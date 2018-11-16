@@ -6,6 +6,7 @@ import (
 	"github.com/go-stack/stack"
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
@@ -31,6 +32,8 @@ type Reader interface {
 	GetCode(address crypto.Address) acm.Bytecode
 	GetSequence(address crypto.Address) uint64
 	Exists(address crypto.Address) bool
+	// GetBlockHash returns	hash of the specific block
+	GetBlockHash(blockNumber uint64) (binary.Word256, error)
 }
 
 type Writer interface {
@@ -49,6 +52,8 @@ type Writer interface {
 type State struct {
 	// Where we sync
 	backend state.ReaderWriter
+	// Block chain info
+	blockchainInfo bcm.BlockchainInfo
 	// Cache this State wraps
 	cache *state.Cache
 	// Any error that may have occurred
@@ -57,16 +62,17 @@ type State struct {
 	cacheOptions []state.CacheOption
 }
 
-func NewState(st state.ReaderWriter, cacheOptions ...state.CacheOption) *State {
+func NewState(st state.ReaderWriter, bci bcm.BlockchainInfo, cacheOptions ...state.CacheOption) *State {
 	return &State{
-		backend:      st,
-		cache:        state.NewCache(st, cacheOptions...),
-		cacheOptions: cacheOptions,
+		backend:        st,
+		blockchainInfo: bci,
+		cache:          state.NewCache(st, cacheOptions...),
+		cacheOptions:   cacheOptions,
 	}
 }
 
 func (st *State) NewCache(cacheOptions ...state.CacheOption) Interface {
-	return NewState(st.cache, append(st.cacheOptions, cacheOptions...)...)
+	return NewState(st.cache, st.blockchainInfo, append(st.cacheOptions, cacheOptions...)...)
 }
 
 func (st *State) Sync() errors.CodedError {
@@ -295,4 +301,8 @@ func (st *State) removeAccount(address crypto.Address) {
 	if err != nil {
 		st.PushError(err)
 	}
+}
+
+func (st *State) GetBlockHash(blockNumber uint64) (binary.Word256, error) {
+	return st.blockchainInfo.GetBlockHash(blockNumber)
 }

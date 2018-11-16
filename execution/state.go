@@ -535,3 +535,14 @@ func (s *State) Copy(db dbm.DB) (*State, error) {
 	}
 	return stateCopy, nil
 }
+
+func (s *State) GetBlockHash(blockHeight uint64) (binary.Word256, error) {
+	be, err := s.GetBlock(blockHeight)
+	if err != nil {
+		return binary.Zero256, err
+	}
+	if be == nil {
+		return binary.Zero256, fmt.Errorf("block %v does not exist", blockHeight)
+	}
+	return binary.LeftPadWord256(be.BlockHeader.AppHash), nil
+}

@@ -54,6 +54,8 @@ const (
 	ErrorCodeExpiredProposal
 	ErrorCodeProposalExecuted
 	ErrorCodeNoInputPermission
+	ErrorCodeInvalidBlockNumber
+	ErrorCodeBlockNumberOutOfRange
 )
 
 func (c Code) ErrorCode() Code {
@@ -140,6 +142,10 @@ func (c Code) String() string {
 		return "Proposal has already been executed"
 	case ErrorCodeNoInputPermission:
 		return "Account has no input permission"
+	case ErrorCodeInvalidBlockNumber:
+		return "Invalid block number"
+	case ErrorCodeBlockNumberOutOfRange:
+		return "Block number out of range"
 	default:
 		return "Unknown error"
 	}

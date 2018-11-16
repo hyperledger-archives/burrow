@@ -122,6 +122,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	} else {
 		kern.State, err = execution.MakeGenesisState(stateDB, genesisDoc)
 	}
+	kern.Blockchain.BlockHashProvider = kern.State.GetBlockHash
 
 	kern.Logger.InfoMsg("State loading successful")
 
