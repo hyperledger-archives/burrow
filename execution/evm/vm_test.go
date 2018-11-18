@@ -805,6 +805,41 @@ func TestStaticCallNoValue(t *testing.T) {
 	require.Len(t, exCalls, 0)
 }
 
+// Test evm account creation
+func TestCreate(t *testing.T) {
+	st := newAppState()
+	cache := NewState(st)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+
+	callee := makeAccountWithCode(cache, "callee", MustSplice(PUSH1, 0x0, PUSH1, 0x0, PUSH1, 0x0, CREATE, PUSH1, 0, MSTORE, PUSH1, 20, PUSH1, 12, RETURN))
+	// ensure pre-generated address has same sequence number
+	addr := crypto.NewContractAddress(callee, cache.GetSequence(callee)+1)
+
+	var gas uint64 = 100000
+	caller := newAccount(cache, "1, 2, 3")
+	output, err := ourVm.Call(cache, NewNoopEventSink(), caller, callee, cache.GetCode(callee), []byte{}, 0, &gas)
+	assert.NoError(t, err, "Should return new address without error")
+	assert.Equal(t, addr.Bytes(), output, "Addresses should be equal")
+}
+
+// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1014.md
+func TestCreate2(t *testing.T) {
+	st := newAppState()
+	cache := NewState(st)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+
+	// salt of 0s
+	var salt [32]byte
+	callee := makeAccountWithCode(cache, "callee", MustSplice(PUSH1, 0x0, PUSH1, 0x0, PUSH1, 0x0, PUSH32, salt[:], CREATE2, PUSH1, 0, MSTORE, PUSH1, 20, PUSH1, 12, RETURN))
+	addr := crypto.NewContractAddress2(callee, cache.GetSequence(callee), salt, cache.GetCode(callee))
+
+	var gas uint64 = 100000
+	caller := newAccount(cache, "1, 2, 3")
+	output, err := ourVm.Call(cache, NewNoopEventSink(), caller, callee, cache.GetCode(callee), []byte{}, 0, &gas)
+	assert.NoError(t, err, "Should return new address without error")
+	assert.Equal(t, addr.Bytes(), output, "Returned value not equal to create2 address")
+}
+
 // This test was introduced to cover an issues exposed in our handling of the
 // gas limit passed from caller to callee on various forms of CALL.
 // The idea of this test is to implement a simple DelegateCall in EVM code

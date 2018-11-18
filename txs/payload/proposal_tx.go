@@ -3,7 +3,7 @@ package payload
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/execution/evm/sha3"
+	"github.com/hyperledger/burrow/crypto/sha3"
 	amino "github.com/tendermint/go-amino"
 )
 

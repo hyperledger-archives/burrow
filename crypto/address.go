@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/tmthrgd/go-hex"
 )
 
@@ -184,5 +185,16 @@ func NewContractAddress(caller Address, nonce []byte) (newAddr Address) {
 	hasher.Write(caller[:]) // does not error
 	hasher.Write(nonce)
 	copy(newAddr[:], hasher.Sum(nil))
+	return
+}
+
+func NewContractAddress2(caller Address, sequence uint64, salt [32]byte, initcode []byte) (newAddr Address) {
+	// sha3(0xff ++ caller.Address() ++ salt ++ sha3(init_code))[12:]
+	temp := make([]byte, 1+20+32+32)
+	temp[0] = 0xFF
+	copy(temp[1:], caller[:])
+	copy(temp[22:], salt[:])
+	copy(temp[53:], sha3.Sha3(initcode))
+	copy(newAddr[:], sha3.Sha3(temp)[12:])
 	return
 }
