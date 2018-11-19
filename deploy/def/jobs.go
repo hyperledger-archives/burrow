@@ -14,7 +14,7 @@ import (
 // ------------------------------------------------------------------------
 
 type Proposal struct {
-	// (Optional), address of the account that signs the proposal
+	// (Optional), address of the account that signs the proposal or votes for the proposal
 	Source string `mapstructure:"source" json:"source" yaml:"source" toml:"source"`
 	// (Optional, advanced only) sequence to use when burrow keys signs the transaction (do not use unless you
 	// know what you're doing)

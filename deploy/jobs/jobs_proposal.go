@@ -14,6 +14,8 @@ import (
 func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (string, error) {
 	var ProposeBatch payload.BatchTx
 
+	prop.Source = useDefault(prop.Source, do.Package.Account)
+
 	for _, job := range prop.Jobs {
 		load, err := job.Payload()
 		if err != nil {
@@ -50,7 +52,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 
 	proposal := payload.Proposal{Name: prop.Name, Description: prop.Description, BatchTx: &ProposeBatch}
 
-	proposalInput, err := client.TxInput(prop.ProposalAddress, "", prop.ProposalSequence, true)
+	proposalInput, err := client.TxInput(prop.ProposalAddress, "", prop.ProposalSequence, false)
 	if err != nil {
 		return "", err
 	}
@@ -92,7 +94,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 		}
 
 		// proposal is there and current, let's vote for it
-		input, err := client.TxInput(prop.Source, "", prop.Sequence, false)
+		input, err := client.TxInput(prop.Source, "", prop.Sequence, true)
 		if err != nil {
 			return "", err
 		}
@@ -100,7 +102,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 		h := binary.HexBytes(proposalHash)
 		proposalTx = &payload.ProposalTx{ProposalHash: &h, VotingWeight: 1, Input: input}
 	} else if do.ProposeCreate {
-		input, err := client.TxInput(prop.Source, "", prop.Sequence, false)
+		input, err := client.TxInput(prop.Source, "", prop.Sequence, true)
 		if err != nil {
 			return "", err
 		}

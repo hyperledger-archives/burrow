@@ -125,10 +125,12 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 			return fmt.Errorf("account %s does not have batch permission", i.Address)
 		}
 
-		if proposeAcc.GetSequence() != i.Sequence {
-			return errors.ErrorCodeExpiredProposal
+		if proposeAcc.GetSequence()+1 != i.Sequence {
+			return fmt.Errorf("proposal expired, sequence number for account %s wrong", i.Address)
 		}
+	}
 
+	for _, i := range ctx.tx.GetInputs() {
 		// Do we have a record of our own vote
 		if _, ok := votes[i.Address]; !ok {
 			votes[i.Address] = ctx.tx.VotingWeight
