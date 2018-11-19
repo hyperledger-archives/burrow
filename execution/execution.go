@@ -310,6 +310,10 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 		if err != nil {
 			return err
 		}
+		err = exe.proposalRegCache.Flush(ws, exe.state)
+		if err != nil {
+			return err
+		}
 		err = ws.AddBlock(blockExecution)
 		if err != nil {
 			return err

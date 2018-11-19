@@ -74,7 +74,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 		log.Warnf("Proposal VERIFY SUCCESSFUL")
 		log.Warnf("Proposal has %d votes:", len(ballot.Votes))
 		for _, v := range ballot.Votes {
-			log.Warnf("\t%x\n", v.Address)
+			log.Warnf("\t%s\n", v.Address)
 		}
 
 		return "", err

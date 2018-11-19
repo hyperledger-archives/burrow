@@ -20,7 +20,7 @@ type Proposal struct {
 	// know what you're doing)
 	Sequence string `mapstructure:"sequence" json:"sequence" yaml:"sequence" toml:"sequence"`
 	// (Required), address of the account used for serialising proposals, the proposals system account
-	ProposalAddress string `mapstructure:"propposaladdress" json:"propposaladdress" yaml:"propposaladdress" toml:"proposaladdress"`
+	ProposalAddress string `mapstructure:"proposaladdress" json:"proposaladdress" yaml:"proposaladdress" toml:"proposaladdress"`
 	// (Optional), sequence of the ProposalAddress
 	ProposalSequence string `mapstructure:"proposalsequence" json:"proposalsequence" yaml:"proposalsequence" toml:"proposalsequence"`
 	// (Optional)

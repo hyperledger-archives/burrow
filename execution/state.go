@@ -76,6 +76,7 @@ var _ Updatable = &writeState{}
 type Updatable interface {
 	state.Writer
 	names.Writer
+	proposal.Writer
 	AddBlock(blockExecution *exec.BlockExecution) error
 }
 
@@ -496,6 +497,7 @@ func (ws *writeState) UpdateProposal(proposalHash []byte, p *payload.Ballot) err
 	if err != nil {
 		return err
 	}
+
 	ws.state.tree.Set(proposalKeyFormat.Key(proposalHash), bs)
 	return nil
 }
@@ -512,9 +514,7 @@ func (s *State) IterateProposals(consumer func(proposalHash []byte, proposal *pa
 		if err != nil {
 			return true, fmt.Errorf("State.IterateProposal() could not iterate over proposals: %v", err)
 		}
-		var proposalHash [sha256.Size]byte
-		proposalKeyFormat.Scan(it.Key(), &proposalHash)
-		if consumer(proposalHash[:], entry) {
+		if consumer(it.Key(), entry) {
 			return true, nil
 		}
 		it.Next()

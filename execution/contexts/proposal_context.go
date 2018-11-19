@@ -63,6 +63,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 		if err != nil {
 			return err
 		}
+		proposalHash = ctx.tx.ProposalHash.Bytes()
 	} else {
 		if ctx.tx.ProposalHash != nil || ctx.tx.Proposal.BatchTx == nil ||
 			len(ctx.tx.Proposal.BatchTx.Txs) == 0 || len(ctx.tx.Proposal.BatchTx.GetInputs()) == 0 {
@@ -74,12 +75,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 			return err
 		}
 
-		bs, err := ctx.tx.Proposal.Encode()
-		if err != nil {
-			return err
-		}
-
-		proposalHash = sha3.Sha3(bs)
+		proposalHash = ctx.tx.Proposal.Hash()
 
 		ballot, err = ctx.ProposalReg.GetProposal(proposalHash)
 		if ballot == nil && err == nil {
