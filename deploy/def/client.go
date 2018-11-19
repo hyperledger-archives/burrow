@@ -155,6 +155,14 @@ func (c *Client) GetValidatorSet() (*rpcquery.ValidatorSet, error) {
 	return c.queryClient.GetValidatorSet(ctx, &rpcquery.GetValidatorSetParam{IncludeHistory: true})
 }
 
+func (c *Client) GetProposal(hash []byte) (*payload.Ballot, error) {
+	err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return c.queryClient.GetProposal(context.Background(), &rpcquery.GetProposalParam{Hash: hash})
+}
+
 func (c *Client) SignAndBroadcast(tx payload.Payload) (*exec.TxExecution, error) {
 	err := c.dial()
 	if err != nil {

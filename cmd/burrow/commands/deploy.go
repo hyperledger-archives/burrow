@@ -57,7 +57,9 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 
 		proposalVerify := cmd.BoolOpt("proposal-verify", false, "Verify any proposal, do NOT create new proposal or vote")
 
-		proposalVote := cmd.BoolOpt("proposal-vote", false, "Vot for proposal, do NOT create new proposal")
+		proposalVote := cmd.BoolOpt("proposal-vote", false, "Vote for proposal, do NOT create new proposal")
+
+		proposalCreate := cmd.BoolOpt("proposal-create", false, "Create new proposal")
 
 		timeoutOpt := cmd.IntOpt("t timeout", 10, "Timeout to talk to the chain")
 
@@ -82,6 +84,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			do.Jobs = *jobsOpt
 			do.ProposeVerify = *proposalVerify
 			do.ProposeVote = *proposalVote
+			do.ProposeCreate = *proposalCreate
 			log.SetFormatter(new(PlainFormatter))
 			log.SetLevel(log.WarnLevel)
 			if do.Verbose {

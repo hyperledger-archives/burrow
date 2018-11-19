@@ -21,6 +21,7 @@ type DeployArgs struct {
 	Jobs          int      `mapstructure:"," json:"," yaml:"," toml:","`
 	ProposeVerify bool     `mapstructure:"," json:"," yaml:"," toml:","`
 	ProposeVote   bool     `mapstructure:"," json:"," yaml:"," toml:","`
+	ProposeCreate bool     `mapstructure:"," json:"," yaml:"," toml:","`
 
 	Package *Package
 }

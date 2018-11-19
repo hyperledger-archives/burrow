@@ -3,6 +3,7 @@ package jobs
 import (
 	"fmt"
 
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -55,13 +56,62 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 	proposal.BatchTx.Inputs = []*payload.TxInput{proposalInput}
 	proposalHash := proposal.Hash()
 
-	log.Warnf("Proposal hash: %x\n", proposalHash)
+	var proposalTx *payload.ProposalTx
+	if do.ProposeVerify {
+		ballot, err := client.GetProposal(proposalHash)
+		if err != nil {
+			log.Warnf("Proposal could NOT be verified, error %v", err)
+			return "", err
+		}
 
-	input, err := client.TxInput(prop.Source, "", prop.Sequence, false)
-	if err != nil {
+		err = isProposalExpired(ballot.Proposal, client)
+		if err != nil {
+			log.Warnf("Proposal verify FAILED: %v", err)
+			return "", err
+		}
+
+		log.Warnf("Proposal VERIFY SUCCESSFUL")
+		log.Warnf("Proposal has %d votes:", len(ballot.Votes))
+		for _, v := range ballot.Votes {
+			log.Warnf("\t%x\n", v.Address)
+		}
+
 		return "", err
+	} else if do.ProposeVote {
+		ballot, err := client.GetProposal(proposalHash)
+		if err != nil {
+			log.Warnf("Proposal could not be found: %v", err)
+			return "", err
+		}
+
+		err = isProposalExpired(ballot.Proposal, client)
+		if err != nil {
+			log.Warnf("Proposal error: %v", err)
+			return "", err
+		}
+
+		// proposal is there and current, let's vote for it
+		input, err := client.TxInput(prop.Source, "", prop.Sequence, false)
+		if err != nil {
+			return "", err
+		}
+
+		h := &binary.HexBytes(proposalHash)
+		proposalTx = &payload.ProposalTx{ProposalHash: &h, VotingWeight: 1, Input: input}
+	} else if do.ProposeCreate {
+		input, err := client.TxInput(prop.Source, "", prop.Sequence, false)
+		if err != nil {
+			return "", err
+		}
+		log.Warnf("Creating Proposal with hash: %x\n", proposalHash)
+
+		proposalTx = &payload.ProposalTx{VotingWeight: 1, Input: input, Proposal: &proposal}
+	} else {
+		log.Errorf("please specify one of --propose-create, --propose-vote, --propose-verify")
+		return "", nil
 	}
-	txe, err := client.SignAndBroadcast(&payload.ProposalTx{VotingWeight: 1, Input: input, Proposal: &proposal})
+
+	txe, err := client.SignAndBroadcast(proposalTx)
 	if err != nil {
 		var err = util.ChainErrorHandler(do.Package.Account, err)
 		return "", err
@@ -70,4 +120,19 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 	result := fmt.Sprintf("%X", txe.Receipt.TxHash)
 
 	return result, nil
+}
+
+func isProposalExpired(proposal *payload.Proposal, client *def.Client) error {
+	for _, input := range proposal.BatchTx.Inputs {
+		acc, err := client.GetAccount(input.Address)
+		if err != nil {
+			return err
+		}
+
+		if input.Sequence != acc.Sequence {
+			return fmt.Errorf("Proposal has expired")
+		}
+	}
+
+	return nil
 }
