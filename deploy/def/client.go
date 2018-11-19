@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"strconv"
 	"time"
 
@@ -161,6 +162,27 @@ func (c *Client) GetProposal(hash []byte) (*payload.Ballot, error) {
 		return nil, err
 	}
 	return c.queryClient.GetProposal(context.Background(), &rpcquery.GetProposalParam{Hash: hash})
+}
+
+func (c *Client) ListProposals(proposed bool) ([]*rpcquery.ProposalResult, error) {
+	err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	stream, err := c.queryClient.ListProposals(context.Background(), &rpcquery.ListProposalsParam{Proposed: proposed})
+	if err != nil {
+		return nil, err
+	}
+	var ballots []*rpcquery.ProposalResult
+	ballot, err := stream.Recv()
+	for err == nil {
+		ballots = append(ballots, ballot)
+		ballot, err = stream.Recv()
+	}
+	if err == io.EOF {
+		return ballots, nil
+	}
+	return nil, err
 }
 
 func (c *Client) SignAndBroadcast(tx payload.Payload) (*exec.TxExecution, error) {

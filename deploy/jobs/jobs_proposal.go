@@ -5,6 +5,7 @@ import (
 
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/deploy/def"
+	"github.com/hyperledger/burrow/deploy/proposals"
 	"github.com/hyperledger/burrow/deploy/util"
 	"github.com/hyperledger/burrow/txs/payload"
 	log "github.com/sirupsen/logrus"
@@ -64,7 +65,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 			return "", err
 		}
 
-		err = isProposalExpired(ballot.Proposal, client)
+		err = proposals.ProposalExpired(ballot.Proposal, client)
 		if err != nil {
 			log.Warnf("Proposal verify FAILED: %v", err)
 			return "", err
@@ -84,7 +85,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 			return "", err
 		}
 
-		err = isProposalExpired(ballot.Proposal, client)
+		err = proposals.ProposalExpired(ballot.Proposal, client)
 		if err != nil {
 			log.Warnf("Proposal error: %v", err)
 			return "", err
@@ -96,7 +97,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 			return "", err
 		}
 
-		h := &binary.HexBytes(proposalHash)
+		h := binary.HexBytes(proposalHash)
 		proposalTx = &payload.ProposalTx{ProposalHash: &h, VotingWeight: 1, Input: input}
 	} else if do.ProposeCreate {
 		input, err := client.TxInput(prop.Source, "", prop.Sequence, false)
@@ -120,19 +121,4 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 	result := fmt.Sprintf("%X", txe.Receipt.TxHash)
 
 	return result, nil
-}
-
-func isProposalExpired(proposal *payload.Proposal, client *def.Client) error {
-	for _, input := range proposal.BatchTx.Inputs {
-		acc, err := client.GetAccount(input.Address)
-		if err != nil {
-			return err
-		}
-
-		if input.Sequence != acc.Sequence {
-			return fmt.Errorf("Proposal has expired")
-		}
-	}
-
-	return nil
 }

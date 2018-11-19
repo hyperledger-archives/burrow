@@ -7,6 +7,7 @@ import (
 
 	pkgs "github.com/hyperledger/burrow/deploy"
 	"github.com/hyperledger/burrow/deploy/def"
+	"github.com/hyperledger/burrow/deploy/proposals"
 	"github.com/hyperledger/burrow/deploy/util"
 	cli "github.com/jawher/mow.cli"
 	log "github.com/sirupsen/logrus"
@@ -63,6 +64,8 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 
 		timeoutOpt := cmd.IntOpt("t timeout", 10, "Timeout to talk to the chain")
 
+		proposalList := cmd.StringOpt("list-proposals state", "", "List proposals, either all, executed, expired, or current")
+
 		cmd.Action = func() {
 			do := new(def.DeployArgs)
 
@@ -94,7 +97,12 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			}
 			client := def.NewClient(*chainUrlOpt, *signerOpt, *mempoolSigningOpt, time.Duration(*timeoutOpt)*time.Second)
 			handleTerm()
-			util.IfExit(pkgs.RunPackage(do, client))
+
+			if *proposalList != "" {
+				proposals.ListProposals(client, *proposalList)
+			} else {
+				util.IfExit(pkgs.RunPackage(do, client))
+			}
 		}
 	}
 }
