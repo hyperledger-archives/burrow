@@ -84,8 +84,9 @@ func BuildJob(build *def.Build, binPath string, resp *compilers.Response) (resul
 
 func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, client *def.Client, intermediate interface{}) (txs []*payload.CallTx, contracts []*compilers.ResponseItem, err error) {
 	deploy.Libraries, _ = util.PreProcessLibs(deploy.Libraries, do, client)
-	// trim the extension
-	contractName := strings.TrimSuffix(deploy.Contract, filepath.Ext(deploy.Contract))
+	// trim the extension and path
+	contractName := filepath.Base(deploy.Contract)
+	contractName = strings.TrimSuffix(contractName, filepath.Ext(contractName))
 
 	// Use defaults
 	deploy.Source = useDefault(deploy.Source, do.Package.Account)
@@ -196,7 +197,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, client *def.Clie
 			var baseObj *payload.CallTx
 			var baseContract *compilers.ResponseItem
 			deployedCount := 0
-			for _, response := range resp.Objects {
+			for i, response := range resp.Objects {
 				if response.Contract.Evm.Bytecode.Object == "" {
 					continue
 				}
@@ -207,10 +208,10 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, client *def.Clie
 				deployedCount++
 				if strings.ToLower(response.Objectname) == strings.ToLower(strings.TrimSuffix(filepath.Base(deploy.Contract), filepath.Ext(filepath.Base(deploy.Contract)))) {
 					baseObj = tx
-					baseContract = &response
+					baseContract = &resp.Objects[i]
 				} else {
 					txs = append(txs, tx)
-					contracts = append(contracts, &response)
+					contracts = append(contracts, &resp.Objects[i])
 				}
 			}
 
@@ -224,7 +225,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, client *def.Clie
 
 		default:
 			log.WithField("contract", deploy.Instance).Info("Deploying a single contract")
-			for _, response := range resp.Objects {
+			for i, response := range resp.Objects {
 				if response.Contract.Evm.Bytecode.Object == "" ||
 					response.Filename != deploy.Contract {
 					continue
@@ -233,6 +234,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, client *def.Clie
 					if response.Contract.Evm.Bytecode.Object == "" {
 						return nil, nil, errCodeMissing
 					}
+					log.WithField("contract", response.Objectname).Infof("foo %s", deploy.Instance)
 					log.WithField("=>", string(response.Contract.Abi)).Info("Abi")
 					log.WithField("=>", response.Contract.Evm.Bytecode.Object).Info("Bin")
 					tx, err := deployContract(deploy, do, client, response, libs)
@@ -240,7 +242,8 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, client *def.Clie
 						return nil, nil, err
 					}
 					txs = append(txs, tx)
-					contracts = append(contracts, &response)
+					// make sure we copy response, as it is the loop variable and will be overwritten
+					contracts = append(contracts, &resp.Objects[i])
 				}
 			}
 		}
