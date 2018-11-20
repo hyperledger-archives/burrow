@@ -131,7 +131,7 @@ func (qs *queryServer) GetProposal(ctx context.Context, param *GetProposalParam)
 func (qs *queryServer) ListProposals(param *ListProposalsParam, stream Query_ListProposalsServer) error {
 	var streamErr error
 	_, err := qs.proposalReg.IterateProposals(func(hash []byte, ballot *payload.Ballot) (stop bool) {
-		if param.GetProposed() == true || ballot.ProposalState == payload.Ballot_PROPOSED {
+		if param.GetProposed() == false || ballot.ProposalState == payload.Ballot_PROPOSED {
 			streamErr = stream.Send(&ProposalResult{Hash: hash, Ballot: ballot})
 			if streamErr != nil {
 				return true
