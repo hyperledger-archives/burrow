@@ -1098,7 +1098,7 @@ func UnpackRevert(data []byte) (message *string, err error) {
 /*
  * Given a eventSpec, get all the fields (topic fields or not)
  */
-func UnpackEvent(eventSpec EventSpec, topics []burrow_binary.Word256, data []byte, args ...interface{}) error {
+func UnpackEvent(eventSpec *EventSpec, topics []burrow_binary.Word256, data []byte, args ...interface{}) error {
 	// First unpack the topic fields
 	topicIndex := 0
 	if !eventSpec.Anonymous {
