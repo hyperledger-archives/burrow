@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/binary"
-	compilers "github.com/hyperledger/burrow/deploy/compile"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/proposals"
 	"github.com/hyperledger/burrow/deploy/util"
@@ -14,6 +14,7 @@ import (
 
 func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (string, error) {
 	var ProposeBatch payload.BatchTx
+	stableAddress := make(map[crypto.Address]uint64)
 
 	prop.Source = useDefault(prop.Source, do.Package.Account)
 
@@ -36,23 +37,12 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 		switch load.(type) {
 		case *def.Call:
 			announceProposalJob(job.Name, "Call")
-			CallTx, ferr := FormulateCallJob(job.Call, do, client)
-			if ferr != nil {
-				return "", ferr
-			}
-			item := payload.Any{}
-			item.CallTx = CallTx
-			ProposeBatch.Txs = append(ProposeBatch.Txs, &item)
-			break
-		case *def.Build:
-			// Build just compile; no Tx is sent so just execute as-if not in proposal
-			announce(job.Name, "Build")
-			var resp *compilers.Response
-			resp, err = getCompilerWork(job.Intermediate)
+			tx, err := FormulateCallJob(job.Call, do, client)
 			if err != nil {
 				return "", err
 			}
-			_, err = BuildJob(job.Build, do.BinPath, resp)
+			ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{CallTx: tx})
+			break
 		case *def.Deploy:
 			announceProposalJob(job.Name, "Deploy")
 			txs, _, err := FormulateDeployJob(job.Deploy, do, client, job.Intermediate)
@@ -60,10 +50,19 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 				return "", err
 			}
 			for _, tx := range txs {
-				item := payload.Any{}
-				item.CallTx = tx
-				ProposeBatch.Txs = append(ProposeBatch.Txs, &item)
+				ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{CallTx: tx})
 			}
+			// Predict address
+			callee, err := crypto.AddressFromHexString(job.Deploy.Source)
+			if err != nil {
+				return "", err
+			}
+			seq, err := getPredictedSequence(callee, &stableAddress, client)
+			if err != nil {
+				return "", err
+			}
+			deployAddress := crypto.NewContractAddress(callee, seq)
+			job.Result = deployAddress.String()
 		default:
 			return "", fmt.Errorf("jobs %s illegal job type for proposal", job.Name)
 		}
@@ -143,4 +142,20 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 	result := fmt.Sprintf("%X", txe.Receipt.TxHash)
 
 	return result, nil
+}
+
+func getPredictedSequence(address crypto.Address, stableAdress *map[crypto.Address]uint64, client *def.Client) (uint64, error) {
+	seq, ok := (*stableAdress)[address]
+	if !ok {
+		acc, err := client.GetAccount(address)
+		if err != nil {
+			return 0, err
+		}
+		seq = acc.GetSequence()
+	}
+	seq++
+
+	(*stableAdress)[address] = seq
+
+	return seq, nil
 }
