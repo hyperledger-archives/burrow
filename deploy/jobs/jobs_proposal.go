@@ -63,6 +63,13 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 			}
 			deployAddress := crypto.NewContractAddress(callee, seq)
 			job.Result = deployAddress.String()
+		case *def.Permission:
+			announceProposalJob(job.Name, "Permission")
+			tx, err := FormulatePermissionJob(job.Permission, do.Package.Account, client)
+			if err != nil {
+				return "", err
+			}
+			ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{PermsTx: tx})
 		default:
 			return "", fmt.Errorf("jobs %s illegal job type for proposal", job.Name)
 		}

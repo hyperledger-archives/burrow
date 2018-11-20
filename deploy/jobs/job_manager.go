@@ -149,7 +149,11 @@ func DoJobs(do *def.DeployArgs, client *def.Client) error {
 			job.Result, err = RegisterNameJob(job.RegisterName, do, client)
 		case *def.Permission:
 			announce(job.Name, "Permission")
-			job.Result, err = PermissionJob(job.Permission, do.Package.Account, client)
+			tx, err := FormulatePermissionJob(job.Permission, do.Package.Account, client)
+			if err != nil {
+				return err
+			}
+			job.Result, err = PermissionJob(job.Permission, do.Package.Account, tx, client)
 
 		// Contracts jobs
 		case *def.Deploy:

@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 
+	"github.com/hyperledger/burrow/txs/payload"
+
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
 	log "github.com/sirupsen/logrus"
@@ -152,7 +154,7 @@ func registerNameTx(name *def.RegisterName, do *def.DeployArgs, client *def.Clie
 	return txe.Receipt.TxHash.String(), nil
 }
 
-func PermissionJob(perm *def.Permission, account string, client *def.Client) (string, error) {
+func FormulatePermissionJob(perm *def.Permission, account string, client *def.Client) (*payload.PermsTx, error) {
 	// Set defaults
 	perm.Source = useDefault(perm.Source, account)
 
@@ -162,7 +164,7 @@ func PermissionJob(perm *def.Permission, account string, client *def.Client) (st
 	// Populate the transaction appropriately
 
 	// Formulate tx
-	tx, err := client.Permissions(&def.PermArg{
+	return client.Permissions(&def.PermArg{
 		Input:      perm.Source,
 		Sequence:   perm.Sequence,
 		Action:     perm.Action,
@@ -171,10 +173,9 @@ func PermissionJob(perm *def.Permission, account string, client *def.Client) (st
 		Role:       perm.Role,
 		Value:      perm.Value,
 	})
-	if err != nil {
-		return "", util.ChainErrorHandler(account, err)
-	}
+}
 
+func PermissionJob(perm *def.Permission, account string, tx *payload.PermsTx, client *def.Client) (string, error) {
 	log.Debug("What are the args returned in transaction: ", tx.PermArgs)
 
 	// Sign, broadcast, display
