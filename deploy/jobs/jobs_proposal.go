@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/binary"
+	compilers "github.com/hyperledger/burrow/deploy/compile"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/proposals"
 	"github.com/hyperledger/burrow/deploy/util"
@@ -43,6 +44,15 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 			}
 			item.CallTx = CallTx
 			break
+		case *def.Build:
+			// Build just compile; no Tx is sent so just execute as-if not in proposal
+			announce(job.Name, "Build")
+			var resp *compilers.Response
+			resp, err = getCompilerWork(job.Intermediate)
+			if err != nil {
+				return "", err
+			}
+			_, err = BuildJob(job.Build, do.BinPath, resp)
 		default:
 			return "", fmt.Errorf("jobs %s illegal job type for proposal", job.Name)
 		}
