@@ -154,7 +154,12 @@ func DoJobs(do *def.DeployArgs, client *def.Client) error {
 		// Contracts jobs
 		case *def.Deploy:
 			announce(job.Name, "Deploy")
-			job.Result, err = DeployJob(job.Deploy, do, client, job.Intermediate)
+			txs, contracts, ferr := FormulateDeployJob(job.Deploy, do, client, job.Intermediate)
+			if ferr != nil {
+				return ferr
+			}
+			job.Result, err = DeployJob(job.Deploy, do, client, txs, contracts)
+
 		case *def.Call:
 			announce(job.Name, "Call")
 			CallTx, ferr := FormulateCallJob(job.Call, do, client)

@@ -33,8 +33,6 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 			return "", fmt.Errorf("error validating job %s after pre-processing variables: %v", job.Name, err)
 		}
 
-		item := payload.Any{}
-
 		switch load.(type) {
 		case *def.Call:
 			announceProposalJob(job.Name, "Call")
@@ -42,7 +40,9 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 			if ferr != nil {
 				return "", ferr
 			}
+			item := payload.Any{}
 			item.CallTx = CallTx
+			ProposeBatch.Txs = append(ProposeBatch.Txs, &item)
 			break
 		case *def.Build:
 			// Build just compile; no Tx is sent so just execute as-if not in proposal
@@ -53,11 +53,21 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 				return "", err
 			}
 			_, err = BuildJob(job.Build, do.BinPath, resp)
+		case *def.Deploy:
+			announceProposalJob(job.Name, "Deploy")
+			txs, _, err := FormulateDeployJob(job.Deploy, do, client, job.Intermediate)
+			if err != nil {
+				return "", err
+			}
+			for _, tx := range txs {
+				item := payload.Any{}
+				item.CallTx = tx
+				ProposeBatch.Txs = append(ProposeBatch.Txs, &item)
+			}
 		default:
 			return "", fmt.Errorf("jobs %s illegal job type for proposal", job.Name)
 		}
 
-		ProposeBatch.Txs = append(ProposeBatch.Txs, &item)
 	}
 
 	proposal := payload.Proposal{Name: prop.Name, Description: prop.Description, BatchTx: &ProposeBatch}
