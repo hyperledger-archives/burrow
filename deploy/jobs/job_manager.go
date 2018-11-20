@@ -142,8 +142,12 @@ func DoJobs(do *def.DeployArgs, client *def.Client) error {
 
 		// Transaction jobs
 		case *def.Send:
-			announce(job.Name, "Sent")
-			job.Result, err = SendJob(job.Send, do.Package.Account, client)
+			announce(job.Name, "Send")
+			tx, err := FormulateSendJob(job.Send, do.Package.Account, client)
+			if err != nil {
+				return err
+			}
+			job.Result, err = SendJob(job.Send, tx, do.Package.Account, client)
 		case *def.RegisterName:
 			announce(job.Name, "RegisterName")
 			job.Result, err = RegisterNameJob(job.RegisterName, do, client)

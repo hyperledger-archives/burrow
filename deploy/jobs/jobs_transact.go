@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func SendJob(send *def.Send, account string, client *def.Client) (string, error) {
+func FormulateSendJob(send *def.Send, account string, client *def.Client) (*payload.SendTx, error) {
 	// Use Default
 	send.Source = useDefault(send.Source, account)
 
@@ -24,15 +24,15 @@ func SendJob(send *def.Send, account string, client *def.Client) (string, error)
 		"amount":      send.Amount,
 	}).Info("Sending Transaction")
 
-	tx, err := client.Send(&def.SendArg{
+	return client.Send(&def.SendArg{
 		Input:    send.Source,
 		Output:   send.Destination,
 		Amount:   send.Amount,
 		Sequence: send.Sequence,
 	})
-	if err != nil {
-		return "", util.ChainErrorHandler(account, err)
-	}
+}
+
+func SendJob(send *def.Send, tx *payload.SendTx, account string, client *def.Client) (string, error) {
 
 	// Sign, broadcast, display
 	txe, err := client.SignAndBroadcast(tx)

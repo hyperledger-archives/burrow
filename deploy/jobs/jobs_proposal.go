@@ -70,6 +70,13 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 				return "", err
 			}
 			ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{PermsTx: tx})
+		case *def.Send:
+			announceProposalJob(job.Name, "Send")
+			tx, err := FormulateSendJob(job.Send, do.Package.Account, client)
+			if err != nil {
+				return "", err
+			}
+			ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{SendTx: tx})
 		default:
 			return "", fmt.Errorf("jobs %s illegal job type for proposal", job.Name)
 		}
