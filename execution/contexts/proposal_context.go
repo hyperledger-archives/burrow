@@ -59,11 +59,20 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 		if ctx.tx.ProposalHash == nil || ctx.tx.ProposalHash.Size() != sha256.Size {
 			return errors.ErrorCodeInvalidProposal
 		}
-		ballot, err = ctx.ProposalReg.GetProposal(ctx.tx.ProposalHash.Bytes())
+		proposalHash = ctx.tx.ProposalHash.Bytes()
+		ballot, err = ctx.ProposalReg.GetProposal(proposalHash)
 		if err != nil {
 			return err
 		}
-		proposalHash = ctx.tx.ProposalHash.Bytes()
+
+		// Check that we have not voted this already
+		for _, vote := range ballot.Votes {
+			for _, i := range ctx.tx.GetInputs() {
+				if i.Address == vote.Address {
+					return errors.ErrorCodeAlreadyVoted
+				}
+			}
+		}
 	} else {
 		if ctx.tx.ProposalHash != nil || ctx.tx.Proposal.BatchTx == nil ||
 			len(ctx.tx.Proposal.BatchTx.Txs) == 0 || len(ctx.tx.Proposal.BatchTx.GetInputs()) == 0 {
@@ -78,14 +87,24 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 		proposalHash = ctx.tx.Proposal.Hash()
 
 		ballot, err = ctx.ProposalReg.GetProposal(proposalHash)
-		if ballot == nil && err == nil {
+		if ballot == nil {
 			ballot = &payload.Ballot{
 				Proposal:      ctx.tx.Proposal,
 				ProposalState: payload.Ballot_PROPOSED,
 			}
 		}
+		// else vote for existing proposal
 		if err != nil {
 			return err
+		}
+	}
+
+	// Check that we have not voted this already
+	for _, vote := range ballot.Votes {
+		for _, i := range ctx.tx.GetInputs() {
+			if i.Address == vote.Address {
+				return errors.ErrorCodeAlreadyVoted
+			}
 		}
 	}
 
