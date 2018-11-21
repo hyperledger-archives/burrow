@@ -35,6 +35,16 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 		}
 
 		switch load.(type) {
+
+		case *def.RegisterName:
+			announceProposalJob(job.Name, "RegisterName")
+			txs, err := FormulateRegisterNameJob(job.RegisterName, do, client)
+			if err != nil {
+				return "", err
+			}
+			for _, tx := range txs {
+				ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{NameTx: tx})
+			}
 		case *def.Call:
 			announceProposalJob(job.Name, "Call")
 			tx, err := FormulateCallJob(job.Call, do, client)

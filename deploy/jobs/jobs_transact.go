@@ -48,7 +48,9 @@ func SendJob(send *def.Send, tx *payload.SendTx, account string, client *def.Cli
 	return txe.Receipt.TxHash.String(), nil
 }
 
-func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, client *def.Client) (string, error) {
+func FormulateRegisterNameJob(name *def.RegisterName, do *def.DeployArgs, client *def.Client) ([]*payload.NameTx, error) {
+	txs := make([]*payload.NameTx, 0)
+
 	// If a data file is given it should be in csv format and
 	// it will be read first. Once the file is parsed and sent
 	// to the chain then a single nameRegTx will be sent if that
@@ -57,7 +59,7 @@ func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, client *def.Cli
 		// open the file and use a reader
 		fileReader, err := os.Open(name.DataFile)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		defer fileReader.Close()
@@ -73,7 +75,7 @@ func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, client *def.Cli
 				break
 			}
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 
 			// Sink the Amount into the third slot in the record if
@@ -94,14 +96,16 @@ func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, client *def.Cli
 			}, do, client)
 
 			if err != nil {
-				return "", err
+				return nil, err
 			}
+
+			txs = append(txs, r)
 
 			n := fmt.Sprintf("%s:%s", record[0], record[1])
 
 			// TODO: write smarter
-			if err = WriteJobResultCSV(n, r); err != nil {
-				return "", err
+			if err = WriteJobResultCSV(n, r.String()); err != nil {
+				return nil, err
 			}
 		}
 	}
@@ -109,14 +113,22 @@ func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, client *def.Cli
 	// If the data field is populated then there is a single
 	// nameRegTx to send. So do that *now*.
 	if name.Data != "" {
-		return registerNameTx(name, do, client)
-	} else {
-		return "data_file_parsed", nil
+		tx, err := registerNameTx(name, do, client)
+		if err != nil {
+			return nil, err
+		}
+		txs = append(txs, tx)
 	}
+
+	if len(txs) == 0 {
+		return nil, fmt.Errorf("nothing to do")
+	}
+
+	return txs, nil
 }
 
 // Runs an individual nametx.
-func registerNameTx(name *def.RegisterName, do *def.DeployArgs, client *def.Client) (string, error) {
+func registerNameTx(name *def.RegisterName, do *def.DeployArgs, client *def.Client) (*payload.NameTx, error) {
 	// Set Defaults
 	name.Source = useDefault(name.Source, do.Package.Account)
 	name.Fee = useDefault(name.Fee, do.DefaultFee)
@@ -129,7 +141,7 @@ func registerNameTx(name *def.RegisterName, do *def.DeployArgs, client *def.Clie
 		"amount": name.Amount,
 	}).Info("NameReg Transaction")
 
-	tx, err := client.Name(&def.NameArg{
+	return client.Name(&def.NameArg{
 		Input:    name.Source,
 		Sequence: name.Sequence,
 		Name:     name.Name,
@@ -137,21 +149,26 @@ func registerNameTx(name *def.RegisterName, do *def.DeployArgs, client *def.Clie
 		Data:     name.Data,
 		Fee:      name.Fee,
 	})
-	if err != nil {
-		return "", util.ChainErrorHandler(do.Package.Account, err)
-	}
-	// Sign, broadcast, display
-	txe, err := client.SignAndBroadcast(tx)
-	if err != nil {
-		return "", util.ChainErrorHandler(do.Package.Account, err)
-	}
+}
 
-	util.ReadTxSignAndBroadcast(txe, err)
-	if err != nil {
-		return "", err
-	}
+func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, txs []*payload.NameTx, client *def.Client) (string, error) {
+	var result string
 
-	return txe.Receipt.TxHash.String(), nil
+	for _, tx := range txs {
+		// Sign, broadcast, display
+		txe, err := client.SignAndBroadcast(tx)
+		if err != nil {
+			return "", util.ChainErrorHandler(do.Package.Account, err)
+		}
+
+		util.ReadTxSignAndBroadcast(txe, err)
+		if err != nil {
+			return "", err
+		}
+
+		result = txe.Receipt.TxHash.String()
+	}
+	return result, nil
 }
 
 func FormulatePermissionJob(perm *def.Permission, account string, client *def.Client) (*payload.PermsTx, error) {
