@@ -12,19 +12,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (string, error) {
+func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.DeployScript, client *def.Client) (string, error) {
 	var ProposeBatch payload.BatchTx
 	stableAddress := make(map[crypto.Address]uint64)
+	script := def.DeployScript{Jobs: prop.Jobs, Account: useDefault(prop.Source, parentScript.Account), Parent: parentScript}
 
-	prop.Source = useDefault(prop.Source, do.Package.Account)
-
-	for _, job := range prop.Jobs {
+	for _, job := range script.Jobs {
 		load, err := job.Payload()
 		if err != nil {
 			return "", fmt.Errorf("could not get Job payload: %v", load)
 		}
 
-		err = util.PreProcessFields(load, do, client)
+		err = util.PreProcessFields(load, do, &script, client)
 		if err != nil {
 			return "", err
 		}
@@ -38,7 +37,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 
 		case *def.UpdateAccount:
 			announceProposalJob(job.Name, "UpdateAccount")
-			tx, _, err := FormulateUpdateAccountJob(job.UpdateAccount, do.Package.Account, client)
+			tx, _, err := FormulateUpdateAccountJob(job.UpdateAccount, script.Account, client)
 			if err != nil {
 				return "", err
 			}
@@ -46,7 +45,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 
 		case *def.RegisterName:
 			announceProposalJob(job.Name, "RegisterName")
-			txs, err := FormulateRegisterNameJob(job.RegisterName, do, client)
+			txs, err := FormulateRegisterNameJob(job.RegisterName, do, script.Account, client)
 			if err != nil {
 				return "", err
 			}
@@ -55,15 +54,14 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 			}
 		case *def.Call:
 			announceProposalJob(job.Name, "Call")
-			tx, err := FormulateCallJob(job.Call, do, client)
+			tx, err := FormulateCallJob(job.Call, do, &script, client)
 			if err != nil {
 				return "", err
 			}
 			ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{CallTx: tx})
-
 		case *def.Deploy:
 			announceProposalJob(job.Name, "Deploy")
-			txs, _, err := FormulateDeployJob(job.Deploy, do, client, job.Intermediate)
+			txs, _, err := FormulateDeployJob(job.Deploy, do, &script, client, job.Intermediate)
 			if err != nil {
 				return "", err
 			}
@@ -83,14 +81,14 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 			job.Result = deployAddress.String()
 		case *def.Permission:
 			announceProposalJob(job.Name, "Permission")
-			tx, err := FormulatePermissionJob(job.Permission, do.Package.Account, client)
+			tx, err := FormulatePermissionJob(job.Permission, script.Account, client)
 			if err != nil {
 				return "", err
 			}
 			ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{PermsTx: tx})
 		case *def.Send:
 			announceProposalJob(job.Name, "Send")
-			tx, err := FormulateSendJob(job.Send, do.Package.Account, client)
+			tx, err := FormulateSendJob(job.Send, script.Account, client)
 			if err != nil {
 				return "", err
 			}
@@ -166,7 +164,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 
 	txe, err := client.SignAndBroadcast(proposalTx)
 	if err != nil {
-		var err = util.ChainErrorHandler(do.Package.Account, err)
+		var err = util.ChainErrorHandler(script.Account, err)
 		return "", err
 	}
 

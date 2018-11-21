@@ -73,16 +73,16 @@ func getCompilerWork(intermediate interface{}) (*compilers.Response, error) {
 	return nil, fmt.Errorf("internal error: no compiler work queued")
 }
 
-func DoJobs(do *def.DeployArgs, client *def.Client) error {
+func DoJobs(do *def.DeployArgs, script *def.DeployScript, client *def.Client) error {
 	// ADD DefaultAddr and DefaultSet to jobs array....
 	// These work in reverse order and the addendums to the
 	// the ordering from the loading process is lifo
 	if len(do.DefaultSets) >= 1 {
-		defaultSetJobs(do)
+		defaultSetJobs(do, script)
 	}
 
 	if do.Address != "" {
-		defaultAddrJob(do)
+		defaultAddrJob(do, script)
 	}
 
 	err := do.Validate()
@@ -98,17 +98,17 @@ func DoJobs(do *def.DeployArgs, client *def.Client) error {
 		go intermediateJobRunner(jobs)
 	}
 
-	for _, job := range do.Package.Jobs {
+	for _, job := range script.Jobs {
 		queueCompilerWork(job, jobs)
 	}
 
-	for _, job := range do.Package.Jobs {
+	for _, job := range script.Jobs {
 		payload, err := job.Payload()
 		if err != nil {
 			return fmt.Errorf("could not get Job payload: %v", payload)
 		}
 
-		err = util.PreProcessFields(payload, do, client)
+		err = util.PreProcessFields(payload, do, script, client)
 		if err != nil {
 			return err
 		}
@@ -121,7 +121,7 @@ func DoJobs(do *def.DeployArgs, client *def.Client) error {
 		switch payload.(type) {
 		case *def.Proposal:
 			announce(job.Name, "Proposal")
-			job.Result, err = ProposalJob(job.Proposal, do, client)
+			job.Result, err = ProposalJob(job.Proposal, do, script, client)
 
 		// Meta Job
 		case *def.Meta:
@@ -133,16 +133,16 @@ func DoJobs(do *def.DeployArgs, client *def.Client) error {
 		case *def.UpdateAccount:
 			announce(job.Name, "UpdateAccount")
 			var tx *pbpayload.GovTx
-			tx, job.Variables, err = FormulateUpdateAccountJob(job.UpdateAccount, do.Package.Account, client)
+			tx, job.Variables, err = FormulateUpdateAccountJob(job.UpdateAccount, script.Account, client)
 			if err != nil {
 				return err
 			}
-			err = UpdateAccountJob(job.UpdateAccount, do.Package.Account, tx, client)
+			err = UpdateAccountJob(job.UpdateAccount, script.Account, tx, client)
 
 		// Util jobs
 		case *def.Account:
 			announce(job.Name, "Account")
-			job.Result, err = SetAccountJob(job.Account, do)
+			job.Result, err = SetAccountJob(job.Account, do, script)
 		case *def.Set:
 			announce(job.Name, "Set")
 			job.Result, err = SetValJob(job.Set, do)
@@ -150,42 +150,42 @@ func DoJobs(do *def.DeployArgs, client *def.Client) error {
 		// Transaction jobs
 		case *def.Send:
 			announce(job.Name, "Send")
-			tx, err := FormulateSendJob(job.Send, do.Package.Account, client)
+			tx, err := FormulateSendJob(job.Send, script.Account, client)
 			if err != nil {
 				return err
 			}
-			job.Result, err = SendJob(job.Send, tx, do.Package.Account, client)
+			job.Result, err = SendJob(job.Send, tx, script.Account, client)
 		case *def.RegisterName:
 			announce(job.Name, "RegisterName")
-			txs, err := FormulateRegisterNameJob(job.RegisterName, do, client)
+			txs, err := FormulateRegisterNameJob(job.RegisterName, do, script.Account, client)
 			if err != nil {
 				return err
 			}
-			job.Result, err = RegisterNameJob(job.RegisterName, do, txs, client)
+			job.Result, err = RegisterNameJob(job.RegisterName, do, script, txs, client)
 		case *def.Permission:
 			announce(job.Name, "Permission")
-			tx, err := FormulatePermissionJob(job.Permission, do.Package.Account, client)
+			tx, err := FormulatePermissionJob(job.Permission, script.Account, client)
 			if err != nil {
 				return err
 			}
-			job.Result, err = PermissionJob(job.Permission, do.Package.Account, tx, client)
+			job.Result, err = PermissionJob(job.Permission, script.Account, tx, client)
 
 		// Contracts jobs
 		case *def.Deploy:
 			announce(job.Name, "Deploy")
-			txs, contracts, ferr := FormulateDeployJob(job.Deploy, do, client, job.Intermediate)
+			txs, contracts, ferr := FormulateDeployJob(job.Deploy, do, script, client, job.Intermediate)
 			if ferr != nil {
 				return ferr
 			}
-			job.Result, err = DeployJob(job.Deploy, do, client, txs, contracts)
+			job.Result, err = DeployJob(job.Deploy, do, script, client, txs, contracts)
 
 		case *def.Call:
 			announce(job.Name, "Call")
-			CallTx, ferr := FormulateCallJob(job.Call, do, client)
+			CallTx, ferr := FormulateCallJob(job.Call, do, script, client)
 			if ferr != nil {
 				return ferr
 			}
-			job.Result, job.Variables, err = CallJob(job.Call, CallTx, do, client)
+			job.Result, job.Variables, err = CallJob(job.Call, CallTx, do, script, client)
 		case *def.Build:
 			announce(job.Name, "Build")
 			var resp *compilers.Response
@@ -209,7 +209,7 @@ func DoJobs(do *def.DeployArgs, client *def.Client) error {
 			job.Result, err = QueryAccountJob(job.QueryAccount, client)
 		case *def.QueryContract:
 			announce(job.Name, "QueryContract")
-			job.Result, job.Variables, err = QueryContractJob(job.QueryContract, do, client)
+			job.Result, job.Variables, err = QueryContractJob(job.QueryContract, do, script, client)
 		case *def.QueryName:
 			announce(job.Name, "QueryName")
 			job.Result, err = QueryNameJob(job.QueryName, client)
@@ -236,7 +236,7 @@ func DoJobs(do *def.DeployArgs, client *def.Client) error {
 			return err
 		}
 	}
-	postProcess(do)
+	postProcess(do, script)
 	return nil
 }
 
@@ -254,8 +254,8 @@ func announceProposalJob(job, typ string) {
 	log.Warn("\n")
 }
 
-func defaultAddrJob(do *def.DeployArgs) {
-	oldJobs := do.Package.Jobs
+func defaultAddrJob(do *def.DeployArgs, deployScript *def.DeployScript) {
+	oldJobs := deployScript.Jobs
 
 	newJob := &def.Job{
 		Name: "defaultAddr",
@@ -264,11 +264,11 @@ func defaultAddrJob(do *def.DeployArgs) {
 		},
 	}
 
-	do.Package.Jobs = append([]*def.Job{newJob}, oldJobs...)
+	deployScript.Jobs = append([]*def.Job{newJob}, oldJobs...)
 }
 
-func defaultSetJobs(do *def.DeployArgs) {
-	oldJobs := do.Package.Jobs
+func defaultSetJobs(do *def.DeployArgs, deployScript *def.DeployScript) {
+	oldJobs := deployScript.Jobs
 
 	newJobs := []*def.Job{}
 
@@ -284,13 +284,13 @@ func defaultSetJobs(do *def.DeployArgs) {
 		}
 	}
 
-	do.Package.Jobs = append(newJobs, oldJobs...)
+	deployScript.Jobs = append(newJobs, oldJobs...)
 }
 
-func postProcess(do *def.DeployArgs) error {
+func postProcess(do *def.DeployArgs, deployScript *def.DeployScript) error {
 	// Formulate the results map
 	results := make(map[string]interface{})
-	for _, job := range do.Package.Jobs {
+	for _, job := range deployScript.Jobs {
 		results[job.Name] = job.Result
 	}
 

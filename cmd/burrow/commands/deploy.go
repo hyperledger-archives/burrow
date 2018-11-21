@@ -101,7 +101,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			if *proposalList != "" {
 				proposals.ListProposals(client, *proposalList)
 			} else {
-				util.IfExit(pkgs.RunPackage(do, client))
+				util.IfExit(pkgs.RunPackage(do, nil, client))
 			}
 		}
 	}

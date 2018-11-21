@@ -43,7 +43,7 @@ func lowerFirstCharacter(name string) string {
 	return string(bs)
 }
 
-func PreProcessFields(value interface{}, do *def.DeployArgs, client *def.Client) (err error) {
+func PreProcessFields(value interface{}, do *def.DeployArgs, script *def.DeployScript, client *def.Client) (err error) {
 	rv := reflect.ValueOf(value)
 	if rv.Kind() == reflect.Ptr {
 		rv = rv.Elem()
@@ -51,7 +51,7 @@ func PreProcessFields(value interface{}, do *def.DeployArgs, client *def.Client)
 	for i := 0; i < rv.NumField(); i++ {
 		field := rv.Field(i)
 		if field.Kind() == reflect.String {
-			str, err := PreProcess(field.String(), do, client)
+			str, err := PreProcess(field.String(), do, script, client)
 			if err != nil {
 				return err
 			}
@@ -61,7 +61,7 @@ func PreProcessFields(value interface{}, do *def.DeployArgs, client *def.Client)
 	return nil
 }
 
-func PreProcess(toProcess string, do *def.DeployArgs, client *def.Client) (string, error) {
+func PreProcess(toProcess string, do *def.DeployArgs, script *def.DeployScript, client *def.Client) (string, error) {
 	// Run through the replacement process for any placeholder matches
 	for _, pm := range rule.MatchPlaceholders(toProcess) {
 		log.WithField("match", toProcess).Debug("Replacement Match Found")
@@ -82,36 +82,53 @@ func PreProcess(toProcess string, do *def.DeployArgs, client *def.Client) (strin
 		}
 
 		// second we loop through the jobNames to do a result replace
-		for _, job := range do.Package.Jobs {
-			if pm.JobName == job.Name {
-				if pm.VariableName != "" {
-					for _, variable := range job.Variables {
-						if variable.Name == pm.VariableName { //find the value we want from the bunch
-							toProcess = strings.Replace(toProcess, pm.Match, variable.Value, 1)
-							log.WithFields(log.Fields{
-								"job":     pm.JobName,
-								"varName": pm.VariableName,
-								"result":  variable.Value,
-							}).Debug("Fixing Inner Vars =>")
-						}
-					}
-				} else {
-					// If result is returned as string assume that rendering otherwise marshal to JSON
-					result, ok := job.Result.(string)
-					if !ok {
-						bs, err := json.Marshal(job.Result)
-						if err != nil {
-							return "", fmt.Errorf("error marhsalling tx result in post processing: %v", err)
-						}
-						result = string(bs)
-					}
-					log.WithFields(log.Fields{
-						"var": string(pm.JobName),
-						"res": result,
-					}).Debug("Fixing Variables =>")
-					toProcess = strings.Replace(toProcess, pm.Match, result, 1)
+		var loopJobs func(script *def.DeployScript) error
+
+		loopJobs = func(script *def.DeployScript) error {
+			if script.Parent != nil {
+				err := loopJobs(script.Parent)
+				if err != nil {
+					return err
 				}
 			}
+
+			for _, job := range script.Jobs {
+				if pm.JobName == job.Name {
+					if pm.VariableName != "" {
+						for _, variable := range job.Variables {
+							if variable.Name == pm.VariableName { //find the value we want from the bunch
+								toProcess = strings.Replace(toProcess, pm.Match, variable.Value, 1)
+								log.WithFields(log.Fields{
+									"job":     pm.JobName,
+									"varName": pm.VariableName,
+									"result":  variable.Value,
+								}).Debug("Fixing Inner Vars =>")
+							}
+						}
+					} else {
+						// If result is returned as string assume that rendering otherwise marshal to JSON
+						result, ok := job.Result.(string)
+						if !ok {
+							bs, err := json.Marshal(job.Result)
+							if err != nil {
+								return fmt.Errorf("error marhsalling tx result in post processing: %v", err)
+							}
+							result = string(bs)
+						}
+						log.WithFields(log.Fields{
+							"var": string(pm.JobName),
+							"res": result,
+						}).Debug("Fixing Variables =>")
+						toProcess = strings.Replace(toProcess, pm.Match, result, 1)
+					}
+				}
+			}
+			return nil
+		}
+
+		err := loopJobs(script)
+		if err != nil {
+			return "", err
 		}
 	}
 	return toProcess, nil
@@ -169,7 +186,7 @@ func replaceBlockVariable(toReplace string, client *def.Client) (string, error) 
 	return toReplace, nil
 }
 
-func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, client *def.Client, constructor bool) (string, []string, error) {
+func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, script *def.DeployScript, client *def.Client, constructor bool) (string, []string, error) {
 	var callDataArray []string
 	var callArray []string
 	if function == "" && !constructor {
@@ -179,7 +196,7 @@ func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, 
 		function = strings.Split(data.(string), " ")[0]
 		callArray = strings.Split(data.(string), " ")[1:]
 		for _, val := range callArray {
-			output, _ := PreProcess(val, do, client)
+			output, _ := PreProcess(val, do, script, client)
 			callDataArray = append(callDataArray, output)
 		}
 	} else if data != nil {
@@ -188,7 +205,7 @@ func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, 
 				log.Warn("Deprecation Warning: Your deploy job is currently using a soon to be deprecated way of declaring constructor values. Please remember to update your run file to store them as a array rather than a string. See documentation for further details.")
 				callArray = strings.Split(data.(string), " ")
 				for _, val := range callArray {
-					output, _ := PreProcess(val, do, client)
+					output, _ := PreProcess(val, do, script, client)
 					callDataArray = append(callDataArray, output)
 				}
 				return function, callDataArray, nil
@@ -216,7 +233,7 @@ func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, 
 					case reflect.String:
 						stringified = value.String()
 					}
-					index, _ = PreProcess(stringified, do, client)
+					index, _ = PreProcess(stringified, do, script, client)
 					args = append(args, stringified)
 				}
 				newString = "[" + strings.Join(args, ",") + "]"
@@ -224,15 +241,15 @@ func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, 
 			default:
 				newString = s.Interface().(string)
 			}
-			newString, _ = PreProcess(newString, do, client)
+			newString, _ = PreProcess(newString, do, script, client)
 			callDataArray = append(callDataArray, newString)
 		}
 	}
 	return function, callDataArray, nil
 }
 
-func PreProcessLibs(libs string, do *def.DeployArgs, client *def.Client) (string, error) {
-	libraries, _ := PreProcess(libs, do, client)
+func PreProcessLibs(libs string, do *def.DeployArgs, script *def.DeployScript, client *def.Client) (string, error) {
+	libraries, _ := PreProcess(libs, do, script, client)
 	if libraries != "" {
 		pairs := strings.Split(libraries, ",")
 		libraries = strings.Join(pairs, " ")

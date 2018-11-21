@@ -57,19 +57,19 @@ func MetaJob(meta *def.Meta, do *def.DeployArgs, client *def.Client) (string, er
 
 	// load the package
 	log.WithField("=>", newDo.YAMLPath).Info("Loading sub YAML")
-	newDo.Package, err = loader.LoadPackage(newDo.YAMLPath)
+	script, err := loader.LoadPackage(newDo.YAMLPath)
 	if err != nil {
 		return "failed", err
 	}
 
 	// set the deploy contract jobs relative to the newDo's root directory
-	for _, job := range newDo.Package.Jobs {
+	for _, job := range script.Jobs {
 		if job.Deploy != nil {
 			job.Deploy.Contract = filepath.Join(newDo.Path, job.Deploy.Contract)
 		}
 	}
 
-	err = DoJobs(newDo, client)
+	err = DoJobs(newDo, script, client)
 	if err != nil {
 		return "failed", err
 	}

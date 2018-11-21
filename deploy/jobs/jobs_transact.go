@@ -48,7 +48,7 @@ func SendJob(send *def.Send, tx *payload.SendTx, account string, client *def.Cli
 	return txe.Receipt.TxHash.String(), nil
 }
 
-func FormulateRegisterNameJob(name *def.RegisterName, do *def.DeployArgs, client *def.Client) ([]*payload.NameTx, error) {
+func FormulateRegisterNameJob(name *def.RegisterName, do *def.DeployArgs, account string, client *def.Client) ([]*payload.NameTx, error) {
 	txs := make([]*payload.NameTx, 0)
 
 	// If a data file is given it should be in csv format and
@@ -93,7 +93,7 @@ func FormulateRegisterNameJob(name *def.RegisterName, do *def.DeployArgs, client
 				Amount:   record[2],
 				Fee:      name.Fee,
 				Sequence: name.Sequence,
-			}, do, client)
+			}, do, account, client)
 
 			if err != nil {
 				return nil, err
@@ -113,7 +113,7 @@ func FormulateRegisterNameJob(name *def.RegisterName, do *def.DeployArgs, client
 	// If the data field is populated then there is a single
 	// nameRegTx to send. So do that *now*.
 	if name.Data != "" {
-		tx, err := registerNameTx(name, do, client)
+		tx, err := registerNameTx(name, do, account, client)
 		if err != nil {
 			return nil, err
 		}
@@ -128,9 +128,9 @@ func FormulateRegisterNameJob(name *def.RegisterName, do *def.DeployArgs, client
 }
 
 // Runs an individual nametx.
-func registerNameTx(name *def.RegisterName, do *def.DeployArgs, client *def.Client) (*payload.NameTx, error) {
+func registerNameTx(name *def.RegisterName, do *def.DeployArgs, account string, client *def.Client) (*payload.NameTx, error) {
 	// Set Defaults
-	name.Source = useDefault(name.Source, do.Package.Account)
+	name.Source = useDefault(name.Source, account)
 	name.Fee = useDefault(name.Fee, do.DefaultFee)
 	name.Amount = useDefault(name.Amount, do.DefaultAmount)
 
@@ -151,14 +151,14 @@ func registerNameTx(name *def.RegisterName, do *def.DeployArgs, client *def.Clie
 	})
 }
 
-func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, txs []*payload.NameTx, client *def.Client) (string, error) {
+func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, script *def.DeployScript, txs []*payload.NameTx, client *def.Client) (string, error) {
 	var result string
 
 	for _, tx := range txs {
 		// Sign, broadcast, display
 		txe, err := client.SignAndBroadcast(tx)
 		if err != nil {
-			return "", util.ChainErrorHandler(do.Package.Account, err)
+			return "", util.ChainErrorHandler(script.Account, err)
 		}
 
 		util.ReadTxSignAndBroadcast(txe, err)

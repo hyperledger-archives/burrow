@@ -9,7 +9,7 @@ import (
 
 func TestPackage_Validate(t *testing.T) {
 	address := crypto.Address{3, 4}.String()
-	pkgs := &Package{
+	pkgs := &DeployScript{
 		Jobs: []*Job{{
 			Name: "CallJob",
 			Call: &Call{
@@ -38,7 +38,7 @@ func TestPackage_Validate(t *testing.T) {
 	err = pkgs.Validate()
 	require.Error(t, err)
 
-	pkgs = &Package{
+	pkgs = &DeployScript{
 		Jobs: []*Job{{
 			Name: "UpdateAccount",
 			UpdateAccount: &UpdateAccount{

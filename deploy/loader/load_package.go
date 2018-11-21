@@ -11,9 +11,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-func LoadPackage(fileName string) (*def.Package, error) {
+func LoadPackage(fileName string) (*def.DeployScript, error) {
 	log.Info("Loading monax Jobs Definition File.")
-	var pkg = new(def.Package)
+	var pkg = new(def.DeployScript)
 	var deployJobs = viper.New()
 
 	// setup file
@@ -50,6 +50,10 @@ func LoadPackage(fileName string) (*def.Package, error) {
 	}
 
 	// TODO more file sanity check (fail before running)
+	err = pkg.Validate()
+	if err != nil {
+		return nil, err
+	}
 
 	return pkg, nil
 }

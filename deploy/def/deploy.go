@@ -22,8 +22,6 @@ type DeployArgs struct {
 	ProposeVerify bool     `mapstructure:"," json:"," yaml:"," toml:","`
 	ProposeVote   bool     `mapstructure:"," json:"," yaml:"," toml:","`
 	ProposeCreate bool     `mapstructure:"," json:"," yaml:"," toml:","`
-
-	Package *Package
 }
 
 func (do *DeployArgs) Validate() error {
@@ -31,16 +29,17 @@ func (do *DeployArgs) Validate() error {
 		validation.Field(&do.DefaultAmount, rule.Uint64),
 		validation.Field(&do.DefaultFee, rule.Uint64),
 		validation.Field(&do.DefaultGas, rule.Uint64),
-		validation.Field(&do.Package),
 	)
 }
 
-type Package struct {
+type DeployScript struct {
 	Account string
 	Jobs    []*Job
+	// If we're in a proposal or meta job, reference our parent script
+	Parent *DeployScript `mapstructure:"-" json:"-" yaml:"-" toml:"-"`
 }
 
-func (pkg *Package) Validate() error {
+func (pkg *DeployScript) Validate() error {
 	return validation.ValidateStruct(pkg,
 		validation.Field(&pkg.Jobs),
 	)

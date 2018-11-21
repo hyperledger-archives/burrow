@@ -5,12 +5,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func SetAccountJob(account *def.Account, do *def.DeployArgs) (string, error) {
+func SetAccountJob(account *def.Account, do *def.DeployArgs, script *def.DeployScript) (string, error) {
 	var result string
 
 	// Set the Account in the Package & Announce
-	do.Package.Account = account.Address
-	log.WithField("=>", do.Package.Account).Info("Setting Account")
+	script.Account = account.Address
+	log.WithField("=>", script.Account).Info("Setting Account")
 
 	// Set result and return
 	result = account.Address
