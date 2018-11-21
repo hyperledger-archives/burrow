@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func RunPackage(do *def.DeployArgs, script *def.DeployScript, client *def.Client) error {
+func RunPackage(do *def.DeployArgs, script *def.Playbook, client *def.Client) error {
 	var err error
 	var pwd string
 

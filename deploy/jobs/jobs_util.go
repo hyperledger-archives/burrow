@@ -5,7 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func SetAccountJob(account *def.Account, do *def.DeployArgs, script *def.DeployScript) (string, error) {
+func SetAccountJob(account *def.Account, do *def.DeployArgs, script *def.Playbook) (string, error) {
 	var result string
 
 	// Set the Account in the Package & Announce

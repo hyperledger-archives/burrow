@@ -11,9 +11,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-func LoadPackage(fileName string) (*def.DeployScript, error) {
+func LoadPackage(fileName string) (*def.Playbook, error) {
 	log.Info("Loading monax Jobs Definition File.")
-	var pkg = new(def.DeployScript)
+	var pkg = new(def.Playbook)
 	var deployJobs = viper.New()
 
 	// setup file

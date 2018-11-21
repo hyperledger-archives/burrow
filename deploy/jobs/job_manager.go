@@ -73,7 +73,7 @@ func getCompilerWork(intermediate interface{}) (*compilers.Response, error) {
 	return nil, fmt.Errorf("internal error: no compiler work queued")
 }
 
-func DoJobs(do *def.DeployArgs, script *def.DeployScript, client *def.Client) error {
+func DoJobs(do *def.DeployArgs, script *def.Playbook, client *def.Client) error {
 	// ADD DefaultAddr and DefaultSet to jobs array....
 	// These work in reverse order and the addendums to the
 	// the ordering from the loading process is lifo
@@ -254,7 +254,7 @@ func announceProposalJob(job, typ string) {
 	log.Warn("\n")
 }
 
-func defaultAddrJob(do *def.DeployArgs, deployScript *def.DeployScript) {
+func defaultAddrJob(do *def.DeployArgs, deployScript *def.Playbook) {
 	oldJobs := deployScript.Jobs
 
 	newJob := &def.Job{
@@ -267,7 +267,7 @@ func defaultAddrJob(do *def.DeployArgs, deployScript *def.DeployScript) {
 	deployScript.Jobs = append([]*def.Job{newJob}, oldJobs...)
 }
 
-func defaultSetJobs(do *def.DeployArgs, deployScript *def.DeployScript) {
+func defaultSetJobs(do *def.DeployArgs, deployScript *def.Playbook) {
 	oldJobs := deployScript.Jobs
 
 	newJobs := []*def.Job{}
@@ -287,7 +287,7 @@ func defaultSetJobs(do *def.DeployArgs, deployScript *def.DeployScript) {
 	deployScript.Jobs = append(newJobs, oldJobs...)
 }
 
-func postProcess(do *def.DeployArgs, deployScript *def.DeployScript) error {
+func postProcess(do *def.DeployArgs, deployScript *def.Playbook) error {
 	// Formulate the results map
 	results := make(map[string]interface{})
 	for _, job := range deployScript.Jobs {

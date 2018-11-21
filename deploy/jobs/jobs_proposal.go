@@ -12,10 +12,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.DeployScript, client *def.Client) (string, error) {
+func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playbook, client *def.Client) (string, error) {
 	var ProposeBatch payload.BatchTx
 	stableAddress := make(map[crypto.Address]uint64)
-	script := def.DeployScript{Jobs: prop.Jobs, Account: useDefault(prop.Source, parentScript.Account), Parent: parentScript}
+	script := def.Playbook{Jobs: prop.Jobs, Account: useDefault(prop.Source, parentScript.Account), Parent: parentScript}
 
 	for _, job := range script.Jobs {
 		load, err := job.Payload()

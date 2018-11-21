@@ -151,7 +151,7 @@ func registerNameTx(name *def.RegisterName, do *def.DeployArgs, account string, 
 	})
 }
 
-func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, script *def.DeployScript, txs []*payload.NameTx, client *def.Client) (string, error) {
+func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, script *def.Playbook, txs []*payload.NameTx, client *def.Client) (string, error) {
 	var result string
 
 	for _, tx := range txs {

@@ -32,14 +32,14 @@ func (do *DeployArgs) Validate() error {
 	)
 }
 
-type DeployScript struct {
+type Playbook struct {
 	Account string
 	Jobs    []*Job
 	// If we're in a proposal or meta job, reference our parent script
-	Parent *DeployScript `mapstructure:"-" json:"-" yaml:"-" toml:"-"`
+	Parent *Playbook `mapstructure:"-" json:"-" yaml:"-" toml:"-"`
 }
 
-func (pkg *DeployScript) Validate() error {
+func (pkg *Playbook) Validate() error {
 	return validation.ValidateStruct(pkg,
 		validation.Field(&pkg.Jobs),
 	)

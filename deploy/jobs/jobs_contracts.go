@@ -82,7 +82,7 @@ func BuildJob(build *def.Build, binPath string, resp *compilers.Response) (resul
 	return "", nil
 }
 
-func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *def.DeployScript, client *def.Client, intermediate interface{}) (txs []*payload.CallTx, contracts []*compilers.ResponseItem, err error) {
+func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *def.Playbook, client *def.Client, intermediate interface{}) (txs []*payload.CallTx, contracts []*compilers.ResponseItem, err error) {
 	deploy.Libraries, _ = util.PreProcessLibs(deploy.Libraries, do, deployScript, client)
 	// trim the extension and path
 	contractName := filepath.Base(deploy.Contract)
@@ -252,7 +252,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 	return
 }
 
-func DeployJob(deploy *def.Deploy, do *def.DeployArgs, script *def.DeployScript, client *def.Client, txs []*payload.CallTx, contracts []*compilers.ResponseItem) (result string, err error) {
+func DeployJob(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook, client *def.Client, txs []*payload.CallTx, contracts []*compilers.ResponseItem) (result string, err error) {
 	for i, tx := range txs {
 		// Sign, broadcast, display
 		contractAddress, err := deployFinalize(do, script, client, tx)
@@ -310,7 +310,7 @@ func findContractFile(contract, binPath string) (string, error) {
 }
 
 // TODO [rj] refactor to remove [contractPath] from functions signature => only used in a single error throw.
-func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.DeployScript, client *def.Client, compilersResponse compilers.ResponseItem, libs map[string]string) (*payload.CallTx, error) {
+func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook, client *def.Client, compilersResponse compilers.ResponseItem, libs map[string]string) (*payload.CallTx, error) {
 	log.WithField("=>", string(compilersResponse.Contract.Abi)).Debug("Specification (From Compilers)")
 
 	contract := compilersResponse.Contract
@@ -370,7 +370,7 @@ func deployTx(client *def.Client, deploy *def.Deploy, contractName, contractCode
 	})
 }
 
-func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.DeployScript, client *def.Client) (tx *payload.CallTx, err error) {
+func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Playbook, client *def.Client) (tx *payload.CallTx, err error) {
 	var callData string
 	var callDataArray []string
 	//todo: find a way to call the fallback function here
@@ -420,7 +420,7 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Depl
 	})
 }
 
-func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, deployScript *def.DeployScript, client *def.Client) (string, []*abi.Variable, error) {
+func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, deployScript *def.Playbook, client *def.Client) (string, []*abi.Variable, error) {
 	var err error
 
 	// Sign, broadcast, display
@@ -487,7 +487,7 @@ func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, deployScrip
 	return result, call.Variables, nil
 }
 
-func deployFinalize(do *def.DeployArgs, deployScript *def.DeployScript, client *def.Client, tx payload.Payload) (*crypto.Address, error) {
+func deployFinalize(do *def.DeployArgs, deployScript *def.Playbook, client *def.Client, tx payload.Payload) (*crypto.Address, error) {
 	txe, err := client.SignAndBroadcast(tx)
 	if err != nil {
 		return nil, util.ChainErrorHandler(deployScript.Account, err)

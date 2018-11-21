@@ -43,7 +43,7 @@ func lowerFirstCharacter(name string) string {
 	return string(bs)
 }
 
-func PreProcessFields(value interface{}, do *def.DeployArgs, script *def.DeployScript, client *def.Client) (err error) {
+func PreProcessFields(value interface{}, do *def.DeployArgs, script *def.Playbook, client *def.Client) (err error) {
 	rv := reflect.ValueOf(value)
 	if rv.Kind() == reflect.Ptr {
 		rv = rv.Elem()
@@ -61,7 +61,7 @@ func PreProcessFields(value interface{}, do *def.DeployArgs, script *def.DeployS
 	return nil
 }
 
-func PreProcess(toProcess string, do *def.DeployArgs, script *def.DeployScript, client *def.Client) (string, error) {
+func PreProcess(toProcess string, do *def.DeployArgs, script *def.Playbook, client *def.Client) (string, error) {
 	// Run through the replacement process for any placeholder matches
 	for _, pm := range rule.MatchPlaceholders(toProcess) {
 		log.WithField("match", toProcess).Debug("Replacement Match Found")
@@ -82,9 +82,9 @@ func PreProcess(toProcess string, do *def.DeployArgs, script *def.DeployScript, 
 		}
 
 		// second we loop through the jobNames to do a result replace
-		var loopJobs func(script *def.DeployScript) error
+		var loopJobs func(script *def.Playbook) error
 
-		loopJobs = func(script *def.DeployScript) error {
+		loopJobs = func(script *def.Playbook) error {
 			if script.Parent != nil {
 				err := loopJobs(script.Parent)
 				if err != nil {
@@ -186,7 +186,7 @@ func replaceBlockVariable(toReplace string, client *def.Client) (string, error) 
 	return toReplace, nil
 }
 
-func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, script *def.DeployScript, client *def.Client, constructor bool) (string, []string, error) {
+func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, script *def.Playbook, client *def.Client, constructor bool) (string, []string, error) {
 	var callDataArray []string
 	var callArray []string
 	if function == "" && !constructor {
@@ -248,7 +248,7 @@ func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, 
 	return function, callDataArray, nil
 }
 
-func PreProcessLibs(libs string, do *def.DeployArgs, script *def.DeployScript, client *def.Client) (string, error) {
+func PreProcessLibs(libs string, do *def.DeployArgs, script *def.Playbook, client *def.Client) (string, error) {
 	libraries, _ := PreProcess(libs, do, script, client)
 	if libraries != "" {
 		pairs := strings.Split(libraries, ",")
