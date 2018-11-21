@@ -36,6 +36,14 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 
 		switch load.(type) {
 
+		case *def.UpdateAccount:
+			announceProposalJob(job.Name, "UpdateAccount")
+			tx, _, err := FormulateUpdateAccountJob(job.UpdateAccount, do.Package.Account, client)
+			if err != nil {
+				return "", err
+			}
+			ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{GovTx: tx})
+
 		case *def.RegisterName:
 			announceProposalJob(job.Name, "RegisterName")
 			txs, err := FormulateRegisterNameJob(job.RegisterName, do, client)
@@ -52,7 +60,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 				return "", err
 			}
 			ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{CallTx: tx})
-			break
+
 		case *def.Deploy:
 			announceProposalJob(job.Name, "Deploy")
 			txs, _, err := FormulateDeployJob(job.Deploy, do, client, job.Intermediate)
@@ -90,7 +98,6 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, client *def.Client) (st
 		default:
 			return "", fmt.Errorf("jobs %s illegal job type for proposal", job.Name)
 		}
-
 	}
 
 	proposal := payload.Proposal{Name: prop.Name, Description: prop.Description, BatchTx: &ProposeBatch}

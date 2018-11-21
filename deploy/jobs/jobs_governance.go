@@ -3,13 +3,15 @@ package jobs
 import (
 	"fmt"
 
+	"github.com/hyperledger/burrow/txs/payload"
+
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 )
 
-func UpdateAccountJob(gov *def.UpdateAccount, account string, client *def.Client) (interface{}, []*abi.Variable, error) {
+func FormulateUpdateAccountJob(gov *def.UpdateAccount, account string, client *def.Client) (*payload.GovTx, []*abi.Variable, error) {
 	gov.Source = useDefault(gov.Source, account)
 	perms := make([]string, len(gov.Permissions))
 
@@ -44,15 +46,19 @@ func UpdateAccountJob(gov *def.UpdateAccount, account string, client *def.Client
 		return nil, nil, err
 	}
 
+	return tx, util.Variables(arg), nil
+}
+
+func UpdateAccountJob(gov *def.UpdateAccount, account string, tx *payload.GovTx, client *def.Client) error {
 	txe, err := client.SignAndBroadcast(tx)
 	if err != nil {
-		return nil, nil, util.ChainErrorHandler(account, err)
+		return util.ChainErrorHandler(account, err)
 	}
 
 	util.ReadTxSignAndBroadcast(txe, err)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
-	return txe, util.Variables(arg), nil
+	return nil
 }

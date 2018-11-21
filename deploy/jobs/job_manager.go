@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	compilers "github.com/hyperledger/burrow/deploy/compile"
+	pbpayload "github.com/hyperledger/burrow/txs/payload"
+
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
 	log "github.com/sirupsen/logrus"
@@ -130,7 +132,12 @@ func DoJobs(do *def.DeployArgs, client *def.Client) error {
 		// Governance
 		case *def.UpdateAccount:
 			announce(job.Name, "UpdateAccount")
-			job.Result, job.Variables, err = UpdateAccountJob(job.UpdateAccount, do.Package.Account, client)
+			var tx *pbpayload.GovTx
+			tx, job.Variables, err = FormulateUpdateAccountJob(job.UpdateAccount, do.Package.Account, client)
+			if err != nil {
+				return err
+			}
+			err = UpdateAccountJob(job.UpdateAccount, do.Package.Account, tx, client)
 
 		// Util jobs
 		case *def.Account:
