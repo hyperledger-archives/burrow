@@ -36,7 +36,7 @@ import (
 
 const (
 	DataStackInitialCapacity = 1024
-	callStackCapacity        = 100 // TODO ensure usage.
+	uint64Length             = 8
 )
 
 type Params struct {
@@ -58,6 +58,7 @@ type VM struct {
 	logger         *logging.Logger
 	debugOpcodes   bool
 	dumpTokens     bool
+	sequence       uint64
 }
 
 func NewVM(params Params, origin crypto.Address, tx *txs.Tx, logger *logging.Logger, options ...func(*VM)) *VM {
@@ -741,8 +742,12 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 
 			// TODO charge for gas to create account _ the code length * GasCreateByte
 			useGasNegative(gas, GasCreateAccount, callState)
-			callState.IncSequence(callee)
-			newAccount := crypto.NewContractAddress(callee, callState.GetSequence(callee))
+
+			vm.sequence++
+			nonce := make([]byte, txs.HashLength+uint64Length)
+			copy(nonce, vm.tx.Hash())
+			PutUint64BE(nonce[txs.HashLength:], vm.sequence)
+			newAccount := crypto.NewContractAddress(callee, nonce)
 
 			// Check the CreateContract permission for this account
 			EnsurePermission(callState, callee, permission.CreateContract)

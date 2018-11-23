@@ -2,12 +2,12 @@ package crypto
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 
 	"github.com/hyperledger/burrow/binary"
 	"github.com/tmthrgd/go-hex"
-	"golang.org/x/crypto/ripemd160"
 )
 
 type Addressable interface {
@@ -27,13 +27,6 @@ func NewAddressable(publicKey PublicKey) Addressable {
 type memoizedAddressable struct {
 	publicKey PublicKey
 	address   Address
-}
-
-func MemoizeAddressable(addressable Addressable) Addressable {
-	if a, ok := addressable.(*memoizedAddressable); ok {
-		return a
-	}
-	return NewAddressable(addressable.GetPublicKey())
 }
 
 func (a *memoizedAddressable) GetPublicKey() PublicKey {
@@ -186,12 +179,10 @@ func (address *Address) Size() int {
 	return binary.Word160Length
 }
 
-func NewContractAddress(caller Address, sequence uint64) (newAddr Address) {
-	temp := make([]byte, 32+8)
-	copy(temp, caller[:])
-	binary.PutUint64BE(temp[32:], uint64(sequence))
-	hasher := ripemd160.New()
-	hasher.Write(temp) // does not error
+func NewContractAddress(caller Address, nonce []byte) (newAddr Address) {
+	hasher := sha256.New()
+	hasher.Write(caller[:]) // does not error
+	hasher.Write(nonce)
 	copy(newAddr[:], hasher.Sum(nil))
 	return
 }
