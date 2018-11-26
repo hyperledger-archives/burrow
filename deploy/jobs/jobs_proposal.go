@@ -6,6 +6,7 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/deploy/def"
+	"github.com/hyperledger/burrow/deploy/loader"
 	"github.com/hyperledger/burrow/deploy/proposals"
 	"github.com/hyperledger/burrow/deploy/util"
 	"github.com/hyperledger/burrow/txs"
@@ -14,66 +15,77 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playbook, client *def.Client) (string, error) {
-	var ProposeBatch payload.BatchTx
-	script := def.Playbook{Jobs: prop.Jobs, Account: useDefault(prop.Source, parentScript.Account), Parent: parentScript}
+func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playbook, client *def.Client) error {
+	script := def.Playbook{Jobs: jobs, Account: useDefault(prop.Source, parentScript.Account), Parent: parentScript}
 
 	for _, job := range script.Jobs {
 		load, err := job.Payload()
 		if err != nil {
-			return "", fmt.Errorf("could not get Job payload: %v", load)
+			return fmt.Errorf("could not get Job payload: %v", load)
 		}
 
 		err = util.PreProcessFields(load, do, &script, client)
 		if err != nil {
-			return "", err
+			return err
 		}
 		// Revalidate with possible replacements
 		err = load.Validate()
 		if err != nil {
-			return "", fmt.Errorf("error validating job %s after pre-processing variables: %v", job.Name, err)
+			return fmt.Errorf("error validating job %s after pre-processing variables: %v", job.Name, err)
 		}
 
 		switch load.(type) {
+		case *def.Meta:
+			announceProposalJob(job.Name, "UpdateAccount")
+			// load the package
+			log.WithField("=>", job.Meta.File).Info("Loading sub YAML")
+			metaScript, err := loader.LoadPackage(job.Meta.File)
+			if err != nil {
+				return err
+			}
+			err = recurseJobs(proposeBatch, metaScript.Jobs, prop, do, &script, client)
+			if err != nil {
+				return err
+			}
 
 		case *def.UpdateAccount:
 			announceProposalJob(job.Name, "UpdateAccount")
 			tx, _, err := FormulateUpdateAccountJob(job.UpdateAccount, script.Account, client)
 			if err != nil {
-				return "", err
+				return err
 			}
-			ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{GovTx: tx})
+			proposeBatch.Txs = append(proposeBatch.Txs, &payload.Any{GovTx: tx})
 
 		case *def.RegisterName:
 			announceProposalJob(job.Name, "RegisterName")
 			txs, err := FormulateRegisterNameJob(job.RegisterName, do, script.Account, client)
 			if err != nil {
-				return "", err
+				return err
 			}
 			for _, tx := range txs {
-				ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{NameTx: tx})
+				proposeBatch.Txs = append(proposeBatch.Txs, &payload.Any{NameTx: tx})
 			}
 		case *def.Call:
 			announceProposalJob(job.Name, "Call")
 			tx, err := FormulateCallJob(job.Call, do, &script, client)
 			if err != nil {
-				return "", err
+				return err
 			}
-			ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{CallTx: tx})
+			proposeBatch.Txs = append(proposeBatch.Txs, &payload.Any{CallTx: tx})
 		case *def.Deploy:
 			announceProposalJob(job.Name, "Deploy")
 			deployTxs, _, err := FormulateDeployJob(job.Deploy, do, &script, client, job.Intermediate)
 			if err != nil {
-				return "", err
+				return err
 			}
 			var deployAddress crypto.Address
 			// Predict address
 			callee, err := crypto.AddressFromHexString(job.Deploy.Source)
 			if err != nil {
-				return "", err
+				return err
 			}
 			for _, tx := range deployTxs {
-				ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{CallTx: tx})
+				proposeBatch.Txs = append(proposeBatch.Txs, &payload.Any{CallTx: tx})
 				txEnv := txs.NewTx(tx)
 
 				deployAddress = crypto.NewContractAddress(callee, txEnv.Hash())
@@ -83,22 +95,33 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playb
 			announceProposalJob(job.Name, "Permission")
 			tx, err := FormulatePermissionJob(job.Permission, script.Account, client)
 			if err != nil {
-				return "", err
+				return err
 			}
-			ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{PermsTx: tx})
+			proposeBatch.Txs = append(proposeBatch.Txs, &payload.Any{PermsTx: tx})
 		case *def.Send:
 			announceProposalJob(job.Name, "Send")
 			tx, err := FormulateSendJob(job.Send, script.Account, client)
 			if err != nil {
-				return "", err
+				return err
 			}
-			ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{SendTx: tx})
+			proposeBatch.Txs = append(proposeBatch.Txs, &payload.Any{SendTx: tx})
 		default:
-			return "", fmt.Errorf("jobs %s illegal job type for proposal", job.Name)
+			return fmt.Errorf("jobs %s illegal job type for proposal", job.Name)
 		}
 	}
 
-	proposal := payload.Proposal{Name: prop.Name, Description: prop.Description, BatchTx: &ProposeBatch}
+	return nil
+}
+
+func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playbook, client *def.Client) (string, error) {
+	var proposeBatch payload.BatchTx
+
+	err := recurseJobs(&proposeBatch, prop.Jobs, prop, do, parentScript, client)
+	if err != nil {
+		return "", err
+	}
+
+	proposal := payload.Proposal{Name: prop.Name, Description: prop.Description, BatchTx: &proposeBatch}
 
 	proposalInput, err := client.TxInput(prop.ProposalAddress, "", prop.ProposalSequence, false)
 	if err != nil {
@@ -164,7 +187,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playb
 
 	txe, err := client.SignAndBroadcast(proposalTx)
 	if err != nil {
-		var err = util.ChainErrorHandler(script.Account, err)
+		var err = util.ChainErrorHandler(proposalTx.Input.Address.String(), err)
 		return "", err
 	}
 
