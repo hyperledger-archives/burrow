@@ -41,7 +41,7 @@ func ListProposals(client *def.Client, reqState string) {
 			"Description":  prop.Ballot.Proposal.Description,
 			"State":        state,
 			"Votes":        len(prop.Ballot.GetVotes()),
-		}).Infof("Proposal %d", i)
+		}).Warnf("Proposal %d", i)
 	}
 }
 

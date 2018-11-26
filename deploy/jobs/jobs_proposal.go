@@ -165,15 +165,17 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playb
 		}
 
 		// proposal is there and current, let's vote for it
-		input, err := client.TxInput(prop.Source, "", prop.Sequence, true)
+		input, err := client.TxInput(parentScript.Account, "", prop.Sequence, true)
 		if err != nil {
 			return "", err
 		}
 
+		log.Warnf("Voting for proposal with hash: %x\n", proposalHash)
+
 		h := binary.HexBytes(proposalHash)
 		proposalTx = &payload.ProposalTx{ProposalHash: &h, VotingWeight: 1, Input: input}
 	} else if do.ProposeCreate {
-		input, err := client.TxInput(prop.Source, "", prop.Sequence, true)
+		input, err := client.TxInput(useDefault(prop.Source, parentScript.Account), "", prop.Sequence, true)
 		if err != nil {
 			return "", err
 		}
@@ -181,7 +183,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playb
 
 		proposalTx = &payload.ProposalTx{VotingWeight: 1, Input: input, Proposal: &proposal}
 	} else {
-		log.Errorf("please specify one of --propose-create, --propose-vote, --propose-verify")
+		log.Errorf("please specify one of --proposal-create, --proposal-vote, --proposal-verify")
 		return "", nil
 	}
 

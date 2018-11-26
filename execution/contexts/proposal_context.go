@@ -188,7 +188,14 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 			txe.PayloadEvent(&exec.PayloadEvent{TxType: txE.Tx.Type(), Index: uint32(i)})
 
 			if txExecutor, ok := ctx.Contexts[txE.Tx.Type()]; ok {
+
+				hash := txe.TxHash
+
+				txe.TxHash = txE.Tx.Rehash()
+
 				err = txExecutor.Execute(txe, txE.Tx.Payload)
+
+				txe.TxHash = hash
 				if err != nil {
 					ctx.Logger.InfoMsg("Transaction execution failed", structure.ErrorKey, err)
 					return err
