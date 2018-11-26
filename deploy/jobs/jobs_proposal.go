@@ -8,13 +8,14 @@ import (
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/proposals"
 	"github.com/hyperledger/burrow/deploy/util"
+	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
+
 	log "github.com/sirupsen/logrus"
 )
 
 func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playbook, client *def.Client) (string, error) {
 	var ProposeBatch payload.BatchTx
-	stableAddress := make(map[crypto.Address]uint64)
 	script := def.Playbook{Jobs: prop.Jobs, Account: useDefault(prop.Source, parentScript.Account), Parent: parentScript}
 
 	for _, job := range script.Jobs {
@@ -61,23 +62,22 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playb
 			ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{CallTx: tx})
 		case *def.Deploy:
 			announceProposalJob(job.Name, "Deploy")
-			txs, _, err := FormulateDeployJob(job.Deploy, do, &script, client, job.Intermediate)
+			deployTxs, _, err := FormulateDeployJob(job.Deploy, do, &script, client, job.Intermediate)
 			if err != nil {
 				return "", err
 			}
-			for _, tx := range txs {
-				ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{CallTx: tx})
-			}
+			var deployAddress crypto.Address
 			// Predict address
 			callee, err := crypto.AddressFromHexString(job.Deploy.Source)
 			if err != nil {
 				return "", err
 			}
-			seq, err := getPredictedSequence(callee, &stableAddress, client)
-			if err != nil {
-				return "", err
+			for _, tx := range deployTxs {
+				ProposeBatch.Txs = append(ProposeBatch.Txs, &payload.Any{CallTx: tx})
+				txEnv := txs.NewTx(tx)
+
+				deployAddress = crypto.NewContractAddress(callee, txEnv.Hash())
 			}
-			deployAddress := crypto.NewContractAddress(callee, seq)
 			job.Result = deployAddress.String()
 		case *def.Permission:
 			announceProposalJob(job.Name, "Permission")
@@ -171,20 +171,4 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playb
 	result := fmt.Sprintf("%X", txe.Receipt.TxHash)
 
 	return result, nil
-}
-
-func getPredictedSequence(address crypto.Address, stableAdress *map[crypto.Address]uint64, client *def.Client) (uint64, error) {
-	seq, ok := (*stableAdress)[address]
-	if !ok {
-		acc, err := client.GetAccount(address)
-		if err != nil {
-			return 0, err
-		}
-		seq = acc.GetSequence()
-	}
-	seq++
-
-	(*stableAdress)[address] = seq
-
-	return seq, nil
 }
