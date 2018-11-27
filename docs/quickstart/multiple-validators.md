@@ -36,7 +36,7 @@ From the generated `.burrow_init.toml `file, create new files for each node, and
     Enabled = false
   [RPC.GRPC]
     Enabled = true
-    ListenAddress = "127.0.0.1:20002"
+    ListenAddress = "127.0.0.1:10997"
   [RPC.Metrics]
     Enabled = false
 ```
