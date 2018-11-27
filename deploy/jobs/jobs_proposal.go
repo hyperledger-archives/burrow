@@ -6,7 +6,6 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/deploy/def"
-	"github.com/hyperledger/burrow/deploy/loader"
 	"github.com/hyperledger/burrow/deploy/proposals"
 	"github.com/hyperledger/burrow/deploy/util"
 	"github.com/hyperledger/burrow/txs"
@@ -36,14 +35,9 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 
 		switch load.(type) {
 		case *def.Meta:
-			announceProposalJob(job.Name, "UpdateAccount")
+			announceProposalJob(job.Name, "Meta")
 			// load the package
-			log.WithField("=>", job.Meta.File).Info("Loading sub YAML")
-			metaScript, err := loader.LoadPackage(job.Meta.File)
-			if err != nil {
-				return err
-			}
-			err = recurseJobs(proposeBatch, metaScript.Jobs, prop, do, &script, client)
+			err = recurseJobs(proposeBatch, job.Meta.Playbook.Jobs, prop, do, &script, client)
 			if err != nil {
 				return err
 			}

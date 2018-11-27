@@ -64,7 +64,8 @@ func KeyNameCurveType(newKeyMatch []string) (keyName, curveType string) {
 
 type Meta struct {
 	// (Required) the file path of the sub yaml to run
-	File string `mapstructure:"file" json:"file" yaml:"file" toml:"file"`
+	File     string    `mapstructure:"file" json:"file" yaml:"file" toml:"file"`
+	Playbook *Playbook `json:"-" yaml:"-" toml:"-"`
 }
 
 func (job *Meta) Validate() error {

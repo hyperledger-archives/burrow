@@ -35,6 +35,8 @@ func (do *DeployArgs) Validate() error {
 type Playbook struct {
 	Account string
 	Jobs    []*Job
+	Path    string `mapstructure:"-" json:"-" yaml:"-" toml:"-"`
+	BinPath string `mapstructure:"-" json:"-" yaml:"-" toml:"-"`
 	// If we're in a proposal or meta job, reference our parent script
 	Parent *Playbook `mapstructure:"-" json:"-" yaml:"-" toml:"-"`
 }
