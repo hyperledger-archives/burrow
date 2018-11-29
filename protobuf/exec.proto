@@ -45,6 +45,8 @@ message TxExecution {
     txs.Receipt Receipt = 9;
     // If execution was an exception
     errors.Exception Exception = 10;
+    // A proposal may contain other transactions
+    repeated TxExecution TxExecutions = 11;
 }
 
 message Header {
