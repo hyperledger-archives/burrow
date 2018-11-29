@@ -296,7 +296,7 @@ func defaultSetJobs(do *def.DeployArgs, deployScript *def.Playbook) {
 
 	for _, setr := range do.DefaultSets {
 		blowdUp := strings.Split(setr, "=")
-		if blowdUp[0] != "" {
+		if len(blowdUp) == 2 && blowdUp[0] != "" {
 			newJobs = append(newJobs, &def.Job{
 				Name: blowdUp[0],
 				Set: &def.Set{

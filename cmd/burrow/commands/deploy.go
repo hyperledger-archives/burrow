@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"time"
+	"strings"
 
 	pkgs "github.com/hyperledger/burrow/deploy"
 	"github.com/hyperledger/burrow/deploy/def"
@@ -71,6 +72,13 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 
 			if *proposalVerify && *proposalVote {
 				output.Fatalf("Cannot combine --proposal-verify and --proposal-vote")
+			}
+
+			for _, e := range *defaultSetsOpt {
+				s := strings.Split(e, "=")
+				if len(s) != 2 || s[0] == "" {
+					output.Fatalf("`--set %s' should have format VARIABLE=value", e)
+				}
 			}
 
 			do.Path = *pathOpt
