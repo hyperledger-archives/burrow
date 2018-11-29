@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/hyperledger/burrow/binary"
@@ -99,6 +100,13 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 				return err
 			}
 			proposeBatch.Txs = append(proposeBatch.Txs, &payload.Any{SendTx: tx})
+		case *def.QueryContract:
+			announceProposalJob(job.Name, "Query Contract")
+			log.Warnf("Query Contract jobs are IGNORED in proposals")
+
+		case *def.Assert:
+			announceProposalJob(job.Name, "Assert")
+			log.Warnf("Assert jobs are IGNORED in proposals")
 		default:
 			return fmt.Errorf("jobs %s illegal job type for proposal", job.Name)
 		}
@@ -175,6 +183,8 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playb
 		}
 		log.Warnf("Creating Proposal with hash: %x\n", proposalHash)
 
+		bs, _ := json.Marshal(proposal)
+		log.Debugf("Proposal json: %s\n", string(bs))
 		proposalTx = &payload.ProposalTx{VotingWeight: 1, Input: input, Proposal: &proposal}
 	} else {
 		log.Errorf("please specify one of --proposal-create, --proposal-vote, --proposal-verify")
