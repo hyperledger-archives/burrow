@@ -3,14 +3,13 @@
 package core
 
 import (
+	"bufio"
 	"context"
 	"fmt"
-	"testing"
-	"time"
-
-	"bufio"
 	"os"
 	"syscall"
+	"testing"
+	"time"
 
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/consensus/tendermint"
@@ -27,6 +26,7 @@ import (
 	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tmTypes "github.com/tendermint/tendermint/types"
@@ -141,10 +141,31 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, t
 
 	inputAddress := privateAccounts[0].GetAddress()
 	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	// Generate a few transactions
-	for i := 0; i < 3; i++ {
-		rpctest.CreateContract(t, tcli, inputAddress, solidity.Bytecode_StrangeLoop)
-	}
+
+	stopCh := make(chan struct{})
+	// Generate a few transactions concurrent with restarts
+	go func() {
+		for {
+			// Fire and forget - we can expect a few to fail since we are restarting kernel
+			tcli.CallTxSync(context.Background(), &payload.CallTx{
+				Input: &payload.TxInput{
+					Address: inputAddress,
+					Amount:  2,
+				},
+				Address:  nil,
+				Data:     solidity.Bytecode_StrangeLoop,
+				Fee:      2,
+				GasLimit: 10000,
+			})
+			select {
+			case <-stopCh:
+				return
+			default:
+				time.Sleep(time.Millisecond)
+			}
+		}
+	}()
+	defer func() { stopCh <- struct{}{} }()
 
 	subID := event.GenSubID()
 	ch, err := kern.Emitter.Subscribe(context.Background(), subID, exec.QueryForBlockExecution(), 10)
@@ -167,5 +188,6 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, t
 			}
 		}
 	}
+
 	return kern.Shutdown(context.Background())
 }
