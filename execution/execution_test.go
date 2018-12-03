@@ -47,7 +47,7 @@ import (
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/require"
 	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tmthrgd/go-hex"
+	hex "github.com/tmthrgd/go-hex"
 )
 
 var (

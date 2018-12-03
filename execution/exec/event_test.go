@@ -9,7 +9,7 @@ import (
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tmthrgd/go-hex"
+	hex "github.com/tmthrgd/go-hex"
 )
 
 func TestEventTagQueries(t *testing.T) {

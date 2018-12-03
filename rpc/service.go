@@ -35,7 +35,7 @@ import (
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/tendermint/consensus"
 	"github.com/tendermint/tendermint/p2p"
-	"github.com/tendermint/tendermint/rpc/core/types"
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 

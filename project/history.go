@@ -47,7 +47,13 @@ func FullVersion() string {
 // To cut a new release add a release to the front of this slice then run the
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
-	MustDeclareReleases("0.23.1 - 2018-11-14",
+	MustDeclareReleases("0.23.2 - 2018-12-18",
+		`Hotfix release for 0.23.1
+### Fixed
+- [State] Fixed issue with checkpointing whereby RWTree would load its readTree from one version lower than it should.
+
+`,
+		"0.23.1 - 2018-11-14",
 		`### Fixed
 - [EVM] state/Cache no longer allows SetStorage on accounts that do not exist
 - [GRPC] GetAccount on unknown account no longer causes a panic

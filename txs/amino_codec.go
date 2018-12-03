@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/txs/payload"
-	"github.com/tendermint/go-amino"
+	amino "github.com/tendermint/go-amino"
 )
 
 type aminoCodec struct {

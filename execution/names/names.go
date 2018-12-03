@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/event/query"
-	"github.com/tendermint/go-amino"
+	amino "github.com/tendermint/go-amino"
 )
 
 var MinNameRegistrationPeriod uint64 = 5

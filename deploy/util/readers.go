@@ -9,7 +9,7 @@ import (
 
 	"github.com/hyperledger/burrow/execution/exec"
 	log "github.com/sirupsen/logrus"
-	"github.com/tmthrgd/go-hex"
+	hex "github.com/tmthrgd/go-hex"
 )
 
 // This is a closer function which is called by most of the tx_run functions

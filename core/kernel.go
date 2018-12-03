@@ -52,7 +52,6 @@ import (
 )
 
 const (
-	FirstBlockTimeout      = 3 * time.Second
 	CooldownTime           = 1000 * time.Millisecond
 	ServerShutdownTimeout  = 1000 * time.Millisecond
 	LoggingCallerDepth     = 5
