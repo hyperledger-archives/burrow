@@ -25,7 +25,7 @@ import (
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/tendermint/go-amino"
+	amino "github.com/tendermint/go-amino"
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
