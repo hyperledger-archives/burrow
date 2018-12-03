@@ -88,6 +88,10 @@ type CommitID struct {
 	Version int64
 }
 
+func (cid CommitID) String() string {
+	return fmt.Sprintf("Commit{Hash: %v, Height: %v, TreeVersion: %v}", cid.Hash, cid.Height, cid.Version)
+}
+
 // Writers to state are responsible for calling State.Lock() before calling
 type State struct {
 	// Values not reassigned
@@ -194,6 +198,9 @@ func LoadState(db dbm.DB, hash []byte) (*State, error) {
 		}
 		return
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return s, nil
 }
@@ -394,7 +401,7 @@ func (s *State) GetTx(txHash []byte) (*exec.TxExecution, error) {
 }
 
 func (s *State) GetBlock(height uint64) (*exec.BlockExecution, error) {
-	bs := s.tree.Get(blockRefKeyFormat.Key(height))
+	bs := s.refs.Get(blockRefKeyFormat.Key(height))
 	if len(bs) == 0 {
 		return nil, nil
 	}

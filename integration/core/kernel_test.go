@@ -3,14 +3,16 @@
 package core
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"os"
+	"syscall"
 	"testing"
 	"time"
 
-	"bufio"
-	"os"
-	"syscall"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/consensus/tendermint"
@@ -27,6 +29,7 @@ import (
 	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tmTypes "github.com/tendermint/tendermint/types"
@@ -37,7 +40,7 @@ var genesisDoc, privateAccounts, privateValidators = genesis.NewDeterministicGen
 func TestBootThenShutdown(t *testing.T) {
 	cleanup := integration.EnterTestDirectory()
 	defer cleanup()
-	//logger, _, _ := lifecycle.NewStdErrLogger()
+	//logger, _ := lifecycle.NewStdErrLogger()
 	logger := logging.NewNoopLogger()
 	privValidator := tendermint.NewPrivValidatorMemory(privateValidators[0], privateValidators[0])
 	assert.NoError(t, bootWaitBlocksShutdown(t, privValidator, integration.NewTestConfig(genesisDoc), logger, nil))
@@ -141,10 +144,54 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, t
 
 	inputAddress := privateAccounts[0].GetAddress()
 	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	// Generate a few transactions
-	for i := 0; i < 3; i++ {
-		rpctest.CreateContract(t, tcli, inputAddress, solidity.Bytecode_StrangeLoop)
-	}
+
+	stopCh := make(chan struct{})
+	// Catch first error only
+	errCh := make(chan error, 1)
+	// Generate a few transactions concurrent with restarts
+	go func() {
+		for {
+			// Fire and forget - we can expect a few to fail since we are restarting kernel
+			txe, err := tcli.CallTxSync(context.Background(), &payload.CallTx{
+				Input: &payload.TxInput{
+					Address: inputAddress,
+					Amount:  2,
+				},
+				Address:  nil,
+				Data:     solidity.Bytecode_StrangeLoop,
+				Fee:      2,
+				GasLimit: 10000,
+			})
+			if err == nil {
+				err = txe.Exception.AsError()
+			}
+			if err != nil {
+				statusError := status.Convert(err)
+				// We expect the GRPC service to be unavailable when we restart
+				if statusError != nil && statusError.Code() != codes.Unavailable {
+					// Don't block - we'll just capture first error
+					select {
+					case errCh <- err:
+					default:
+
+					}
+				}
+			}
+			select {
+			case <-stopCh:
+				close(errCh)
+				return
+			default:
+				time.Sleep(time.Millisecond)
+			}
+		}
+	}()
+	defer func() {
+		stopCh <- struct{}{}
+		for err := range errCh {
+			t.Fatalf("Error from transaction sending goroutine: %v", err)
+		}
+	}()
 
 	subID := event.GenSubID()
 	ch, err := kern.Emitter.Subscribe(context.Background(), subID, exec.QueryForBlockExecution(), 10)
@@ -167,5 +214,6 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, t
 			}
 		}
 	}
+
 	return kern.Shutdown(context.Background())
 }
