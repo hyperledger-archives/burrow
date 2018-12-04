@@ -28,6 +28,7 @@ import (
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
+	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tmthrgd/go-hex"
@@ -813,7 +814,10 @@ func TestCreate(t *testing.T) {
 
 	callee := makeAccountWithCode(cache, "callee", MustSplice(PUSH1, 0x0, PUSH1, 0x0, PUSH1, 0x0, CREATE, PUSH1, 0, MSTORE, PUSH1, 20, PUSH1, 12, RETURN))
 	// ensure pre-generated address has same sequence number
-	addr := crypto.NewContractAddress(callee, cache.GetSequence(callee)+1)
+	nonce := make([]byte, txs.HashLength+uint64Length)
+	copy(nonce, ourVm.tx.Hash())
+	PutUint64BE(nonce[txs.HashLength:], ourVm.sequence+1)
+	addr := crypto.NewContractAddress(callee, nonce)
 
 	var gas uint64 = 100000
 	caller := newAccount(cache, "1, 2, 3")
@@ -831,7 +835,10 @@ func TestCreate2(t *testing.T) {
 	// salt of 0s
 	var salt [32]byte
 	callee := makeAccountWithCode(cache, "callee", MustSplice(PUSH1, 0x0, PUSH1, 0x0, PUSH1, 0x0, PUSH32, salt[:], CREATE2, PUSH1, 0, MSTORE, PUSH1, 20, PUSH1, 12, RETURN))
-	addr := crypto.NewContractAddress2(callee, cache.GetSequence(callee), salt, cache.GetCode(callee))
+	nonce := make([]byte, txs.HashLength+uint64Length)
+	copy(nonce, ourVm.tx.Hash())
+	PutUint64BE(nonce[txs.HashLength:], ourVm.sequence)
+	addr := crypto.NewContractAddress2(callee, nonce, salt, cache.GetCode(callee))
 
 	var gas uint64 = 100000
 	caller := newAccount(cache, "1, 2, 3")

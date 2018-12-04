@@ -188,7 +188,7 @@ func NewContractAddress(caller Address, nonce []byte) (newAddr Address) {
 	return
 }
 
-func NewContractAddress2(caller Address, sequence uint64, salt [32]byte, initcode []byte) (newAddr Address) {
+func NewContractAddress2(caller Address, nonce []byte, salt [32]byte, initcode []byte) (newAddr Address) {
 	// sha3(0xff ++ caller.Address() ++ salt ++ sha3(init_code))[12:]
 	temp := make([]byte, 1+20+32+32)
 	temp[0] = 0xFF

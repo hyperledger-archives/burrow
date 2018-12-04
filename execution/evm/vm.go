@@ -752,10 +752,11 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			nonce := make([]byte, txs.HashLength+uint64Length)
 			copy(nonce, vm.tx.Hash())
 			PutUint64BE(nonce[txs.HashLength:], vm.sequence)
+			var newAccount crypto.Address
 			if op == CREATE {
-				newAccount := crypto.NewContractAddress(callee, nonce)
+				newAccount = crypto.NewContractAddress(callee, nonce)
 			} else if op == CREATE2 {
-				newAccount = crypto.NewContractAddress2(callee, nonce, salt)
+				newAccount = crypto.NewContractAddress2(callee, nonce, salt, callState.GetCode(callee))
 			}
 
 			// Check the CreateContract permission for this account
