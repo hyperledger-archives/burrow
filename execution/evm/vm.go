@@ -735,15 +735,9 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 
 		case CREATE, CREATE2: // 0xF0, 0xFB
 			returnData = nil
-			var salt Word256
-
 			contractValue := stack.PopU64()
 			offset, size := stack.PopBigInt(), stack.PopBigInt()
 			input := memory.Read(offset, size)
-
-			if op == CREATE2 {
-				salt = stack.Pop()
-			}
 
 			// TODO charge for gas to create account _ the code length * GasCreateByte
 			useGasNegative(gas, GasCreateAccount, callState)
@@ -756,6 +750,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 				PutUint64BE(nonce[txs.HashLength:], vm.sequence)
 				newAccount = crypto.NewContractAddress(callee, nonce)
 			} else if op == CREATE2 {
+				salt := stack.Pop()
 				newAccount = crypto.NewContractAddress2(callee, salt, callState.GetCode(callee))
 			}
 
