@@ -25,9 +25,9 @@ import (
 	"github.com/hyperledger/burrow/acm/state"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/errors"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
-	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
@@ -733,9 +733,8 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			}))
 			vm.Debugf(" => T:%X D:%X\n", topics, data)
 
-		case CREATE: // 0xF0
+		case CREATE, CREATE2: // 0xF0, 0xFB
 			returnData = nil
-
 			contractValue := stack.PopU64()
 			offset, size := stack.PopBigInt(), stack.PopBigInt()
 			input := memory.Read(offset, size)
@@ -743,11 +742,17 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			// TODO charge for gas to create account _ the code length * GasCreateByte
 			useGasNegative(gas, GasCreateAccount, callState)
 
-			vm.sequence++
-			nonce := make([]byte, txs.HashLength+uint64Length)
-			copy(nonce, vm.tx.Hash())
-			PutUint64BE(nonce[txs.HashLength:], vm.sequence)
-			newAccount := crypto.NewContractAddress(callee, nonce)
+			var newAccount crypto.Address
+			if op == CREATE {
+				vm.sequence++
+				nonce := make([]byte, txs.HashLength+uint64Length)
+				copy(nonce, vm.tx.Hash())
+				PutUint64BE(nonce[txs.HashLength:], vm.sequence)
+				newAccount = crypto.NewContractAddress(callee, nonce)
+			} else if op == CREATE2 {
+				salt := stack.Pop()
+				newAccount = crypto.NewContractAddress2(callee, salt, callState.GetCode(callee))
+			}
 
 			// Check the CreateContract permission for this account
 			EnsurePermission(callState, callee, permission.CreateContract)
@@ -929,10 +934,6 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			return nil
 
 		case STOP: // 0x00
-			return nil
-
-		case CREATE2:
-			callState.PushError(errors.Errorf("%v not yet implemented", op))
 			return nil
 
 		default:

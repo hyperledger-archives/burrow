@@ -14,7 +14,7 @@ import (
 
 	burrow_binary "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/execution/evm/sha3"
+	"github.com/hyperledger/burrow/crypto/sha3"
 )
 
 // EVM Solidity calls and return values are packed into

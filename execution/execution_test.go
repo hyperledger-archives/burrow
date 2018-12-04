@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"golang.org/x/crypto/ripemd160"
 
@@ -37,7 +38,6 @@ import (
 	"github.com/hyperledger/burrow/execution/evm"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
-	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/genesis"

@@ -12,11 +12,11 @@ import (
 
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
-	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/solidity"
 	"github.com/hyperledger/burrow/integration/rpctest"

@@ -23,6 +23,27 @@ func TestNewContractAddress(t *testing.T) {
 	}, addr)
 }
 
+func TestNewContractAddress2(t *testing.T) {
+	addr := NewContractAddress2(Address{
+		0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0,
+	}, [32]byte{
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0,
+	}, []byte{0x00})
+
+	assert.Equal(t, Address{
+		77, 26, 46, 43, 180,
+		248, 143, 2, 80, 242,
+		111, 255, 240, 152, 176,
+		179, 11, 38, 191, 56,
+	}, addr)
+}
+
 func TestAddress_MarshalJSON(t *testing.T) {
 	addr := Address{
 		73, 234, 48, 252, 174,
