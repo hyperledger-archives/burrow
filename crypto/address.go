@@ -188,13 +188,13 @@ func NewContractAddress(caller Address, nonce []byte) (newAddr Address) {
 	return
 }
 
-func NewContractAddress2(caller Address, nonce []byte, salt [32]byte, initcode []byte) (newAddr Address) {
+func NewContractAddress2(caller Address, salt [32]byte, initcode []byte) (newAddr Address) {
 	// sha3(0xff ++ caller.Address() ++ salt ++ sha3(init_code))[12:]
-	temp := make([]byte, 1+20+32+32)
-	temp[0] = 0xFF
-	copy(temp[1:], caller[:])
-	copy(temp[22:], salt[:])
-	copy(temp[53:], sha3.Sha3(initcode))
+	var temp []byte
+	temp = append(temp, []byte{0xFF}...)
+	temp = append(temp, caller[:]...)
+	temp = append(temp, salt[:]...)
+	temp = append(temp, sha3.Sha3(initcode)...)
 	copy(newAddr[:], sha3.Sha3(temp)[12:])
 	return
 }

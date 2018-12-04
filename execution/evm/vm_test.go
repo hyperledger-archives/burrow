@@ -835,10 +835,7 @@ func TestCreate2(t *testing.T) {
 	// salt of 0s
 	var salt [32]byte
 	callee := makeAccountWithCode(cache, "callee", MustSplice(PUSH1, 0x0, PUSH1, 0x0, PUSH1, 0x0, PUSH32, salt[:], CREATE2, PUSH1, 0, MSTORE, PUSH1, 20, PUSH1, 12, RETURN))
-	nonce := make([]byte, txs.HashLength+uint64Length)
-	copy(nonce, ourVm.tx.Hash())
-	PutUint64BE(nonce[txs.HashLength:], ourVm.sequence)
-	addr := crypto.NewContractAddress2(callee, nonce, salt, cache.GetCode(callee))
+	addr := crypto.NewContractAddress2(callee, salt, cache.GetCode(callee))
 
 	var gas uint64 = 100000
 	caller := newAccount(cache, "1, 2, 3")

@@ -748,15 +748,15 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			// TODO charge for gas to create account _ the code length * GasCreateByte
 			useGasNegative(gas, GasCreateAccount, callState)
 
-			vm.sequence++
-			nonce := make([]byte, txs.HashLength+uint64Length)
-			copy(nonce, vm.tx.Hash())
-			PutUint64BE(nonce[txs.HashLength:], vm.sequence)
 			var newAccount crypto.Address
 			if op == CREATE {
+				vm.sequence++
+				nonce := make([]byte, txs.HashLength+uint64Length)
+				copy(nonce, vm.tx.Hash())
+				PutUint64BE(nonce[txs.HashLength:], vm.sequence)
 				newAccount = crypto.NewContractAddress(callee, nonce)
 			} else if op == CREATE2 {
-				newAccount = crypto.NewContractAddress2(callee, nonce, salt, callState.GetCode(callee))
+				newAccount = crypto.NewContractAddress2(callee, salt, callState.GetCode(callee))
 			}
 
 			// Check the CreateContract permission for this account
