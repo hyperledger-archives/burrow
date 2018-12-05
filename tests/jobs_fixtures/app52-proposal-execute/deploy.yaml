@@ -15,6 +15,18 @@ jobs:
      relation: ne
      val: ""
 
+ - name: DeployerAccount
+   update-account:
+     target: new()
+     native: 300
+     permissions: ["all"]
+
+ - name: AssertDeployerAccountCreated
+   assert:
+     key: $DeployerAccount.address
+     relation: ne
+     val: ""
+
  - name: Propose Calling stuff
    proposal:
     name: CallFooBarProposal
@@ -23,12 +35,16 @@ jobs:
     jobs:
      - name: CallFoobar
        call:
+         source: $DeployerAccount.address
+         sequence: 1
          destination: $foobar
          function: addFoobar
          bin: foo
          data: [ 2 ]
      - name: CallFoobar2
        call:
+         source: $DeployerAccount.address
+         sequence: 2
          destination: $foobar
          function: addFoobar
          bin: foo

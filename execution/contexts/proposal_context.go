@@ -3,6 +3,7 @@ package contexts
 import (
 	"crypto/sha256"
 	"fmt"
+	"runtime/debug"
 	"unicode"
 
 	"github.com/hyperledger/burrow/acm/state"
@@ -160,18 +161,24 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 		}
 	}
 
-	for _, step := range ballot.Proposal.BatchTx.Txs {
+	stateCache := state.NewCache(ctx.StateWriter)
+
+	for i, step := range ballot.Proposal.BatchTx.Txs {
 		txEnv := txs.EnvelopeFromAny(ctx.Tip.ChainID(), step)
 
-		for _, i := range txEnv.Tx.GetInputs() {
-			acc, err := ctx.StateWriter.GetAccount(i.Address)
+		for _, input := range txEnv.Tx.GetInputs() {
+			acc, err := stateCache.GetAccount(input.Address)
 			if err != nil {
 				return err
 			}
 
-			if acc.GetSequence()+1 != i.Sequence {
-				return fmt.Errorf("proposal expired, sequence number for account %s wrong", i.Address)
+			acc.Sequence++
+
+			if acc.Sequence != input.Sequence {
+				return fmt.Errorf("proposal expired, sequence number %d for account %s wrong at step %d", input.Sequence, input.Address, i+1)
 			}
+
+			stateCache.UpdateAccount(acc)
 		}
 	}
 
@@ -180,13 +187,41 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 
 		txe.TxExecutions = make([]*exec.TxExecution, 0)
 
-		for _, step := range ballot.Proposal.BatchTx.Txs {
+		for i, step := range ballot.Proposal.BatchTx.Txs {
 			txEnv := txs.EnvelopeFromAny(ctx.Tip.ChainID(), step)
 
 			containedTxe := exec.NewTxExecution(txEnv)
 
-			if txExecutor, ok := ctx.Contexts[txEnv.Tx.Type()]; ok {
+			defer func() {
+				if r := recover(); r != nil {
+					err = fmt.Errorf("recovered from panic in executor.Execute(%s): %v\n%s", txEnv.String(), r,
+						debug.Stack())
+					// If we recover here we are in a position to promulgate the error to the TxExecution
+					containedTxe.PushError(err)
+				}
+			}()
 
+			for _, input := range txEnv.Tx.GetInputs() {
+				acc, err := ctx.StateWriter.GetAccount(input.Address)
+				if err != nil {
+					return err
+				}
+
+				acc.Sequence++
+
+				if input.Address != acc.GetAddress() {
+					return fmt.Errorf("trying to validate input from address %v but passed account %v", input.Address,
+						acc.GetAddress())
+				}
+
+				if acc.Sequence != input.Sequence {
+					return fmt.Errorf("proposal expired, sequence number %d for account %s wrong at step %d", input.Sequence, input.Address, i+1)
+				}
+
+				ctx.StateWriter.UpdateAccount(acc)
+			}
+
+			if txExecutor, ok := ctx.Contexts[txEnv.Tx.Type()]; ok {
 				err = txExecutor.Execute(containedTxe, txEnv.Tx.Payload)
 
 				if err != nil {
