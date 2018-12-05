@@ -39,6 +39,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 	if err != nil {
 		return err
 	}
+
 	if inAcc == nil {
 		ctx.Logger.InfoMsg("Cannot find input account",
 			"tx_input", ctx.tx.Input)
@@ -58,19 +59,11 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 		if ctx.tx.ProposalHash == nil || ctx.tx.ProposalHash.Size() != sha256.Size {
 			return errors.ErrorCodeInvalidProposal
 		}
+
 		proposalHash = ctx.tx.ProposalHash.Bytes()
 		ballot, err = ctx.ProposalReg.GetProposal(proposalHash)
 		if err != nil {
 			return err
-		}
-
-		// Check that we have not voted this already
-		for _, vote := range ballot.Votes {
-			for _, i := range ctx.tx.GetInputs() {
-				if i.Address == vote.Address {
-					return errors.ErrorCodeAlreadyVoted
-				}
-			}
 		}
 	} else {
 		if ctx.tx.ProposalHash != nil || ctx.tx.Proposal.BatchTx == nil ||
@@ -86,16 +79,18 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 		proposalHash = ctx.tx.Proposal.Hash()
 
 		ballot, err = ctx.ProposalReg.GetProposal(proposalHash)
+		if err != nil {
+			return err
+		}
+
 		if ballot == nil {
 			ballot = &payload.Ballot{
 				Proposal:      ctx.tx.Proposal,
 				ProposalState: payload.Ballot_PROPOSED,
 			}
 		}
+
 		// else vote for existing proposal
-		if err != nil {
-			return err
-		}
 	}
 
 	// Check that we have not voted this already
@@ -166,15 +161,17 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 	}
 
 	for _, step := range ballot.Proposal.BatchTx.Txs {
-		txE := txs.EnvelopeFromAny("", step)
+		txEnv := txs.EnvelopeFromAny(ctx.Tip.ChainID(), step)
 
-		for _, i := range txE.Tx.GetInputs() {
-			_, err := ctx.StateWriter.GetAccount(i.Address)
+		for _, i := range txEnv.Tx.GetInputs() {
+			acc, err := ctx.StateWriter.GetAccount(i.Address)
 			if err != nil {
 				return err
 			}
 
-			// Do not check sequence numbers of inputs
+			if acc.GetSequence()+1 != i.Sequence {
+				return fmt.Errorf("proposal expired, sequence number for account %s wrong", i.Address)
+			}
 		}
 	}
 
