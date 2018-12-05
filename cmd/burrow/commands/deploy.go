@@ -107,7 +107,11 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			handleTerm()
 
 			if *proposalList != "" {
-				proposals.ListProposals(client, *proposalList)
+				state, err := proposals.ProposalStateFromString(*proposalList)
+				if err != nil {
+					output.Fatalf(err.Error())
+				}
+				proposals.ListProposals(client, state)
 			} else {
 				util.IfExit(pkgs.RunPackage(do, nil, client))
 			}

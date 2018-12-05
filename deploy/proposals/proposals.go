@@ -5,12 +5,60 @@ import (
 	"strings"
 
 	"github.com/hyperledger/burrow/deploy/def"
+	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
 	log "github.com/sirupsen/logrus"
 )
 
-func ListProposals(client *def.Client, reqState string) {
-	props, err := client.ListProposals(strings.EqualFold(reqState, "proposed"))
+type ProposalState int
+
+const (
+	ALL ProposalState = 1 + iota
+	FAILED
+	EXECUTED
+	EXPIRED
+	PROPOSED
+)
+
+func (p *ProposalState) String() string {
+	switch *p {
+	case ALL:
+		return "ALL"
+	case FAILED:
+		return "FAILED"
+	case EXECUTED:
+		return "EXECUTED"
+	case EXPIRED:
+		return "EXPIRED"
+	case PROPOSED:
+		return "PROPOSED"
+	default:
+		panic(fmt.Sprintf("unknown propopsal state %d", *p))
+	}
+}
+
+func ProposalStateFromString(s string) (ProposalState, error) {
+	if strings.EqualFold(s, "all") {
+		return ALL, nil
+	}
+	if strings.EqualFold(s, "failed") {
+		return FAILED, nil
+	}
+	if strings.EqualFold(s, "executed") {
+		return EXECUTED, nil
+	}
+	if strings.EqualFold(s, "expired") {
+		return EXPIRED, nil
+	}
+	if strings.EqualFold(s, "proposed") {
+		return PROPOSED, nil
+	}
+
+	return ALL, fmt.Errorf("Unknown proposal state %s", s)
+}
+
+func ListProposals(client *def.Client, reqState ProposalState) {
+	props, err := client.ListProposals(reqState == PROPOSED)
 	if err != nil {
 		log.Warnf("Failed to list proposals: %v", err)
 		return
@@ -31,7 +79,7 @@ func ListProposals(client *def.Client, reqState string) {
 			}
 		}
 
-		if !strings.EqualFold(state, reqState) && !strings.EqualFold(reqState, "all") {
+		if !strings.EqualFold(state, reqState.String()) && reqState != ALL {
 			continue
 		}
 
@@ -53,7 +101,22 @@ func ProposalExpired(proposal *payload.Proposal, client *def.Client) error {
 		}
 
 		if input.Sequence != acc.Sequence+1 {
-			return fmt.Errorf("Proposal has expired")
+			return fmt.Errorf("Proposal has expired, account %s is out of sequence", input.Address.String())
+		}
+	}
+
+	for i, step := range proposal.BatchTx.Txs {
+		txEnv := txs.EnvelopeFromAny("", step)
+
+		for _, input := range txEnv.Tx.GetInputs() {
+			acc, err := client.GetAccount(input.Address)
+			if err != nil {
+				return err
+			}
+
+			if input.Sequence != acc.Sequence+1 {
+				return fmt.Errorf("Proposal has expired, account %s at step %d is expired", input.Address.String(), i)
+			}
 		}
 	}
 
