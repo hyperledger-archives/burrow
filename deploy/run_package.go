@@ -57,7 +57,7 @@ func RunPackage(do *def.DeployArgs, script *def.Playbook, client *def.Client) er
 
 	// Load the package if it doesn't exist
 	if script == nil {
-		script, err = loader.LoadPackage(do.YAMLPath, do, nil)
+		script, err = loader.LoadPlaybook(do.YAMLPath, do, nil)
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ func RunPackage(do *def.DeployArgs, script *def.Playbook, client *def.Client) er
 		}
 	}
 
-	return jobs.DoJobs(do, script, client)
+	return jobs.ExecutePlaybook(do, script, client)
 }
 
 func printPathPackage(client *def.Client) {

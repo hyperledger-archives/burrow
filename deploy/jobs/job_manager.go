@@ -80,28 +80,170 @@ func getCompilerWork(intermediate interface{}) (*compilers.Response, error) {
 	return nil, fmt.Errorf("internal error: no compiler work queued")
 }
 
-func DoJobs(do *def.DeployArgs, script *def.Playbook, client *def.Client) error {
+func doJobs(script *def.Playbook, args *def.DeployArgs, client *def.Client) error {
+	for _, job := range script.Jobs {
+		payload, err := job.Payload()
+		if err != nil {
+			return fmt.Errorf("could not get Job payload: %v", payload)
+		}
+
+		err = util.PreProcessFields(payload, args, script, client)
+		if err != nil {
+			return err
+		}
+		// Revalidate with possible replacements
+		err = payload.Validate()
+		if err != nil {
+			return fmt.Errorf("error validating job %s after pre-processing variables: %v", job.Name, err)
+		}
+
+		switch payload.(type) {
+		case *def.Proposal:
+			announce(job.Name, "Proposal")
+			job.Result, err = ProposalJob(job.Proposal, args, script, client)
+
+		// Meta Job
+		case *def.Meta:
+			announce(job.Name, "Meta")
+			metaPlaybook := job.Meta.Playbook
+			if metaPlaybook.Account == "" {
+				metaPlaybook.Account = script.Account
+			}
+			err = doJobs(metaPlaybook, args, client)
+
+		// Governance
+		case *def.UpdateAccount:
+			announce(job.Name, "UpdateAccount")
+			var tx *pbpayload.GovTx
+			tx, job.Variables, err = FormulateUpdateAccountJob(job.UpdateAccount, script.Account, client)
+			if err != nil {
+				return err
+			}
+			err = UpdateAccountJob(job.UpdateAccount, script.Account, tx, client)
+
+		// Util jobs
+		case *def.Account:
+			announce(job.Name, "Account")
+			job.Result, err = SetAccountJob(job.Account, args, script)
+		case *def.Set:
+			announce(job.Name, "Set")
+			job.Result, err = SetValJob(job.Set, args)
+
+		// Transaction jobs
+		case *def.Send:
+			announce(job.Name, "Send")
+			tx, err := FormulateSendJob(job.Send, script.Account, client)
+			if err != nil {
+				return err
+			}
+			job.Result, err = SendJob(job.Send, tx, script.Account, client)
+		case *def.RegisterName:
+			announce(job.Name, "RegisterName")
+			txs, err := FormulateRegisterNameJob(job.RegisterName, args, script.Account, client)
+			if err != nil {
+				return err
+			}
+			job.Result, err = RegisterNameJob(job.RegisterName, args, script, txs, client)
+		case *def.Permission:
+			announce(job.Name, "Permission")
+			tx, err := FormulatePermissionJob(job.Permission, script.Account, client)
+			if err != nil {
+				return err
+			}
+			job.Result, err = PermissionJob(job.Permission, script.Account, tx, client)
+
+		// Contracts jobs
+		case *def.Deploy:
+			announce(job.Name, "Deploy")
+			txs, contracts, ferr := FormulateDeployJob(job.Deploy, args, script, client, job.Intermediate)
+			if ferr != nil {
+				return ferr
+			}
+			job.Result, err = DeployJob(job.Deploy, args, script, client, txs, contracts)
+
+		case *def.Call:
+			announce(job.Name, "Call")
+			CallTx, ferr := FormulateCallJob(job.Call, args, script, client)
+			if ferr != nil {
+				return ferr
+			}
+			job.Result, job.Variables, err = CallJob(job.Call, CallTx, args, script, client)
+		case *def.Build:
+			announce(job.Name, "Build")
+			var resp *compilers.Response
+			resp, err = getCompilerWork(job.Intermediate)
+			if err != nil {
+				return err
+			}
+			job.Result, err = BuildJob(job.Build, args.BinPath, resp)
+
+		// State jobs
+		case *def.RestoreState:
+			announce(job.Name, "RestoreState")
+			job.Result, err = RestoreStateJob(job.RestoreState)
+		case *def.DumpState:
+			announce(job.Name, "DumpState")
+			job.Result, err = DumpStateJob(job.DumpState)
+
+		// Test jobs
+		case *def.QueryAccount:
+			announce(job.Name, "QueryAccount")
+			job.Result, err = QueryAccountJob(job.QueryAccount, client)
+		case *def.QueryContract:
+			announce(job.Name, "QueryContract")
+			job.Result, job.Variables, err = QueryContractJob(job.QueryContract, args, script, client)
+		case *def.QueryName:
+			announce(job.Name, "QueryName")
+			job.Result, err = QueryNameJob(job.QueryName, client)
+		case *def.QueryVals:
+			announce(job.Name, "QueryVals")
+			job.Result, err = QueryValsJob(job.QueryVals, client)
+		case *def.Assert:
+			announce(job.Name, "Assert")
+			job.Result, err = AssertJob(job.Assert)
+
+		default:
+			log.Error("")
+			return fmt.Errorf("the Job specified in deploy.yaml and parsed as '%v' is not recognised as a valid job",
+				job)
+		}
+
+		if len(job.Variables) != 0 {
+			for _, theJob := range job.Variables {
+				log.WithField("=>", fmt.Sprintf("%s,%s", theJob.Name, theJob.Value)).Info("Job Vars")
+			}
+		}
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func ExecutePlaybook(args *def.DeployArgs, script *def.Playbook, client *def.Client) error {
 	// ADD DefaultAddr and DefaultSet to jobs array....
 	// These work in reverse order and the addendums to the
 	// the ordering from the loading process is lifo
-	if len(do.DefaultSets) >= 1 {
-		defaultSetJobs(do, script)
+	if len(args.DefaultSets) >= 1 {
+		defaultSetJobs(args, script)
 	}
 
-	if do.Address != "" {
-		defaultAddrJob(do, script)
+	if args.Address != "" {
+		defaultAddrJob(args, script)
 	}
 
-	err := do.Validate()
+	err := args.Validate()
 	if err != nil {
-		return fmt.Errorf("error validating Burrow deploy file at %s: %v", do.YAMLPath, err)
+		return fmt.Errorf("error validating Burrow deploy file at %s: %v", args.YAMLPath, err)
 	}
 
 	// Ensure we have a queue large enough so that we don't have to wait for more work to be queued
-	jobs := make(chan *intermediateJob, do.Jobs*2)
+	jobs := make(chan *intermediateJob, args.Jobs*2)
 	defer close(jobs)
 
-	for i := 0; i < do.Jobs; i++ {
+	for i := 0; i < args.Jobs; i++ {
 		go intermediateJobRunner(jobs)
 	}
 
@@ -109,156 +251,12 @@ func DoJobs(do *def.DeployArgs, script *def.Playbook, client *def.Client) error 
 		queueCompilerWork(job, jobs)
 	}
 
-	var executePlaybook func(script *def.Playbook) error
-
-	executePlaybook = func(script *def.Playbook) error {
-		for _, job := range script.Jobs {
-			payload, err := job.Payload()
-			if err != nil {
-				return fmt.Errorf("could not get Job payload: %v", payload)
-			}
-
-			err = util.PreProcessFields(payload, do, script, client)
-			if err != nil {
-				return err
-			}
-			// Revalidate with possible replacements
-			err = payload.Validate()
-			if err != nil {
-				return fmt.Errorf("error validating job %s after pre-processing variables: %v", job.Name, err)
-			}
-
-			switch payload.(type) {
-			case *def.Proposal:
-				announce(job.Name, "Proposal")
-				job.Result, err = ProposalJob(job.Proposal, do, script, client)
-
-			// Meta Job
-			case *def.Meta:
-				announce(job.Name, "Meta")
-				metaPlaybook := job.Meta.Playbook
-				if metaPlaybook.Account == "" {
-					metaPlaybook.Account = script.Account
-				}
-				err = executePlaybook(metaPlaybook)
-
-			// Governance
-			case *def.UpdateAccount:
-				announce(job.Name, "UpdateAccount")
-				var tx *pbpayload.GovTx
-				tx, job.Variables, err = FormulateUpdateAccountJob(job.UpdateAccount, script.Account, client)
-				if err != nil {
-					return err
-				}
-				err = UpdateAccountJob(job.UpdateAccount, script.Account, tx, client)
-
-			// Util jobs
-			case *def.Account:
-				announce(job.Name, "Account")
-				job.Result, err = SetAccountJob(job.Account, do, script)
-			case *def.Set:
-				announce(job.Name, "Set")
-				job.Result, err = SetValJob(job.Set, do)
-
-			// Transaction jobs
-			case *def.Send:
-				announce(job.Name, "Send")
-				tx, err := FormulateSendJob(job.Send, script.Account, client)
-				if err != nil {
-					return err
-				}
-				job.Result, err = SendJob(job.Send, tx, script.Account, client)
-			case *def.RegisterName:
-				announce(job.Name, "RegisterName")
-				txs, err := FormulateRegisterNameJob(job.RegisterName, do, script.Account, client)
-				if err != nil {
-					return err
-				}
-				job.Result, err = RegisterNameJob(job.RegisterName, do, script, txs, client)
-			case *def.Permission:
-				announce(job.Name, "Permission")
-				tx, err := FormulatePermissionJob(job.Permission, script.Account, client)
-				if err != nil {
-					return err
-				}
-				job.Result, err = PermissionJob(job.Permission, script.Account, tx, client)
-
-			// Contracts jobs
-			case *def.Deploy:
-				announce(job.Name, "Deploy")
-				txs, contracts, ferr := FormulateDeployJob(job.Deploy, do, script, client, job.Intermediate)
-				if ferr != nil {
-					return ferr
-				}
-				job.Result, err = DeployJob(job.Deploy, do, script, client, txs, contracts)
-
-			case *def.Call:
-				announce(job.Name, "Call")
-				CallTx, ferr := FormulateCallJob(job.Call, do, script, client)
-				if ferr != nil {
-					return ferr
-				}
-				job.Result, job.Variables, err = CallJob(job.Call, CallTx, do, script, client)
-			case *def.Build:
-				announce(job.Name, "Build")
-				var resp *compilers.Response
-				resp, err = getCompilerWork(job.Intermediate)
-				if err != nil {
-					return err
-				}
-				job.Result, err = BuildJob(job.Build, do.BinPath, resp)
-
-			// State jobs
-			case *def.RestoreState:
-				announce(job.Name, "RestoreState")
-				job.Result, err = RestoreStateJob(job.RestoreState)
-			case *def.DumpState:
-				announce(job.Name, "DumpState")
-				job.Result, err = DumpStateJob(job.DumpState)
-
-			// Test jobs
-			case *def.QueryAccount:
-				announce(job.Name, "QueryAccount")
-				job.Result, err = QueryAccountJob(job.QueryAccount, client)
-			case *def.QueryContract:
-				announce(job.Name, "QueryContract")
-				job.Result, job.Variables, err = QueryContractJob(job.QueryContract, do, script, client)
-			case *def.QueryName:
-				announce(job.Name, "QueryName")
-				job.Result, err = QueryNameJob(job.QueryName, client)
-			case *def.QueryVals:
-				announce(job.Name, "QueryVals")
-				job.Result, err = QueryValsJob(job.QueryVals, client)
-			case *def.Assert:
-				announce(job.Name, "Assert")
-				job.Result, err = AssertJob(job.Assert)
-
-			default:
-				log.Error("")
-				return fmt.Errorf("the Job specified in deploy.yaml and parsed as '%v' is not recognised as a valid job",
-					job)
-			}
-
-			if len(job.Variables) != 0 {
-				for _, theJob := range job.Variables {
-					log.WithField("=>", fmt.Sprintf("%s,%s", theJob.Name, theJob.Value)).Info("Job Vars")
-				}
-			}
-
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}
-
-	err = executePlaybook(script)
+	err = doJobs(script, args, client)
 	if err != nil {
 		return err
 	}
 
-	postProcess(do, script)
+	postProcess(args, script)
 	return nil
 }
 
