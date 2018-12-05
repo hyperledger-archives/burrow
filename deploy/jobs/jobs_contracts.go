@@ -72,7 +72,7 @@ func BuildJob(build *def.Build, binPath string, resp *compilers.Response) (resul
 		if err != nil {
 			return "", err
 		}
-		contractName := filepath.Join(binPath, fmt.Sprintf("%s.bin", res.Objectname))
+		contractName := filepath.Join(binP, fmt.Sprintf("%s.bin", res.Objectname))
 		log.WithField("=>", contractName).Warn("Saving Binary")
 		if err := ioutil.WriteFile(contractName, b, 0664); err != nil {
 			return "", err
@@ -253,6 +253,19 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 }
 
 func DeployJob(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook, client *def.Client, txs []*payload.CallTx, contracts []*compilers.ResponseItem) (result string, err error) {
+
+	// Save
+	if _, err := os.Stat(do.BinPath); os.IsNotExist(err) {
+		if err := os.Mkdir(do.BinPath, 0775); err != nil {
+			return "", err
+		}
+	}
+
+	// saving contract
+	// additional data may be sent along with the contract
+	// these are naively added to the end of the contract code using standard
+	// mint packing
+
 	for i, tx := range txs {
 		// Sign, broadcast, display
 		contractAddress, err := deployFinalize(do, script, client, tx)
@@ -319,18 +332,6 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 		return nil, err
 	}
 	contractCode := contract.Evm.Bytecode.Object
-
-	// Save
-	if _, err := os.Stat(do.BinPath); os.IsNotExist(err) {
-		if err := os.Mkdir(do.BinPath, 0775); err != nil {
-			return nil, err
-		}
-	}
-
-	// saving contract
-	// additional data may be sent along with the contract
-	// these are naively added to the end of the contract code using standard
-	// mint packing
 
 	if deploy.Data != nil {
 		_, callDataArray, err := util.PreProcessInputData(compilersResponse.Objectname, deploy.Data, do, script, client, true)
