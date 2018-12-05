@@ -181,27 +181,26 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 	if power >= ctx.Tip.GenesisDoc().Params.ProposalThreshold {
 		ballot.ProposalState = payload.Ballot_EXECUTED
 
-		for i, step := range ballot.Proposal.BatchTx.Txs {
-			txE := txs.EnvelopeFromAny("", step)
+		txe.TxExecutions = make([]*exec.TxExecution, 0)
 
-			txe.PayloadEvent(&exec.PayloadEvent{TxType: txE.Tx.Type(), Index: uint32(i)})
+		for _, step := range ballot.Proposal.BatchTx.Txs {
+			txEnv := txs.EnvelopeFromAny(ctx.Tip.ChainID(), step)
 
-			if txExecutor, ok := ctx.Contexts[txE.Tx.Type()]; ok {
+			containedTxe := exec.NewTxExecution(txEnv)
 
-				hash := txe.TxHash
+			if txExecutor, ok := ctx.Contexts[txEnv.Tx.Type()]; ok {
 
-				txe.TxHash = txE.Tx.Rehash()
+				err = txExecutor.Execute(containedTxe, txEnv.Tx.Payload)
 
-				err = txExecutor.Execute(txe, txE.Tx.Payload)
-
-				txe.TxHash = hash
 				if err != nil {
 					ctx.Logger.InfoMsg("Transaction execution failed", structure.ErrorKey, err)
 					return err
 				}
 			}
 
-			if txe.Exception != nil {
+			txe.TxExecutions = append(txe.TxExecutions, containedTxe)
+
+			if containedTxe.Exception != nil {
 				ballot.ProposalState = payload.Ballot_FAILED
 				break
 			}

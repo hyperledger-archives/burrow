@@ -22,7 +22,6 @@ const (
 	TypeTxExecution    = EventType(0x04)
 	TypeBlockExecution = EventType(0x05)
 	TypeGovernAccount  = EventType(0x06)
-	TypePayload        = EventType(0x07)
 )
 
 var nameFromType = map[EventType]string{
@@ -33,7 +32,6 @@ var nameFromType = map[EventType]string{
 	TypeTxExecution:    "TxExecutionEvent",
 	TypeBlockExecution: "BlockExecutionEvent",
 	TypeGovernAccount:  "GovernAccountEvent",
-	TypePayload:        "PayloadEvent",
 }
 
 var typeFromName = make(map[string]EventType)
