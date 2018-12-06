@@ -3,6 +3,10 @@ jobs:
    deploy:
      contract: contract.sol
 
+ - name: foobar2
+   deploy:
+     contract: test.sol
+
  - name: SystemAccount
    update-account:
      target: new()
@@ -47,6 +51,23 @@ jobs:
          function: addFoobar
          bin: foo
          data: [ 3 ]
+     - name: NameReg
+       register:
+         source: $DeployerAccount.address
+         name: FOO
+         data: bar
+         amount: 5000
+         fee: 2000
+     - name: deployBar
+       deploy:
+         contract: bar.bin
+     - name: CallBar
+       call:
+         source: $DeployerAccount.address
+         destination: $deployBar
+         function: addFoobar
+         bin: bar
+         data: [ 3 ]
 
  - name: getFoobar
    call:
@@ -58,3 +79,15 @@ jobs:
      key: $getFoobar
      relation: eq
      val: 5
+
+ - name: FOO
+   query-name:
+      name: FOO
+      field: data
+
+ - name: checkFOO
+   assert:
+     key: $FOO
+     relation: eq
+     val: bar
+
