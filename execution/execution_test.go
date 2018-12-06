@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/event/query"
+
 	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"golang.org/x/crypto/ripemd160"
@@ -1623,7 +1625,8 @@ func (te *testExecutor) signExecuteCommit(tx payload.Payload, signers ...acm.Add
 func execTxWaitAccountCall(t *testing.T, exe *testExecutor, txEnv *txs.Envelope,
 	address crypto.Address) (*exec.CallEvent, error) {
 
-	qry, err := event.QueryForEventID(exec.EventStringAccountCall(address)).
+	qry, err := query.NewBuilder().
+		AndEquals(event.EventIDKey, exec.EventStringAccountCall(address)).
 		AndEquals(event.TxHashKey, txEnv.Tx.Hash()).Query()
 	if err != nil {
 		return nil, err
