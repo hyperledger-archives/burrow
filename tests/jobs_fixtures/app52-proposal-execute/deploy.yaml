@@ -36,7 +36,6 @@ jobs:
      - name: CallFoobar
        call:
          source: $DeployerAccount.address
-         sequence: 1
          destination: $foobar
          function: addFoobar
          bin: foo
@@ -44,7 +43,6 @@ jobs:
      - name: CallFoobar2
        call:
          source: $DeployerAccount.address
-         sequence: 2
          destination: $foobar
          function: addFoobar
          bin: foo

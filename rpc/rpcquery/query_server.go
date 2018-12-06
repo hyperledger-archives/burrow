@@ -55,6 +55,11 @@ func (qs *queryServer) GetAccount(ctx context.Context, param *GetAccountParam) (
 	return acc, err
 }
 
+func (qs *queryServer) GetStorage(ctx context.Context, param *GetStorageParam) (*StorageValue, error) {
+	val, err := qs.accounts.GetStorage(param.Address, param.Key)
+	return &StorageValue{Value: val}, err
+}
+
 func (qs *queryServer) ListAccounts(param *ListAccountsParam, stream Query_ListAccountsServer) error {
 	qry, err := query.NewBuilder(param.Query).Query()
 	var streamErr error

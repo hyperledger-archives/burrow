@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/deploy/def"
@@ -15,7 +16,24 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playbook, client *def.Client) error {
+func getAcccountSequence(seq string, addressStr string, seqCache *state.Cache) (string, error) {
+	if seq != "" {
+		return seq, nil
+	}
+	address, err := crypto.AddressFromHexString(addressStr)
+	if err != nil {
+		return "", err
+	}
+	acc, err := seqCache.GetAccount(address)
+	if err != nil {
+		return "", err
+	}
+	acc.Sequence++
+	err = seqCache.UpdateAccount(acc)
+	return fmt.Sprintf("%d", acc.Sequence), err
+}
+
+func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playbook, client *def.Client, seqCache *state.Cache) error {
 	script := def.Playbook{Jobs: jobs, Account: useDefault(prop.Source, parentScript.Account), Parent: parentScript}
 
 	for _, job := range script.Jobs {
@@ -38,13 +56,18 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 		case *def.Meta:
 			announceProposalJob(job.Name, "Meta")
 			// load the package
-			err = recurseJobs(proposeBatch, job.Meta.Playbook.Jobs, prop, do, &script, client)
+			err = recurseJobs(proposeBatch, job.Meta.Playbook.Jobs, prop, do, &script, client, seqCache)
 			if err != nil {
 				return err
 			}
 
 		case *def.UpdateAccount:
 			announceProposalJob(job.Name, "UpdateAccount")
+			job.UpdateAccount.Source = useDefault(job.UpdateAccount.Source, script.Account)
+			job.UpdateAccount.Sequence, err = getAcccountSequence(job.UpdateAccount.Sequence, job.UpdateAccount.Source, seqCache)
+			if err != nil {
+				return err
+			}
 			tx, _, err := FormulateUpdateAccountJob(job.UpdateAccount, script.Account, client)
 			if err != nil {
 				return err
@@ -53,6 +76,11 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 
 		case *def.RegisterName:
 			announceProposalJob(job.Name, "RegisterName")
+			job.RegisterName.Source = useDefault(job.RegisterName.Source, script.Account)
+			job.RegisterName.Sequence, err = getAcccountSequence(job.RegisterName.Sequence, job.RegisterName.Source, seqCache)
+			if err != nil {
+				return err
+			}
 			txs, err := FormulateRegisterNameJob(job.RegisterName, do, script.Account, client)
 			if err != nil {
 				return err
@@ -62,6 +90,11 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 			}
 		case *def.Call:
 			announceProposalJob(job.Name, "Call")
+			job.Call.Source = useDefault(job.Call.Source, script.Account)
+			job.Call.Sequence, err = getAcccountSequence(job.Call.Sequence, job.Call.Source, seqCache)
+			if err != nil {
+				return err
+			}
 			tx, err := FormulateCallJob(job.Call, do, &script, client)
 			if err != nil {
 				return err
@@ -69,6 +102,11 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 			proposeBatch.Txs = append(proposeBatch.Txs, &payload.Any{CallTx: tx})
 		case *def.Deploy:
 			announceProposalJob(job.Name, "Deploy")
+			job.Deploy.Source = useDefault(job.Deploy.Source, script.Account)
+			job.Deploy.Sequence, err = getAcccountSequence(job.Deploy.Sequence, job.Deploy.Source, seqCache)
+			if err != nil {
+				return err
+			}
 			deployTxs, _, err := FormulateDeployJob(job.Deploy, do, &script, client, job.Intermediate)
 			if err != nil {
 				return err
@@ -88,6 +126,11 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 			job.Result = deployAddress.String()
 		case *def.Permission:
 			announceProposalJob(job.Name, "Permission")
+			job.Permission.Source = useDefault(job.Permission.Source, script.Account)
+			job.Permission.Sequence, err = getAcccountSequence(job.Permission.Sequence, job.Permission.Source, seqCache)
+			if err != nil {
+				return err
+			}
 			tx, err := FormulatePermissionJob(job.Permission, script.Account, client)
 			if err != nil {
 				return err
@@ -95,6 +138,11 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 			proposeBatch.Txs = append(proposeBatch.Txs, &payload.Any{PermsTx: tx})
 		case *def.Send:
 			announceProposalJob(job.Name, "Send")
+			job.Send.Source = useDefault(job.Send.Source, script.Account)
+			job.Send.Sequence, err = getAcccountSequence(job.Send.Sequence, job.Send.Source, seqCache)
+			if err != nil {
+				return err
+			}
 			tx, err := FormulateSendJob(job.Send, script.Account, client)
 			if err != nil {
 				return err
@@ -118,7 +166,9 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playbook, client *def.Client) (string, error) {
 	var proposeBatch payload.BatchTx
 
-	err := recurseJobs(&proposeBatch, prop.Jobs, prop, do, parentScript, client)
+	seqCache := state.NewCache(client)
+
+	err := recurseJobs(&proposeBatch, prop.Jobs, prop, do, parentScript, client, seqCache)
 	if err != nil {
 		return "", err
 	}

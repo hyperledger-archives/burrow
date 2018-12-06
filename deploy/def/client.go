@@ -11,6 +11,7 @@ import (
 	"reflect"
 
 	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
@@ -134,6 +135,18 @@ func (c *Client) GetAccount(address crypto.Address) (*acm.Account, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 	return c.queryClient.GetAccount(ctx, &rpcquery.GetAccountParam{Address: address})
+}
+
+func (c *Client) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
+	err := c.dial()
+	if err != nil {
+		return binary.Word256{}, err
+	}
+	val, err := c.queryClient.GetStorage(context.Background(), &rpcquery.GetStorageParam{Address: address, Key: key})
+	if err != nil {
+		return binary.Word256{}, err
+	}
+	return val.Value, err
 }
 
 func (c *Client) GetName(name string) (*names.Entry, error) {
