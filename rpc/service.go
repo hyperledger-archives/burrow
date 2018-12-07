@@ -66,7 +66,7 @@ func NewService(state state.IterableReader, nameReg names.IterableReader, blockc
 	}
 }
 
-func (s *Service) State() state.Reader {
+func (s *Service) State() state.IterableReader {
 	return s.state
 }
 
@@ -233,6 +233,14 @@ func (s *Service) AccountHumanReadable(address crypto.Address) (*ResultAccountHu
 			Permissions: perms,
 			Roles:       acc.Permissions.Roles,
 		},
+	}, nil
+}
+
+func (s *Service) AccountStats() (*ResultAccountStats, error) {
+	stats := s.state.GetAccountStats()
+	return &ResultAccountStats{
+		AccountsWithCode:    stats.AccountsWithCode,
+		AccountsWithoutCode: stats.AccountsWithoutCode,
 	}, nil
 }
 

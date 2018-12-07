@@ -49,6 +49,8 @@ type Datum struct {
 	TxPerBlockBuckets   map[float64]float64
 	TotalTime           float64
 	TimePerBlockBuckets map[float64]float64
+	AccountsWithCode    uint64
+	AccountsWithoutCode uint64
 }
 
 func StartServer(service *rpc.Service, pattern, listenAddress string, blockSampleSize uint64,

@@ -45,6 +45,15 @@ type StorageIterable interface {
 	IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error)
 }
 
+type AccountStats struct {
+	AccountsWithCode    uint64
+	AccountsWithoutCode uint64
+}
+
+type AccountStatsGetter interface {
+	GetAccountStats() AccountStats
+}
+
 // Compositions
 
 // Read-only account and storage state
@@ -62,6 +71,7 @@ type Iterable interface {
 type IterableReader interface {
 	Iterable
 	Reader
+	AccountStatsGetter
 }
 
 type Writer interface {
