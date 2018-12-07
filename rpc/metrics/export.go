@@ -48,6 +48,7 @@ func (e *Exporter) gatherData() error {
 	if err != nil {
 		return err
 	}
+	e.getAccountStats()
 
 	return nil
 }
@@ -146,6 +147,13 @@ func (e *Exporter) getBlockTimeBuckets(res *rpc.ResultBlocks) error {
 		e.datum.TimePerBlockBuckets[timeDiff] += 1
 	}
 	return nil
+}
+
+func (e *Exporter) getAccountStats() {
+	stats := e.service.State().GetAccountStats()
+
+	e.datum.AccountsWithCode = float64(stats.AccountsWithCode)
+	e.datum.AccountsWithoutCode = float64(stats.AccountsWithoutCode)
 }
 
 func round(x float64) float64 {

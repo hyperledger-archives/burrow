@@ -19,6 +19,7 @@ const (
 	Storage         = "storage"
 	DumpStorage     = "dump_storage"
 	GetAccountHuman = "account_human"
+	AccountStats    = "account_stats"
 
 	// Simulated call
 	Call     = "call"
@@ -58,6 +59,7 @@ func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.
 		Storage:         server.NewRPCFunc(service.Storage, "address,key"),
 		DumpStorage:     server.NewRPCFunc(service.DumpStorage, "address"),
 		GetAccountHuman: server.NewRPCFunc(service.AccountHumanReadable, "address"),
+		AccountStats:    server.NewRPCFunc(service.AccountStats, ""),
 
 		// Blockchain
 		Genesis: server.NewRPCFunc(service.Genesis, ""),

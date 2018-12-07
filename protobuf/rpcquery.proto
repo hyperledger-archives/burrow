@@ -30,6 +30,8 @@ service Query {
 
     rpc GetProposal(GetProposalParam) returns (payload.Ballot);
     rpc ListProposals(ListProposalsParam) returns (stream ProposalResult);
+
+    rpc GetStats() returns (Stats)
 }
 
 message StatusParam {
@@ -78,4 +80,9 @@ message ListProposalsParam {
 message ProposalResult {
     bytes Hash = 1;
     payload.Ballot Ballot = 2;
+}
+
+message Stats {
+    uint64 AccountsWithCode = 1;
+    uint64 AccountsWithoutCode = 2;
 }
