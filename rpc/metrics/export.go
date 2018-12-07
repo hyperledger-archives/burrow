@@ -152,8 +152,8 @@ func (e *Exporter) getBlockTimeBuckets(res *rpc.ResultBlocks) error {
 func (e *Exporter) getAccountStats() {
 	stats := e.service.State().GetAccountStats()
 
-	e.datum.AccountsWithCode = stats.AccountsWithCode
-	e.datum.AccountsWithoutCode = stats.AccountsWithoutCode
+	e.datum.AccountsWithCode = float64(stats.AccountsWithCode)
+	e.datum.AccountsWithoutCode = float64(stats.AccountsWithoutCode)
 }
 
 func round(x float64) float64 {

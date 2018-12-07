@@ -49,8 +49,8 @@ type Datum struct {
 	TxPerBlockBuckets   map[float64]float64
 	TotalTime           float64
 	TimePerBlockBuckets map[float64]float64
-	AccountsWithCode    uint64
-	AccountsWithoutCode uint64
+	AccountsWithCode    float64
+	AccountsWithoutCode float64
 }
 
 func StartServer(service *rpc.Service, pattern, listenAddress string, blockSampleSize uint64,
@@ -121,7 +121,16 @@ func AddMetrics() map[string]*prometheus.Desc {
 		"Current outbound peers",
 		[]string{"chain_id", "moniker"}, nil,
 	)
-
+	burrowMetrics["Contracts"] = prometheus.NewDesc(
+		prometheus.BuildFQName("burrow", "accounts", "contracts"),
+		"Current contracts on the chain",
+		[]string{"chain_id", "moniker"}, nil,
+	)
+	burrowMetrics["Users"] = prometheus.NewDesc(
+		prometheus.BuildFQName("burrow", "accounts", "users"),
+		"Current users on the chain",
+		[]string{"chain_id", "moniker"}, nil,
+	)
 	return burrowMetrics
 }
 
@@ -191,6 +200,20 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		e.datum.BlockSampleSize,
 		e.datum.TotalTime,
 		e.datum.TimePerBlockBuckets,
+		e.chainID,
+		e.validatorMoniker,
+	)
+	ch <- prometheus.MustNewConstMetric(
+		e.burrowMetrics["Contracts"],
+		prometheus.GaugeValue,
+		e.datum.AccountsWithCode,
+		e.chainID,
+		e.validatorMoniker,
+	)
+	ch <- prometheus.MustNewConstMetric(
+		e.burrowMetrics["Users"],
+		prometheus.GaugeValue,
+		e.datum.AccountsWithoutCode,
 		e.chainID,
 		e.validatorMoniker,
 	)
