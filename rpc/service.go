@@ -45,7 +45,7 @@ const MaxBlockLookback = 1000
 
 // Base service that provides implementation for all underlying RPC methods
 type Service struct {
-	state      state.IterableReader
+	state      state.IterableStatsReader
 	nameReg    names.IterableReader
 	blockchain bcm.BlockchainInfo
 	nodeView   *tendermint.NodeView
@@ -54,7 +54,7 @@ type Service struct {
 
 // Service provides an internal query and information service with serialisable return types on which can accomodate
 // a number of transport front ends
-func NewService(state state.IterableReader, nameReg names.IterableReader, blockchain bcm.BlockchainInfo,
+func NewService(state state.IterableStatsReader, nameReg names.IterableReader, blockchain bcm.BlockchainInfo,
 	nodeView *tendermint.NodeView, logger *logging.Logger) *Service {
 
 	return &Service{
@@ -66,7 +66,7 @@ func NewService(state state.IterableReader, nameReg names.IterableReader, blockc
 	}
 }
 
-func (s *Service) State() state.IterableReader {
+func (s *Service) State() state.IterableStatsReader {
 	return s.state
 }
 

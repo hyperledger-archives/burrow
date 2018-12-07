@@ -71,6 +71,11 @@ type Iterable interface {
 type IterableReader interface {
 	Iterable
 	Reader
+}
+
+type IterableStatsReader interface {
+	Iterable
+	Reader
 	AccountStatsGetter
 }
 
