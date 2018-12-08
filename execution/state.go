@@ -92,13 +92,14 @@ type CommitID struct {
 type State struct {
 	// Values not reassigned
 	sync.RWMutex
-	writeState *writeState
-	height     uint64
-	db         dbm.DB
-	cacheDB    *storage.CacheDB
-	tree       *storage.RWTree
-	refs       storage.KVStore
-	codec      *amino.Codec
+	writeState   *writeState
+	height       uint64
+	accountStats state.AccountStats
+	db           dbm.DB
+	cacheDB      *storage.CacheDB
+	tree         *storage.RWTree
+	refs         storage.KVStore
+	codec        *amino.Codec
 }
 
 // Create a new State object
@@ -114,6 +115,7 @@ func NewState(db dbm.DB) *State {
 		refs:    refs,
 		codec:   amino.NewCodec(),
 	}
+
 	s.writeState = &writeState{state: s}
 	return s
 }
@@ -183,6 +185,16 @@ func LoadState(db dbm.DB, hash []byte) (*State, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not load current version of state tree: CommitID: %v", commitID)
 	}
+	// Populate stats. If this starts taking too long, store the value rather than the full scan at startup
+	_, err = s.IterateAccounts(func(acc *acm.Account) (stop bool) {
+		if len(acc.Code) > 0 {
+			s.accountStats.AccountsWithCode++
+		} else {
+			s.accountStats.AccountsWithoutCode++
+		}
+		return
+	})
+
 	return s, nil
 }
 
@@ -235,6 +247,26 @@ func (s *State) GetAccount(address crypto.Address) (*acm.Account, error) {
 	return acm.Decode(accBytes)
 }
 
+func (ws *writeState) statsAddAccount(acc *acm.Account) {
+	if acc != nil {
+		if len(acc.Code) > 0 {
+			ws.state.accountStats.AccountsWithCode++
+		} else {
+			ws.state.accountStats.AccountsWithoutCode++
+		}
+	}
+}
+
+func (ws *writeState) statsRemoveAccount(acc *acm.Account) {
+	if acc != nil {
+		if len(acc.Code) > 0 {
+			ws.state.accountStats.AccountsWithCode--
+		} else {
+			ws.state.accountStats.AccountsWithoutCode--
+		}
+	}
+}
+
 func (ws *writeState) UpdateAccount(account *acm.Account) error {
 	if account == nil {
 		return fmt.Errorf("UpdateAccount passed nil account in State")
@@ -243,13 +275,23 @@ func (ws *writeState) UpdateAccount(account *acm.Account) error {
 	if err != nil {
 		return fmt.Errorf("UpdateAccount could not encode account: %v", err)
 	}
-	ws.state.tree.Set(accountKeyFormat.Key(account.Address), encodedAccount)
+	updated := ws.state.tree.Set(accountKeyFormat.Key(account.Address), encodedAccount)
+	if updated {
+		ws.statsAddAccount(account)
+	}
 	return nil
 }
 
-func (ws *writeState) RemoveAccount(address crypto.Address) error {
-	ws.state.tree.Delete(accountKeyFormat.Key(address))
-	return nil
+func (ws *writeState) RemoveAccount(address crypto.Address) (err error) {
+	accBytes, deleted := ws.state.tree.Delete(accountKeyFormat.Key(address))
+	if deleted {
+		var acc *acm.Account
+		acc, err = acm.Decode(accBytes)
+		if err == nil {
+			ws.statsRemoveAccount(acc)
+		}
+	}
+	return err
 }
 
 func (s *State) IterateAccounts(consumer func(*acm.Account) (stop bool)) (stopped bool, err error) {
@@ -265,6 +307,10 @@ func (s *State) IterateAccounts(consumer func(*acm.Account) (stop bool)) (stoppe
 		it.Next()
 	}
 	return false, nil
+}
+
+func (s *State) GetAccountStats() state.AccountStats {
+	return s.accountStats
 }
 
 func (s *State) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {

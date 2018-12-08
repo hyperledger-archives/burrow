@@ -44,7 +44,6 @@ type Writer interface {
 	UnsetPermission(address crypto.Address, permFlag permission.PermFlag)
 	AddRole(address crypto.Address, role string) bool
 	RemoveRole(address crypto.Address, role string) bool
-	IncSequence(address crypto.Address)
 }
 
 type State struct {
@@ -263,15 +262,6 @@ func (st *State) RemoveRole(address crypto.Address, role string) bool {
 	removed := acc.Permissions.RemoveRole(role)
 	st.updateAccount(acc)
 	return removed
-}
-
-func (st *State) IncSequence(address crypto.Address) {
-	acc := st.mustAccount(address)
-	if acc == nil {
-		return
-	}
-	acc.Sequence++
-	st.updateAccount(acc)
 }
 
 // Helpers

@@ -225,5 +225,5 @@ func (txe *TxExecution) TaggedEvents() TaggedEvents {
 }
 
 func QueryForTxExecution(txHash []byte) query.Queryable {
-	return query.NewBuilder().AndEquals(event.EventIDKey, EventStringTxExecution(txHash))
+	return event.QueryForEventID(EventStringTxExecution(txHash))
 }

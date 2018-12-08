@@ -62,8 +62,8 @@ func (rwt *RWTree) Save() ([]byte, int64, error) {
 	return hash, version, nil
 }
 
-func (rwt *RWTree) Set(key, value []byte) {
-	rwt.tree.Set(key, value)
+func (rwt *RWTree) Set(key, value []byte) bool {
+	return rwt.tree.Set(key, value)
 }
 
 func (rwt *RWTree) Get(key []byte) []byte {
@@ -83,8 +83,8 @@ func (rwt *RWTree) Has(key []byte) bool {
 	return rwt.Get(key) != nil
 }
 
-func (rwt *RWTree) Delete(key []byte) {
-	rwt.tree.Remove(key)
+func (rwt *RWTree) Delete(key []byte) ([]byte, bool) {
+	return rwt.tree.Remove(key)
 }
 
 func (rwt *RWTree) Iterator(start, end []byte) dbm.Iterator {

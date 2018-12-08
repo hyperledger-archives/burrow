@@ -12,11 +12,11 @@ import (
 
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
-	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/solidity"
 	"github.com/hyperledger/burrow/integration/rpctest"
@@ -285,7 +285,7 @@ func TestLogEvents(t *testing.T) {
 	var direction string
 	var depth int64
 	evAbi := spec.Events["ChangeLevel"]
-	err = abi.UnpackEvent(evAbi, log.Topics, log.Data, &direction, &depth)
+	err = abi.UnpackEvent(&evAbi, log.Topics, log.Data, &direction, &depth)
 	require.NoError(t, err)
 	assert.Equal(t, evAbi.EventID.Bytes(), log.Topics[0].Bytes())
 	assert.Equal(t, int64(18), depth)
@@ -307,7 +307,7 @@ func TestEventEmitter(t *testing.T) {
 	data := abi.GetPackingTypes(evAbi.Inputs)
 	// Check signature
 	assert.Equal(t, evAbi.EventID.Bytes(), log.Topics[0].Bytes())
-	err = abi.UnpackEvent(evAbi, log.Topics, log.Data.Bytes(), data...)
+	err = abi.UnpackEvent(&evAbi, log.Topics, log.Data.Bytes(), data...)
 	require.NoError(t, err)
 
 	h := sha3.NewKeccak256()
@@ -346,7 +346,7 @@ func TestEventEmitterBytes32isString(t *testing.T) {
 			data[i] = new(string)
 		}
 	}
-	err = abi.UnpackEvent(evAbi, log.Topics, log.Data.Bytes(), data...)
+	err = abi.UnpackEvent(&evAbi, log.Topics, log.Data.Bytes(), data...)
 	require.NoError(t, err)
 
 	h := sha3.NewKeccak256()

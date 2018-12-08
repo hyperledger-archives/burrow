@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/hyperledger/burrow/execution/errors"
+	"github.com/hyperledger/burrow/execution/exec"
 
 	"github.com/hyperledger/burrow/crypto"
 	compilers "github.com/hyperledger/burrow/deploy/compile"
@@ -437,6 +438,9 @@ func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, client *def
 			return "", nil, txe.Exception.AsError()
 		}
 	}
+
+	logEvents(txe, do)
+
 	var result string
 
 	// Formally process the return
@@ -482,9 +486,45 @@ func deployFinalize(do *def.DeployArgs, client *def.Client, tx payload.Payload) 
 		return nil, err
 	}
 
+	// The contructor can generate events
+	logEvents(txe, do)
+
 	if !txe.Receipt.CreatesContract || txe.Receipt.ContractAddress == crypto.ZeroAddress {
 		// Shouldn't get ZeroAddress when CreatesContract is true, but still
 		return nil, fmt.Errorf("result from SignAndBroadcast does not contain address for the deployed contract")
 	}
 	return &txe.Receipt.ContractAddress, nil
+}
+
+func logEvents(txe *exec.TxExecution, do *def.DeployArgs) {
+	for _, event := range txe.Events {
+		eventLog := event.GetLog()
+
+		if eventLog == nil {
+			continue
+		}
+
+		var eventID abi.EventID
+		copy(eventID[:], eventLog.GetTopic(0).Bytes())
+
+		evAbi, err := abi.FindEventSpec(do.BinPath, eventID)
+		if err != nil {
+			log.Errorf("Could not find ABI for Event with ID %x\n", eventID)
+			continue
+		}
+
+		vals := make([]interface{}, len(evAbi.Inputs))
+		for i := range vals {
+			vals[i] = new(string)
+		}
+
+		if err = abi.UnpackEvent(evAbi, eventLog.Topics, eventLog.Data, vals...); err == nil {
+			fields := log.Fields{}
+			for i := range vals {
+				val := vals[i].(*string)
+				fields[evAbi.Inputs[i].Name] = *val
+			}
+			log.WithFields(fields).Info("Event " + evAbi.Name)
+		}
+	}
 }

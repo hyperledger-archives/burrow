@@ -51,15 +51,6 @@ func (tx *CallTx) String() string {
 	return fmt.Sprintf("CallTx{%v -> %s: %v}", tx.Input, tx.Address, tx.Data)
 }
 
-// Returns the contract address that this CallTx would create if CallTx.Address == nil otherwise returns nil
-func (tx *CallTx) CreatesContractAddress() *crypto.Address {
-	if tx.Address != nil {
-		return nil
-	}
-	address := crypto.NewContractAddress(tx.Input.Address, tx.Input.Sequence)
-	return &address
-}
-
 func (tx *CallTx) Any() *Any {
 	return &Any{
 		CallTx: tx,

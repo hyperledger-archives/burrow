@@ -22,6 +22,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/event/query"
+
+	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"golang.org/x/crypto/ripemd160"
 
@@ -37,7 +40,6 @@ import (
 	"github.com/hyperledger/burrow/execution/evm"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
-	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/genesis"
@@ -306,7 +308,7 @@ func TestCallPermission(t *testing.T) {
 	fmt.Println("\n##### SIMPLE CONTRACT")
 
 	// create simple contract
-	simpleContractAddr := crypto.NewContractAddress(users[0].GetAddress(), 100)
+	simpleContractAddr := crypto.NewContractAddress(users[0].GetAddress(), []byte{100})
 	simpleAcc := &acm.Account{
 		Address:     simpleContractAddr,
 		Balance:     0,
@@ -327,7 +329,7 @@ func TestCallPermission(t *testing.T) {
 
 	// create contract that calls the simple contract
 	contractCode := callContractCode(simpleContractAddr)
-	caller1ContractAddr := crypto.NewContractAddress(users[0].GetAddress(), 101)
+	caller1ContractAddr := crypto.NewContractAddress(users[0].GetAddress(), []byte{101})
 	caller1Acc := &acm.Account{
 		Address:     caller1ContractAddr,
 		Balance:     10000,
@@ -368,7 +370,7 @@ func TestCallPermission(t *testing.T) {
 	fmt.Println("\n##### CALL TO CONTRACT CALLING SIMPLE CONTRACT (FAIL)")
 
 	contractCode2 := callContractCode(caller1ContractAddr)
-	caller2ContractAddr := crypto.NewContractAddress(users[0].GetAddress(), 102)
+	caller2ContractAddr := crypto.NewContractAddress(users[0].GetAddress(), []byte{102})
 	caller2Acc := &acm.Account{
 		Address:     caller2ContractAddr,
 		Balance:     1000,
@@ -432,7 +434,7 @@ func TestCreatePermission(t *testing.T) {
 	require.NoError(t, err)
 
 	// ensure the contract is there
-	contractAddr := crypto.NewContractAddress(tx.Input.Address, tx.Input.Sequence)
+	contractAddr := crypto.NewContractAddress(tx.Input.Address, txHash(tx))
 	contractAcc := getAccount(exe.stateCache, contractAddr)
 	if contractAcc == nil {
 		t.Fatalf("failed to create contract %s", contractAddr)
@@ -456,7 +458,7 @@ func TestCreatePermission(t *testing.T) {
 	require.NoError(t, err)
 
 	// ensure the contract is there
-	contractAddr = crypto.NewContractAddress(tx.Input.Address, tx.Input.Sequence)
+	contractAddr = crypto.NewContractAddress(tx.Input.Address, txHash(tx))
 	contractAcc = getAccount(exe.stateCache, contractAddr)
 	if contractAcc == nil {
 		t.Fatalf("failed to create contract %s", contractAddr)
@@ -496,7 +498,7 @@ func TestCreatePermission(t *testing.T) {
 	fmt.Println("\n##### CALL to empty address")
 	code := callContractCode(crypto.Address{})
 
-	contractAddr = crypto.NewContractAddress(users[0].GetAddress(), 110)
+	contractAddr = crypto.NewContractAddress(users[0].GetAddress(), []byte{110})
 	contractAcc = &acm.Account{
 		Address:     contractAddr,
 		Balance:     1000,
@@ -609,7 +611,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	// call to contract that calls unknown account - without create_account perm
 	// create contract that calls the simple contract
 	contractCode := callContractCode(users[9].GetAddress())
-	caller1ContractAddr := crypto.NewContractAddress(users[4].GetAddress(), 101)
+	caller1ContractAddr := crypto.NewContractAddress(users[4].GetAddress(), []byte{101})
 	caller1Acc := &acm.Account{
 		Address:     caller1ContractAddr,
 		Balance:     0,
@@ -1597,6 +1599,10 @@ func (te *testExecutor) updateAccounts(t *testing.T, accounts ...*acm.Account) {
 	}
 }
 
+func txHash(tx payload.Payload) []byte {
+	return txs.Enclose(testChainID, tx).Tx.Hash()
+}
+
 func (te *testExecutor) signExecuteCommit(tx payload.Payload, signers ...acm.AddressableSigner) error {
 	txEnv := txs.Enclose(testChainID, tx)
 	err := txEnv.Sign(signers...)
@@ -1619,7 +1625,8 @@ func (te *testExecutor) signExecuteCommit(tx payload.Payload, signers ...acm.Add
 func execTxWaitAccountCall(t *testing.T, exe *testExecutor, txEnv *txs.Envelope,
 	address crypto.Address) (*exec.CallEvent, error) {
 
-	qry, err := event.QueryForEventID(exec.EventStringAccountCall(address)).
+	qry, err := query.NewBuilder().
+		AndEquals(event.EventIDKey, exec.EventStringAccountCall(address)).
 		AndEquals(event.TxHashKey, txEnv.Tx.Hash()).Query()
 	if err != nil {
 		return nil, err

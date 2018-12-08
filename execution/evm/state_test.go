@@ -44,8 +44,6 @@ func TestState_Sync(t *testing.T) {
 	st.CreateAccount(address)
 	amt := uint64(1232)
 	st.AddToBalance(address, amt)
-	st.IncSequence(address)
-	require.Nil(t, st.Error())
 
 	var err error
 	err = st.Sync()
@@ -53,7 +51,6 @@ func TestState_Sync(t *testing.T) {
 	acc, err := backend.GetAccount(address)
 	require.NoError(t, err)
 	assert.Equal(t, acc.Balance, amt)
-	assert.Equal(t, uint64(1), acc.Sequence)
 }
 
 func TestState_NewCache(t *testing.T) {
@@ -64,8 +61,6 @@ func TestState_NewCache(t *testing.T) {
 	cache.CreateAccount(address)
 	amt := uint64(1232)
 	cache.AddToBalance(address, amt)
-	cache.IncSequence(address)
-	require.Nil(t, st.Error())
 
 	var err error
 	assert.Equal(t, uint64(0), st.GetBalance(address))

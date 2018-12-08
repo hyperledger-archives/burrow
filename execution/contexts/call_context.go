@@ -109,21 +109,11 @@ func (ctx *CallContext) Precheck() (*acm.Account, *acm.Account, error) {
 }
 
 func (ctx *CallContext) Check(inAcc *acm.Account, value uint64) error {
-	createContract := ctx.tx.Address == nil
 	// The mempool does not call txs until
 	// the proposer determines the order of txs.
 	// So mempool will skip the actual .Call(),
 	// and only deduct from the caller's balance.
 	inAcc.Balance -= value
-	if createContract {
-		// This is done by DeriveNewAccount when runCall == true
-		ctx.Logger.TraceMsg("Incrementing sequence number since creates contract",
-			"tag", "sequence",
-			"account", inAcc.Address,
-			"old_sequence", inAcc.Sequence,
-			"new_sequence", inAcc.Sequence+1)
-		inAcc.Sequence++
-	}
 	err := ctx.StateWriter.UpdateAccount(inAcc)
 	if err != nil {
 		return err
@@ -152,8 +142,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 	// get or create callee
 	if createContract {
 		// We already checked for permission
-		txCache.IncSequence(caller)
-		callee = crypto.NewContractAddress(caller, txCache.GetSequence(caller))
+		callee = crypto.NewContractAddress(caller, ctx.txe.TxHash)
 		code = ctx.tx.Data
 		txCache.CreateAccount(callee)
 		ctx.Logger.TraceMsg("Creating new contract",

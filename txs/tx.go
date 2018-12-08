@@ -27,6 +27,8 @@ import (
 	"github.com/hyperledger/burrow/txs/payload"
 )
 
+const HashLength = tmhash.Size
+
 // Tx is the canonical object that we serialise to produce the SignBytes that we sign
 type Tx struct {
 	ChainID string
@@ -184,7 +186,7 @@ func (tx *Tx) GenerateReceipt() *Receipt {
 	if callTx, ok := tx.Payload.(*payload.CallTx); ok {
 		receipt.CreatesContract = callTx.Address == nil
 		if receipt.CreatesContract {
-			receipt.ContractAddress = crypto.NewContractAddress(callTx.Input.Address, callTx.Input.Sequence)
+			receipt.ContractAddress = crypto.NewContractAddress(callTx.Input.Address, tx.Hash())
 		} else {
 			receipt.ContractAddress = *callTx.Address
 		}

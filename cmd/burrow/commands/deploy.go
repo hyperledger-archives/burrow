@@ -137,4 +137,5 @@ func (f *PlainFormatter) appendMessageData(b *bytes.Buffer, key string, value in
 		stringVal = fmt.Sprint(value)
 	}
 	b.WriteString(stringVal)
+	b.WriteString(" ")
 }
