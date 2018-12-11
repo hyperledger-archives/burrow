@@ -410,6 +410,22 @@ func (s *State) GetTx(txHash []byte) (*exec.TxExecution, error) {
 		index, height, txHash, len(be.TxExecutions))
 }
 
+func (s *State) IterateTx(start, end uint64, consumer func(tx *exec.TxExecution) (stop bool)) (stopped bool, err error) {
+	for height := start; height <= end; height++ {
+		be, err := s.GetBlock(height)
+		if err != nil {
+			return false, fmt.Errorf("error getting block %v", height)
+		}
+		for i := 0; i < len(be.TxExecutions); i++ {
+			stopped = consumer(be.TxExecutions[i])
+			if stopped {
+				return stopped, err
+			}
+		}
+	}
+	return false, nil
+}
+
 func (s *State) GetBlock(height uint64) (*exec.BlockExecution, error) {
 	bs := s.refs.Get(blockRefKeyFormat.Key(height))
 	if len(bs) == 0 {

@@ -40,6 +40,7 @@ import (
 	"github.com/hyperledger/burrow/process"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/metrics"
+	"github.com/hyperledger/burrow/rpc/rpcdump"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/rpcinfo"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
@@ -263,6 +264,9 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 
 				rpcevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer(kern.State,
 					kern.Emitter, kern.Blockchain, kern.Logger))
+
+				rpcdump.RegisterDumpServer(grpcServer, rpcdump.NewDumpServer(kern.State,
+					kern.Blockchain, nodeView, kern.Logger))
 
 				// Provides metadata about services registered
 				//reflection.Register(grpcServer)

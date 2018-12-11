@@ -1,0 +1,41 @@
+syntax = 'proto3';
+
+option go_package = "github.com/hyperledger/burrow/dump";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+import "acm.proto";
+import "exec.proto";
+import "names.proto";
+
+package dump;
+
+// Enable custom Marshal method.
+option (gogoproto.marshaler_all) = true;
+// Enable custom Unmarshal method.
+option (gogoproto.unmarshaler_all) = true;
+// Enable custom Size method (Required by Marshal and Unmarshal).
+option (gogoproto.sizer_all) = true;
+// Enable registration with golang/protobuf for the grpc-gateway.
+option (gogoproto.goproto_registration) = true;
+// Enable generation of XXX_MessageName methods for grpc-go/status.
+option (gogoproto.messagename_all) = true;
+
+message Storage {
+    bytes Key = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.Word256", (gogoproto.nullable) = false];
+    bytes Value = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.Word256", (gogoproto.nullable) = false];
+}
+
+message AccountStorage {
+    bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+    Storage Storage = 2;
+}
+
+message Dump {
+    option (gogoproto.onlyone) = true;
+
+    acm.Account Account = 1;
+    AccountStorage AccountStorage = 2;
+    exec.LogEvent Event = 3; 
+    names.Entry Name = 4;
+}
