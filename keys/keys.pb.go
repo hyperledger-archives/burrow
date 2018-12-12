@@ -38,7 +38,7 @@ func (m *ListRequest) Reset()         { *m = ListRequest{} }
 func (m *ListRequest) String() string { return proto.CompactTextString(m) }
 func (*ListRequest) ProtoMessage()    {}
 func (*ListRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{0}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{0}
 }
 func (m *ListRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -81,7 +81,7 @@ func (m *VerifyResponse) Reset()         { *m = VerifyResponse{} }
 func (m *VerifyResponse) String() string { return proto.CompactTextString(m) }
 func (*VerifyResponse) ProtoMessage()    {}
 func (*VerifyResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{1}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{1}
 }
 func (m *VerifyResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -124,7 +124,7 @@ func (m *RemoveNameResponse) Reset()         { *m = RemoveNameResponse{} }
 func (m *RemoveNameResponse) String() string { return proto.CompactTextString(m) }
 func (*RemoveNameResponse) ProtoMessage()    {}
 func (*RemoveNameResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{2}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{2}
 }
 func (m *RemoveNameResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -167,7 +167,7 @@ func (m *AddNameResponse) Reset()         { *m = AddNameResponse{} }
 func (m *AddNameResponse) String() string { return proto.CompactTextString(m) }
 func (*AddNameResponse) ProtoMessage()    {}
 func (*AddNameResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{3}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{3}
 }
 func (m *AddNameResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -211,7 +211,7 @@ func (m *RemoveNameRequest) Reset()         { *m = RemoveNameRequest{} }
 func (m *RemoveNameRequest) String() string { return proto.CompactTextString(m) }
 func (*RemoveNameRequest) ProtoMessage()    {}
 func (*RemoveNameRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{4}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{4}
 }
 func (m *RemoveNameRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -264,7 +264,7 @@ func (m *GenRequest) Reset()         { *m = GenRequest{} }
 func (m *GenRequest) String() string { return proto.CompactTextString(m) }
 func (*GenRequest) ProtoMessage()    {}
 func (*GenRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{5}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{5}
 }
 func (m *GenRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -329,7 +329,7 @@ func (m *GenResponse) Reset()         { *m = GenResponse{} }
 func (m *GenResponse) String() string { return proto.CompactTextString(m) }
 func (*GenResponse) ProtoMessage()    {}
 func (*GenResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{6}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{6}
 }
 func (m *GenResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -381,7 +381,7 @@ func (m *PubRequest) Reset()         { *m = PubRequest{} }
 func (m *PubRequest) String() string { return proto.CompactTextString(m) }
 func (*PubRequest) ProtoMessage()    {}
 func (*PubRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{7}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{7}
 }
 func (m *PubRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -440,7 +440,7 @@ func (m *PubResponse) Reset()         { *m = PubResponse{} }
 func (m *PubResponse) String() string { return proto.CompactTextString(m) }
 func (*PubResponse) ProtoMessage()    {}
 func (*PubResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{8}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{8}
 }
 func (m *PubResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -499,7 +499,7 @@ func (m *ImportJSONRequest) Reset()         { *m = ImportJSONRequest{} }
 func (m *ImportJSONRequest) String() string { return proto.CompactTextString(m) }
 func (*ImportJSONRequest) ProtoMessage()    {}
 func (*ImportJSONRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{9}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{9}
 }
 func (m *ImportJSONRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -557,7 +557,7 @@ func (m *ImportResponse) Reset()         { *m = ImportResponse{} }
 func (m *ImportResponse) String() string { return proto.CompactTextString(m) }
 func (*ImportResponse) ProtoMessage()    {}
 func (*ImportResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{10}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{10}
 }
 func (m *ImportResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -611,7 +611,7 @@ func (m *ImportRequest) Reset()         { *m = ImportRequest{} }
 func (m *ImportRequest) String() string { return proto.CompactTextString(m) }
 func (*ImportRequest) ProtoMessage()    {}
 func (*ImportRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{11}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{11}
 }
 func (m *ImportRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -685,7 +685,7 @@ func (m *ExportRequest) Reset()         { *m = ExportRequest{} }
 func (m *ExportRequest) String() string { return proto.CompactTextString(m) }
 func (*ExportRequest) ProtoMessage()    {}
 func (*ExportRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{12}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{12}
 }
 func (m *ExportRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -753,7 +753,7 @@ func (m *ExportResponse) Reset()         { *m = ExportResponse{} }
 func (m *ExportResponse) String() string { return proto.CompactTextString(m) }
 func (*ExportResponse) ProtoMessage()    {}
 func (*ExportResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{13}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{13}
 }
 func (m *ExportResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -828,7 +828,7 @@ func (m *SignRequest) Reset()         { *m = SignRequest{} }
 func (m *SignRequest) String() string { return proto.CompactTextString(m) }
 func (*SignRequest) ProtoMessage()    {}
 func (*SignRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{14}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{14}
 }
 func (m *SignRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -901,7 +901,7 @@ func (m *SignResponse) Reset()         { *m = SignResponse{} }
 func (m *SignResponse) String() string { return proto.CompactTextString(m) }
 func (*SignResponse) ProtoMessage()    {}
 func (*SignResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{15}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{15}
 }
 func (m *SignResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -962,7 +962,7 @@ func (m *VerifyRequest) Reset()         { *m = VerifyRequest{} }
 func (m *VerifyRequest) String() string { return proto.CompactTextString(m) }
 func (*VerifyRequest) ProtoMessage()    {}
 func (*VerifyRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{16}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{16}
 }
 func (m *VerifyRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1035,7 +1035,7 @@ func (m *HashRequest) Reset()         { *m = HashRequest{} }
 func (m *HashRequest) String() string { return proto.CompactTextString(m) }
 func (*HashRequest) ProtoMessage()    {}
 func (*HashRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{17}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{17}
 }
 func (m *HashRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1093,7 +1093,7 @@ func (m *HashResponse) Reset()         { *m = HashResponse{} }
 func (m *HashResponse) String() string { return proto.CompactTextString(m) }
 func (*HashResponse) ProtoMessage()    {}
 func (*HashResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{18}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{18}
 }
 func (m *HashResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1145,7 +1145,7 @@ func (m *KeyID) Reset()         { *m = KeyID{} }
 func (m *KeyID) String() string { return proto.CompactTextString(m) }
 func (*KeyID) ProtoMessage()    {}
 func (*KeyID) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{19}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{19}
 }
 func (m *KeyID) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1203,7 +1203,7 @@ func (m *ListResponse) Reset()         { *m = ListResponse{} }
 func (m *ListResponse) String() string { return proto.CompactTextString(m) }
 func (*ListResponse) ProtoMessage()    {}
 func (*ListResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{20}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{20}
 }
 func (m *ListResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1255,7 +1255,7 @@ func (m *AddNameRequest) Reset()         { *m = AddNameRequest{} }
 func (m *AddNameRequest) String() string { return proto.CompactTextString(m) }
 func (*AddNameRequest) ProtoMessage()    {}
 func (*AddNameRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_keys_0247eff2e9d4bf23, []int{21}
+	return fileDescriptor_keys_cf52bfbdf9f18318, []int{21}
 }
 func (m *AddNameRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -5356,10 +5356,10 @@ var (
 	ErrIntOverflowKeys   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("keys.proto", fileDescriptor_keys_0247eff2e9d4bf23) }
-func init() { golang_proto.RegisterFile("keys.proto", fileDescriptor_keys_0247eff2e9d4bf23) }
+func init() { proto.RegisterFile("keys.proto", fileDescriptor_keys_cf52bfbdf9f18318) }
+func init() { golang_proto.RegisterFile("keys.proto", fileDescriptor_keys_cf52bfbdf9f18318) }
 
-var fileDescriptor_keys_0247eff2e9d4bf23 = []byte{
+var fileDescriptor_keys_cf52bfbdf9f18318 = []byte{
 	// 759 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x56, 0x4d, 0x6f, 0xd3, 0x4c,
 	0x10, 0x96, 0x63, 0xbf, 0x7d, 0xdb, 0x71, 0x92, 0xb7, 0xf1, 0x5b, 0x44, 0x64, 0x95, 0x08, 0xed,

@@ -35,7 +35,7 @@ func (m *AccountPermissions) Reset()         { *m = AccountPermissions{} }
 func (m *AccountPermissions) String() string { return proto.CompactTextString(m) }
 func (*AccountPermissions) ProtoMessage()    {}
 func (*AccountPermissions) Descriptor() ([]byte, []int) {
-	return fileDescriptor_permission_631de79937917deb, []int{0}
+	return fileDescriptor_permission_e2cddec46e3554ae, []int{0}
 }
 func (m *AccountPermissions) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -91,7 +91,7 @@ type BasePermissions struct {
 func (m *BasePermissions) Reset()      { *m = BasePermissions{} }
 func (*BasePermissions) ProtoMessage() {}
 func (*BasePermissions) Descriptor() ([]byte, []int) {
-	return fileDescriptor_permission_631de79937917deb, []int{1}
+	return fileDescriptor_permission_e2cddec46e3554ae, []int{1}
 }
 func (m *BasePermissions) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -154,7 +154,7 @@ type PermArgs struct {
 func (m *PermArgs) Reset()      { *m = PermArgs{} }
 func (*PermArgs) ProtoMessage() {}
 func (*PermArgs) Descriptor() ([]byte, []int) {
-	return fileDescriptor_permission_631de79937917deb, []int{2}
+	return fileDescriptor_permission_e2cddec46e3554ae, []int{2}
 }
 func (m *PermArgs) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -901,10 +901,10 @@ var (
 	ErrIntOverflowPermission   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("permission.proto", fileDescriptor_permission_631de79937917deb) }
-func init() { golang_proto.RegisterFile("permission.proto", fileDescriptor_permission_631de79937917deb) }
+func init() { proto.RegisterFile("permission.proto", fileDescriptor_permission_e2cddec46e3554ae) }
+func init() { golang_proto.RegisterFile("permission.proto", fileDescriptor_permission_e2cddec46e3554ae) }
 
-var fileDescriptor_permission_631de79937917deb = []byte{
+var fileDescriptor_permission_e2cddec46e3554ae = []byte{
 	// 367 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x91, 0x31, 0x4f, 0xc2, 0x40,
 	0x14, 0xc7, 0x7b, 0x50, 0x48, 0x39, 0x49, 0x24, 0x17, 0x87, 0x46, 0x93, 0xb6, 0x61, 0x30, 0x1d,

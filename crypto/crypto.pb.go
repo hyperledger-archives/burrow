@@ -36,7 +36,7 @@ type PublicKey struct {
 func (m *PublicKey) Reset()      { *m = PublicKey{} }
 func (*PublicKey) ProtoMessage() {}
 func (*PublicKey) Descriptor() ([]byte, []int) {
-	return fileDescriptor_crypto_7888f8b603fa919d, []int{0}
+	return fileDescriptor_crypto_014219bddbc69e0e, []int{0}
 }
 func (m *PublicKey) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -89,7 +89,7 @@ type PrivateKey struct {
 func (m *PrivateKey) Reset()      { *m = PrivateKey{} }
 func (*PrivateKey) ProtoMessage() {}
 func (*PrivateKey) Descriptor() ([]byte, []int) {
-	return fileDescriptor_crypto_7888f8b603fa919d, []int{1}
+	return fileDescriptor_crypto_014219bddbc69e0e, []int{1}
 }
 func (m *PrivateKey) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -133,7 +133,7 @@ type Signature struct {
 func (m *Signature) Reset()      { *m = Signature{} }
 func (*Signature) ProtoMessage() {}
 func (*Signature) Descriptor() ([]byte, []int) {
-	return fileDescriptor_crypto_7888f8b603fa919d, []int{2}
+	return fileDescriptor_crypto_014219bddbc69e0e, []int{2}
 }
 func (m *Signature) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -810,10 +810,10 @@ var (
 	ErrIntOverflowCrypto   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("crypto.proto", fileDescriptor_crypto_7888f8b603fa919d) }
-func init() { golang_proto.RegisterFile("crypto.proto", fileDescriptor_crypto_7888f8b603fa919d) }
+func init() { proto.RegisterFile("crypto.proto", fileDescriptor_crypto_014219bddbc69e0e) }
+func init() { golang_proto.RegisterFile("crypto.proto", fileDescriptor_crypto_014219bddbc69e0e) }
 
-var fileDescriptor_crypto_7888f8b603fa919d = []byte{
+var fileDescriptor_crypto_014219bddbc69e0e = []byte{
 	// 278 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x49, 0x2e, 0xaa, 0x2c,
 	0x28, 0xc9, 0xd7, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x83, 0xf0, 0xa4, 0x74, 0xd3, 0x33,

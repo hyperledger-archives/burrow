@@ -19,7 +19,7 @@ import (
 )
 
 type queryServer struct {
-	accounts    state.IterableReader
+	accounts    state.IterableStatsReader
 	nameReg     names.IterableReader
 	proposalReg proposal.IterableReader
 	blockchain  bcm.BlockchainInfo
@@ -29,7 +29,7 @@ type queryServer struct {
 
 var _ QueryServer = &queryServer{}
 
-func NewQueryServer(state state.IterableReader, nameReg names.IterableReader, proposalReg proposal.IterableReader,
+func NewQueryServer(state state.IterableStatsReader, nameReg names.IterableReader, proposalReg proposal.IterableReader,
 	blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, logger *logging.Logger) *queryServer {
 	return &queryServer{
 		accounts:    state,
@@ -143,4 +143,13 @@ func (qs *queryServer) ListProposals(param *ListProposalsParam, stream Query_Lis
 		return err
 	}
 	return streamErr
+}
+
+func (qs *queryServer) GetStats(ctx context.Context, param *GetStatsParam) (*Stats, error) {
+	stats := qs.accounts.GetAccountStats()
+
+	return &Stats{
+		AccountsWithCode:    stats.AccountsWithCode,
+		AccountsWithoutCode: stats.AccountsWithoutCode,
+	}, nil
 }

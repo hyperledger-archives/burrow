@@ -65,7 +65,7 @@ func (x Bound_BoundType) String() string {
 	return proto.EnumName(Bound_BoundType_name, int32(x))
 }
 func (Bound_BoundType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_rpcevents_089c327456cc7f7a, []int{5, 0}
+	return fileDescriptor_rpcevents_9d7d83df46bfb95f, []int{5, 0}
 }
 
 type GetBlockRequest struct {
@@ -82,7 +82,7 @@ func (m *GetBlockRequest) Reset()         { *m = GetBlockRequest{} }
 func (m *GetBlockRequest) String() string { return proto.CompactTextString(m) }
 func (*GetBlockRequest) ProtoMessage()    {}
 func (*GetBlockRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcevents_089c327456cc7f7a, []int{0}
+	return fileDescriptor_rpcevents_9d7d83df46bfb95f, []int{0}
 }
 func (m *GetBlockRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -143,7 +143,7 @@ func (m *GetTxRequest) Reset()         { *m = GetTxRequest{} }
 func (m *GetTxRequest) String() string { return proto.CompactTextString(m) }
 func (*GetTxRequest) ProtoMessage()    {}
 func (*GetTxRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcevents_089c327456cc7f7a, []int{1}
+	return fileDescriptor_rpcevents_9d7d83df46bfb95f, []int{1}
 }
 func (m *GetTxRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -230,7 +230,7 @@ func (m *BlocksRequest) Reset()         { *m = BlocksRequest{} }
 func (m *BlocksRequest) String() string { return proto.CompactTextString(m) }
 func (*BlocksRequest) ProtoMessage()    {}
 func (*BlocksRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcevents_089c327456cc7f7a, []int{2}
+	return fileDescriptor_rpcevents_9d7d83df46bfb95f, []int{2}
 }
 func (m *BlocksRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -289,7 +289,7 @@ func (m *GetEventsResponse) Reset()         { *m = GetEventsResponse{} }
 func (m *GetEventsResponse) String() string { return proto.CompactTextString(m) }
 func (*GetEventsResponse) ProtoMessage()    {}
 func (*GetEventsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcevents_089c327456cc7f7a, []int{3}
+	return fileDescriptor_rpcevents_9d7d83df46bfb95f, []int{3}
 }
 func (m *GetEventsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -348,7 +348,7 @@ func (m *GetTxsResponse) Reset()         { *m = GetTxsResponse{} }
 func (m *GetTxsResponse) String() string { return proto.CompactTextString(m) }
 func (*GetTxsResponse) ProtoMessage()    {}
 func (*GetTxsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcevents_089c327456cc7f7a, []int{4}
+	return fileDescriptor_rpcevents_9d7d83df46bfb95f, []int{4}
 }
 func (m *GetTxsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -407,7 +407,7 @@ func (m *Bound) Reset()         { *m = Bound{} }
 func (m *Bound) String() string { return proto.CompactTextString(m) }
 func (*Bound) ProtoMessage()    {}
 func (*Bound) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcevents_089c327456cc7f7a, []int{5}
+	return fileDescriptor_rpcevents_9d7d83df46bfb95f, []int{5}
 }
 func (m *Bound) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -472,7 +472,7 @@ func (m *BlockRange) Reset()         { *m = BlockRange{} }
 func (m *BlockRange) String() string { return proto.CompactTextString(m) }
 func (*BlockRange) ProtoMessage()    {}
 func (*BlockRange) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcevents_089c327456cc7f7a, []int{6}
+	return fileDescriptor_rpcevents_9d7d83df46bfb95f, []int{6}
 }
 func (m *BlockRange) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2069,10 +2069,10 @@ var (
 	ErrIntOverflowRpcevents   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("rpcevents.proto", fileDescriptor_rpcevents_089c327456cc7f7a) }
-func init() { golang_proto.RegisterFile("rpcevents.proto", fileDescriptor_rpcevents_089c327456cc7f7a) }
+func init() { proto.RegisterFile("rpcevents.proto", fileDescriptor_rpcevents_9d7d83df46bfb95f) }
+func init() { golang_proto.RegisterFile("rpcevents.proto", fileDescriptor_rpcevents_9d7d83df46bfb95f) }
 
-var fileDescriptor_rpcevents_089c327456cc7f7a = []byte{
+var fileDescriptor_rpcevents_9d7d83df46bfb95f = []byte{
 	// 584 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x54, 0x5f, 0x8f, 0xd2, 0x40,
 	0x10, 0xbf, 0xe5, 0x4f, 0x03, 0x03, 0x1e, 0xbd, 0xcd, 0xa9, 0x48, 0x0c, 0x47, 0x6a, 0x62, 0x48,
