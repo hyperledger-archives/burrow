@@ -35,8 +35,7 @@ import (
 )
 
 const (
-	BlockingTimeout = 1000 * time.Second
-	//BlockingTimeout     = 10 * time.Second
+	BlockingTimeout     = 10 * time.Second
 	SubscribeBufferSize = 10
 )
 
