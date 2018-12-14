@@ -39,7 +39,7 @@ run_test(){
 
 #
   deploy_cmd="${burrow_bin} deploy --chain-url=$BURROW_HOST:$BURROW_GRPC_PORT --keys=$BURROW_HOST:$BURROW_GRPC_PORT \
-   --address $key1_addr --set addr1=$key1_addr --mempool-signing --set addr2=$key2_addr --set addr2_pub=$key2_pub"
+   --address $key1 --mempool-signing --set key2_addr=$key2_addr --set addr2_pub=$key2_pub --set key1=$key1 --set key2=$key2"
   [[ "$debug" == true ]] && deploy_cmd="$deploy_cmd --debug"
   echo "executing deploy with command line:"
   echo "$deploy_cmd"

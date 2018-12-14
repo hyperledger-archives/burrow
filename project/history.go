@@ -56,6 +56,7 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 
 ### Added
 - [Deploy] burrow deploy now prints events generated during transactions
+- [Deploy] burrow deploy can use key names where addresses are used
 
 ### Removed
 

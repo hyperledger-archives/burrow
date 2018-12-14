@@ -263,6 +263,9 @@ func (k *KeyStore) List(ctx context.Context, in *ListRequest) (*ListResponse, er
 	var list []*KeyID
 
 	for name, addr := range names {
+		if in.KeyName != "" && in.KeyName != name {
+			continue
+		}
 		list = append(list, &KeyID{KeyName: name, Address: addr})
 	}
 

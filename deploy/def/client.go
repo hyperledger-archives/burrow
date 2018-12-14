@@ -56,6 +56,7 @@ func (c *Client) dial() error {
 		if c.KeysClientAddress == "" {
 			logrus.Info("Using mempool signing since no keyClient set, pass --keys to sign locally or elsewhere")
 			c.MempoolSigning = true
+			c.keyClient, err = keys.NewRemoteKeyClient(c.ChainAddress, logging.NewNoopLogger())
 		} else {
 			logrus.Infof("Using keys server at: %s", c.KeysClientAddress)
 			c.keyClient, err = keys.NewRemoteKeyClient(c.KeysClientAddress, logging.NewNoopLogger())
@@ -103,6 +104,18 @@ func (c *Client) Status() (*rpc.ResultStatus, error) {
 		return nil, err
 	}
 	return c.queryClient.Status(context.Background(), &rpcquery.StatusParam{})
+}
+
+func (c *Client) GetKeyAddress(key string) (crypto.Address, error) {
+	address, err := crypto.AddressFromHexString(key)
+	if err == nil {
+		return address, nil
+	}
+	err = c.dial()
+	if err != nil {
+		return crypto.Address{}, err
+	}
+	return c.keyClient.GetAddressForKeyName(key)
 }
 
 func (c *Client) GetAccount(address crypto.Address) (*acm.Account, error) {
@@ -264,7 +277,7 @@ func (c *Client) UpdateAccount(arg *GovArg) (*payload.GovTx, error) {
 		Roles:       arg.Permissions,
 	}
 	if arg.Address != "" {
-		address, err := crypto.AddressFromHexString(arg.Address)
+		address, err := c.GetKeyAddress(arg.Address)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse UpdateAccoount Address: %v", err)
 		}
@@ -356,7 +369,7 @@ func (c *Client) Call(arg *CallArg) (*payload.CallTx, error) {
 	}
 	var contractAddress *crypto.Address
 	if arg.Address != "" {
-		address, err := crypto.AddressFromHexString(arg.Address)
+		address, err := c.GetKeyAddress(arg.Address)
 		if err != nil {
 			return nil, err
 		}
@@ -397,7 +410,7 @@ func (c *Client) Send(arg *SendArg) (*payload.SendTx, error) {
 	if err != nil {
 		return nil, err
 	}
-	outputAddress, err := crypto.AddressFromHexString(arg.Output)
+	outputAddress, err := c.GetKeyAddress(arg.Output)
 	if err != nil {
 		return nil, err
 	}
@@ -463,7 +476,7 @@ func (c *Client) Permissions(arg *PermArg) (*payload.PermsTx, error) {
 		Action: action,
 	}
 	if arg.Target != "" {
-		target, err := crypto.AddressFromHexString(arg.Target)
+		target, err := c.GetKeyAddress(arg.Target)
 		if err != nil {
 			return nil, err
 		}
@@ -504,7 +517,7 @@ func (c *Client) TxInput(inputString, amountString, sequenceString string, allow
 	var err error
 	var inputAddress crypto.Address
 	if inputString != "" {
-		inputAddress, err = crypto.AddressFromHexString(inputString)
+		inputAddress, err = c.GetKeyAddress(inputString)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse input address from %s: %v", inputString, err)
 		}

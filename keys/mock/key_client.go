@@ -72,6 +72,16 @@ func (mkc *KeyClient) Generate(keyName string, curve crypto.CurveType) (crypto.A
 	return mkc.NewKey(keyName), nil
 }
 
+func (mkc *KeyClient) GetAddressForKeyName(keyName string) (crypto.Address, error) {
+	for _, m := range mkc.knownKeys {
+		if m.Name == keyName {
+			return m.Address, nil
+		}
+	}
+
+	return crypto.Address{}, nil
+}
+
 func (mkc *KeyClient) HealthCheck() error {
 	return nil
 }

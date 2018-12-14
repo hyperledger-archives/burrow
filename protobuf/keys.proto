@@ -29,7 +29,7 @@ service Keys {
 // Some empty types we may define later
 
 message ListRequest {
-
+    string KeyName = 1;
 }
 
 message VerifyResponse {
