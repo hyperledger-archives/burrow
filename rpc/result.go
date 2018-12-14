@@ -23,10 +23,10 @@ import (
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
-	"github.com/tendermint/go-amino"
+	amino "github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/consensus"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
-	"github.com/tendermint/tendermint/rpc/core/types"
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 

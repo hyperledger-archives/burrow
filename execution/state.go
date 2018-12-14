@@ -21,7 +21,7 @@ import (
 
 	"github.com/hyperledger/burrow/txs/payload"
 
-	"github.com/tendermint/go-amino"
+	amino "github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 
 	"github.com/hyperledger/burrow/acm"
@@ -174,7 +174,7 @@ func LoadState(db dbm.DB, hash []byte) (*State, error) {
 	s := NewState(db)
 	// Get the version associated with this state hash
 	commitID := new(CommitID)
-	err := s.codec.UnmarshalBinary(s.refs.Get(commitKeyFormat.Key(hash)), commitID)
+	err := s.codec.UnmarshalBinaryBare(s.refs.Get(commitKeyFormat.Key(hash)), commitID)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode CommitID: %v", err)
 	}
@@ -226,7 +226,7 @@ func (ws *writeState) commit() ([]byte, error) {
 		Height:  ws.state.height,
 		Version: treeVersion,
 	}
-	bs, err := ws.state.codec.MarshalBinary(commitID)
+	bs, err := ws.state.codec.MarshalBinaryBare(commitID)
 	if err != nil {
 		return nil, fmt.Errorf("could not encode CommitID %v: %v", commitID, err)
 	}

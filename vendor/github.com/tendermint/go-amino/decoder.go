@@ -217,12 +217,6 @@ func DecodeTime(bz []byte) (t time.Time, n int, err error) {
 		}
 	}
 
-	// Validation check.
-	if nsec < 0 || 999999999 < nsec {
-		err = fmt.Errorf("invalid time, nanoseconds out of bounds %v", nsec)
-		return
-	}
-
 	// Construct time.
 	t = time.Unix(sec, int64(nsec))
 	// Strip timezone and monotonic for deep equality.
@@ -238,20 +232,27 @@ func decodeSeconds(bz *[]byte) (int64, int, error) {
 	if err != nil {
 		return 0, n, err
 	}
-	if fieldNum == 1 && typ == Typ3_8Byte {
+	if fieldNum == 1 && typ == Typ3_Varint {
 		slide(bz, &n, _n)
 		_n = 0
-		sec, _n, err := DecodeInt64(*bz)
+		sec, _n, err := DecodeUvarint(*bz)
 		if slide(bz, &n, _n) && err != nil {
 			return 0, n, err
-		} else {
-			return sec, n, err
 		}
-	} else if fieldNum == 2 && typ == Typ3_4Byte {
+		// if seconds where negative before casting them to uint64, we yield
+		// the original signed value:
+		res := int64(sec)
+		if res < minSeconds || res >= maxSeconds {
+			return 0, n, InvalidTimeErr(fmt.Sprintf("seconds have to be > %d and < %d, got: %d",
+				minSeconds, maxSeconds, res))
+		}
+		return res, n, err
+
+	} else if fieldNum == 2 && typ == Typ3_Varint {
 		// skip: do not slide, no error, will read again
 		return 0, n, nil
 	} else {
-		return 0, n, fmt.Errorf("expected field number 1 <8Bytes> or field number 2 <4Bytes> , got %v", fieldNum)
+		return 0, n, fmt.Errorf("expected field number 1 <Varint> or field number 2 <Varint> , got %v", fieldNum)
 	}
 }
 
@@ -261,15 +262,19 @@ func decodeNanos(bz *[]byte, n *int) (int32, error) {
 	if err != nil {
 		return 0, err
 	}
-	if fieldNum == 2 && typ == Typ3_4Byte {
+	if fieldNum == 2 && typ == Typ3_Varint {
 		slide(bz, n, _n)
 		_n = 0
-		// Actually read the Int32.
-		nsec, _n, err := DecodeInt32(*bz)
+		nsec, _n, err := DecodeUvarint(*bz)
 		if slide(bz, n, _n) && err != nil {
 			return 0, err
 		}
-		return nsec, nil
+		// Validation check.
+		if nsec < 0 || maxNanos < nsec {
+			return 0, InvalidTimeErr(fmt.Sprintf("nanoseconds not in interval [0, 999999999] %v", nsec))
+		}
+		// this cast from uint64 to int32 is OK, due to above restriction:
+		return int32(nsec), nil
 	}
 	// skip over (no error)
 	return 0, nil

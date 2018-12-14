@@ -22,7 +22,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging/structure"
-	"github.com/tmthrgd/go-hex"
+	hex "github.com/tmthrgd/go-hex"
 )
 
 // Logger that implements some formatting conventions for burrow and burrow-client

@@ -16,20 +16,7 @@
 # overriding here because of IAVL
 [[override]]
   name = "github.com/tendermint/tendermint"
-  version = "=0.24.0"
-
-[[override]]
-  name = "github.com/tendermint/go-amino"
-  version = "^0.12.0-rc0"
-
-[[constraint]]
-  name = "github.com/tendermint/iavl"
-  version = "=0.11.0"
-
-# Haven't made a release since 2016.
-[[constraint]]
-  name = "github.com/prometheus/client_golang"
-  revision = "ae27198cdd90bf12cd134ad79d1366a6cf49f632"
+  version = "=0.27.0"
 
 [[constraint]]
   name = "golang.org/x/net"
@@ -43,6 +30,11 @@
 [[override]]
   name = "github.com/mitchellh/mapstructure"
   revision = "v1.0.0"
+
+[[constraint]]
+  name = "golang.org/x/crypto"
+  source = "github.com/tendermint/crypto"
+  revision = "3764759f34a542a3aef74d6b02e35be7ab893bba"
 
 #
 #[[override]]

@@ -198,7 +198,7 @@ var cdc = NewAminoCodec()
 
 func DecodeReceipt(bs []byte) (*Receipt, error) {
 	receipt := new(Receipt)
-	err := cdc.UnmarshalBinary(bs, receipt)
+	err := cdc.UnmarshalBinaryBare(bs, receipt)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +206,7 @@ func DecodeReceipt(bs []byte) (*Receipt, error) {
 }
 
 func (receipt *Receipt) Encode() ([]byte, error) {
-	return cdc.MarshalBinary(receipt)
+	return cdc.MarshalBinaryBare(receipt)
 }
 
 func EnvelopeFromAny(chainID string, p *payload.Any) *Envelope {

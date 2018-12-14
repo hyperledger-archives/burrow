@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/tendermint/go-amino"
+	amino "github.com/tendermint/go-amino"
 
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
@@ -48,12 +48,12 @@ func (acc *Account) GetAddress() crypto.Address {
 var cdc = amino.NewCodec()
 
 func (acc *Account) Encode() ([]byte, error) {
-	return cdc.MarshalBinary(acc)
+	return cdc.MarshalBinaryBare(acc)
 }
 
 func Decode(accBytes []byte) (*Account, error) {
 	ca := new(Account)
-	err := cdc.UnmarshalBinary(accBytes, ca)
+	err := cdc.UnmarshalBinaryBare(accBytes, ca)
 	if err != nil {
 		return nil, err
 	}

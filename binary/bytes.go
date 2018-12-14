@@ -1,6 +1,6 @@
 package binary
 
-import "github.com/tmthrgd/go-hex"
+import hex "github.com/tmthrgd/go-hex"
 
 type HexBytes []byte
 

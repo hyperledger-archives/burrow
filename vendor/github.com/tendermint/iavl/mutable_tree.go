@@ -263,6 +263,17 @@ func (tree *MutableTree) LoadVersion(targetVersion int64) (int64, error) {
 	return latestVersion, nil
 }
 
+// LoadVersionOverwrite returns the version number of targetVersion.
+// Higher versions' data will be deleted.
+func (tree *MutableTree) LoadVersionForOverwriting(targetVersion int64) (int64, error) {
+	latestVersion, err := tree.LoadVersion(targetVersion)
+	if err != nil {
+		return latestVersion, err
+	}
+	tree.deleteVersionsFrom(targetVersion+1)
+	return targetVersion, nil
+}
+
 // GetImmutable loads an ImmutableTree at a given version for querying
 func (tree *MutableTree) GetImmutable(version int64) (*ImmutableTree, error) {
 	rootHash := tree.ndb.getRoot(version)
@@ -365,11 +376,34 @@ func (tree *MutableTree) DeleteVersion(version int64) error {
 		return cmn.ErrorWrap(ErrVersionDoesNotExist, "")
 	}
 
-	tree.ndb.DeleteVersion(version)
+	tree.ndb.DeleteVersion(version, true)
 	tree.ndb.Commit()
 
 	delete(tree.versions, version)
 
+	return nil
+}
+
+// deleteVersionsFrom deletes tree version from disk specified version to latest version. The version can then no
+// longer be accessed.
+func (tree *MutableTree) deleteVersionsFrom(version int64) error {
+	if version <= 0 {
+		return cmn.NewError("version must be greater than 0")
+	}
+	newLatestVersion := version - 1
+	lastestVersion := tree.ndb.getLatestVersion()
+	for ; version <= lastestVersion; version++ {
+		if version == tree.version {
+			return cmn.NewError("cannot delete latest saved version (%d)", version)
+		}
+		if _, ok := tree.versions[version]; !ok {
+			return cmn.ErrorWrap(ErrVersionDoesNotExist, "")
+		}
+		tree.ndb.DeleteVersion(version, false)
+		delete(tree.versions, version)
+	}
+	tree.ndb.Commit()
+	tree.ndb.resetLatestVersion(newLatestVersion)
 	return nil
 }
 

@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/event/query"
-	"github.com/tendermint/go-amino"
+	amino "github.com/tendermint/go-amino"
 )
 
 var MinNameRegistrationPeriod uint64 = 5
@@ -40,7 +40,7 @@ const (
 var cdc = amino.NewCodec()
 
 func (e *Entry) Encode() ([]byte, error) {
-	return cdc.MarshalBinary(e)
+	return cdc.MarshalBinaryBare(e)
 }
 
 func (e *Entry) String() string {
@@ -61,7 +61,7 @@ func (e *Entry) Tagged() *TaggedEntry {
 
 func DecodeEntry(entryBytes []byte) (*Entry, error) {
 	entry := new(Entry)
-	err := cdc.UnmarshalBinary(entryBytes, entry)
+	err := cdc.UnmarshalBinaryBare(entryBytes, entry)
 	if err != nil {
 		return nil, err
 	}

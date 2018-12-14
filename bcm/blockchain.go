@@ -25,7 +25,7 @@ import (
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/tendermint/go-amino"
+	amino "github.com/tendermint/go-amino"
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
@@ -183,7 +183,7 @@ func (bc *Blockchain) Encode() ([]byte, error) {
 		LastBlockHeight:       bc.lastBlockHeight,
 		ValidatorCache:        bc.validatorCache.Persistable(),
 	}
-	encodedState, err := cdc.MarshalBinary(persistedState)
+	encodedState, err := cdc.MarshalBinaryBare(persistedState)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +192,7 @@ func (bc *Blockchain) Encode() ([]byte, error) {
 
 func DecodeBlockchain(encodedState []byte) (*Blockchain, error) {
 	persistedState := new(PersistedState)
-	err := cdc.UnmarshalBinary(encodedState, persistedState)
+	err := cdc.UnmarshalBinaryBare(encodedState, persistedState)
 	if err != nil {
 		return nil, err
 	}

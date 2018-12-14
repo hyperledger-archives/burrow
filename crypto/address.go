@@ -8,7 +8,7 @@ import (
 
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto/sha3"
-	"github.com/tmthrgd/go-hex"
+	hex "github.com/tmthrgd/go-hex"
 )
 
 type Addressable interface {

@@ -132,10 +132,9 @@ func defaultValue(rt reflect.Type) (rv reflect.Value) {
 	switch rt.Kind() {
 	case reflect.Ptr:
 		// Dereference all the way and see if it's a time type.
-		rt_, indirects := rt.Elem(), 1
+		rt_:= rt.Elem()
 		for rt_.Kind() == reflect.Ptr {
 			rt_ = rt_.Elem()
-			indirects += 1
 		}
 		switch rt_ {
 		case timeType:
@@ -162,7 +161,7 @@ func defaultValue(rt reflect.Type) (rv reflect.Value) {
 		}
 	}
 
-	// Just return ithe default Go zero object.
+	// Just return the default Go zero object.
 	// Return an empty struct.
 	return reflect.Zero(rt)
 }
