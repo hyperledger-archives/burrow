@@ -21,8 +21,11 @@ type BurrowTendermintConfig struct {
 	ListenAddress   string
 	// Optional external that nodes may provide with their NodeInfo
 	ExternalAddress string
-	Moniker         string
-	TendermintRoot  string
+	// Set true for strict address routability rules
+	// Set false for private or local networks
+	AddrBookStrict bool
+	Moniker        string
+	TendermintRoot string
 	// Peers ID or address this node is authorize to sync with
 	AuthorizedPeers string
 
@@ -58,6 +61,7 @@ func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
 		conf.P2P.PersistentPeers = btc.PersistentPeers
 		conf.P2P.ListenAddress = btc.ListenAddress
 		conf.P2P.ExternalAddress = btc.ExternalAddress
+		conf.P2P.AddrBookStrict = btc.AddrBookStrict
 		conf.Moniker = btc.Moniker
 		// Unfortunately this stops metrics from being used at all
 		conf.Instrumentation.Prometheus = false
