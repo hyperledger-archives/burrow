@@ -255,18 +255,42 @@ func (k *KeyStore) Import(ctx context.Context, in *ImportRequest) (*ImportRespon
 }
 
 func (k *KeyStore) List(ctx context.Context, in *ListRequest) (*ListResponse, error) {
-	names, err := coreNameList(k.keysDirPath)
+	byname, err := coreNameList(k.keysDirPath)
 	if err != nil {
 		return nil, err
 	}
 
 	var list []*KeyID
 
-	for name, addr := range names {
-		if in.KeyName != "" && in.KeyName != name {
-			continue
+	if in.KeyName != "" {
+		if addr, ok := byname[in.KeyName]; ok {
+			list = append(list, &KeyID{KeyName: in.KeyName, Address: addr})
 		}
-		list = append(list, &KeyID{KeyName: name, Address: addr})
+	} else {
+		// list all address
+
+		// Switch to lookup by address
+		byaddr := make(map[string]string)
+		for name, addr := range byname {
+			byaddr[addr] = name
+		}
+
+		datadir, err := returnDataDir(k.keysDirPath)
+		if err != nil {
+			return nil, err
+		}
+		addrs, err := GetAllAddresses(datadir)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, addr := range addrs {
+			key := KeyID{Address: addr}
+			if name, ok := byaddr[addr]; ok {
+				key.KeyName = name
+			}
+			list = append(list, &key)
+		}
 	}
 
 	return &ListResponse{Key: list}, nil

@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -325,28 +326,22 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 			}
 		})
 
-		cmd.Command("list", "list key names", func(cmd *cli.Cmd) {
+		cmd.Command("list", "list keys", func(cmd *cli.Cmd) {
 			name := cmd.StringOpt("name", "", "name of key to use")
 
 			cmd.Action = func() {
 				c := grpcKeysClient(output)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				resp, err := c.List(ctx, &keys.ListRequest{})
+				resp, err := c.List(ctx, &keys.ListRequest{KeyName: *name})
 				if err != nil {
-					output.Fatalf("failed to list key names: %v", err)
+					output.Fatalf("failed to list key: %v", err)
 				}
-				if *name != "" {
-					for _, k := range resp.Key {
-						if k.KeyName == *name {
-							output.Printf("%s\n", k.Address)
-						}
-					}
-				} else {
-					for _, k := range resp.Key {
-						fmt.Printf("%v\n", k)
-					}
+				bs, err := json.MarshalIndent(resp.Key, "", "    ")
+				if err != nil {
+					output.Fatalf("failed to json encode keys: %v", err)
 				}
+				fmt.Printf("%s\n", string(bs))
 			}
 		})
 

@@ -173,7 +173,11 @@ func (ks *KeyStore) AllKeys() ([]*Key, error) {
 	var list []*Key
 
 	for _, addr := range addrs {
-		k, err := ks.GetKey("", addr)
+		addrB, err := crypto.AddressFromHexString(addr)
+		if err != nil {
+			return nil, err
+		}
+		k, err := ks.GetKey("", addrB[:])
 		if err != nil {
 			return nil, err
 		}
@@ -228,7 +232,7 @@ func DecryptKey(passphrase string, keyProtected *keyJSON) (*Key, error) {
 	return k, nil
 }
 
-func (ks *KeyStore) GetAllAddresses() (addresses [][]byte, err error) {
+func (ks *KeyStore) GetAllAddresses() (addresses []string, err error) {
 	ks.Lock()
 	defer ks.Unlock()
 	return GetAllAddresses(ks.keysDirPath)
@@ -352,19 +356,15 @@ func (ks *KeyStore) GetAllNames() (map[string]string, error) {
 	return coreNameList(ks.keysDirPath)
 }
 
-func GetAllAddresses(dataDirPath string) (addresses [][]byte, err error) {
+func GetAllAddresses(dataDirPath string) (addresses []string, err error) {
 	fileInfos, err := ioutil.ReadDir(dataDirPath)
 	if err != nil {
 		return nil, err
 	}
-	addresses = make([][]byte, len(fileInfos))
+	addresses = make([]string, len(fileInfos))
 	for i, fileInfo := range fileInfos {
 		addr := strings.TrimSuffix(fileInfo.Name(), ".json")
-		address, err := hex.DecodeString(addr)
-		if err != nil {
-			continue
-		}
-		addresses[i] = address
+		addresses[i] = addr
 	}
 	return addresses, err
 }
