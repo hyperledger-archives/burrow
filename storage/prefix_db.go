@@ -48,7 +48,7 @@ func (pdb *PrefixDB) Iterator(start, end []byte) dbm.Iterator {
 }
 
 func (pdb *PrefixDB) ReverseIterator(start, end []byte) dbm.Iterator {
-	return pdb.prefix.ReverseIterator(pdb.db.ReverseIterator, start, end)
+	return pdb.prefix.Iterator(pdb.db.ReverseIterator, start, end)
 }
 
 func (pdb *PrefixDB) Close() {
