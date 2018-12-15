@@ -90,7 +90,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 				log.SetLevel(log.DebugLevel)
 			}
 			client := def.NewClient(*chainUrlOpt, *signerOpt, *mempoolSigningOpt, time.Duration(*timeoutOpt)*time.Second)
-
+			handleTerm()
 			util.IfExit(pkgs.RunPackage(do, client))
 		}
 	}
