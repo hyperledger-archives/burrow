@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strconv"
+	"time"
 
 	"reflect"
 
@@ -32,14 +33,15 @@ type Client struct {
 	KeysClientAddress string
 	// Memoised clients and info
 	chainID               string
+	timeout               time.Duration
 	transactClient        rpctransact.TransactClient
 	queryClient           rpcquery.QueryClient
 	executionEventsClient rpcevents.ExecutionEventsClient
 	keyClient             keys.KeyClient
 }
 
-func NewClient(chainURL, keysClientAddress string, mempoolSigning bool) *Client {
-	client := Client{ChainAddress: chainURL, MempoolSigning: mempoolSigning, KeysClientAddress: keysClientAddress}
+func NewClient(chainURL, keysClientAddress string, mempoolSigning bool, timeout time.Duration) *Client {
+	client := Client{ChainAddress: chainURL, MempoolSigning: mempoolSigning, KeysClientAddress: keysClientAddress, timeout: timeout}
 	return &client
 }
 
@@ -65,7 +67,10 @@ func (c *Client) dial() error {
 		if err != nil {
 			return err
 		}
-		stat, err := c.queryClient.Status(context.Background(), &rpcquery.StatusParam{})
+		ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+		defer cancel()
+
+		stat, err := c.queryClient.Status(ctx, &rpcquery.StatusParam{})
 		if err != nil {
 			return err
 		}
@@ -103,7 +108,9 @@ func (c *Client) Status() (*rpc.ResultStatus, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.queryClient.Status(context.Background(), &rpcquery.StatusParam{})
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	return c.queryClient.Status(ctx, &rpcquery.StatusParam{})
 }
 
 func (c *Client) GetKeyAddress(key string) (crypto.Address, error) {
@@ -123,7 +130,9 @@ func (c *Client) GetAccount(address crypto.Address) (*acm.Account, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.queryClient.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: address})
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	return c.queryClient.GetAccount(ctx, &rpcquery.GetAccountParam{Address: address})
 }
 
 func (c *Client) GetName(name string) (*names.Entry, error) {
@@ -131,7 +140,9 @@ func (c *Client) GetName(name string) (*names.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.queryClient.GetName(context.Background(), &rpcquery.GetNameParam{Name: name})
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	return c.queryClient.GetName(ctx, &rpcquery.GetNameParam{Name: name})
 }
 
 func (c *Client) GetValidatorSet() (*rpcquery.ValidatorSet, error) {
@@ -139,7 +150,9 @@ func (c *Client) GetValidatorSet() (*rpcquery.ValidatorSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.queryClient.GetValidatorSet(context.Background(), &rpcquery.GetValidatorSetParam{IncludeHistory: true})
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	return c.queryClient.GetValidatorSet(ctx, &rpcquery.GetValidatorSetParam{IncludeHistory: true})
 }
 
 func (c *Client) SignAndBroadcast(tx payload.Payload) (*exec.TxExecution, error) {
@@ -209,7 +222,9 @@ func (c *Client) Broadcast(tx payload.Payload) (*exec.TxExecution, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.transactClient.BroadcastTxSync(context.Background(), &rpctransact.TxEnvelopeParam{Payload: tx.Any()})
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	return c.transactClient.BroadcastTxSync(ctx, &rpctransact.TxEnvelopeParam{Payload: tx.Any()})
 }
 
 // Broadcast envelope - can be locally signed or remote signing will be attempted
@@ -218,7 +233,10 @@ func (c *Client) BroadcastEnvelope(txEnv *txs.Envelope) (*exec.TxExecution, erro
 	if err != nil {
 		return nil, err
 	}
-	return c.transactClient.BroadcastTxSync(context.Background(), &rpctransact.TxEnvelopeParam{Envelope: txEnv})
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+
+	return c.transactClient.BroadcastTxSync(ctx, &rpctransact.TxEnvelopeParam{Envelope: txEnv})
 }
 
 func (c *Client) ParseUint64(amount string) (uint64, error) {
@@ -246,7 +264,9 @@ func (c *Client) QueryContract(arg *QueryArg) (*exec.TxExecution, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.transactClient.CallTxSim(context.Background(), tx)
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	return c.transactClient.CallTxSim(ctx, tx)
 }
 
 // Transaction types
@@ -549,7 +569,9 @@ func (c *Client) getSequence(sequence string, inputAddress crypto.Address, mempo
 			return 0, nil
 		}
 		// Get from chain
-		acc, err := c.queryClient.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: inputAddress})
+		ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+		defer cancel()
+		acc, err := c.queryClient.GetAccount(ctx, &rpcquery.GetAccountParam{Address: inputAddress})
 		if err != nil {
 			return 0, err
 		}

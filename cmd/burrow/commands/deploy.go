@@ -3,6 +3,7 @@ package commands
 import (
 	"bytes"
 	"fmt"
+	"time"
 
 	pkgs "github.com/hyperledger/burrow/deploy"
 	"github.com/hyperledger/burrow/deploy/def"
@@ -58,6 +59,8 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 
 		proposalVote := cmd.BoolOpt("proposal-vote", false, "Vot for proposal, do NOT create new proposal")
 
+		timeoutOpt := cmd.IntOpt("t timeout", 10, "Timeout to talk to the chain")
+
 		cmd.Action = func() {
 			do := new(def.DeployArgs)
 
@@ -86,7 +89,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			} else if do.Debug {
 				log.SetLevel(log.DebugLevel)
 			}
-			client := def.NewClient(*chainUrlOpt, *signerOpt, *mempoolSigningOpt)
+			client := def.NewClient(*chainUrlOpt, *signerOpt, *mempoolSigningOpt, time.Duration(*timeoutOpt)*time.Second)
 
 			util.IfExit(pkgs.RunPackage(do, client))
 		}
