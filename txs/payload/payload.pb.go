@@ -52,7 +52,7 @@ func (x Ballot_ProposalState) String() string {
 	return proto.EnumName(Ballot_ProposalState_name, int32(x))
 }
 func (Ballot_ProposalState) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_payload_ab57a0f5c86b0b45, []int{14, 0}
+	return fileDescriptor_payload_935b893e761fc798, []int{14, 0}
 }
 
 type Any struct {
@@ -74,7 +74,7 @@ func (m *Any) Reset()         { *m = Any{} }
 func (m *Any) String() string { return proto.CompactTextString(m) }
 func (*Any) ProtoMessage()    {}
 func (*Any) Descriptor() ([]byte, []int) {
-	return fileDescriptor_payload_ab57a0f5c86b0b45, []int{0}
+	return fileDescriptor_payload_935b893e761fc798, []int{0}
 }
 func (m *Any) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -187,7 +187,7 @@ type TxInput struct {
 func (m *TxInput) Reset()      { *m = TxInput{} }
 func (*TxInput) ProtoMessage() {}
 func (*TxInput) Descriptor() ([]byte, []int) {
-	return fileDescriptor_payload_ab57a0f5c86b0b45, []int{1}
+	return fileDescriptor_payload_935b893e761fc798, []int{1}
 }
 func (m *TxInput) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -248,7 +248,7 @@ type TxOutput struct {
 func (m *TxOutput) Reset()      { *m = TxOutput{} }
 func (*TxOutput) ProtoMessage() {}
 func (*TxOutput) Descriptor() ([]byte, []int) {
-	return fileDescriptor_payload_ab57a0f5c86b0b45, []int{2}
+	return fileDescriptor_payload_935b893e761fc798, []int{2}
 }
 func (m *TxOutput) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -308,7 +308,7 @@ type CallTx struct {
 func (m *CallTx) Reset()      { *m = CallTx{} }
 func (*CallTx) ProtoMessage() {}
 func (*CallTx) Descriptor() ([]byte, []int) {
-	return fileDescriptor_payload_ab57a0f5c86b0b45, []int{3}
+	return fileDescriptor_payload_935b893e761fc798, []int{3}
 }
 func (m *CallTx) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -376,7 +376,7 @@ type SendTx struct {
 func (m *SendTx) Reset()      { *m = SendTx{} }
 func (*SendTx) ProtoMessage() {}
 func (*SendTx) Descriptor() ([]byte, []int) {
-	return fileDescriptor_payload_ab57a0f5c86b0b45, []int{4}
+	return fileDescriptor_payload_935b893e761fc798, []int{4}
 }
 func (m *SendTx) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -423,7 +423,7 @@ type PermsTx struct {
 func (m *PermsTx) Reset()      { *m = PermsTx{} }
 func (*PermsTx) ProtoMessage() {}
 func (*PermsTx) Descriptor() ([]byte, []int) {
-	return fileDescriptor_payload_ab57a0f5c86b0b45, []int{5}
+	return fileDescriptor_payload_935b893e761fc798, []int{5}
 }
 func (m *PermsTx) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -488,7 +488,7 @@ type NameTx struct {
 func (m *NameTx) Reset()      { *m = NameTx{} }
 func (*NameTx) ProtoMessage() {}
 func (*NameTx) Descriptor() ([]byte, []int) {
-	return fileDescriptor_payload_ab57a0f5c86b0b45, []int{6}
+	return fileDescriptor_payload_935b893e761fc798, []int{6}
 }
 func (m *NameTx) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -560,7 +560,7 @@ type BondTx struct {
 func (m *BondTx) Reset()      { *m = BondTx{} }
 func (*BondTx) ProtoMessage() {}
 func (*BondTx) Descriptor() ([]byte, []int) {
-	return fileDescriptor_payload_ab57a0f5c86b0b45, []int{7}
+	return fileDescriptor_payload_935b893e761fc798, []int{7}
 }
 func (m *BondTx) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -605,7 +605,7 @@ type UnbondTx struct {
 func (m *UnbondTx) Reset()      { *m = UnbondTx{} }
 func (*UnbondTx) ProtoMessage() {}
 func (*UnbondTx) Descriptor() ([]byte, []int) {
-	return fileDescriptor_payload_ab57a0f5c86b0b45, []int{8}
+	return fileDescriptor_payload_935b893e761fc798, []int{8}
 }
 func (m *UnbondTx) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -649,7 +649,7 @@ type GovTx struct {
 func (m *GovTx) Reset()      { *m = GovTx{} }
 func (*GovTx) ProtoMessage() {}
 func (*GovTx) Descriptor() ([]byte, []int) {
-	return fileDescriptor_payload_ab57a0f5c86b0b45, []int{9}
+	return fileDescriptor_payload_935b893e761fc798, []int{9}
 }
 func (m *GovTx) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -695,7 +695,7 @@ type ProposalTx struct {
 func (m *ProposalTx) Reset()      { *m = ProposalTx{} }
 func (*ProposalTx) ProtoMessage() {}
 func (*ProposalTx) Descriptor() ([]byte, []int) {
-	return fileDescriptor_payload_ab57a0f5c86b0b45, []int{10}
+	return fileDescriptor_payload_935b893e761fc798, []int{10}
 }
 func (m *ProposalTx) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -739,7 +739,7 @@ type BatchTx struct {
 func (m *BatchTx) Reset()      { *m = BatchTx{} }
 func (*BatchTx) ProtoMessage() {}
 func (*BatchTx) Descriptor() ([]byte, []int) {
-	return fileDescriptor_payload_ab57a0f5c86b0b45, []int{11}
+	return fileDescriptor_payload_935b893e761fc798, []int{11}
 }
 func (m *BatchTx) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -783,7 +783,7 @@ type Vote struct {
 func (m *Vote) Reset()      { *m = Vote{} }
 func (*Vote) ProtoMessage() {}
 func (*Vote) Descriptor() ([]byte, []int) {
-	return fileDescriptor_payload_ab57a0f5c86b0b45, []int{12}
+	return fileDescriptor_payload_935b893e761fc798, []int{12}
 }
 func (m *Vote) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -828,7 +828,7 @@ type Proposal struct {
 func (m *Proposal) Reset()      { *m = Proposal{} }
 func (*Proposal) ProtoMessage() {}
 func (*Proposal) Descriptor() ([]byte, []int) {
-	return fileDescriptor_payload_ab57a0f5c86b0b45, []int{13}
+	return fileDescriptor_payload_935b893e761fc798, []int{13}
 }
 func (m *Proposal) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -875,7 +875,7 @@ func (m *Ballot) Reset()         { *m = Ballot{} }
 func (m *Ballot) String() string { return proto.CompactTextString(m) }
 func (*Ballot) ProtoMessage()    {}
 func (*Ballot) Descriptor() ([]byte, []int) {
-	return fileDescriptor_payload_ab57a0f5c86b0b45, []int{14}
+	return fileDescriptor_payload_935b893e761fc798, []int{14}
 }
 func (m *Ballot) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4449,10 +4449,10 @@ var (
 	ErrIntOverflowPayload   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("payload.proto", fileDescriptor_payload_ab57a0f5c86b0b45) }
-func init() { golang_proto.RegisterFile("payload.proto", fileDescriptor_payload_ab57a0f5c86b0b45) }
+func init() { proto.RegisterFile("payload.proto", fileDescriptor_payload_935b893e761fc798) }
+func init() { golang_proto.RegisterFile("payload.proto", fileDescriptor_payload_935b893e761fc798) }
 
-var fileDescriptor_payload_ab57a0f5c86b0b45 = []byte{
+var fileDescriptor_payload_935b893e761fc798 = []byte{
 	// 958 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x56, 0x4b, 0x6f, 0x23, 0x45,
 	0x10, 0x4e, 0x67, 0xc6, 0x8f, 0xad, 0x75, 0x82, 0xb7, 0x79, 0xc8, 0x8a, 0x84, 0xbd, 0x32, 0x08,

@@ -47,7 +47,7 @@ func (m *CallCodeParam) Reset()         { *m = CallCodeParam{} }
 func (m *CallCodeParam) String() string { return proto.CompactTextString(m) }
 func (*CallCodeParam) ProtoMessage()    {}
 func (*CallCodeParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpctransact_df1ccfba2ed5331a, []int{0}
+	return fileDescriptor_rpctransact_0d4753fe41955324, []int{0}
 }
 func (m *CallCodeParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -105,7 +105,7 @@ func (m *TxEnvelope) Reset()         { *m = TxEnvelope{} }
 func (m *TxEnvelope) String() string { return proto.CompactTextString(m) }
 func (*TxEnvelope) ProtoMessage()    {}
 func (*TxEnvelope) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpctransact_df1ccfba2ed5331a, []int{1}
+	return fileDescriptor_rpctransact_0d4753fe41955324, []int{1}
 }
 func (m *TxEnvelope) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -152,7 +152,7 @@ func (m *TxEnvelopeParam) Reset()         { *m = TxEnvelopeParam{} }
 func (m *TxEnvelopeParam) String() string { return proto.CompactTextString(m) }
 func (*TxEnvelopeParam) ProtoMessage()    {}
 func (*TxEnvelopeParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpctransact_df1ccfba2ed5331a, []int{2}
+	return fileDescriptor_rpctransact_0d4753fe41955324, []int{2}
 }
 func (m *TxEnvelopeParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1305,12 +1305,12 @@ var (
 	ErrIntOverflowRpctransact   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("rpctransact.proto", fileDescriptor_rpctransact_df1ccfba2ed5331a) }
+func init() { proto.RegisterFile("rpctransact.proto", fileDescriptor_rpctransact_0d4753fe41955324) }
 func init() {
-	golang_proto.RegisterFile("rpctransact.proto", fileDescriptor_rpctransact_df1ccfba2ed5331a)
+	golang_proto.RegisterFile("rpctransact.proto", fileDescriptor_rpctransact_0d4753fe41955324)
 }
 
-var fileDescriptor_rpctransact_df1ccfba2ed5331a = []byte{
+var fileDescriptor_rpctransact_0d4753fe41955324 = []byte{
 	// 506 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x54, 0xcf, 0x6f, 0xd3, 0x30,
 	0x18, 0x25, 0xfc, 0x18, 0xdb, 0x97, 0x56, 0x65, 0xbe, 0x50, 0x55, 0x28, 0x45, 0x3d, 0x20, 0x84,
