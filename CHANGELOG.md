@@ -1,4 +1,11 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.23.2] - 2018-12-18
+Hotfix release for 0.23.1
+### Fixed
+- [State] Fixed issue with checkpointing whereby RWTree would load its readTree from one version lower than it should.
+
+
+
 ## [0.23.1] - 2018-11-14
 ### Fixed
 - [EVM] state/Cache no longer allows SetStorage on accounts that do not exist
@@ -321,6 +328,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.23.2]: https://github.com/hyperledger/burrow/compare/v0.23.1...v0.23.2
 [0.23.1]: https://github.com/hyperledger/burrow/compare/v0.23.0...v0.23.1
 [0.23.0]: https://github.com/hyperledger/burrow/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/hyperledger/burrow/compare/v0.21.0...v0.22.0
