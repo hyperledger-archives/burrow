@@ -33,7 +33,7 @@ func NewTxExecution(txEnv *txs.Envelope) *TxExecution {
 
 func DecodeTxExecution(bs []byte) (*TxExecution, error) {
 	txe := new(TxExecution)
-	err := cdc.UnmarshalBinary(bs, txe)
+	err := cdc.UnmarshalBinaryBare(bs, txe)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func DecodeTxExecution(bs []byte) (*TxExecution, error) {
 }
 
 func (txe *TxExecution) Encode() ([]byte, error) {
-	return cdc.MarshalBinary(txe)
+	return cdc.MarshalBinaryBare(txe)
 }
 
 func (*TxExecution) EventType() EventType {

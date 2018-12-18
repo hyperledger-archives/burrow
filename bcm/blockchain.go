@@ -136,17 +136,21 @@ func (bc *Blockchain) ValidatorWriter() validator.Writer {
 	return validator.SyncWriter(bc, bc.validatorCache.AlterPower)
 }
 
-func (bc *Blockchain) CommitBlock(blockTime time.Time,
-	blockHash, appHash []byte) (totalPowerChange, totalFlow *big.Int, err error) {
+func (bc *Blockchain) CommitBlock(blockTime time.Time, blockHash,
+	appHash []byte) (totalPowerChange, totalFlow *big.Int, err error) {
 	bc.Lock()
 	defer bc.Unlock()
-	// Checkpoint on the _previous_ block. If we die, this is where we will resume since we know it must have been
-	// committed since we are committing the next block. If we fall over we can resume a safe committed state and
-	// Tendermint will catch us up
+	// Checkpoint on the _previous_ block. If we die, this is where we will resume since we know all intervening state
+	// has been written successfully since we are committing the next block.
+	// If we fall over we can resume a safe committed state and Tendermint will catch us up
 	err = bc.save()
 	if err != nil {
 		return
 	}
+	// TODO: Because our blockchain reference is unversioned we have no easy way (i.e. other than replaying all blocks)
+	// to recover the validator set. This probably suggests that validator set may not be in the correct place...
+	// should it be a versioned tree in state? Should it be its own DB. We probably ought to do a better job of breaking
+	// apart our various concerns.
 	totalPowerChange, totalFlow, err = bc.validatorCache.Rotate()
 	if err != nil {
 		return
@@ -183,7 +187,7 @@ func (bc *Blockchain) Encode() ([]byte, error) {
 		LastBlockHeight:       bc.lastBlockHeight,
 		ValidatorCache:        bc.validatorCache.Persistable(),
 	}
-	encodedState, err := cdc.MarshalBinary(persistedState)
+	encodedState, err := cdc.MarshalBinaryBare(persistedState)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +196,7 @@ func (bc *Blockchain) Encode() ([]byte, error) {
 
 func DecodeBlockchain(encodedState []byte) (*Blockchain, error) {
 	persistedState := new(PersistedState)
-	err := cdc.UnmarshalBinary(encodedState, persistedState)
+	err := cdc.UnmarshalBinaryBare(encodedState, persistedState)
 	if err != nil {
 		return nil, err
 	}

@@ -1,7 +1,7 @@
 package def
 
 import (
-	"github.com/go-ozzo/ozzo-validation"
+	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/hyperledger/burrow/deploy/def/rule"
 )
 

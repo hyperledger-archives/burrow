@@ -215,7 +215,7 @@ func (kf *KeyFormat) Fix(args ...interface{}) (*KeyFormat, error) {
 // argument for reverse can be passed to get reverse iteration.
 func (kf *KeyFormat) Iterator(iterable KVIterable, start, end []byte, reverse ...bool) KVIterator {
 	if len(reverse) > 0 && reverse[0] {
-		return kf.prefix.ReverseIterator(iterable.ReverseIterator, start, end)
+		return kf.prefix.Iterator(iterable.ReverseIterator, start, end)
 	}
 	return kf.prefix.Iterator(iterable.Iterator, start, end)
 }

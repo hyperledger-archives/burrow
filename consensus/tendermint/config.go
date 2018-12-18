@@ -3,6 +3,7 @@ package tendermint
 import (
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/hyperledger/burrow/consensus/tendermint/abci"
 	tm_config "github.com/tendermint/tendermint/config"
@@ -31,7 +32,7 @@ type BurrowTendermintConfig struct {
 
 	// EmptyBlocks mode and possible interval between empty blocks in seconds
 	CreateEmptyBlocks         bool
-	CreateEmptyBlocksInterval int
+	CreateEmptyBlocksInterval time.Duration
 }
 
 func DefaultBurrowTendermintConfig() *BurrowTendermintConfig {

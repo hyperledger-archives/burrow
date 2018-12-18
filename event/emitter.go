@@ -24,7 +24,7 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/process"
 	"github.com/tendermint/tendermint/libs/common"
-	"github.com/tmthrgd/go-hex"
+	hex "github.com/tmthrgd/go-hex"
 )
 
 const DefaultEventBufferCapacity = 2 << 10

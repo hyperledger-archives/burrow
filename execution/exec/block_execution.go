@@ -14,7 +14,7 @@ func EventStringBlockExecution(height uint64) string { return fmt.Sprintf("Execu
 
 func DecodeBlockExecution(bs []byte) (*BlockExecution, error) {
 	be := new(BlockExecution)
-	err := cdc.UnmarshalBinary(bs, be)
+	err := cdc.UnmarshalBinaryBare(bs, be)
 	if err != nil {
 		return nil, err
 	}
@@ -22,7 +22,7 @@ func DecodeBlockExecution(bs []byte) (*BlockExecution, error) {
 }
 
 func (be *BlockExecution) Encode() ([]byte, error) {
-	return cdc.MarshalBinary(be)
+	return cdc.MarshalBinaryBare(be)
 }
 
 func (*BlockExecution) EventType() EventType {

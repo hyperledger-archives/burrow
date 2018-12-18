@@ -17,10 +17,10 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/logging/logconfig/presets"
-	"github.com/jawher/mow.cli"
-	"github.com/tendermint/go-amino"
+	cli "github.com/jawher/mow.cli"
+	amino "github.com/tendermint/go-amino"
 	tmEd25519 "github.com/tendermint/tendermint/crypto/ed25519"
-	"github.com/tendermint/tendermint/crypto/encoding/amino"
+	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 	"github.com/tendermint/tendermint/p2p"
 )
 

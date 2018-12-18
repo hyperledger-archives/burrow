@@ -21,7 +21,7 @@ import (
 
 	"github.com/hyperledger/burrow/txs/payload"
 
-	"github.com/tendermint/go-amino"
+	amino "github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 
 	"github.com/hyperledger/burrow/acm"
@@ -86,6 +86,10 @@ type CommitID struct {
 	// Height and Version will normally be the same - but it's not clear we should assume this
 	Height  uint64
 	Version int64
+}
+
+func (cid CommitID) String() string {
+	return fmt.Sprintf("Commit{Hash: %v, Height: %v, TreeVersion: %v}", cid.Hash, cid.Height, cid.Version)
 }
 
 // Writers to state are responsible for calling State.Lock() before calling
@@ -174,7 +178,7 @@ func LoadState(db dbm.DB, hash []byte) (*State, error) {
 	s := NewState(db)
 	// Get the version associated with this state hash
 	commitID := new(CommitID)
-	err := s.codec.UnmarshalBinary(s.refs.Get(commitKeyFormat.Key(hash)), commitID)
+	err := s.codec.UnmarshalBinaryBare(s.refs.Get(commitKeyFormat.Key(hash)), commitID)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode CommitID: %v", err)
 	}
@@ -194,6 +198,9 @@ func LoadState(db dbm.DB, hash []byte) (*State, error) {
 		}
 		return
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	return s, nil
 }
@@ -226,7 +233,7 @@ func (ws *writeState) commit() ([]byte, error) {
 		Height:  ws.state.height,
 		Version: treeVersion,
 	}
-	bs, err := ws.state.codec.MarshalBinary(commitID)
+	bs, err := ws.state.codec.MarshalBinaryBare(commitID)
 	if err != nil {
 		return nil, fmt.Errorf("could not encode CommitID %v: %v", commitID, err)
 	}
@@ -394,7 +401,7 @@ func (s *State) GetTx(txHash []byte) (*exec.TxExecution, error) {
 }
 
 func (s *State) GetBlock(height uint64) (*exec.BlockExecution, error) {
-	bs := s.tree.Get(blockRefKeyFormat.Key(height))
+	bs := s.refs.Get(blockRefKeyFormat.Key(height))
 	if len(bs) == 0 {
 		return nil, nil
 	}

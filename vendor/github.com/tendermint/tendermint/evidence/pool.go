@@ -59,7 +59,7 @@ func (evpool *EvidencePool) PriorityEvidence() []types.Evidence {
 
 // PendingEvidence returns uncommitted evidence up to maxBytes.
 // If maxBytes is -1, all evidence is returned.
-func (evpool *EvidencePool) PendingEvidence(maxBytes int) []types.Evidence {
+func (evpool *EvidencePool) PendingEvidence(maxBytes int64) []types.Evidence {
 	return evpool.evidenceStore.PendingEvidence(maxBytes)
 }
 
@@ -127,7 +127,7 @@ func (evpool *EvidencePool) MarkEvidenceAsCommitted(height int64, evidence []typ
 	}
 
 	// remove committed evidence from the clist
-	maxAge := evpool.State().ConsensusParams.EvidenceParams.MaxAge
+	maxAge := evpool.State().ConsensusParams.Evidence.MaxAge
 	evpool.removeEvidence(height, maxAge, blockEvidenceMap)
 
 }

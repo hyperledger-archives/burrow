@@ -35,7 +35,7 @@ import (
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/tendermint/consensus"
 	"github.com/tendermint/tendermint/p2p"
-	"github.com/tendermint/tendermint/rpc/core/types"
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
@@ -114,8 +114,9 @@ func (s *Service) Peers() []core_types.Peer {
 	p2pPeers := s.nodeView.Peers().List()
 	peers := make([]core_types.Peer, len(p2pPeers))
 	for i, peer := range p2pPeers {
+		ni, _ := peer.NodeInfo().(p2p.DefaultNodeInfo)
 		peers[i] = core_types.Peer{
-			NodeInfo:         peer.NodeInfo(),
+			NodeInfo:         ni,
 			IsOutbound:       peer.IsOutbound(),
 			ConnectionStatus: peer.Status(),
 		}
@@ -125,14 +126,11 @@ func (s *Service) Peers() []core_types.Peer {
 
 func (s *Service) Network() (*ResultNetwork, error) {
 	var listeners []string
-	for _, listener := range s.nodeView.Listeners() {
-		listeners = append(listeners, listener.String())
-	}
 	peers := s.Peers()
 	return &ResultNetwork{
 		ThisNode: s.nodeView.NodeInfo(),
 		ResultNetInfo: &core_types.ResultNetInfo{
-			Listening: s.nodeView.IsListening(),
+			Listening: true,
 			Listeners: listeners,
 			NPeers:    len(peers),
 			Peers:     peers,
@@ -336,7 +334,7 @@ func (s *Service) ConsensusState() (*ResultConsensusState, error) {
 		}
 		peerStates[i] = core_types.PeerStateInfo{
 			// Peer basic info.
-			NodeAddress: p2p.IDAddressString(peer.ID(), peer.NodeInfo().ListenAddr),
+			NodeAddress: p2p.IDAddressString(peer.ID(), peer.NodeInfo().NetAddress().String()),
 			// Peer consensus state.
 			PeerState: peerStateJSON,
 		}

@@ -10,7 +10,7 @@ import (
 
 	"reflect"
 
-	"github.com/go-ozzo/ozzo-validation"
+	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/permission"

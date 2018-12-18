@@ -18,9 +18,6 @@ var (
 
 	// ErrInvalidRoot is returned when the root passed in does not match the proof's.
 	ErrInvalidRoot = fmt.Errorf("invalid root")
-
-	// ErrNilRoot is returned when the root of the tree is nil.
-	ErrNilRoot = fmt.Errorf("tree root is nil")
 )
 
 //----------------------------------------

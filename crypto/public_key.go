@@ -7,7 +7,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/tendermint/tendermint/crypto/tmhash"
-	"github.com/tmthrgd/go-hex"
+	hex "github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ripemd160"
 )

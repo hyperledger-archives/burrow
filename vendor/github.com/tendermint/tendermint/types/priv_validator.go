@@ -2,6 +2,7 @@ package types
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 
 	"github.com/tendermint/tendermint/crypto"
@@ -9,14 +10,13 @@ import (
 )
 
 // PrivValidator defines the functionality of a local Tendermint validator
-// that signs votes, proposals, and heartbeats, and never double signs.
+// that signs votes and proposals, and never double signs.
 type PrivValidator interface {
 	GetAddress() Address // redundant since .PubKey().Address()
 	GetPubKey() crypto.PubKey
 
 	SignVote(chainID string, vote *Vote) error
 	SignProposal(chainID string, proposal *Proposal) error
-	SignHeartbeat(chainID string, heartbeat *Heartbeat) error
 }
 
 //----------------------------------------
@@ -83,16 +83,6 @@ func (pv *MockPV) SignProposal(chainID string, proposal *Proposal) error {
 	return nil
 }
 
-// signHeartbeat signs the heartbeat without any checking.
-func (pv *MockPV) SignHeartbeat(chainID string, heartbeat *Heartbeat) error {
-	sig, err := pv.privKey.Sign(heartbeat.SignBytes(chainID))
-	if err != nil {
-		return err
-	}
-	heartbeat.Signature = sig
-	return nil
-}
-
 // String returns a string representation of the MockPV.
 func (pv *MockPV) String() string {
 	return fmt.Sprintf("MockPV{%v}", pv.GetAddress())
@@ -102,4 +92,25 @@ func (pv *MockPV) String() string {
 func (pv *MockPV) DisableChecks() {
 	// Currently this does nothing,
 	// as MockPV has no safety checks at all.
+}
+
+type erroringMockPV struct {
+	*MockPV
+}
+
+var ErroringMockPVErr = errors.New("erroringMockPV always returns an error")
+
+// Implements PrivValidator.
+func (pv *erroringMockPV) SignVote(chainID string, vote *Vote) error {
+	return ErroringMockPVErr
+}
+
+// Implements PrivValidator.
+func (pv *erroringMockPV) SignProposal(chainID string, proposal *Proposal) error {
+	return ErroringMockPVErr
+}
+
+// NewErroringMockPV returns a MockPV that fails on each signing request. Again, for testing only.
+func NewErroringMockPV() *erroringMockPV {
+	return &erroringMockPV{&MockPV{ed25519.GenPrivKey()}}
 }

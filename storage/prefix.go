@@ -4,7 +4,7 @@ import (
 	"bytes"
 
 	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tmthrgd/go-hex"
+	hex "github.com/tmthrgd/go-hex"
 )
 
 type Prefix []byte
@@ -66,35 +66,6 @@ func (p Prefix) Iterator(iteratorFn func(start, end []byte) dbm.Iterator, start,
 	}
 }
 
-func (p Prefix) ReverseIterator(iteratorFn func(start, end []byte) dbm.Iterator, start, end []byte) KVIterator {
-	// Note because of the inclusive start, exclusive end on underlying iterator
-	// To get inclusive start/end we have to handle the following:
-	// 1012 above <- does not start with prefix (but included by underlying iterator)
-	// 1011232
-	// 1011 prefix
-	// 1010111 <- does not start with prefix (but included by underlying iterator)
-	// 1010 below
-	var pstart, pend []byte
-	above := p.Above()
-	if start == nil {
-		pstart = above
-	} else {
-		pstart = p.Key(start)
-	}
-	if end == nil {
-		pend = p.Below()
-	} else {
-		pend = p.Key(end)
-	}
-	return &prefixIterator{
-		start:  start,
-		end:    end,
-		prefix: p,
-		// Skip 'above' if necessary
-		source: skipOne(iteratorFn(pstart, pend), above),
-	}
-}
-
 func (p Prefix) Iterable(source KVIterable) KVIterable {
 	return &prefixIterable{
 		prefix: p,
@@ -112,7 +83,7 @@ func (pi *prefixIterable) Iterator(start, end []byte) KVIterator {
 }
 
 func (pi *prefixIterable) ReverseIterator(start, end []byte) KVIterator {
-	return pi.prefix.ReverseIterator(pi.source.ReverseIterator, start, end)
+	return pi.prefix.Iterator(pi.source.ReverseIterator, start, end)
 }
 
 func (p Prefix) Store(source KVStore) KVStore {
@@ -188,17 +159,6 @@ func (pi *prefixIterator) validate() {
 	}
 }
 
-// If the first iterator item is skipKey, then
-// skip it.
-func skipOne(iterator dbm.Iterator, skipKey []byte) dbm.Iterator {
-	if iterator.Valid() {
-		if bytes.Equal(iterator.Key(), skipKey) {
-			iterator.Next()
-		}
-	}
-	return iterator
-}
-
 type prefixKVStore struct {
 	prefix Prefix
 	source KVStore
@@ -225,5 +185,5 @@ func (ps *prefixKVStore) Iterator(start, end []byte) dbm.Iterator {
 }
 
 func (ps *prefixKVStore) ReverseIterator(start, end []byte) dbm.Iterator {
-	return ps.prefix.ReverseIterator(ps.source.ReverseIterator, start, end)
+	return ps.prefix.Iterator(ps.source.ReverseIterator, start, end)
 }

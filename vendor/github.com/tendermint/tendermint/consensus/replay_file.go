@@ -58,7 +58,18 @@ func (cs *ConsensusState) ReplayFile(file string, console bool) error {
 	if err != nil {
 		return errors.Errorf("failed to subscribe %s to %v", subscriber, types.EventQueryNewRoundStep)
 	}
-	defer cs.eventBus.Unsubscribe(ctx, subscriber, types.EventQueryNewRoundStep)
+	defer func() {
+		// drain newStepCh to make sure we don't block
+	LOOP:
+		for {
+			select {
+			case <-newStepCh:
+			default:
+				break LOOP
+			}
+		}
+		cs.eventBus.Unsubscribe(ctx, subscriber, types.EventQueryNewRoundStep)
+	}()
 
 	// just open the file for reading, no need to use wal
 	fp, err := os.OpenFile(file, os.O_RDONLY, 0600)
@@ -221,7 +232,18 @@ func (pb *playback) replayConsoleLoop() int {
 			if err != nil {
 				cmn.Exit(fmt.Sprintf("failed to subscribe %s to %v", subscriber, types.EventQueryNewRoundStep))
 			}
-			defer pb.cs.eventBus.Unsubscribe(ctx, subscriber, types.EventQueryNewRoundStep)
+			defer func() {
+				// drain newStepCh to make sure we don't block
+			LOOP:
+				for {
+					select {
+					case <-newStepCh:
+					default:
+						break LOOP
+					}
+				}
+				pb.cs.eventBus.Unsubscribe(ctx, subscriber, types.EventQueryNewRoundStep)
+			}()
 
 			if len(tokens) == 1 {
 				if err := pb.replayReset(1, newStepCh); err != nil {
@@ -298,11 +320,16 @@ func newConsensusStateForReplay(config cfg.BaseConfig, csConfig *cfg.ConsensusCo
 
 	// Create proxyAppConn connection (consensus, mempool, query)
 	clientCreator := proxy.DefaultClientCreator(config.ProxyApp, config.ABCI, config.DBDir())
-	proxyApp := proxy.NewAppConns(clientCreator,
-		NewHandshaker(stateDB, state, blockStore, gdoc))
+	proxyApp := proxy.NewAppConns(clientCreator)
 	err = proxyApp.Start()
 	if err != nil {
 		cmn.Exit(fmt.Sprintf("Error starting proxy app conns: %v", err))
+	}
+
+	handshaker := NewHandshaker(stateDB, state, blockStore, gdoc)
+	err = handshaker.Handshake(proxyApp)
+	if err != nil {
+		cmn.Exit(fmt.Sprintf("Error on handshake: %v", err))
 	}
 
 	eventBus := types.NewEventBus()

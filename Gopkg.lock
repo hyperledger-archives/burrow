@@ -35,11 +35,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f10ee3c00a8a100d742d787adb726ea057193539e084984d582619b006dcb178"
+  digest = "1:d9043cacf637538c6d9df546f256173ce78b1ff10f42fba7a22ba72fb13b7837"
   name = "github.com/btcsuite/btcd"
   packages = ["btcec"]
   pruneopts = "NUT"
-  revision = "67e573d211ace594f1366b4ce9d39726c4b19bd0"
+  revision = "7d2daa5bfef28c5e282571bc06416516936115ee"
 
 [[projects]]
   branch = "master"
@@ -72,13 +72,6 @@
   pruneopts = "NUT"
   revision = "44cc805cf13205b55f69e14bcb69867d1ae92f98"
   version = "v1.1.0"
-
-[[projects]]
-  digest = "1:294576320c5093015ca9130ed928c84b2fdc8b9db6d136505a513795f3a64e3e"
-  name = "github.com/ebuchman/fail-test"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "95f809107225be108efcf10a3509e4ea6ceef3c4"
 
 [[projects]]
   branch = "master"
@@ -121,12 +114,12 @@
   version = "v0.6.0"
 
 [[projects]]
-  digest = "1:341a7df38da99fe91ed40e4008c13cc5d02dcc98ed1a094360cb7d5df26d6d26"
+  digest = "1:738c75300725db7262825a96ba5b6a8a737f0faa93d9dadcf3977504034877e0"
   name = "github.com/go-logfmt/logfmt"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "390ab7935ee28ec6b286364bba9b4dd6410cb3d5"
-  version = "v0.3.0"
+  revision = "07c9b44f60d7ffdfb7d8efe1ad539965737836dc"
+  version = "v0.4.0"
 
 [[projects]]
   digest = "1:0e8048fcb6ee925a40c4f8c1e034e78e0c1c07cf6d2693d85ea8a0c9055c4386"
@@ -149,7 +142,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:15d98ba6264884131abdd3dbf9d4639b15b81bff3b5e48ab1662a94847012a3e"
+  digest = "1:63dfa0378013bdefa3afabd8d4170af1d3b741204d4798563023b2f1b13e871b"
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
@@ -160,7 +153,7 @@
     "types",
   ]
   pruneopts = "UT"
-  revision = "211a54c57504366b3bf4b490fb3c0a5f5b8d290b"
+  revision = "4cbf7e384e768b4e01799441fdf2a706a5635ae7"
 
 [[projects]]
   digest = "1:03e14cff610a8a58b774e36bd337fa979482be86aab01be81fb8bbd6d0f07fc8"
@@ -185,12 +178,12 @@
   revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
 
 [[projects]]
-  digest = "1:3b708ebf63bfa9ba3313bedb8526bc0bb284e51474e65e958481476a9d4a12aa"
+  digest = "1:4a0c072e44da763409da72d41492373a034baf2e6d849c76d239b4abdfbb6c49"
   name = "github.com/gorilla/websocket"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
-  version = "v1.2.0"
+  revision = "66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d"
+  version = "v1.4.0"
 
 [[projects]]
   digest = "1:11c6c696067d3127ecf332b10f89394d386d9083f82baf71f40f2da31841a009"
@@ -332,14 +325,16 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:a16a1797cf7077c68a7a312ab68f1349b5ba2ca926a383d4b17c272b6ee97e15"
+  digest = "1:7c7cfeecd2b7147bcfec48a4bf622b4879e26aec145a9e373ce51d0c23b16f6b"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
+    "prometheus/internal",
     "prometheus/promhttp",
   ]
   pruneopts = "NUT"
-  revision = "ae27198cdd90bf12cd134ad79d1366a6cf49f632"
+  revision = "505eaef017263e299324067d40ca2c48f6a2cf50"
+  version = "v0.9.2"
 
 [[projects]]
   branch = "master"
@@ -359,7 +354,7 @@
     "model",
   ]
   pruneopts = "NUT"
-  revision = "7e9e6cabbd393fc208072eedef99188d0ce788b6"
+  revision = "4724e9255275ce38f7179b2478abeae4e28c904f"
 
 [[projects]]
   branch = "master"
@@ -372,7 +367,7 @@
     "xfs",
   ]
   pruneopts = "NUT"
-  revision = "185b4288413d2a0dd0806f78c90dde719829e5ae"
+  revision = "1dc9a6cbc91aacc3e8b2d63db4d2e957a5394ac4"
 
 [[projects]]
   branch = "master"
@@ -381,6 +376,14 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "3113b8401b8a98917cde58f8bbd42a1b1c03b1fd"
+
+[[projects]]
+  digest = "1:f250ca51e5b9215bc2df18f92060a9a835e9f85ab18ebbba0e1a6ef1f8fcdbfe"
+  name = "github.com/rs/cors"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "9a47f48565a795472d43519dd49aac781f3034fb"
+  version = "v1.6.0"
 
 [[projects]]
   digest = "1:d848e2bdc690ea54c4b49894b67a05db318a97ee6561879b814c2c1f82f61406"
@@ -426,12 +429,12 @@
   version = "v1.0.3"
 
 [[projects]]
-  digest = "1:9caed8c7c05e8927f5bc6eec5698119b2b63a7cf304effc6c9b818bc864a10d3"
+  digest = "1:e11ca20a245c80885b5777d7918a2a57d464556f3f1a61be5524e3972eea7ca2"
   name = "github.com/spf13/viper"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "2c12c60302a5a0e62ee102ca9bc996277c2f64f5"
-  version = "v1.2.1"
+  revision = "6d33b5a963d922d182c91e8a1c88d81fd150cfd4"
+  version = "v1.3.1"
 
 [[projects]]
   branch = "master"
@@ -454,7 +457,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:9ff9e1808adfc43f788f1c1e9fd2660c285b522243da985a4c043ec6f2a2d736"
+  digest = "1:685fdfea42d825ebd39ee0994354b46c374cf2c2b2d97a41a8dee1807c6a9b62"
   name = "github.com/syndtr/goleveldb"
   packages = [
     "leveldb",
@@ -471,7 +474,7 @@
     "leveldb/util",
   ]
   pruneopts = "NUT"
-  revision = "f9080354173f192dfc8821931eacf9cfd6819253"
+  revision = "b001fa50d6b27f3f0bb175a87d0cb55426d0a0ae"
 
 [[projects]]
   digest = "1:0f300196893c040e7a5c6025051a696c068392fe2f836f2a7e8ab35d0af9cafa"
@@ -481,35 +484,23 @@
   revision = "e5840949ff4fff0c56f9b6a541e22b63581ea9df"
 
 [[projects]]
-  branch = "master"
-  digest = "1:087aaa7920e5d0bf79586feb57ce01c35c830396ab4392798112e8aae8c47722"
-  name = "github.com/tendermint/ed25519"
-  packages = [
-    ".",
-    "edwards25519",
-    "extra25519",
-  ]
-  pruneopts = "NUT"
-  revision = "d8387025d2b9d158cf4efb07e7ebf814bcce2057"
-
-[[projects]]
-  digest = "1:27a7f2bb9b1f91a843e3a16c30b6d2b4254025e78efe8a8e6ed65b6af69d48da"
+  digest = "1:cab51cbba1fe9bd667ccd5198911b306a4b551c8fb2be754daae5b748d806d12"
   name = "github.com/tendermint/go-amino"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "faa6e731944e2b7b6a46ad202902851e8ce85bee"
-  version = "v0.12.0"
+  revision = "dc14acf9ef15f85828bfbc561ed9dd9d2a284885"
+  version = "v0.14.1"
 
 [[projects]]
-  digest = "1:95454de4bf99bf62e6e3b59724a712e954e1c8d9956e0bc098699179ad1168c6"
+  digest = "1:ab37e39e65da3b173493c741507b6d9769681414d834eb678d3bf334c6b5ad8e"
   name = "github.com/tendermint/iavl"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "3acc91fb8811db2c5409a855ae1f8e441fe98e2d"
-  version = "v0.11.0"
+  revision = "de0740903a67b624d887f9055d4c60175dcfa758"
+  version = "v0.12.0"
 
 [[projects]]
-  digest = "1:aea6b9055ca880c3f6de07b59e4ef34bc181206633b97c8abe33e9ec7a340a95"
+  digest = "1:970491c968ce06d577f2b43fd8fdde3da6b12a428381185c5bbc67f9cc26a034"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -534,6 +525,7 @@
     "libs/common",
     "libs/db",
     "libs/events",
+    "libs/fail",
     "libs/flowrate",
     "libs/log",
     "libs/pubsub",
@@ -543,13 +535,11 @@
     "p2p",
     "p2p/conn",
     "p2p/pex",
-    "p2p/upnp",
     "privval",
     "proxy",
     "rpc/core",
     "rpc/core/types",
     "rpc/grpc",
-    "rpc/lib",
     "rpc/lib/server",
     "rpc/lib/types",
     "state",
@@ -561,8 +551,8 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "d419fffe18531317c28c29a292ad7d253f6cafdf"
-  version = "v0.24.0"
+  revision = "9c236ffd6c56add84f3c17930ae75c26c68d61ec"
+  version = "v0.27.0"
 
 [[projects]]
   branch = "master"
@@ -581,8 +571,7 @@
   revision = "14226a535f434c12dbb6c0a0a59e40716f1534b4"
 
 [[projects]]
-  branch = "master"
-  digest = "1:95da60183886ee206cccb731ca3e66aa4731e3aac52f257fcf3e7049a63792fe"
+  digest = "1:fda2fde01556c582685ab0a5cf270ea0bd657f572fbdfc89b9acc31e1d48dc8a"
   name = "golang.org/x/crypto"
   packages = [
     "chacha20poly1305",
@@ -602,7 +591,8 @@
     "ssh/terminal",
   ]
   pruneopts = "NUT"
-  revision = "4d3f4d9ffa16a13f451c3b2999e9c49e9750bf06"
+  revision = "3764759f34a542a3aef74d6b02e35be7ab893bba"
+  source = "github.com/tendermint/crypto"
 
 [[projects]]
   digest = "1:2822b75330f8a787dca2f7d861788811676b2c50cea125851bbe32e9fd31624c"
@@ -622,7 +612,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:044b180daf00b33789fa51915fe800fc86327dc73c0ab5d928c06525a5f943f6"
+  digest = "1:68866e75c99ae82686f9e80734e74fb4f0f2fb7d75ad27680712b04d0c307774"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -630,7 +620,7 @@
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "9b800f95dbbc54abff0acf7ee32d88ba4e328c89"
+  revision = "4d1cda033e0619309c606fc686de3adcf599539e"
 
 [[projects]]
   digest = "1:e7071ed636b5422cc51c0e3a6cebc229d6c9fffc528814b519a980641422d619"
@@ -657,11 +647,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:56b0bca90b7e5d1facf5fbdacba23e4e0ce069d25381b8e2f70ef1e7ebfb9c1a"
+  digest = "1:077c1c599507b3b3e9156d17d36e1e61928ee9b53a5b420f10f28ebd4a0b275c"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "NUT"
-  revision = "c830210a61dfaa790e1920f8d0470fc27bc2efbe"
+  revision = "bd91e49a0898e27abb88c339b432fa53d7497ac0"
 
 [[projects]]
   digest = "1:d0e5846da58e4e20d1bbd7502b24f31d37e3ac1e02a9042d95bd93c2d0c139dd"
@@ -698,12 +688,12 @@
   version = "v1.13.0"
 
 [[projects]]
-  digest = "1:7c95b35057a0ff2e19f707173cc1a947fa43a6eb5c4d300d196ece0334046082"
+  digest = "1:18108594151654e9e696b27b181b953f9a90b16bf14d253dd1b397b025a1487f"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
-  version = "v2.2.1"
+  revision = "51d6538a90f86fe93ac480b35f37b2be17fef232"
+  version = "v2.2.2"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -762,12 +752,15 @@
     "github.com/tendermint/tendermint/rpc/core/types",
     "github.com/tendermint/tendermint/state",
     "github.com/tendermint/tendermint/types",
+    "github.com/tendermint/tendermint/types/time",
     "github.com/tmthrgd/go-hex",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/ripemd160",
     "golang.org/x/crypto/scrypt",
     "golang.org/x/net/context",
     "google.golang.org/grpc",
+    "google.golang.org/grpc/codes",
+    "google.golang.org/grpc/status",
     "gopkg.in/yaml.v2",
   ]
   solver-name = "gps-cdcl"

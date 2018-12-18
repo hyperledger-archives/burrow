@@ -20,5 +20,6 @@ message NodeInfo {
     string Version = 4;
     bytes Channels = 5 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
     string Moniker = 6;
-    repeated string Other = 7;
+    string RPCAddress = 7;
+    string TxIndex = 8;
 }
