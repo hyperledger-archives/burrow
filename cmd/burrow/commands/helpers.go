@@ -62,8 +62,7 @@ func genesisDocProvider(genesisFile string, skipNonExistent bool) source.ConfigP
 				return fmt.Errorf("config passed was not BurrowConfig")
 			}
 			if conf.GenesisDoc != nil {
-				return fmt.Errorf("sourcing GenesisDoc from file %v, but GenesisDoc was defined in earlier "+
-					"config source, only specify GenesisDoc in one place", genesisFile)
+				return nil
 			}
 			genesisDoc := new(genesis.GenesisDoc)
 			err := source.FromFile(genesisFile, genesisDoc)
