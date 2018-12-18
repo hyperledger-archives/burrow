@@ -25,7 +25,7 @@ import (
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/tendermint/go-amino"
+	amino "github.com/tendermint/go-amino"
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
@@ -136,17 +136,21 @@ func (bc *Blockchain) ValidatorWriter() validator.Writer {
 	return validator.SyncWriter(bc, bc.validatorCache.AlterPower)
 }
 
-func (bc *Blockchain) CommitBlock(blockTime time.Time,
-	blockHash, appHash []byte) (totalPowerChange, totalFlow *big.Int, err error) {
+func (bc *Blockchain) CommitBlock(blockTime time.Time, blockHash,
+	appHash []byte) (totalPowerChange, totalFlow *big.Int, err error) {
 	bc.Lock()
 	defer bc.Unlock()
-	// Checkpoint on the _previous_ block. If we die, this is where we will resume since we know it must have been
-	// committed since we are committing the next block. If we fall over we can resume a safe committed state and
-	// Tendermint will catch us up
+	// Checkpoint on the _previous_ block. If we die, this is where we will resume since we know all intervening state
+	// has been written successfully since we are committing the next block.
+	// If we fall over we can resume a safe committed state and Tendermint will catch us up
 	err = bc.save()
 	if err != nil {
 		return
 	}
+	// TODO: Because our blockchain reference is unversioned we have no easy way (i.e. other than replaying all blocks)
+	// to recover the validator set. This probably suggests that validator set may not be in the correct place...
+	// should it be a versioned tree in state? Should it be its own DB. We probably ought to do a better job of breaking
+	// apart our various concerns.
 	totalPowerChange, totalFlow, err = bc.validatorCache.Rotate()
 	if err != nil {
 		return

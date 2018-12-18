@@ -6,7 +6,7 @@ import (
 
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/jawher/mow.cli"
+	cli "github.com/jawher/mow.cli"
 )
 
 type configOptions struct {

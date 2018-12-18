@@ -4,7 +4,7 @@ import (
 	"bytes"
 
 	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tmthrgd/go-hex"
+	hex "github.com/tmthrgd/go-hex"
 )
 
 type Prefix []byte

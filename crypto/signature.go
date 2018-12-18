@@ -3,7 +3,7 @@ package crypto
 import (
 	"fmt"
 
-	"github.com/tmthrgd/go-hex"
+	hex "github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ed25519"
 )
 

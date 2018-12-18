@@ -36,13 +36,10 @@ func (rwt *RWTree) Load(version int64) error {
 	if treeVersion != version {
 		return fmt.Errorf("tried to load version %d of RWTree, but got version %d", version, treeVersion)
 	}
-	// Load previous version for readTree
-	// Set readTree
-	if version > 0 {
-		rwt.readTree, err = rwt.tree.GetImmutable(version - 1)
-		if err != nil {
-			return fmt.Errorf("could not load previous version of RWTree to use as read version")
-		}
+	// Set readTree at commit point == tree
+	rwt.readTree, err = rwt.tree.GetImmutable(version)
+	if err != nil {
+		return fmt.Errorf("could not load previous version of RWTree to use as read version")
 	}
 	return nil
 }
