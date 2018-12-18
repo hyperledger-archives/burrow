@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/binary"
-	"github.com/tmthrgd/go-hex"
+	hex "github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ripemd160"
 )
 

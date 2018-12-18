@@ -20,7 +20,7 @@ import (
 	"math/big"
 	"sort"
 
-	"github.com/tmthrgd/go-hex"
+	hex "github.com/tmthrgd/go-hex"
 )
 
 var (
