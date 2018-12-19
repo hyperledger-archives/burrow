@@ -17,6 +17,8 @@ package core
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"net/http"
@@ -86,7 +88,7 @@ func NewBurrowDB(dbDir string) dbm.DB {
 
 func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTypes.PrivValidator,
 	genesisDoc *genesis.GenesisDoc, tmConf *tmConfig.Config, rpcConfig *rpc.RPCConfig, keyConfig *keys.KeysConfig,
-	keyStore *keys.KeyStore, exeOptions []execution.ExecutionOption, authorizedPeersProvider abci.PeersFilterProvider, logger *logging.Logger) (*Kernel, error) {
+	keyStore *keys.KeyStore, exeOptions []execution.ExecutionOption, authorizedPeersProvider abci.PeersFilterProvider, restore string, logger *logging.Logger) (*Kernel, error) {
 
 	var err error
 	kern := &Kernel{
@@ -120,8 +122,32 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 				"state gives %X, blockchain gives %X", kern.Blockchain.LastBlockHeight(),
 				kern.State.Hash(), kern.Blockchain.AppHashAfterLastBlock())
 		}
+		if restore != "" {
+			return nil, fmt.Errorf("Cannot restore onto existing chain; don't give --restore argument")
+		}
 	} else {
 		kern.State, err = execution.MakeGenesisState(stateDB, genesisDoc)
+		if err != nil {
+			return nil, fmt.Errorf("could not build genesis state: %v", err)
+		}
+
+		if restore != "" {
+			err = kern.State.LoadDump(restore)
+			if err != nil {
+				return nil, fmt.Errorf("failed to restore from %s: %v", restore, err)
+			}
+		}
+
+		if genesisDoc.AppHash != "" {
+			hash, err := hex.DecodeString(genesisDoc.AppHash)
+			if err != nil || len(hash) != sha256.Size {
+				return nil, fmt.Errorf("AppHash field is not valid hash")
+			}
+
+			if !bytes.Equal(hash, kern.State.Hash()) {
+				return nil, fmt.Errorf("AppHash does not match, got AppHash 0x%X expected 0x%s", kern.State.Hash(), genesisDoc.AppHash)
+			}
+		}
 	}
 
 	kern.Logger.InfoMsg("State loading successful")

@@ -21,7 +21,9 @@ import (
 	amino "github.com/tendermint/go-amino"
 	tmEd25519 "github.com/tendermint/tendermint/crypto/ed25519"
 	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
+	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/p2p"
+	hex "github.com/tmthrgd/go-hex"
 )
 
 func Configure(output Output) func(cmd *cli.Cmd) {
@@ -66,11 +68,13 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 		chainNameOpt := cmd.StringOpt("n chain-name", "", "Default chain name")
 
+		restoreDumpOpt := cmd.StringOpt("restore-dump", "", "Including AppHash for restored file")
+
 		cmd.Spec = "[--keys-url=<keys URL> | --keysdir=<keys directory>] " +
 			"[--config-template-in=<text template> --config-out=<output file>]... " +
 			"[--genesis-spec=<GenesisSpec file> | --genesis-doc=<GenesisDoc file>] " +
 			"[--separate-genesis-doc=<genesis JSON file>] [--chain-name] [--json] " +
-			"[--generate-node-keys] " +
+			"[--generate-node-keys] [--restore-dump=<dump file>] " +
 			"[--logging=<logging program>] [--describe-logging] [--debug]"
 
 		configOpts := addConfigOptions(cmd)
@@ -201,6 +205,24 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("Unable to set ChainName since no GenesisDoc/GenesisSpec provided.")
 				}
 				conf.GenesisDoc.ChainName = *chainNameOpt
+			}
+
+			if *restoreDumpOpt != "" {
+				if conf.GenesisDoc == nil {
+					output.Fatalf("no GenesisDoc/GenesisSpec provided, cannot restore dump")
+				}
+
+				state, err := execution.MakeGenesisState(db.NewMemDB(), conf.GenesisDoc)
+				if err != nil {
+					output.Fatalf("could not generate state from genesis: %v", err)
+				}
+
+				err = state.LoadDump(*restoreDumpOpt)
+				if err != nil {
+					output.Fatalf("could not load restore file: %v", err)
+				}
+
+				conf.GenesisDoc.AppHash = hex.EncodeUpperToString(state.Hash())
 			}
 
 			if conf.GenesisDoc != nil {

@@ -31,11 +31,21 @@ message AccountStorage {
     Storage Storage = 2;
 }
 
+message EVMEvent {
+    uint64 Height = 1;
+    exec.LogEvent Event = 2;
+}
+
+message Height {
+    uint64 Height = 1;
+}
+
 message Dump {
     option (gogoproto.onlyone) = true;
 
-    acm.Account Account = 1;
-    AccountStorage AccountStorage = 2;
-    exec.LogEvent Event = 3; 
-    names.Entry Name = 4;
+    Height Height = 1;
+    acm.Account Account = 2;
+    AccountStorage AccountStorage = 3;
+    EVMEvent EVMEvent = 4; 
+    names.Entry Name = 5;
 }

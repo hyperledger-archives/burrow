@@ -17,10 +17,13 @@ package execution
 import (
 	"crypto/sha256"
 	"fmt"
+	"io"
+	"os"
 	"sync"
 
 	"github.com/hyperledger/burrow/txs"
 
+	"github.com/hyperledger/burrow/dump"
 	"github.com/hyperledger/burrow/txs/payload"
 
 	amino "github.com/tendermint/go-amino"
@@ -69,6 +72,8 @@ var (
 	// Binding between apphash and version stto
 	commitKeyFormat = storage.NewMustKeyFormat("v", uint64Length)
 )
+
+var cdc = amino.NewCodec()
 
 // Implements account and blockchain state
 var _ state.IterableReader = &State{}
@@ -178,6 +183,48 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 	}
 
 	return s, nil
+}
+
+func (s *State) LoadDump(filename string) error {
+	f, err := os.OpenFile(filename, os.O_RDONLY, 0644)
+	if err != nil {
+		return err
+	}
+
+	tx := exec.TxExecution{TxHash: make([]byte, 32)}
+
+	for {
+		var row dump.Dump
+
+		_, err = cdc.UnmarshalBinaryLengthPrefixedReader(f, &row, 0)
+		if err != nil {
+			break
+		}
+
+		if row.Account != nil {
+			s.writeState.UpdateAccount(row.Account)
+		}
+		if row.AccountStorage != nil {
+			s.writeState.SetStorage(row.AccountStorage.Address, row.AccountStorage.Storage.Key, row.AccountStorage.Storage.Value)
+		}
+		if row.Name != nil {
+			s.writeState.UpdateName(row.Name)
+		}
+		if row.EVMEvent != nil {
+			tx.Events = append(tx.Events, &exec.Event{Log: row.EVMEvent.Event})
+		}
+	}
+
+	s.writeState.AddBlock(&exec.BlockExecution{
+		Height:       0,
+		TxExecutions: []*exec.TxExecution{&tx},
+	})
+
+	if err == io.EOF {
+		return nil
+	}
+
+	return err
 }
 
 // Tries to load the execution state from DB, returns nil with no error if no state found
@@ -434,6 +481,9 @@ func (s *State) IterateTx(start, end uint64, consumer func(tx *exec.TxExecution)
 		be, err := s.GetBlock(height)
 		if err != nil {
 			return false, fmt.Errorf("error getting block %v", height)
+		}
+		if be == nil {
+			continue
 		}
 		for i := 0; i < len(be.TxExecutions); i++ {
 			stopped = consumer(be.TxExecutions[i])
