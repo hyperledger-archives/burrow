@@ -24,7 +24,6 @@ import (
 
 	"github.com/hyperledger/burrow/event/query"
 
-	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"golang.org/x/crypto/ripemd160"
 

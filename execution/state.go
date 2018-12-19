@@ -96,7 +96,7 @@ func (cid CommitID) String() string {
 // Writers to state are responsible for calling State.Lock() before calling
 type State struct {
 	// Last seen height from GetBlock
-	height uint64
+	height       uint64
 	accountStats state.AccountStats
 	// Values not reassigned
 	sync.RWMutex
