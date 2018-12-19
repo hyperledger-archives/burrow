@@ -2,8 +2,11 @@ package commands
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/config/source"
@@ -59,8 +62,7 @@ func genesisDocProvider(genesisFile string, skipNonExistent bool) source.ConfigP
 				return fmt.Errorf("config passed was not BurrowConfig")
 			}
 			if conf.GenesisDoc != nil {
-				return fmt.Errorf("sourcing GenesisDoc from file %v, but GenesisDoc was defined in earlier "+
-					"config source, only specify GenesisDoc in one place", genesisFile)
+				return nil
 			}
 			genesisDoc := new(genesis.GenesisDoc)
 			err := source.FromFile(genesisFile, genesisDoc)
@@ -99,4 +101,13 @@ func parseRange(rangeString string) (start int64, end int64, err error) {
 		return
 	}
 	return 0, 0, fmt.Errorf("could not parse range from %s", rangeString)
+}
+
+func handleTerm() {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		os.Exit(1)
+	}()
 }

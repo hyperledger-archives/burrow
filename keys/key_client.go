@@ -34,6 +34,9 @@ type KeyClient interface {
 	// Generate requests that a key be generate within the keys instance and returns the address
 	Generate(keyName string, keyType crypto.CurveType) (keyAddress crypto.Address, err error)
 
+	// Get the address for a keyname or the adress itself
+	GetAddressForKeyName(keyName string) (keyAddress crypto.Address, err error)
+
 	// Returns nil if the keys instance is healthy, error otherwise
 	HealthCheck() error
 }
@@ -83,6 +86,25 @@ func (l *localKeyClient) Generate(keyName string, curveType crypto.CurveType) (k
 		return crypto.Address{}, err
 	}
 	return crypto.AddressFromHexString(resp.GetAddress())
+}
+
+func (l *localKeyClient) GetAddressForKeyName(keyName string) (keyAddress crypto.Address, err error) {
+	keyAddress, err = crypto.AddressFromHexString(keyName)
+	if err == nil {
+		return
+	}
+
+	all, err := l.ks.GetAllNames()
+
+	if err != nil {
+		return crypto.Address{}, err
+	}
+
+	if addr, ok := all[keyName]; ok {
+		return crypto.AddressFromHexString(addr)
+	}
+
+	return crypto.Address{}, fmt.Errorf("`%s` is neither an address or a known key name", keyName)
 }
 
 // Returns nil if the keys instance is healthy, error otherwise
@@ -139,6 +161,25 @@ func (l *remoteKeyClient) Generate(keyName string, curveType crypto.CurveType) (
 	}
 	l.logger.TraceMsg("Received Generate response to remote key server: ", fmt.Sprintf("%v", resp))
 	return crypto.AddressFromHexString(resp.GetAddress())
+}
+
+func (l *remoteKeyClient) GetAddressForKeyName(keyName string) (keyAddress crypto.Address, err error) {
+	keyAddress, err = crypto.AddressFromHexString(keyName)
+	if err == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	key, err := l.kc.List(ctx, &ListRequest{KeyName: keyName})
+	if err != nil {
+		return crypto.Address{}, err
+	}
+
+	if len(key.Key) == 1 {
+		return crypto.AddressFromHexString(key.Key[0].Address)
+	}
+
+	return crypto.Address{}, fmt.Errorf("`%s` is neither an address or a known key name", keyName)
 }
 
 // Returns nil if the keys instance is healthy, error otherwise

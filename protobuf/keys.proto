@@ -29,7 +29,7 @@ service Keys {
 // Some empty types we may define later
 
 message ListRequest {
-
+    string KeyName = 1;
 }
 
 message VerifyResponse {
@@ -128,7 +128,7 @@ message HashResponse {
 
 message KeyID {
     string Address = 1;
-    string KeyName = 2;
+    repeated string KeyName = 2;
 }
 
 message ListResponse {

@@ -32,7 +32,7 @@ jobs:
 
 - name: sendTxTest3
   send:
-      destination: $addr2
+      destination: $key2
       amount: $val1
 
 - name: sendTxQuery1
@@ -47,7 +47,7 @@ jobs:
 
 - name: sendTxQuery3
   query-account:
-      account: $addr2
+      account: $key2
       field: balance
 
 - name: sendTxAssert1

@@ -35,7 +35,6 @@ type Proposal struct {
 
 func (job *Proposal) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Source, rule.AddressOrPlaceholder),
 		validation.Field(&job.Sequence, rule.Uint64OrPlaceholder),
 		validation.Field(&job.VotingPower, rule.Uint64OrPlaceholder),
 		validation.Field(&job.Name, validation.Required),
@@ -109,7 +108,6 @@ type UpdateAccount struct {
 
 func (job *UpdateAccount) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Source, rule.AddressOrPlaceholder),
 		validation.Field(&job.Target, validation.Required, rule.Or(rule.Placeholder, is.Hexadecimal,
 			validation.Match(NewKeyRegex))),
 		validation.Field(&job.Permissions),
@@ -133,7 +131,7 @@ type Account struct {
 
 func (job *Account) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Address, validation.Required, rule.AddressOrPlaceholder),
+		validation.Field(&job.Address, validation.Required),
 	)
 }
 
@@ -170,8 +168,7 @@ type Send struct {
 
 func (job *Send) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Source, rule.AddressOrPlaceholder),
-		validation.Field(&job.Destination, validation.Required, rule.AddressOrPlaceholder),
+		validation.Field(&job.Destination, validation.Required),
 		validation.Field(&job.Amount, rule.Uint64OrPlaceholder),
 		validation.Field(&job.Sequence, rule.Uint64OrPlaceholder),
 	)
@@ -198,7 +195,6 @@ type RegisterName struct {
 
 func (job *RegisterName) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Source, rule.AddressOrPlaceholder),
 		validation.Field(&job.Amount, rule.Uint64OrPlaceholder),
 		validation.Field(&job.Fee, rule.Uint64OrPlaceholder),
 		validation.Field(&job.Sequence, rule.Uint64OrPlaceholder),
@@ -227,7 +223,6 @@ type Permission struct {
 
 func (job *Permission) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Source, rule.AddressOrPlaceholder),
 		validation.Field(&job.Value, validation.In("true", "false", "")),
 		validation.Field(&job.Sequence, rule.Uint64OrPlaceholder),
 	)
@@ -347,7 +342,7 @@ type Call struct {
 
 func (job *Call) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Destination, validation.Required, rule.AddressOrPlaceholder),
+		validation.Field(&job.Destination, validation.Required),
 		validation.Field(&job.Amount, rule.Uint64OrPlaceholder),
 		validation.Field(&job.Fee, rule.Uint64OrPlaceholder),
 		validation.Field(&job.Gas, rule.Uint64OrPlaceholder),
@@ -411,7 +406,7 @@ type QueryContract struct {
 
 func (job *QueryContract) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Destination, validation.Required, rule.AddressOrPlaceholder),
+		validation.Field(&job.Destination, validation.Required),
 	)
 }
 
@@ -426,7 +421,7 @@ type QueryAccount struct {
 
 func (job *QueryAccount) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Account, validation.Required, rule.AddressOrPlaceholder),
+		validation.Field(&job.Account, validation.Required),
 		validation.Field(&job.Field, validation.Required),
 	)
 }

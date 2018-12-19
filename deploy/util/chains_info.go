@@ -11,7 +11,6 @@ import (
 
 	"github.com/elgs/gojq"
 	"github.com/hyperledger/burrow/acm/validator"
-	"github.com/hyperledger/burrow/crypto"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -24,7 +23,7 @@ func GetBlockHeight(client *def.Client) (latestBlockHeight uint64, err error) {
 }
 
 func AccountsInfo(account, field string, client *def.Client) (string, error) {
-	address, err := crypto.AddressFromHexString(account)
+	address, err := client.GetKeyAddress(account)
 	if err != nil {
 		return "", err
 	}

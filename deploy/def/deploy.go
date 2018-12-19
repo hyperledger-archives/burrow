@@ -27,7 +27,6 @@ type DeployArgs struct {
 
 func (do *DeployArgs) Validate() error {
 	return validation.ValidateStruct(do,
-		validation.Field(&do.Address, rule.Address),
 		validation.Field(&do.DefaultAmount, rule.Uint64),
 		validation.Field(&do.DefaultFee, rule.Uint64),
 		validation.Field(&do.DefaultGas, rule.Uint64),
@@ -42,7 +41,6 @@ type Package struct {
 
 func (pkg *Package) Validate() error {
 	return validation.ValidateStruct(pkg,
-		validation.Field(&pkg.Account, rule.Address),
 		validation.Field(&pkg.Jobs),
 	)
 }

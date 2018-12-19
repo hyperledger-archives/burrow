@@ -98,5 +98,8 @@ func validatorAddress(conf *config.BurrowConfig, addressString string, index int
 	if conf.ValidatorAddress != nil {
 		return conf.ValidatorAddress, nil
 	}
+	if conf.GenesisDoc != nil && len(conf.GenesisDoc.Validators) == 1 {
+		return &conf.GenesisDoc.Validators[0].Address, nil
+	}
 	return nil, nil
 }
