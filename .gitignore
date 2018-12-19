@@ -17,3 +17,4 @@ test_scratch/
 commit_hash.txt
 
 tests/keys/
+.output.json

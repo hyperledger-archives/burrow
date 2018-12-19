@@ -15,6 +15,7 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -56,6 +57,7 @@ const (
 	ServerShutdownTimeout  = 1000 * time.Millisecond
 	LoggingCallerDepth     = 5
 	AccountsRingMutexCount = 100
+	BurrowDBName           = "burrow_state"
 )
 
 // Kernel is the root structure of Burrow
@@ -77,6 +79,10 @@ type Kernel struct {
 	shutdownOnce   sync.Once
 }
 
+func NewBurrowDB(dbDir string) dbm.DB {
+	return dbm.NewDB(BurrowDBName, dbm.GoLevelDBBackend, dbDir)
+}
+
 func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTypes.PrivValidator,
 	genesisDoc *genesis.GenesisDoc, tmConf *tmConfig.Config, rpcConfig *rpc.RPCConfig, keyConfig *keys.KeysConfig,
 	keyStore *keys.KeyStore, exeOptions []execution.ExecutionOption, authorizedPeersProvider abci.PeersFilterProvider, logger *logging.Logger) (*Kernel, error) {
@@ -93,7 +99,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 		structure.RunId, kern.RunID.String())
 	tmLogger := logger.With(structure.CallerKey, log.Caller(LoggingCallerDepth+1))
 	kern.Logger = logger.WithInfo(structure.CallerKey, log.Caller(LoggingCallerDepth))
-	stateDB := dbm.NewDB("burrow_state", dbm.GoLevelDBBackend, tmConf.DBDir())
+	stateDB := NewBurrowDB(tmConf.DBDir())
 
 	kern.Blockchain, err = bcm.LoadOrNewBlockchain(stateDB, genesisDoc, kern.Logger)
 	if err != nil {
@@ -103,14 +109,20 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	// These should be in sync unless we are at the genesis block
 	if kern.Blockchain.LastBlockHeight() > 0 {
 		kern.Logger.InfoMsg("Loading application state")
-		kern.State, err = execution.LoadState(stateDB, kern.Blockchain.AppHashAfterLastBlock())
+		kern.State, err = execution.LoadState(stateDB, int64(kern.Blockchain.LastBlockHeight()))
 		if err != nil {
 			return nil, fmt.Errorf("could not load persisted execution state at hash 0x%X: %v",
 				kern.Blockchain.AppHashAfterLastBlock(), err)
 		}
+		if !bytes.Equal(kern.State.Hash(), kern.Blockchain.AppHashAfterLastBlock()) {
+			return nil, fmt.Errorf("state and blockchain disagree on hash for block at height %d: "+
+				"state gives %X, blockchain gives %X", kern.Blockchain.LastBlockHeight(),
+				kern.State.Hash(), kern.Blockchain.AppHashAfterLastBlock())
+		}
 	} else {
 		kern.State, err = execution.MakeGenesisState(stateDB, genesisDoc)
 	}
+
 	kern.Logger.InfoMsg("State loading successful")
 
 	txCodec := txs.NewAminoCodec()
