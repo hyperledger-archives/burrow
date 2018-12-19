@@ -20,7 +20,8 @@ func TestSave(t *testing.T) {
 	rwt.Save()
 	assert.Equal(t, gaa, rwt.Get(foo))
 	rwt.Set(foo, dam)
-	rwt.Save()
+	_, _, err := rwt.Save()
+	require.NoError(t, err)
 	assert.Equal(t, dam, rwt.Get(foo))
 }
 
@@ -67,4 +68,26 @@ func TestRollback(t *testing.T) {
 	// Expect the same hashes
 	assert.Equal(t, hash2, hash3)
 	assert.Equal(t, version2, version3)
+}
+
+func TestVersionDivergence(t *testing.T) {
+	// This test serves as a reminder that IAVL nodes contain the version and a new node is created for every write
+	rwt1 := NewRWTree(dbm.NewMemDB(), 100)
+	rwt1.Set(bz("Raffle"), bz("Topper"))
+	hash11, _, err := rwt1.Save()
+	require.NoError(t, err)
+
+	rwt2 := NewRWTree(dbm.NewMemDB(), 100)
+	rwt2.Set(bz("Raffle"), bz("Topper"))
+	hash21, _, err := rwt2.Save()
+	require.NoError(t, err)
+
+	// The following 'ought' to be idempotent but isn't since it replaces the previous node with an identical one, but
+	// with an incremented version number
+	rwt2.Set(bz("Raffle"), bz("Topper"))
+	hash22, _, err := rwt2.Save()
+	require.NoError(t, err)
+
+	assert.Equal(t, hash11, hash21)
+	assert.NotEqual(t, hash11, hash22)
 }

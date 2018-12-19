@@ -2,6 +2,10 @@ package commands
 
 import (
 	"encoding/json"
+	"os"
+	"os/signal"
+
+	"github.com/hyperledger/burrow/binary"
 
 	"github.com/hyperledger/burrow/forensics"
 	"github.com/hyperledger/burrow/txs"
@@ -34,6 +38,8 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 			cmd.Action = func() {
 				start, end, err := parseRange(*rangeArg)
 
+				sigCh := make(chan os.Signal, 1)
+				signal.Notify(sigCh)
 				_, err = explorer.Blocks(start, end,
 					func(block *forensics.Block) (stop bool) {
 						bs, err := json.Marshal(block)
@@ -41,7 +47,12 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 							output.Fatalf("Could not serialise block: %v", err)
 						}
 						output.Printf(string(bs))
-						return false
+						select {
+						case <-sigCh:
+							return true
+						default:
+							return false
+						}
 					})
 				if err != nil {
 					output.Fatalf("Error iterating over blocks: %v", err)
@@ -63,9 +74,11 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 						stopped, err := block.Transactions(func(txEnv *txs.Envelope) (stop bool) {
 							wrapper := struct {
 								Height int64
+								TxHash binary.HexBytes
 								Tx     *txs.Envelope
 							}{
 								Height: block.Height,
+								TxHash: txEnv.Tx.Hash(),
 								Tx:     txEnv,
 							}
 							bs, err := json.Marshal(wrapper)

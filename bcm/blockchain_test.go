@@ -18,7 +18,7 @@ var big0 = big.NewInt(0)
 func TestBlockchain_Encode(t *testing.T) {
 	genesisDoc, _, validators := genesis.NewDeterministicGenesis(234).
 		GenesisDoc(5, true, 232, 3, true, 34)
-	bc := newBlockchain(db.NewMemDB(), genesisDoc)
+	bc := NewBlockchain(db.NewMemDB(), genesisDoc)
 	bs, err := bc.Encode()
 	require.NoError(t, err)
 	bcOut, err := DecodeBlockchain(bs)
