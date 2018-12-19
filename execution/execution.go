@@ -46,7 +46,7 @@ type Executor interface {
 }
 
 type ExecutorState interface {
-	Update(updater func(ws Updatable) error) (hash []byte, err error)
+	Update(updater func(ws Updatable) error) (hash []byte, version int64, err error)
 	names.Reader
 	proposal.Reader
 	state.IterableReader
@@ -298,10 +298,9 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 	if err != nil {
 		return nil, err
 	}
-
 	// First commit the app state, this app hash will not get checkpointed until the next block when we are sure
 	// that nothing in the downstream commit process could have failed. At worst we go back one block.
-	hash, err := exe.state.Update(func(ws Updatable) error {
+	hash, version, err := exe.state.Update(func(ws Updatable) error {
 		// flush the caches
 		err := exe.stateCache.Flush(ws, exe.state)
 		if err != nil {
@@ -344,6 +343,10 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 		"total_validator_power", exe.blockchain.CurrentValidators().TotalPower(),
 		"total_validator_power_change", totalPowerChange,
 		"total_validator_flow", totalFlow)
+	if uint64(version) != exe.blockchain.LastBlockHeight() {
+		return nil, fmt.Errorf("state tree version %d does not equal blockchain height %d but their equality "+
+			"is meant to be a guaranteed invariant", version, exe.blockchain.LastBlockHeight())
+	}
 
 	return hash, nil
 }
