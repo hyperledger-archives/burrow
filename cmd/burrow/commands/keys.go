@@ -327,7 +327,7 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 		})
 
 		cmd.Command("list", "list keys", func(cmd *cli.Cmd) {
-			name := cmd.StringOpt("name", "", "name of key to use")
+			name := cmd.StringOpt("name", "", "name or address of key to use")
 
 			cmd.Action = func() {
 				c := grpcKeysClient(output)
@@ -337,7 +337,11 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 				if err != nil {
 					output.Fatalf("failed to list key: %v", err)
 				}
-				bs, err := json.MarshalIndent(resp.Key, "", "    ")
+				printKeys := resp.Key
+				if printKeys == nil {
+					printKeys = make([]*keys.KeyID, 0)
+				}
+				bs, err := json.MarshalIndent(printKeys, "", "    ")
 				if err != nil {
 					output.Fatalf("failed to json encode keys: %v", err)
 				}

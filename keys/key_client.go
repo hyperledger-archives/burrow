@@ -35,7 +35,7 @@ type KeyClient interface {
 	Generate(keyName string, keyType crypto.CurveType) (keyAddress crypto.Address, err error)
 
 	// Get the address for a keyname or the adress itself
-	GetAddressForKeyName(keyName string) (keyAddres crypto.Address, err error)
+	GetAddressForKeyName(keyName string) (keyAddress crypto.Address, err error)
 
 	// Returns nil if the keys instance is healthy, error otherwise
 	HealthCheck() error
@@ -88,8 +88,8 @@ func (l *localKeyClient) Generate(keyName string, curveType crypto.CurveType) (k
 	return crypto.AddressFromHexString(resp.GetAddress())
 }
 
-func (l *localKeyClient) GetAddressForKeyName(keyName string) (keyAddres crypto.Address, err error) {
-	keyAddres, err = crypto.AddressFromHexString(keyName)
+func (l *localKeyClient) GetAddressForKeyName(keyName string) (keyAddress crypto.Address, err error) {
+	keyAddress, err = crypto.AddressFromHexString(keyName)
 	if err == nil {
 		return
 	}
@@ -163,8 +163,8 @@ func (l *remoteKeyClient) Generate(keyName string, curveType crypto.CurveType) (
 	return crypto.AddressFromHexString(resp.GetAddress())
 }
 
-func (l *remoteKeyClient) GetAddressForKeyName(keyName string) (keyAddres crypto.Address, err error) {
-	keyAddres, err = crypto.AddressFromHexString(keyName)
+func (l *remoteKeyClient) GetAddressForKeyName(keyName string) (keyAddress crypto.Address, err error) {
+	keyAddress, err = crypto.AddressFromHexString(keyName)
 	if err == nil {
 		return
 	}

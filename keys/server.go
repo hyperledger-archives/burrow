@@ -264,16 +264,18 @@ func (k *KeyStore) List(ctx context.Context, in *ListRequest) (*ListResponse, er
 
 	if in.KeyName != "" {
 		if addr, ok := byname[in.KeyName]; ok {
-			list = append(list, &KeyID{KeyName: in.KeyName, Address: addr})
+			list = append(list, &KeyID{KeyName: getAddressNames(addr, byname), Address: addr})
+		} else {
+			if addr, err := crypto.AddressFromHexString(in.KeyName); err == nil {
+				_, err := k.GetKey("", addr[:])
+				if err == nil {
+					address := addr.String()
+					list = append(list, &KeyID{Address: address, KeyName: getAddressNames(address, byname)})
+				}
+			}
 		}
 	} else {
 		// list all address
-
-		// Switch to lookup by address
-		byaddr := make(map[string]string)
-		for name, addr := range byname {
-			byaddr[addr] = name
-		}
 
 		datadir, err := returnDataDir(k.keysDirPath)
 		if err != nil {
@@ -285,15 +287,23 @@ func (k *KeyStore) List(ctx context.Context, in *ListRequest) (*ListResponse, er
 		}
 
 		for _, addr := range addrs {
-			key := KeyID{Address: addr}
-			if name, ok := byaddr[addr]; ok {
-				key.KeyName = name
-			}
-			list = append(list, &key)
+			list = append(list, &KeyID{KeyName: getAddressNames(addr, byname), Address: addr})
 		}
 	}
 
 	return &ListResponse{Key: list}, nil
+}
+
+func getAddressNames(address string, byname map[string]string) []string {
+	names := make([]string, 0)
+
+	for name, addr := range byname {
+		if address == addr {
+			names = append(names, name)
+		}
+	}
+
+	return names
 }
 
 func (k *KeyStore) RemoveName(ctx context.Context, in *RemoveNameRequest) (*RemoveNameResponse, error) {

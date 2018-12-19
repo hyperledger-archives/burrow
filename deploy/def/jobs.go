@@ -421,7 +421,7 @@ type QueryAccount struct {
 
 func (job *QueryAccount) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Account, validation.Required, validation.Required),
+		validation.Field(&job.Account, validation.Required),
 		validation.Field(&job.Field, validation.Required),
 	)
 }
