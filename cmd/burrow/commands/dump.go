@@ -18,6 +18,7 @@ var cdc = amino.NewCodec()
 func Dump(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 		chainUrlOpt := cmd.StringOpt("u chain-url", "127.0.0.1:10997", "chain-url to be used in IP:PORT format")
+		heightOpt := cmd.IntOpt("h height", 0, "Block height to dump to, defaults to latest block height")
 		filename := cmd.StringArg("FILE", "", "Save dump here")
 
 		cmd.Action = func() {
@@ -33,7 +34,7 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 			}
 			dc := rpcdump.NewDumpClient(conn)
 
-			dump, err := dc.GetDump(ctx, &rpcdump.GetDumpParam{})
+			dump, err := dc.GetDump(ctx, &rpcdump.GetDumpParam{Height: uint64(*heightOpt)})
 			if err != nil {
 				output.Fatalf("failed to retrieve dump: %v", err)
 				return

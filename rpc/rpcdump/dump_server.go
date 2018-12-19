@@ -31,7 +31,15 @@ func NewDumpServer(state *execution.State, blockchain bcm.BlockchainInfo, nodeVi
 }
 
 func (qs *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) error {
-	_, err := qs.state.IterateAccounts(func(acc *acm.Account) (stop bool) {
+	height := param.Height
+	if height <= 0 {
+		height = qs.blockchain.LastBlockHeight()
+	}
+	state, err := qs.state.LoadHeight(height)
+	if err != nil {
+		return err
+	}
+	_, err = state.IterateAccounts(func(acc *acm.Account) (stop bool) {
 		stream.Send(&dump.Dump{Account: acc})
 
 		stopped, err := qs.state.IterateStorage(acc.Address, func(key, value binary.Word256) (stopped bool) {
@@ -55,7 +63,7 @@ func (qs *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 		return err
 	}
 
-	_, err = qs.state.IterateNames(func(entry *names.Entry) (stop bool) {
+	_, err = state.IterateNames(func(entry *names.Entry) (stop bool) {
 		stream.Send(&dump.Dump{Name: entry})
 		return
 	})
@@ -64,7 +72,7 @@ func (qs *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 		return err
 	}
 
-	_, err = qs.state.IterateTx(0, qs.blockchain.LastBlockHeight(), func(tx *exec.TxExecution) (stop bool) {
+	_, err = qs.state.IterateTx(0, height, func(tx *exec.TxExecution) (stop bool) {
 		for i := 0; i < len(tx.Events); i++ {
 			event := tx.Events[i].GetLog()
 			if event != nil {

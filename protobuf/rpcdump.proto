@@ -19,5 +19,5 @@ service Dump {
 }
 
 message GetDumpParam {
-
+    uint64 height = 1;
 }

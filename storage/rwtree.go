@@ -46,6 +46,17 @@ func (rwt *RWTree) Load(version int64) error {
 	return nil
 }
 
+func (rwt *RWTree) GetImmutableVersion(version int64) (*RWTree, error) {
+	readTree, err := rwt.tree.GetImmutable(version)
+	if err != nil {
+		return nil, fmt.Errorf("could not load previous version of RWTree to use as read version")
+	}
+
+	return &RWTree{
+		readTree: readTree,
+	}, nil
+}
+
 // Save the current write tree making writes accessible from read tree.
 func (rwt *RWTree) Save() ([]byte, int64, error) {
 	// save state at a new version may still be orphaned before we save the version against the hash

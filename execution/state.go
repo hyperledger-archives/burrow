@@ -102,27 +102,35 @@ type State struct {
 	height       uint64
 	accountStats state.AccountStats
 	// Values not reassigned
-	sync.Mutex
+	sync.RWMutex
+	StateTree
 	writeState *writeState
 	db         dbm.DB
 	cacheDB    *storage.CacheDB
-	tree       *storage.RWTree
 	refs       storage.KVStore
 	codec      *amino.Codec
+}
+
+type StateTree struct {
+	tree *storage.RWTree
+}
+
+func newStateTree(cacheDB *storage.CacheDB) StateTree {
+	return StateTree{tree: storage.NewRWTree(storage.NewPrefixDB(cacheDB, treePrefix), defaultCacheCapacity)}
 }
 
 // Create a new State object
 func NewState(db dbm.DB) *State {
 	// We collapse all db operations into a single batch committed by save()
 	cacheDB := storage.NewCacheDB(db)
-	tree := storage.NewRWTree(storage.NewPrefixDB(cacheDB, treePrefix), defaultCacheCapacity)
+	statetree := newStateTree(cacheDB)
 	refs := storage.NewPrefixDB(cacheDB, refsPrefix)
 	s := &State{
-		db:      db,
-		cacheDB: cacheDB,
-		tree:    tree,
-		refs:    refs,
-		codec:   amino.NewCodec(),
+		db:        db,
+		cacheDB:   cacheDB,
+		StateTree: statetree,
+		refs:      refs,
+		codec:     amino.NewCodec(),
 	}
 
 	s.writeState = &writeState{state: s}
@@ -216,6 +224,17 @@ func (s *State) CommitID(version int64) (*CommitID, error) {
 	return commitID, nil
 }
 
+func (s *State) LoadHeight(height uint64) (*StateTree, error) {
+	tree, err := s.tree.GetImmutableVersion(int64(height))
+	if err != nil {
+		return nil, err
+	}
+
+	return &StateTree{
+		tree,
+	}, nil
+}
+
 // Perform updates to state whilst holding the write lock, allows a commit to hold the write lock across multiple
 // operations while preventing interlaced reads and writes
 func (s *State) Update(updater func(up Updatable) error) ([]byte, int64, error) {
@@ -256,7 +275,7 @@ func (ws *writeState) commit() ([]byte, int64, error) {
 }
 
 // Returns nil if account does not exist with given address.
-func (s *State) GetAccount(address crypto.Address) (*acm.Account, error) {
+func (s *StateTree) GetAccount(address crypto.Address) (*acm.Account, error) {
 	accBytes := s.tree.Get(accountKeyFormat.Key(address))
 	if accBytes == nil {
 		return nil, nil
@@ -311,7 +330,7 @@ func (ws *writeState) RemoveAccount(address crypto.Address) (err error) {
 	return err
 }
 
-func (s *State) IterateAccounts(consumer func(*acm.Account) (stop bool)) (stopped bool, err error) {
+func (s *StateTree) IterateAccounts(consumer func(*acm.Account) (stop bool)) (stopped bool, err error) {
 	it := accountKeyFormat.Iterator(s.tree, nil, nil)
 	for it.Valid() {
 		account, err := acm.Decode(it.Value())
@@ -330,7 +349,7 @@ func (s *State) GetAccountStats() state.AccountStats {
 	return s.accountStats
 }
 
-func (s *State) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
+func (s *StateTree) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
 	return binary.LeftPadWord256(s.tree.Get(storageKeyFormat.Key(address, key))), nil
 }
 
@@ -343,7 +362,7 @@ func (ws *writeState) SetStorage(address crypto.Address, key, value binary.Word2
 	return nil
 }
 
-func (s *State) IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
+func (s *StateTree) IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
 	it := storageKeyFormat.Fix(address).Iterator(s.tree, nil, nil)
 	for it.Valid() {
 		key := it.Key()
@@ -460,7 +479,7 @@ func (s *State) Hash() []byte {
 
 var _ names.IterableReader = &State{}
 
-func (s *State) GetName(name string) (*names.Entry, error) {
+func (s *StateTree) GetName(name string) (*names.Entry, error) {
 	entryBytes := s.tree.Get(nameKeyFormat.Key(name))
 	if entryBytes == nil {
 		return nil, nil
@@ -483,7 +502,7 @@ func (ws *writeState) RemoveName(name string) error {
 	return nil
 }
 
-func (s *State) IterateNames(consumer func(*names.Entry) (stop bool)) (stopped bool, err error) {
+func (s *StateTree) IterateNames(consumer func(*names.Entry) (stop bool)) (stopped bool, err error) {
 	it := nameKeyFormat.Iterator(s.tree, nil, nil)
 	for it.Valid() {
 		entry, err := names.DecodeEntry(it.Value())
@@ -501,7 +520,7 @@ func (s *State) IterateNames(consumer func(*names.Entry) (stop bool)) (stopped b
 // Proposal
 var _ proposal.IterableReader = &State{}
 
-func (s *State) GetProposal(proposalHash []byte) (*payload.Ballot, error) {
+func (s *StateTree) GetProposal(proposalHash []byte) (*payload.Ballot, error) {
 	bs := s.tree.Get(proposalKeyFormat.Key(proposalHash))
 	if len(bs) == 0 {
 		return nil, nil
@@ -525,7 +544,7 @@ func (ws *writeState) RemoveProposal(proposalHash []byte) error {
 	return nil
 }
 
-func (s *State) IterateProposals(consumer func(proposalHash []byte, proposal *payload.Ballot) (stop bool)) (stopped bool, err error) {
+func (s *StateTree) IterateProposals(consumer func(proposalHash []byte, proposal *payload.Ballot) (stop bool)) (stopped bool, err error) {
 	it := proposalKeyFormat.Iterator(s.tree, nil, nil)
 	for it.Valid() {
 		entry, err := payload.DecodeBallot(it.Value())
