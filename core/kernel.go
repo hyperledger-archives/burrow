@@ -109,7 +109,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	// These should be in sync unless we are at the genesis block
 	if kern.Blockchain.LastBlockHeight() > 0 {
 		kern.Logger.InfoMsg("Loading application state")
-		kern.State, err = execution.LoadState(stateDB, int64(kern.Blockchain.LastBlockHeight()))
+		kern.State, err = execution.LoadState(stateDB, int64(kern.Blockchain.LastBlockHeight()+execution.VersionOffset))
 		if err != nil {
 			return nil, fmt.Errorf("could not load persisted execution state at hash 0x%X: %v",
 				kern.Blockchain.AppHashAfterLastBlock(), err)

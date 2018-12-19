@@ -38,8 +38,9 @@ import (
 )
 
 const (
-	defaultCacheCapacity = 1024
-	uint64Length         = 8
+	VersionOffset        uint64 = 1
+	defaultCacheCapacity        = 1024
+	uint64Length                = 8
 
 	// Prefix under which the versioned merkle state tree resides - tracking previous versions of history
 	treePrefix = "m"
@@ -164,6 +165,12 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 		return nil, err
 	}
 
+	// TODO: remove this in order to synchronise version and height
+	// We need to save at least once so that readTree points at a non-working-state tree
+	_, _, err = s.writeState.commit()
+	if err != nil {
+		return nil, err
+	}
 	return s, nil
 }
 
