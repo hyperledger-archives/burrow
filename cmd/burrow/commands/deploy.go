@@ -3,8 +3,8 @@ package commands
 import (
 	"bytes"
 	"fmt"
-	"time"
 	"strings"
+	"time"
 
 	pkgs "github.com/hyperledger/burrow/deploy"
 	"github.com/hyperledger/burrow/deploy/def"
