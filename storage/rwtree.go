@@ -18,9 +18,11 @@ type RWTree struct {
 }
 
 func NewRWTree(db dbm.DB, cacheSize int) *RWTree {
+	tree := iavl.NewMutableTree(db, cacheSize)
 	return &RWTree{
-		tree:     iavl.NewMutableTree(db, cacheSize),
-		readTree: iavl.NewImmutableTree(db, cacheSize),
+		tree: tree,
+		// Initially we set readTree to be the inner ImmutableTree of our write tree - this allows us to keep treeVersion == height (FTW)
+		readTree: tree.ImmutableTree,
 	}
 }
 
@@ -57,6 +59,10 @@ func (rwt *RWTree) Save() ([]byte, int64, error) {
 		return nil, 0, fmt.Errorf("RWTree.Save() could not obtain ImmutableTree read tree: %v", err)
 	}
 	return hash, version, nil
+}
+
+func (rwt *RWTree) Version() int64 {
+	return rwt.tree.Version()
 }
 
 func (rwt *RWTree) Set(key, value []byte) bool {
@@ -106,4 +112,11 @@ func (rwt *RWTree) ReverseIterator(start, end []byte) dbm.Iterator {
 		})
 	}()
 	return NewChannelIterator(ch, start, end)
+}
+
+func PrintTree(rwt *RWTree) {
+	fmt.Println("ReadTree")
+	iavl.PrintTree(rwt.readTree)
+	fmt.Println("WriteTree")
+	iavl.PrintTree(rwt.tree.ImmutableTree)
 }

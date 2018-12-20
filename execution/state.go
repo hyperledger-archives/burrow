@@ -54,15 +54,18 @@ var (
 	storageKeyFormat  = storage.NewMustKeyFormat("s", crypto.AddressLength, binary.Word256Length)
 	nameKeyFormat     = storage.NewMustKeyFormat("n", storage.VariadicSegmentLength)
 	proposalKeyFormat = storage.NewMustKeyFormat("p", sha256.Size)
+
 	// Keys that reference references
 	blockRefKeyFormat = storage.NewMustKeyFormat("b", uint64Length)
 	txRefKeyFormat    = storage.NewMustKeyFormat("t", uint64Length, uint64Length)
-	// Reference keys
+
+	// Reference keys (that do not contribute to state hash)
 	// TODO: implement content-addressing of code and optionally blocks (to allow reference to block to be stored in state tree)
 	//codeKeyFormat   = storage.NewMustKeyFormat("c", sha256.Size)
 	//blockKeyFormat  = storage.NewMustKeyFormat("b", sha256.Size)
-	txKeyFormat     = storage.NewMustKeyFormat("b", tmhash.Size)
-	commitKeyFormat = storage.NewMustKeyFormat("x", tmhash.Size)
+	txKeyFormat = storage.NewMustKeyFormat("b", tmhash.Size)
+	// Binding between apphash and version stto
+	commitKeyFormat = storage.NewMustKeyFormat("v", uint64Length)
 )
 
 // Implements account and blockchain state
@@ -82,28 +85,27 @@ type writeState struct {
 }
 
 type CommitID struct {
-	Hash binary.HexBytes
-	// Height and Version will normally be the same - but it's not clear we should assume this
-	Height  uint64
+	Hash    binary.HexBytes
 	Version int64
 }
 
 func (cid CommitID) String() string {
-	return fmt.Sprintf("Commit{Hash: %v, Height: %v, TreeVersion: %v}", cid.Hash, cid.Height, cid.Version)
+	return fmt.Sprintf("Commit{Hash: %v, Version: %v}", cid.Hash, cid.Version)
 }
 
 // Writers to state are responsible for calling State.Lock() before calling
 type State struct {
-	// Values not reassigned
-	sync.RWMutex
-	writeState   *writeState
+	// Last seen height from GetBlock
 	height       uint64
 	accountStats state.AccountStats
-	db           dbm.DB
-	cacheDB      *storage.CacheDB
-	tree         *storage.RWTree
-	refs         storage.KVStore
-	codec        *amino.Codec
+	// Values not reassigned
+	sync.RWMutex
+	writeState *writeState
+	db         dbm.DB
+	cacheDB    *storage.CacheDB
+	tree       *storage.RWTree
+	refs       storage.KVStore
+	codec      *amino.Codec
 }
 
 // Create a new State object
@@ -164,23 +166,15 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 		return nil, err
 	}
 
-	// We need to save at least once so that readTree points at a non-working-state tree
-	_, err = s.writeState.commit()
-	if err != nil {
-		return nil, err
-	}
 	return s, nil
-
 }
 
 // Tries to load the execution state from DB, returns nil with no error if no state found
-func LoadState(db dbm.DB, hash []byte) (*State, error) {
+func LoadState(db dbm.DB, version int64) (*State, error) {
 	s := NewState(db)
-	// Get the version associated with this state hash
-	commitID := new(CommitID)
-	err := s.codec.UnmarshalBinaryBare(s.refs.Get(commitKeyFormat.Key(hash)), commitID)
+	commitID, err := s.CommitID(version)
 	if err != nil {
-		return nil, fmt.Errorf("could not decode CommitID: %v", err)
+		return nil, err
 	}
 	if commitID.Version <= 0 {
 		return nil, fmt.Errorf("trying to load state from non-positive version: CommitID: %v", commitID)
@@ -205,23 +199,37 @@ func LoadState(db dbm.DB, hash []byte) (*State, error) {
 	return s, nil
 }
 
+func (s *State) Version() int64 {
+	return s.tree.Version()
+}
+
+func (s *State) CommitID(version int64) (*CommitID, error) {
+	// Get the version associated with this state hash
+	commitID := new(CommitID)
+	err := s.codec.UnmarshalBinaryBare(s.refs.Get(commitKeyFormat.Key(version)), commitID)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode CommitID: %v", err)
+	}
+	return commitID, nil
+}
+
 // Perform updates to state whilst holding the write lock, allows a commit to hold the write lock across multiple
 // operations while preventing interlaced reads and writes
-func (s *State) Update(updater func(up Updatable) error) ([]byte, error) {
+func (s *State) Update(updater func(up Updatable) error) ([]byte, int64, error) {
 	s.Lock()
 	defer s.Unlock()
 	err := updater(s.writeState)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	return s.writeState.commit()
 }
 
-func (ws *writeState) commit() ([]byte, error) {
+func (ws *writeState) commit() ([]byte, int64, error) {
 	// save state at a new version may still be orphaned before we save the version against the hash
-	hash, treeVersion, err := ws.state.tree.Save()
+	hash, version, err := ws.state.tree.Save()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if len(hash) == 0 {
 		// Normalise the hash of an empty to tree to the correct hash size
@@ -230,19 +238,18 @@ func (ws *writeState) commit() ([]byte, error) {
 	// Provide a reference to load this version in the future from the state hash
 	commitID := CommitID{
 		Hash:    hash,
-		Height:  ws.state.height,
-		Version: treeVersion,
+		Version: version,
 	}
 	bs, err := ws.state.codec.MarshalBinaryBare(commitID)
 	if err != nil {
-		return nil, fmt.Errorf("could not encode CommitID %v: %v", commitID, err)
+		return nil, 0, fmt.Errorf("could not encode CommitID %v: %v", commitID, err)
 	}
-	ws.state.refs.Set(commitKeyFormat.Key(hash), bs)
+	ws.state.refs.Set(commitKeyFormat.Key(version), bs)
 	// Commit the state in cacheDB atomically for this block (synchronous)
 	batch := ws.state.db.NewBatch()
 	ws.state.cacheDB.Commit(batch)
 	batch.WriteSync()
-	return hash, err
+	return hash, version, err
 }
 
 // Returns nil if account does not exist with given address.
@@ -425,8 +432,6 @@ func (s *State) GetBlocks(startHeight, endHeight uint64, consumer func(*exec.Blo
 }
 
 func (s *State) Hash() []byte {
-	s.RLock()
-	defer s.RUnlock()
 	return s.tree.Hash()
 }
 
@@ -524,7 +529,7 @@ func (s *State) Copy(db dbm.DB) (*State, error) {
 		stateCopy.tree.Set(key, value)
 		return false
 	})
-	_, err := stateCopy.writeState.commit()
+	_, _, err := stateCopy.writeState.commit()
 	if err != nil {
 		return nil, err
 	}

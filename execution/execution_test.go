@@ -24,7 +24,6 @@ import (
 
 	"github.com/hyperledger/burrow/event/query"
 
-	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"golang.org/x/crypto/ripemd160"
 
@@ -1007,11 +1006,13 @@ func TestNameTxs(t *testing.T) {
 	// fail to update it as non-owner
 	// Fast forward
 	for exe.blockchain.LastBlockHeight() < entry.Expires-1 {
-		commitNewBlock(st, exe.blockchain)
+		_, err = exe.Commit(nil, time.Now(), nil)
+		require.NoError(t, err)
 	}
 	tx, _ = payload.NewNameTx(st, testPrivAccounts[1].GetPublicKey(), name, data, amt, fee)
 	require.Error(t, exe.signExecuteCommit(tx, testPrivAccounts[1]))
-	commitNewBlock(st, exe.blockchain)
+	_, err = exe.Commit(nil, time.Now(), nil)
+	require.NoError(t, err)
 
 	// once expires, non-owner succeeds
 	startingBlock = exe.blockchain.LastBlockHeight()
@@ -1060,7 +1061,8 @@ func TestNameTxs(t *testing.T) {
 	validateEntry(t, entry, name, data, testPrivAccounts[0].GetAddress(), startingBlock+numDesiredBlocks)
 	// Fast forward
 	for exe.blockchain.LastBlockHeight() < entry.Expires {
-		commitNewBlock(st, exe.blockchain)
+		_, err = exe.Commit(nil, time.Now(), nil)
+		require.NoError(t, err)
 	}
 
 	amt = fee
@@ -1181,7 +1183,7 @@ func TestContractSend(t *testing.T) {
 
 	newAcc1 := getAccount(st, acc1.Address)
 	newAcc1.Code = callerCode
-	_, err := st.Update(func(up Updatable) error {
+	_, _, err := st.Update(func(up Updatable) error {
 		return up.UpdateAccount(newAcc1)
 	})
 	require.NoError(t, err)
@@ -1332,7 +1334,7 @@ func TestTxs(t *testing.T) {
 		stateCallTx := copyState(t, st)
 		newAcc1 := getAccount(stateCallTx, acc1.Address)
 		newAcc1.Code = []byte{0x60}
-		_, err := stateCallTx.Update(func(up Updatable) error {
+		_, _, err := stateCallTx.Update(func(up Updatable) error {
 			return up.UpdateAccount(newAcc1)
 		})
 		require.NoError(t, err)
@@ -1439,7 +1441,7 @@ func TestSelfDestruct(t *testing.T) {
 	contractCode = append(contractCode, acc2.Address.Bytes()...)
 	contractCode = append(contractCode, 0xff)
 	newAcc1.Code = contractCode
-	_, err := st.Update(func(up Updatable) error {
+	_, _, err := st.Update(func(up Updatable) error {
 		return up.UpdateAccount(newAcc1)
 	})
 	require.NoError(t, err)
@@ -1524,11 +1526,6 @@ func newBaseGenDoc(globalPerm, accountPerm permission.AccountPermissions) genesi
 	}
 }
 
-func commitNewBlock(state *State, blockchain *bcm.Blockchain) {
-	blockchain.CommitBlock(blockchain.LastBlockTime().Add(time.Second), sha3.Sha3(blockchain.LastBlockHash()),
-		state.Hash())
-}
-
 func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numValidators int, randBonded bool,
 	minBonded int64) (*State, []*acm.PrivateAccount) {
 	testGenesisDoc, privAccounts, _ := deterministicGenesis.GenesisDoc(numAccounts, randBalance, minBalance,
@@ -1537,7 +1534,7 @@ func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numV
 	if err != nil {
 		panic(fmt.Errorf("could not make genesis state: %v", err))
 	}
-	s0.writeState.commit()
+	//s0.writeState.commit()
 	return s0, privAccounts
 }
 
@@ -1565,6 +1562,7 @@ type testExecutor struct {
 
 func makeExecutor(state *State) *testExecutor {
 	blockchain := newBlockchain(testGenesisDoc)
+	blockchain.CommitBlockAtHeight(time.Now(), []byte("hashily"), state.Hash(), uint64(state.Version()))
 	return &testExecutor{
 		executor: newExecutor("makeExecutorCache", true, state, blockchain, event.NewNoOpPublisher(),
 			logger),
@@ -1592,9 +1590,9 @@ func (te *testExecutor) permString(t *testing.T, address crypto.Address) string 
 
 func (te *testExecutor) updateAccounts(t *testing.T, accounts ...*acm.Account) {
 	for _, acc := range accounts {
-		_, err := te.state.Update(func(ws Updatable) error {
-			return ws.UpdateAccount(acc)
-		})
+		err := te.stateCache.UpdateAccount(acc)
+		require.NoError(t, err)
+		_, err = te.Commit(nil, time.Now(), nil)
 		require.NoError(t, err)
 	}
 }
@@ -1636,8 +1634,6 @@ func execTxWaitAccountCall(t *testing.T, exe *testExecutor, txEnv *txs.Envelope,
 		return nil, err
 	}
 	_, err = exe.Commit([]byte("Blocky McHash"), time.Now(), nil)
-	require.NoError(t, err)
-	_, _, err = exe.blockchain.CommitBlock(time.Time{}, nil, nil)
 	require.NoError(t, err)
 
 	for _, ev := range txe.TaggedEvents().Filter(qry) {

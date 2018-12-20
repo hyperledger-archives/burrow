@@ -60,12 +60,13 @@ func (kvc *KVCache) ReverseIterator(start, end []byte) KVIterator {
 }
 
 func (kvc *KVCache) newIterator(start, end []byte) *KVCacheIterator {
-	return &KVCacheIterator{
+	kvi := &KVCacheIterator{
 		start: start,
 		end:   end,
 		keys:  kvc.SortedKeysInDomain(start, end),
 		cache: kvc.cache,
 	}
+	return kvi
 }
 
 // Writes contents of cache to backend without flushing the cache

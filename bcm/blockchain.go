@@ -25,7 +25,7 @@ import (
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/tendermint/go-amino"
+	amino "github.com/tendermint/go-amino"
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
@@ -93,11 +93,11 @@ func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc, logger *logg
 	}
 
 	logger.InfoMsg("No existing blockchain state found in database, making new blockchain")
-	return newBlockchain(db, genesisDoc), nil
+	return NewBlockchain(db, genesisDoc), nil
 }
 
 // Pointer to blockchain state initialised from genesis
-func newBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *Blockchain {
+func NewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *Blockchain {
 	vs := validator.NewTrimSet()
 	for _, gv := range genesisDoc.Validators {
 		vs.ChangePower(gv.PublicKey, new(big.Int).SetUint64(gv.Amount))
@@ -138,6 +138,11 @@ func (bc *Blockchain) ValidatorWriter() validator.Writer {
 
 func (bc *Blockchain) CommitBlock(blockTime time.Time, blockHash,
 	appHash []byte) (totalPowerChange, totalFlow *big.Int, err error) {
+	return bc.CommitBlockAtHeight(blockTime, blockHash, appHash, bc.lastBlockHeight+1)
+}
+
+func (bc *Blockchain) CommitBlockAtHeight(blockTime time.Time, blockHash, appHash []byte,
+	height uint64) (totalPowerChange, totalFlow *big.Int, err error) {
 	bc.Lock()
 	defer bc.Unlock()
 	// Checkpoint on the _previous_ block. If we die, this is where we will resume since we know all intervening state
@@ -159,7 +164,7 @@ func (bc *Blockchain) CommitBlock(blockTime time.Time, blockHash,
 	if err != nil {
 		return
 	}
-	bc.lastBlockHeight += 1
+	bc.lastBlockHeight = height
 	bc.lastBlockTime = blockTime
 	bc.lastBlockHash = blockHash
 	bc.appHashAfterLastBlock = appHash
@@ -200,7 +205,8 @@ func DecodeBlockchain(encodedState []byte) (*Blockchain, error) {
 	if err != nil {
 		return nil, err
 	}
-	bc := newBlockchain(nil, &persistedState.GenesisDoc)
+	bc := NewBlockchain(nil, &persistedState.GenesisDoc)
+	//bc.lastBlockHeight = persistedState.LastBlockHeight
 	bc.lastBlockHeight = persistedState.LastBlockHeight
 	bc.appHashAfterLastBlock = persistedState.AppHashAfterLastBlock
 	bc.validatorCache = validator.UnpersistRing(persistedState.ValidatorCache)

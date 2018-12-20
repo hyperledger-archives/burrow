@@ -37,7 +37,7 @@ func TestState_UpdateAccount(t *testing.T) {
 	s := NewState(db.NewMemDB())
 	account := acm.NewAccountFromSecret("Foo")
 	account.Permissions.Base.Perms = permission.SetGlobal | permission.HasRole
-	_, err := s.Update(func(ws Updatable) error {
+	_, _, err := s.Update(func(ws Updatable) error {
 		return ws.UpdateAccount(account)
 	})
 	require.NoError(t, err)
@@ -53,7 +53,7 @@ func TestWriteState_AddBlock(t *testing.T) {
 	height := uint64(100)
 	txs := uint64(5)
 	events := uint64(10)
-	_, err := s.Update(func(ws Updatable) error {
+	_, _, err := s.Update(func(ws Updatable) error {
 		return ws.AddBlock(mkBlock(height, txs, events))
 	})
 	require.NoError(t, err)
@@ -69,7 +69,7 @@ func TestWriteState_AddBlock(t *testing.T) {
 		})
 	require.NoError(t, err)
 	// non-increasing events
-	_, err = s.Update(func(ws Updatable) error {
+	_, _, err = s.Update(func(ws Updatable) error {
 		return nil
 	})
 	require.NoError(t, err)

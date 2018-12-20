@@ -294,7 +294,6 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 	if err != nil {
 		panic(errors.Wrap(err, "Could not commit transactions in block to execution state"))
 	}
-
 	err = app.checker.Reset()
 	if err != nil {
 		panic(errors.Wrap(err, "could not reset check cache during commit"))

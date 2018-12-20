@@ -1,8 +1,3 @@
 ### Fixed
-- [EVM] state/Cache no longer allows SetStorage on accounts that do not exist
-- [GRPC] GetAccount on unknown account no longer causes a panic
-
-### Added
-- [Docker] Added solc 0.4.25 binary to docker container so that burrow deploy has what it needs to function
-- [Execution] panics from executors are captured and pushed to error sink of TxExecution
+- [State] Since State hash is not unique (i.e if we make no writes) by storing the CommitID by AppHash we can overwrite an older CommitID with a newer one leading us to load the wrong tree version to overwrite in case of loading from a checkpoint.
 

@@ -48,19 +48,19 @@ func FullVersion() string {
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases("",
-		`### Security
-
-### Changed
-
-### Fixed
-
-### Added
+		`### Added
 - [Deploy] burrow deploy now prints events generated during transactions
 - [Deploy] burrow deploy can use key names where addresses are used
+`,
+		"0.23.3 - 2018-12-19",
+		`### Fixed
+- [State] Since State hash is not unique (i.e if we make no writes) by storing the CommitID by AppHash we can overwrite an older CommitID with a newer one leading us to load the wrong tree version to overwrite in case of loading from a checkpoint.
+`,
+		"0.23.2 - 2018-12-18",
+		`Hotfix release for 0.23.1
+### Fixed
+- [State] Fixed issue with checkpointing whereby RWTree would load its readTree from one version lower than it should.
 
-### Removed
-
-### Deprecated
 `,
 		"0.23.1 - 2018-11-14",
 		`### Fixed
