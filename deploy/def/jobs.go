@@ -14,13 +14,13 @@ import (
 // ------------------------------------------------------------------------
 
 type Proposal struct {
-	// (Optional), address of the account that signs the proposal
+	// (Optional), address of the account that signs the proposal or votes for the proposal
 	Source string `mapstructure:"source" json:"source" yaml:"source" toml:"source"`
 	// (Optional, advanced only) sequence to use when burrow keys signs the transaction (do not use unless you
 	// know what you're doing)
 	Sequence string `mapstructure:"sequence" json:"sequence" yaml:"sequence" toml:"sequence"`
 	// (Required), address of the account used for serialising proposals, the proposals system account
-	ProposalAddress string `mapstructure:"propposaladdress" json:"propposaladdress" yaml:"propposaladdress" toml:"proposaladdress"`
+	ProposalAddress string `mapstructure:"proposaladdress" json:"proposaladdress" yaml:"proposaladdress" toml:"proposaladdress"`
 	// (Optional), sequence of the ProposalAddress
 	ProposalSequence string `mapstructure:"proposalsequence" json:"proposalsequence" yaml:"proposalsequence" toml:"proposalsequence"`
 	// (Optional)
@@ -64,7 +64,8 @@ func KeyNameCurveType(newKeyMatch []string) (keyName, curveType string) {
 
 type Meta struct {
 	// (Required) the file path of the sub yaml to run
-	File string `mapstructure:"file" json:"file" yaml:"file" toml:"file"`
+	File     string    `mapstructure:"file" json:"file" yaml:"file" toml:"file"`
+	Playbook *Playbook `json:"-" yaml:"-" toml:"-"`
 }
 
 func (job *Meta) Validate() error {

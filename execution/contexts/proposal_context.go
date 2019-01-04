@@ -3,13 +3,13 @@ package contexts
 import (
 	"crypto/sha256"
 	"fmt"
+	"runtime/debug"
 	"unicode"
 
 	"github.com/hyperledger/burrow/acm/state"
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/proposal"
@@ -40,6 +40,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 	if err != nil {
 		return err
 	}
+
 	if inAcc == nil {
 		ctx.Logger.InfoMsg("Cannot find input account",
 			"tx_input", ctx.tx.Input)
@@ -59,7 +60,9 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 		if ctx.tx.ProposalHash == nil || ctx.tx.ProposalHash.Size() != sha256.Size {
 			return errors.ErrorCodeInvalidProposal
 		}
-		ballot, err = ctx.ProposalReg.GetProposal(ctx.tx.ProposalHash.Bytes())
+
+		proposalHash = ctx.tx.ProposalHash.Bytes()
+		ballot, err = ctx.ProposalReg.GetProposal(proposalHash)
 		if err != nil {
 			return err
 		}
@@ -74,22 +77,29 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 			return err
 		}
 
-		bs, err := ctx.tx.Proposal.Encode()
+		proposalHash = ctx.tx.Proposal.Hash()
+
+		ballot, err = ctx.ProposalReg.GetProposal(proposalHash)
 		if err != nil {
 			return err
 		}
 
-		proposalHash = sha3.Sha3(bs)
-
-		ballot, err = ctx.ProposalReg.GetProposal(proposalHash)
-		if ballot == nil && err == nil {
+		if ballot == nil {
 			ballot = &payload.Ballot{
 				Proposal:      ctx.tx.Proposal,
 				ProposalState: payload.Ballot_PROPOSED,
 			}
 		}
-		if err != nil {
-			return err
+
+		// else vote for existing proposal
+	}
+
+	// Check that we have not voted this already
+	for _, vote := range ballot.Votes {
+		for _, i := range ctx.tx.GetInputs() {
+			if i.Address == vote.Address {
+				return errors.ErrorCodeAlreadyVoted
+			}
 		}
 	}
 
@@ -129,10 +139,12 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 			return fmt.Errorf("account %s does not have batch permission", i.Address)
 		}
 
-		if proposeAcc.GetSequence() != i.Sequence {
-			return errors.ErrorCodeExpiredProposal
+		if proposeAcc.GetSequence()+1 != i.Sequence {
+			return fmt.Errorf("proposal expired, sequence number for account %s wrong", i.Address)
 		}
+	}
 
+	for _, i := range ctx.tx.GetInputs() {
 		// Do we have a record of our own vote
 		if _, ok := votes[i.Address]; !ok {
 			votes[i.Address] = ctx.tx.VotingWeight
@@ -149,36 +161,78 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 		}
 	}
 
-	for _, step := range ballot.Proposal.BatchTx.Txs {
-		txE := txs.EnvelopeFromAny("", step)
+	stateCache := state.NewCache(ctx.StateWriter)
 
-		for _, i := range txE.Tx.GetInputs() {
-			_, err := ctx.StateWriter.GetAccount(i.Address)
+	for i, step := range ballot.Proposal.BatchTx.Txs {
+		txEnv := txs.EnvelopeFromAny(ctx.Tip.ChainID(), step)
+
+		for _, input := range txEnv.Tx.GetInputs() {
+			acc, err := stateCache.GetAccount(input.Address)
 			if err != nil {
 				return err
 			}
 
-			// Do not check sequence numbers of inputs
+			acc.Sequence++
+
+			if acc.Sequence != input.Sequence {
+				return fmt.Errorf("proposal expired, sequence number %d for account %s wrong at step %d", input.Sequence, input.Address, i+1)
+			}
+
+			stateCache.UpdateAccount(acc)
 		}
 	}
 
 	if power >= ctx.Tip.GenesisDoc().Params.ProposalThreshold {
 		ballot.ProposalState = payload.Ballot_EXECUTED
 
+		txe.TxExecutions = make([]*exec.TxExecution, 0)
+
 		for i, step := range ballot.Proposal.BatchTx.Txs {
-			txE := txs.EnvelopeFromAny("", step)
+			txEnv := txs.EnvelopeFromAny(ctx.Tip.ChainID(), step)
 
-			txe.PayloadEvent(&exec.PayloadEvent{TxType: txE.Tx.Type(), Index: uint32(i)})
+			containedTxe := exec.NewTxExecution(txEnv)
 
-			if txExecutor, ok := ctx.Contexts[txE.Tx.Type()]; ok {
-				err = txExecutor.Execute(txe, txE.Tx.Payload)
+			defer func() {
+				if r := recover(); r != nil {
+					err = fmt.Errorf("recovered from panic in executor.Execute(%s): %v\n%s", txEnv.String(), r,
+						debug.Stack())
+					// If we recover here we are in a position to promulgate the error to the TxExecution
+					containedTxe.PushError(err)
+				}
+			}()
+
+			for _, input := range txEnv.Tx.GetInputs() {
+				acc, err := ctx.StateWriter.GetAccount(input.Address)
+				if err != nil {
+					return err
+				}
+
+				acc.Sequence++
+
+				if input.Address != acc.GetAddress() {
+					return fmt.Errorf("trying to validate input from address %v but passed account %v", input.Address,
+						acc.GetAddress())
+				}
+
+				if acc.Sequence != input.Sequence {
+					return fmt.Errorf("proposal expired, sequence number %d for account %s wrong at step %d", input.Sequence, input.Address, i+1)
+				}
+
+				ctx.StateWriter.UpdateAccount(acc)
+			}
+
+			if txExecutor, ok := ctx.Contexts[txEnv.Tx.Type()]; ok {
+				err = txExecutor.Execute(containedTxe, txEnv.Tx.Payload)
+
 				if err != nil {
 					ctx.Logger.InfoMsg("Transaction execution failed", structure.ErrorKey, err)
 					return err
 				}
 			}
 
-			if txe.Exception != nil {
+			txe.TxExecutions = append(txe.TxExecutions, containedTxe)
+
+			if containedTxe.Exception != nil {
 				ballot.ProposalState = payload.Ballot_FAILED
 				break
 			}

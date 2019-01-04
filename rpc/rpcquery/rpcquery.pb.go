@@ -15,6 +15,7 @@ import rpc "github.com/hyperledger/burrow/rpc"
 import payload "github.com/hyperledger/burrow/txs/payload"
 
 import github_com_hyperledger_burrow_crypto "github.com/hyperledger/burrow/crypto"
+import github_com_hyperledger_burrow_binary "github.com/hyperledger/burrow/binary"
 
 import (
 	context "golang.org/x/net/context"
@@ -47,7 +48,7 @@ func (m *StatusParam) Reset()         { *m = StatusParam{} }
 func (m *StatusParam) String() string { return proto.CompactTextString(m) }
 func (*StatusParam) ProtoMessage()    {}
 func (*StatusParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_85dc1071a8cbe440, []int{0}
+	return fileDescriptor_rpcquery_abf0f07e248c5772, []int{0}
 }
 func (m *StatusParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -105,7 +106,7 @@ func (m *GetAccountParam) Reset()         { *m = GetAccountParam{} }
 func (m *GetAccountParam) String() string { return proto.CompactTextString(m) }
 func (*GetAccountParam) ProtoMessage()    {}
 func (*GetAccountParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_85dc1071a8cbe440, []int{1}
+	return fileDescriptor_rpcquery_abf0f07e248c5772, []int{1}
 }
 func (m *GetAccountParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -138,6 +139,95 @@ func (*GetAccountParam) XXX_MessageName() string {
 	return "rpcquery.GetAccountParam"
 }
 
+type GetStorageParam struct {
+	Address              github_com_hyperledger_burrow_crypto.Address `protobuf:"bytes,1,opt,name=Address,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Address"`
+	Key                  github_com_hyperledger_burrow_binary.Word256 `protobuf:"bytes,2,opt,name=Key,proto3,customtype=github.com/hyperledger/burrow/binary.Word256" json:"Key"`
+	XXX_NoUnkeyedLiteral struct{}                                     `json:"-"`
+	XXX_unrecognized     []byte                                       `json:"-"`
+	XXX_sizecache        int32                                        `json:"-"`
+}
+
+func (m *GetStorageParam) Reset()         { *m = GetStorageParam{} }
+func (m *GetStorageParam) String() string { return proto.CompactTextString(m) }
+func (*GetStorageParam) ProtoMessage()    {}
+func (*GetStorageParam) Descriptor() ([]byte, []int) {
+	return fileDescriptor_rpcquery_abf0f07e248c5772, []int{2}
+}
+func (m *GetStorageParam) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetStorageParam) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetStorageParam.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *GetStorageParam) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetStorageParam.Merge(dst, src)
+}
+func (m *GetStorageParam) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetStorageParam) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetStorageParam.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetStorageParam proto.InternalMessageInfo
+
+func (*GetStorageParam) XXX_MessageName() string {
+	return "rpcquery.GetStorageParam"
+}
+
+type StorageValue struct {
+	Value                github_com_hyperledger_burrow_binary.Word256 `protobuf:"bytes,1,opt,name=Value,proto3,customtype=github.com/hyperledger/burrow/binary.Word256" json:"Value"`
+	XXX_NoUnkeyedLiteral struct{}                                     `json:"-"`
+	XXX_unrecognized     []byte                                       `json:"-"`
+	XXX_sizecache        int32                                        `json:"-"`
+}
+
+func (m *StorageValue) Reset()         { *m = StorageValue{} }
+func (m *StorageValue) String() string { return proto.CompactTextString(m) }
+func (*StorageValue) ProtoMessage()    {}
+func (*StorageValue) Descriptor() ([]byte, []int) {
+	return fileDescriptor_rpcquery_abf0f07e248c5772, []int{3}
+}
+func (m *StorageValue) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *StorageValue) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_StorageValue.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *StorageValue) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_StorageValue.Merge(dst, src)
+}
+func (m *StorageValue) XXX_Size() int {
+	return m.Size()
+}
+func (m *StorageValue) XXX_DiscardUnknown() {
+	xxx_messageInfo_StorageValue.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_StorageValue proto.InternalMessageInfo
+
+func (*StorageValue) XXX_MessageName() string {
+	return "rpcquery.StorageValue"
+}
+
 type ListAccountsParam struct {
 	Query                string   `protobuf:"bytes,1,opt,name=Query,proto3" json:"Query,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -149,7 +239,7 @@ func (m *ListAccountsParam) Reset()         { *m = ListAccountsParam{} }
 func (m *ListAccountsParam) String() string { return proto.CompactTextString(m) }
 func (*ListAccountsParam) ProtoMessage()    {}
 func (*ListAccountsParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_85dc1071a8cbe440, []int{2}
+	return fileDescriptor_rpcquery_abf0f07e248c5772, []int{4}
 }
 func (m *ListAccountsParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -200,7 +290,7 @@ func (m *GetNameParam) Reset()         { *m = GetNameParam{} }
 func (m *GetNameParam) String() string { return proto.CompactTextString(m) }
 func (*GetNameParam) ProtoMessage()    {}
 func (*GetNameParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_85dc1071a8cbe440, []int{3}
+	return fileDescriptor_rpcquery_abf0f07e248c5772, []int{5}
 }
 func (m *GetNameParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -251,7 +341,7 @@ func (m *ListNamesParam) Reset()         { *m = ListNamesParam{} }
 func (m *ListNamesParam) String() string { return proto.CompactTextString(m) }
 func (*ListNamesParam) ProtoMessage()    {}
 func (*ListNamesParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_85dc1071a8cbe440, []int{4}
+	return fileDescriptor_rpcquery_abf0f07e248c5772, []int{6}
 }
 func (m *ListNamesParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -302,7 +392,7 @@ func (m *GetValidatorSetParam) Reset()         { *m = GetValidatorSetParam{} }
 func (m *GetValidatorSetParam) String() string { return proto.CompactTextString(m) }
 func (*GetValidatorSetParam) ProtoMessage()    {}
 func (*GetValidatorSetParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_85dc1071a8cbe440, []int{5}
+	return fileDescriptor_rpcquery_abf0f07e248c5772, []int{7}
 }
 func (m *GetValidatorSetParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -355,7 +445,7 @@ func (m *ValidatorSet) Reset()         { *m = ValidatorSet{} }
 func (m *ValidatorSet) String() string { return proto.CompactTextString(m) }
 func (*ValidatorSet) ProtoMessage()    {}
 func (*ValidatorSet) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_85dc1071a8cbe440, []int{6}
+	return fileDescriptor_rpcquery_abf0f07e248c5772, []int{8}
 }
 func (m *ValidatorSet) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -420,7 +510,7 @@ func (m *ValidatorSetDeltas) Reset()         { *m = ValidatorSetDeltas{} }
 func (m *ValidatorSetDeltas) String() string { return proto.CompactTextString(m) }
 func (*ValidatorSetDeltas) ProtoMessage()    {}
 func (*ValidatorSetDeltas) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_85dc1071a8cbe440, []int{7}
+	return fileDescriptor_rpcquery_abf0f07e248c5772, []int{9}
 }
 func (m *ValidatorSetDeltas) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -471,7 +561,7 @@ func (m *GetProposalParam) Reset()         { *m = GetProposalParam{} }
 func (m *GetProposalParam) String() string { return proto.CompactTextString(m) }
 func (*GetProposalParam) ProtoMessage()    {}
 func (*GetProposalParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_85dc1071a8cbe440, []int{8}
+	return fileDescriptor_rpcquery_abf0f07e248c5772, []int{10}
 }
 func (m *GetProposalParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -522,7 +612,7 @@ func (m *ListProposalsParam) Reset()         { *m = ListProposalsParam{} }
 func (m *ListProposalsParam) String() string { return proto.CompactTextString(m) }
 func (*ListProposalsParam) ProtoMessage()    {}
 func (*ListProposalsParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_85dc1071a8cbe440, []int{9}
+	return fileDescriptor_rpcquery_abf0f07e248c5772, []int{11}
 }
 func (m *ListProposalsParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -574,7 +664,7 @@ func (m *ProposalResult) Reset()         { *m = ProposalResult{} }
 func (m *ProposalResult) String() string { return proto.CompactTextString(m) }
 func (*ProposalResult) ProtoMessage()    {}
 func (*ProposalResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_85dc1071a8cbe440, []int{10}
+	return fileDescriptor_rpcquery_abf0f07e248c5772, []int{12}
 }
 func (m *ProposalResult) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -631,7 +721,7 @@ func (m *GetStatsParam) Reset()         { *m = GetStatsParam{} }
 func (m *GetStatsParam) String() string { return proto.CompactTextString(m) }
 func (*GetStatsParam) ProtoMessage()    {}
 func (*GetStatsParam) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_85dc1071a8cbe440, []int{11}
+	return fileDescriptor_rpcquery_abf0f07e248c5772, []int{13}
 }
 func (m *GetStatsParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -676,7 +766,7 @@ func (m *Stats) Reset()         { *m = Stats{} }
 func (m *Stats) String() string { return proto.CompactTextString(m) }
 func (*Stats) ProtoMessage()    {}
 func (*Stats) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcquery_85dc1071a8cbe440, []int{12}
+	return fileDescriptor_rpcquery_abf0f07e248c5772, []int{14}
 }
 func (m *Stats) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -727,6 +817,10 @@ func init() {
 	golang_proto.RegisterType((*StatusParam)(nil), "rpcquery.StatusParam")
 	proto.RegisterType((*GetAccountParam)(nil), "rpcquery.GetAccountParam")
 	golang_proto.RegisterType((*GetAccountParam)(nil), "rpcquery.GetAccountParam")
+	proto.RegisterType((*GetStorageParam)(nil), "rpcquery.GetStorageParam")
+	golang_proto.RegisterType((*GetStorageParam)(nil), "rpcquery.GetStorageParam")
+	proto.RegisterType((*StorageValue)(nil), "rpcquery.StorageValue")
+	golang_proto.RegisterType((*StorageValue)(nil), "rpcquery.StorageValue")
 	proto.RegisterType((*ListAccountsParam)(nil), "rpcquery.ListAccountsParam")
 	golang_proto.RegisterType((*ListAccountsParam)(nil), "rpcquery.ListAccountsParam")
 	proto.RegisterType((*GetNameParam)(nil), "rpcquery.GetNameParam")
@@ -765,6 +859,7 @@ const _ = grpc.SupportPackageIsVersion4
 type QueryClient interface {
 	Status(ctx context.Context, in *StatusParam, opts ...grpc.CallOption) (*rpc.ResultStatus, error)
 	GetAccount(ctx context.Context, in *GetAccountParam, opts ...grpc.CallOption) (*acm.Account, error)
+	GetStorage(ctx context.Context, in *GetStorageParam, opts ...grpc.CallOption) (*StorageValue, error)
 	ListAccounts(ctx context.Context, in *ListAccountsParam, opts ...grpc.CallOption) (Query_ListAccountsClient, error)
 	GetName(ctx context.Context, in *GetNameParam, opts ...grpc.CallOption) (*names.Entry, error)
 	ListNames(ctx context.Context, in *ListNamesParam, opts ...grpc.CallOption) (Query_ListNamesClient, error)
@@ -794,6 +889,15 @@ func (c *queryClient) Status(ctx context.Context, in *StatusParam, opts ...grpc.
 func (c *queryClient) GetAccount(ctx context.Context, in *GetAccountParam, opts ...grpc.CallOption) (*acm.Account, error) {
 	out := new(acm.Account)
 	err := c.cc.Invoke(ctx, "/rpcquery.Query/GetAccount", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) GetStorage(ctx context.Context, in *GetStorageParam, opts ...grpc.CallOption) (*StorageValue, error) {
+	out := new(StorageValue)
+	err := c.cc.Invoke(ctx, "/rpcquery.Query/GetStorage", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -936,6 +1040,7 @@ func (c *queryClient) GetStats(ctx context.Context, in *GetStatsParam, opts ...g
 type QueryServer interface {
 	Status(context.Context, *StatusParam) (*rpc.ResultStatus, error)
 	GetAccount(context.Context, *GetAccountParam) (*acm.Account, error)
+	GetStorage(context.Context, *GetStorageParam) (*StorageValue, error)
 	ListAccounts(*ListAccountsParam, Query_ListAccountsServer) error
 	GetName(context.Context, *GetNameParam) (*names.Entry, error)
 	ListNames(*ListNamesParam, Query_ListNamesServer) error
@@ -981,6 +1086,24 @@ func _Query_GetAccount_Handler(srv interface{}, ctx context.Context, dec func(in
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(QueryServer).GetAccount(ctx, req.(*GetAccountParam))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_GetStorage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetStorageParam)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).GetStorage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpcquery.Query/GetStorage",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).GetStorage(ctx, req.(*GetStorageParam))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1133,6 +1256,10 @@ var _Query_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Query_GetAccount_Handler,
 		},
 		{
+			MethodName: "GetStorage",
+			Handler:    _Query_GetStorage_Handler,
+		},
+		{
 			MethodName: "GetName",
 			Handler:    _Query_GetName_Handler,
 		},
@@ -1225,6 +1352,72 @@ func (m *GetAccountParam) MarshalTo(dAtA []byte) (int, error) {
 		return 0, err
 	}
 	i += n1
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *GetStorageParam) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GetStorageParam) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	dAtA[i] = 0xa
+	i++
+	i = encodeVarintRpcquery(dAtA, i, uint64(m.Address.Size()))
+	n2, err := m.Address.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n2
+	dAtA[i] = 0x12
+	i++
+	i = encodeVarintRpcquery(dAtA, i, uint64(m.Key.Size()))
+	n3, err := m.Key.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n3
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *StorageValue) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *StorageValue) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	dAtA[i] = 0xa
+	i++
+	i = encodeVarintRpcquery(dAtA, i, uint64(m.Value.Size()))
+	n4, err := m.Value.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n4
 	if m.XXX_unrecognized != nil {
 		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
@@ -1509,11 +1702,11 @@ func (m *ProposalResult) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintRpcquery(dAtA, i, uint64(m.Ballot.Size()))
-		n2, err := m.Ballot.MarshalTo(dAtA[i:])
+		n5, err := m.Ballot.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n2
+		i += n5
 	}
 	if m.XXX_unrecognized != nil {
 		i += copy(dAtA[i:], m.XXX_unrecognized)
@@ -1609,6 +1802,36 @@ func (m *GetAccountParam) Size() (n int) {
 	var l int
 	_ = l
 	l = m.Address.Size()
+	n += 1 + l + sovRpcquery(uint64(l))
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *GetStorageParam) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.Address.Size()
+	n += 1 + l + sovRpcquery(uint64(l))
+	l = m.Key.Size()
+	n += 1 + l + sovRpcquery(uint64(l))
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *StorageValue) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.Value.Size()
 	n += 1 + l + sovRpcquery(uint64(l))
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -1983,6 +2206,198 @@ func (m *GetAccountParam) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if err := m.Address.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRpcquery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GetStorageParam) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRpcquery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GetStorageParam: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GetStorageParam: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Address", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpcquery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Address.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Key", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpcquery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Key.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRpcquery(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *StorageValue) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRpcquery
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: StorageValue: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: StorageValue: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Value", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpcquery
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthRpcquery
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Value.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -3046,54 +3461,59 @@ var (
 	ErrIntOverflowRpcquery   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("rpcquery.proto", fileDescriptor_rpcquery_85dc1071a8cbe440) }
-func init() { golang_proto.RegisterFile("rpcquery.proto", fileDescriptor_rpcquery_85dc1071a8cbe440) }
+func init() { proto.RegisterFile("rpcquery.proto", fileDescriptor_rpcquery_abf0f07e248c5772) }
+func init() { golang_proto.RegisterFile("rpcquery.proto", fileDescriptor_rpcquery_abf0f07e248c5772) }
 
-var fileDescriptor_rpcquery_85dc1071a8cbe440 = []byte{
-	// 719 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x54, 0xcf, 0x6e, 0xd3, 0x4e,
-	0x10, 0xfe, 0xb9, 0x7f, 0xd2, 0x74, 0x92, 0x26, 0xed, 0xfe, 0x4a, 0x29, 0xa6, 0x4a, 0x2b, 0x1f,
-	0x42, 0xa9, 0xc0, 0x89, 0x42, 0xcb, 0x01, 0x24, 0x44, 0x03, 0x28, 0x2d, 0x82, 0xaa, 0x38, 0x08,
-	0x24, 0x6e, 0x1b, 0x7b, 0x49, 0x2c, 0x9c, 0xac, 0x59, 0xaf, 0x41, 0x79, 0x01, 0x5e, 0x83, 0x57,
-	0xe1, 0xd8, 0x23, 0x67, 0x0e, 0x15, 0x6a, 0x5f, 0x04, 0x79, 0xbd, 0x1b, 0x7b, 0x93, 0xa8, 0xb7,
-	0x99, 0xd9, 0x6f, 0x66, 0x76, 0x66, 0xbf, 0x6f, 0xa1, 0xc2, 0x42, 0xf7, 0x6b, 0x4c, 0xd8, 0xd8,
-	0x0e, 0x19, 0xe5, 0x14, 0x15, 0x95, 0x6f, 0x3e, 0xec, 0xfb, 0x7c, 0x10, 0xf7, 0x6c, 0x97, 0x0e,
-	0x1b, 0x7d, 0xda, 0xa7, 0x0d, 0x01, 0xe8, 0xc5, 0x9f, 0x85, 0x27, 0x1c, 0x61, 0xa5, 0x89, 0x66,
-	0x69, 0x84, 0x87, 0x24, 0x92, 0xce, 0x2a, 0x76, 0x87, 0xd2, 0xac, 0x7e, 0xc3, 0x81, 0xef, 0x61,
-	0x4e, 0x99, 0x3a, 0x63, 0xa1, 0x2b, 0xcd, 0xb5, 0x10, 0x8f, 0x03, 0x8a, 0xbd, 0xd4, 0xb5, 0x7c,
-	0x28, 0x75, 0x39, 0xe6, 0x71, 0x74, 0x8e, 0x19, 0x1e, 0xa2, 0x7d, 0xa8, 0xb6, 0x03, 0xea, 0x7e,
-	0x79, 0xef, 0x0f, 0xc9, 0x47, 0x9f, 0x0f, 0xfc, 0xd1, 0xb6, 0xb1, 0x67, 0xec, 0xaf, 0x3a, 0xd3,
-	0x61, 0xd4, 0x84, 0xff, 0x45, 0xa8, 0x4b, 0xc8, 0x28, 0x87, 0x5e, 0x10, 0xe8, 0x79, 0x47, 0x16,
-	0x86, 0x6a, 0x87, 0xf0, 0x63, 0xd7, 0xa5, 0xf1, 0x88, 0xa7, 0xed, 0xce, 0x60, 0xe5, 0xd8, 0xf3,
-	0x18, 0x89, 0x22, 0xd1, 0xa6, 0xdc, 0x3e, 0xbc, 0xb8, 0xdc, 0xfd, 0xef, 0xcf, 0xe5, 0xee, 0x83,
-	0xdc, 0x22, 0x06, 0xe3, 0x90, 0xb0, 0x80, 0x78, 0x7d, 0xc2, 0x1a, 0xbd, 0x98, 0x31, 0xfa, 0xbd,
-	0xe1, 0xb2, 0x71, 0xc8, 0xa9, 0x2d, 0x73, 0x1d, 0x55, 0xc4, 0xba, 0x0f, 0x1b, 0x6f, 0xfc, 0x48,
-	0xf5, 0x90, 0x33, 0x6d, 0xc2, 0xf2, 0xbb, 0x64, 0xbb, 0x72, 0x92, 0xd4, 0xb1, 0x2c, 0x28, 0x77,
-	0x08, 0x3f, 0xc3, 0x43, 0x92, 0xa2, 0x10, 0x2c, 0x25, 0x8e, 0x04, 0x09, 0xdb, 0xaa, 0x43, 0x25,
-	0x29, 0x97, 0xd8, 0x37, 0xd6, 0x7a, 0x06, 0x9b, 0x1d, 0xc2, 0x3f, 0xa8, 0xa5, 0x77, 0x89, 0x1c,
-	0xaf, 0x0e, 0x95, 0xd3, 0x91, 0x1b, 0xc4, 0x1e, 0x39, 0xf1, 0x23, 0x4e, 0x65, 0x5a, 0xd1, 0x99,
-	0x8a, 0x5a, 0x3f, 0x0c, 0x28, 0xe7, 0xb3, 0xd1, 0x16, 0x14, 0x06, 0xc4, 0xef, 0x0f, 0xb8, 0x48,
-	0x58, 0x72, 0xa4, 0x87, 0xea, 0xb0, 0xd8, 0x25, 0x7c, 0x7b, 0x61, 0x6f, 0x71, 0xbf, 0xd4, 0xda,
-	0xb4, 0xb3, 0x67, 0x9e, 0x64, 0x3b, 0x09, 0x00, 0x3d, 0x86, 0x15, 0xd5, 0x71, 0x51, 0x60, 0x77,
-	0xec, 0x09, 0xe7, 0xf2, 0x8d, 0x5e, 0x92, 0x80, 0xe3, 0xc8, 0x51, 0x60, 0xeb, 0x35, 0xa0, 0xd9,
-	0x63, 0x74, 0x08, 0x30, 0x89, 0x46, 0x37, 0x36, 0xcf, 0xe1, 0xac, 0x3a, 0xac, 0x77, 0x08, 0x3f,
-	0x67, 0x34, 0xa4, 0x11, 0x0e, 0x26, 0x4b, 0x3e, 0xc1, 0xd1, 0x20, 0x7d, 0x6c, 0x47, 0xd8, 0x56,
-	0x13, 0x50, 0xb2, 0x64, 0x05, 0x94, 0x8b, 0x36, 0xa1, 0x98, 0x46, 0x88, 0x27, 0x97, 0x36, 0xf1,
-	0xad, 0xb7, 0x50, 0x51, 0x68, 0x87, 0x44, 0x71, 0xc0, 0xe7, 0xd5, 0x45, 0xf7, 0xa0, 0xd0, 0xc6,
-	0x41, 0x40, 0xb9, 0xe0, 0x64, 0xa9, 0x55, 0xb5, 0x15, 0xf3, 0xd3, 0xb0, 0x23, 0x8f, 0xad, 0x2a,
-	0xac, 0x75, 0x08, 0x4f, 0x54, 0x90, 0xf6, 0xb6, 0x08, 0x2c, 0x0b, 0x0f, 0x1d, 0xc0, 0xba, 0xa2,
-	0x52, 0xc2, 0xe1, 0x17, 0xd4, 0x23, 0xf2, 0x41, 0x66, 0xe2, 0x89, 0x1e, 0xf2, 0x31, 0x1a, 0x73,
-	0x01, 0x5f, 0x10, 0xf0, 0x79, 0x47, 0xad, 0x9f, 0x4b, 0x92, 0x4c, 0xa8, 0x05, 0x85, 0x54, 0x84,
-	0xe8, 0x56, 0xf6, 0x4e, 0x39, 0x59, 0x9a, 0x1b, 0x49, 0xd8, 0x4e, 0x87, 0x95, 0xc8, 0x23, 0x80,
-	0x4c, 0x4d, 0xe8, 0x4e, 0x96, 0x37, 0xa5, 0x31, 0xb3, 0x6c, 0x27, 0x1f, 0x83, 0x02, 0x3e, 0x85,
-	0x72, 0x5e, 0x21, 0xe8, 0x6e, 0x96, 0x38, 0xa3, 0x1c, 0x3d, 0xb5, 0x69, 0xa0, 0x06, 0xac, 0x48,
-	0xcd, 0xa0, 0x2d, 0xad, 0xe1, 0x44, 0x46, 0x66, 0xd9, 0x4e, 0xff, 0xa4, 0x57, 0x23, 0xce, 0xc6,
-	0xe8, 0x08, 0x56, 0x27, 0x02, 0x42, 0xdb, 0x7a, 0xab, 0x4c, 0x55, 0x7a, 0x52, 0xd3, 0x40, 0xa7,
-	0xe2, 0xa7, 0xd0, 0x14, 0x51, 0xd3, 0xfa, 0xcd, 0x48, 0xcd, 0xdc, 0x9a, 0x4f, 0x70, 0xf4, 0x04,
-	0x4a, 0x39, 0x16, 0x22, 0x53, 0x2b, 0xa3, 0x91, 0xd3, 0x9c, 0x26, 0x08, 0x3a, 0x85, 0x35, 0x8d,
-	0x99, 0x68, 0x47, 0x9f, 0x40, 0xa7, 0xac, 0x99, 0x9b, 0x4f, 0xa7, 0x67, 0xd3, 0x40, 0x87, 0x50,
-	0x54, 0x1c, 0x43, 0xb7, 0xb5, 0x3b, 0x64, 0xbc, 0x33, 0xab, 0xfa, 0xe3, 0x47, 0xed, 0xe7, 0x17,
-	0x57, 0x35, 0xe3, 0xf7, 0x55, 0xcd, 0xf8, 0x7b, 0x55, 0x33, 0x7e, 0x5d, 0xd7, 0x8c, 0x8b, 0xeb,
-	0x9a, 0xf1, 0xe9, 0xe0, 0xe6, 0xbf, 0x91, 0x85, 0x6e, 0x43, 0xd5, 0xe9, 0x15, 0xc4, 0x2f, 0xff,
-	0xe8, 0x5f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x64, 0xbf, 0x2b, 0xbb, 0x73, 0x06, 0x00, 0x00,
+var fileDescriptor_rpcquery_abf0f07e248c5772 = []byte{
+	// 795 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x55, 0xcf, 0x4e, 0xdb, 0x4e,
+	0x10, 0xfe, 0x99, 0x40, 0x08, 0x93, 0x90, 0xc0, 0xfe, 0x28, 0xa5, 0x2e, 0x0a, 0xc8, 0x87, 0x94,
+	0xa2, 0xd6, 0x89, 0x52, 0xe0, 0xd0, 0x4a, 0x6d, 0x49, 0xff, 0x04, 0x68, 0x8b, 0xa8, 0x53, 0x81,
+	0xc4, 0x6d, 0x63, 0x6f, 0x13, 0xab, 0x4e, 0xd6, 0x5d, 0xaf, 0x5b, 0xe5, 0x05, 0xfa, 0x2e, 0x7d,
+	0x8b, 0x1e, 0x39, 0xf6, 0xdc, 0x03, 0x42, 0xf0, 0x22, 0x95, 0xd7, 0xbb, 0x89, 0x9d, 0x20, 0xd4,
+	0x1e, 0x7a, 0xdb, 0x99, 0xfd, 0x66, 0xc6, 0x3b, 0xf3, 0x7d, 0x63, 0x28, 0x32, 0xdf, 0xfe, 0x1c,
+	0x12, 0x36, 0x30, 0x7d, 0x46, 0x39, 0x45, 0x39, 0x65, 0xeb, 0x0f, 0x3b, 0x2e, 0xef, 0x86, 0x6d,
+	0xd3, 0xa6, 0xbd, 0x6a, 0x87, 0x76, 0x68, 0x55, 0x00, 0xda, 0xe1, 0x47, 0x61, 0x09, 0x43, 0x9c,
+	0xe2, 0x40, 0x3d, 0xdf, 0xc7, 0x3d, 0x12, 0x48, 0x63, 0x0e, 0xdb, 0x3d, 0x79, 0x2c, 0x7d, 0xc1,
+	0x9e, 0xeb, 0x60, 0x4e, 0x99, 0xba, 0x63, 0xbe, 0x2d, 0x8f, 0xf3, 0x3e, 0x1e, 0x78, 0x14, 0x3b,
+	0xb1, 0x69, 0xb8, 0x90, 0x6f, 0x71, 0xcc, 0xc3, 0xe0, 0x08, 0x33, 0xdc, 0x43, 0x1b, 0x50, 0x6a,
+	0x78, 0xd4, 0xfe, 0xf4, 0xc1, 0xed, 0x91, 0x13, 0x97, 0x77, 0xdd, 0xfe, 0x8a, 0xb6, 0xae, 0x6d,
+	0xcc, 0x59, 0xe3, 0x6e, 0x54, 0x83, 0xff, 0x85, 0xab, 0x45, 0x48, 0x3f, 0x81, 0x9e, 0x12, 0xe8,
+	0xeb, 0xae, 0x0c, 0x0c, 0xa5, 0x26, 0xe1, 0xbb, 0xb6, 0x4d, 0xc3, 0x3e, 0x8f, 0xcb, 0x1d, 0xc2,
+	0xec, 0xae, 0xe3, 0x30, 0x12, 0x04, 0xa2, 0x4c, 0xa1, 0xb1, 0x75, 0x76, 0xbe, 0xf6, 0xdf, 0xaf,
+	0xf3, 0xb5, 0x07, 0x89, 0x46, 0x74, 0x07, 0x3e, 0x61, 0x1e, 0x71, 0x3a, 0x84, 0x55, 0xdb, 0x21,
+	0x63, 0xf4, 0x6b, 0xd5, 0x66, 0x03, 0x9f, 0x53, 0x53, 0xc6, 0x5a, 0x2a, 0x89, 0xf1, 0x5d, 0x13,
+	0x35, 0x5a, 0x9c, 0x32, 0xdc, 0x21, 0xff, 0xa4, 0x06, 0x7a, 0x0d, 0x99, 0x37, 0x64, 0x20, 0x1e,
+	0xfa, 0xc7, 0xb9, 0xda, 0x6e, 0x1f, 0xb3, 0x81, 0x79, 0x42, 0x99, 0x53, 0xdf, 0xde, 0xb1, 0xa2,
+	0x04, 0xc6, 0x29, 0x14, 0xe4, 0x77, 0x1e, 0x63, 0x2f, 0x24, 0xe8, 0x00, 0x66, 0xc4, 0xe1, 0xef,
+	0xbe, 0x72, 0x2c, 0x73, 0x9c, 0xc2, 0xb8, 0x0f, 0x8b, 0x6f, 0xdd, 0x40, 0xf5, 0x5a, 0xce, 0x76,
+	0x09, 0x66, 0xde, 0x47, 0x2c, 0x93, 0x13, 0x8d, 0x0d, 0xc3, 0x80, 0x42, 0x93, 0xf0, 0x43, 0xdc,
+	0x93, 0xed, 0x42, 0x30, 0x1d, 0x19, 0x12, 0x24, 0xce, 0x46, 0x05, 0x8a, 0x51, 0xba, 0xe8, 0x7c,
+	0x63, 0xae, 0xa7, 0xb0, 0xd4, 0x24, 0xfc, 0x58, 0x91, 0xaf, 0x45, 0xe4, 0x98, 0x2b, 0x50, 0xdc,
+	0xef, 0xdb, 0x5e, 0xe8, 0x90, 0x3d, 0x37, 0xe0, 0x54, 0x86, 0xe5, 0xac, 0x31, 0xaf, 0xf1, 0x4d,
+	0x83, 0x42, 0x32, 0x1a, 0x2d, 0x43, 0xb6, 0x4b, 0xdc, 0x4e, 0x97, 0x8b, 0x80, 0x69, 0x4b, 0x5a,
+	0xa8, 0x02, 0x99, 0x16, 0xe1, 0x2b, 0x53, 0xeb, 0x99, 0x8d, 0x7c, 0x7d, 0xc9, 0x1c, 0xd1, 0x7d,
+	0x18, 0x6d, 0x45, 0x00, 0xb4, 0x03, 0xb3, 0xaa, 0x62, 0x46, 0x60, 0x57, 0xcd, 0xa1, 0xf6, 0x92,
+	0x85, 0x5e, 0x12, 0x8f, 0xe3, 0xc0, 0x52, 0x60, 0xe3, 0x00, 0xd0, 0xe4, 0x35, 0xda, 0x02, 0x18,
+	0x7a, 0x83, 0x1b, 0x8b, 0x27, 0x70, 0x46, 0x05, 0x16, 0x9a, 0x84, 0x1f, 0x31, 0xea, 0xd3, 0x00,
+	0x7b, 0xc3, 0x26, 0xef, 0xe1, 0xa0, 0x1b, 0x8f, 0xda, 0x12, 0x67, 0xa3, 0x06, 0x28, 0x6a, 0xb2,
+	0x02, 0xca, 0x46, 0xeb, 0x90, 0x8b, 0x3d, 0xc4, 0x91, 0x4d, 0x1b, 0xda, 0xc6, 0x3b, 0x28, 0x2a,
+	0xb4, 0x45, 0x82, 0xd0, 0xe3, 0xd7, 0xe5, 0x45, 0xf7, 0x20, 0xdb, 0xc0, 0x9e, 0x47, 0xb9, 0xa0,
+	0x6c, 0xbe, 0x5e, 0x32, 0xd5, 0x06, 0x88, 0xdd, 0x96, 0xbc, 0x36, 0x4a, 0x30, 0x2f, 0xb4, 0x83,
+	0x25, 0x61, 0x0c, 0x02, 0x33, 0xc2, 0x42, 0x9b, 0xb0, 0xa0, 0xa8, 0x14, 0x69, 0xf9, 0x05, 0x75,
+	0x88, 0x1c, 0xc8, 0x84, 0x3f, 0xda, 0x0b, 0x49, 0x1f, 0x0d, 0xb9, 0x80, 0x4f, 0x09, 0xf8, 0x75,
+	0x57, 0xf5, 0x8b, 0x69, 0x49, 0x26, 0x54, 0x87, 0x6c, 0xbc, 0x8c, 0xd0, 0xad, 0xd1, 0x9c, 0x12,
+	0xeb, 0x49, 0x5f, 0x8c, 0xdc, 0x66, 0xfc, 0x58, 0x89, 0xdc, 0x06, 0x18, 0x6d, 0x15, 0x74, 0x67,
+	0x14, 0x37, 0xb6, 0x6b, 0xf4, 0x82, 0x19, 0x2d, 0x48, 0x05, 0x7c, 0x26, 0xc2, 0xa4, 0x00, 0xc7,
+	0xc2, 0x92, 0xeb, 0x43, 0x5f, 0x4e, 0x7e, 0x49, 0x42, 0xae, 0x4f, 0xa0, 0x90, 0x94, 0x18, 0xba,
+	0x3b, 0xc2, 0x4d, 0x48, 0x2f, 0x5d, 0xbb, 0xa6, 0xa1, 0x2a, 0xcc, 0x4a, 0xd1, 0xa1, 0xe5, 0x54,
+	0xe9, 0xa1, 0x0e, 0xf5, 0x82, 0x19, 0x2f, 0xf7, 0x57, 0x7d, 0xce, 0x06, 0x68, 0x1b, 0xe6, 0x86,
+	0x0a, 0x44, 0x2b, 0xe9, 0x52, 0x23, 0x59, 0xa6, 0x83, 0x6a, 0x1a, 0xda, 0x17, 0xeb, 0x30, 0x25,
+	0xa9, 0x72, 0xaa, 0xde, 0x84, 0x56, 0x93, 0xef, 0x4d, 0xc5, 0x3d, 0x86, 0x7c, 0x82, 0xc6, 0x48,
+	0x4f, 0xa5, 0x49, 0xb1, 0x5b, 0x1f, 0x67, 0x18, 0xda, 0x87, 0xf9, 0x14, 0xb5, 0xd1, 0x6a, 0xfa,
+	0x05, 0x69, 0xce, 0xeb, 0x89, 0xf7, 0xa5, 0xf9, 0x5d, 0xd3, 0xd0, 0x16, 0xe4, 0x14, 0x49, 0xd1,
+	0xed, 0xb1, 0xa9, 0x29, 0xe2, 0xea, 0xa5, 0x34, 0x7b, 0x82, 0xc6, 0xf3, 0xb3, 0xcb, 0xb2, 0xf6,
+	0xf3, 0xb2, 0xac, 0x5d, 0x5c, 0x96, 0xb5, 0x1f, 0x57, 0x65, 0xed, 0xec, 0xaa, 0xac, 0x9d, 0x6e,
+	0xde, 0xbc, 0x5a, 0x99, 0x6f, 0x57, 0x55, 0x9e, 0x76, 0x56, 0xfc, 0x2e, 0x1f, 0xfd, 0x0e, 0x00,
+	0x00, 0xff, 0xff, 0xf2, 0x97, 0xea, 0x38, 0xbc, 0x07, 0x00, 0x00,
 }

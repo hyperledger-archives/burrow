@@ -111,13 +111,6 @@ func (txe *TxExecution) PushError(err error) {
 	}
 }
 
-func (txe *TxExecution) PayloadEvent(payload *PayloadEvent) {
-	txe.Append(&Event{
-		Header:  txe.Header(TypePayload, EventStringPayload(payload.Index), nil),
-		Payload: payload,
-	})
-}
-
 func (txe *TxExecution) Trace() string {
 	var calls []string
 	for _, ev := range txe.Events {

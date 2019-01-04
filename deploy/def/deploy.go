@@ -21,8 +21,7 @@ type DeployArgs struct {
 	Jobs          int      `mapstructure:"," json:"," yaml:"," toml:","`
 	ProposeVerify bool     `mapstructure:"," json:"," yaml:"," toml:","`
 	ProposeVote   bool     `mapstructure:"," json:"," yaml:"," toml:","`
-
-	Package *Package
+	ProposeCreate bool     `mapstructure:"," json:"," yaml:"," toml:","`
 }
 
 func (do *DeployArgs) Validate() error {
@@ -30,16 +29,19 @@ func (do *DeployArgs) Validate() error {
 		validation.Field(&do.DefaultAmount, rule.Uint64),
 		validation.Field(&do.DefaultFee, rule.Uint64),
 		validation.Field(&do.DefaultGas, rule.Uint64),
-		validation.Field(&do.Package),
 	)
 }
 
-type Package struct {
+type Playbook struct {
 	Account string
 	Jobs    []*Job
+	Path    string `mapstructure:"-" json:"-" yaml:"-" toml:"-"`
+	BinPath string `mapstructure:"-" json:"-" yaml:"-" toml:"-"`
+	// If we're in a proposal or meta job, reference our parent script
+	Parent *Playbook `mapstructure:"-" json:"-" yaml:"-" toml:"-"`
 }
 
-func (pkg *Package) Validate() error {
+func (pkg *Playbook) Validate() error {
 	return validation.ValidateStruct(pkg,
 		validation.Field(&pkg.Jobs),
 	)

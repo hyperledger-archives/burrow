@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func RunPackage(do *def.DeployArgs, client *def.Client) error {
+func RunPackage(do *def.DeployArgs, script *def.Playbook, client *def.Client) error {
 	var err error
 	var pwd string
 
@@ -56,8 +56,8 @@ func RunPackage(do *def.DeployArgs, client *def.Client) error {
 	printPathPackage(client)
 
 	// Load the package if it doesn't exist
-	if do.Package == nil {
-		do.Package, err = loader.LoadPackage(do.YAMLPath)
+	if script == nil {
+		script, err = loader.LoadPlaybook(do.YAMLPath, do, nil)
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ func RunPackage(do *def.DeployArgs, client *def.Client) error {
 		}
 	}
 
-	return jobs.DoJobs(do, client)
+	return jobs.ExecutePlaybook(do, script, client)
 }
 
 func printPathPackage(client *def.Client) {

@@ -55,6 +55,11 @@ func (qs *queryServer) GetAccount(ctx context.Context, param *GetAccountParam) (
 	return acc, err
 }
 
+func (qs *queryServer) GetStorage(ctx context.Context, param *GetStorageParam) (*StorageValue, error) {
+	val, err := qs.accounts.GetStorage(param.Address, param.Key)
+	return &StorageValue{Value: val}, err
+}
+
 func (qs *queryServer) ListAccounts(param *ListAccountsParam, stream Query_ListAccountsServer) error {
 	qry, err := query.NewBuilder(param.Query).Query()
 	var streamErr error
@@ -131,7 +136,7 @@ func (qs *queryServer) GetProposal(ctx context.Context, param *GetProposalParam)
 func (qs *queryServer) ListProposals(param *ListProposalsParam, stream Query_ListProposalsServer) error {
 	var streamErr error
 	_, err := qs.proposalReg.IterateProposals(func(hash []byte, ballot *payload.Ballot) (stop bool) {
-		if param.GetProposed() == true || ballot.ProposalState == payload.Ballot_PROPOSED {
+		if param.GetProposed() == false || ballot.ProposalState == payload.Ballot_PROPOSED {
 			streamErr = stream.Send(&ProposalResult{Hash: hash, Ballot: ballot})
 			if streamErr != nil {
 				return true
