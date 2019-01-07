@@ -17,7 +17,6 @@ func decodeEvent(header *exec.Header, log *exec.LogEvent, abiSpec *abi.AbiSpec) 
 	data := make(map[string]interface{})
 
 	var eventID abi.EventID
-	var evAbi abi.EventSpec
 	copy(eventID[:], log.Topics[0].Bytes())
 
 	evAbi, ok := abiSpec.EventsById[eventID]
@@ -35,7 +34,7 @@ func decodeEvent(header *exec.Header, log *exec.LogEvent, abiSpec *abi.AbiSpec) 
 	unpackedData := abi.GetPackingTypes(evAbi.Inputs)
 
 	// unpack event data (topics & data part)
-	if err := abi.UnpackEvent(evAbi, log.Topics, log.Data, unpackedData...); err != nil {
+	if err := abi.UnpackEvent(&evAbi, log.Topics, log.Data, unpackedData...); err != nil {
 		return nil, errors.Wrap(err, "Could not unpack event data")
 	}
 
