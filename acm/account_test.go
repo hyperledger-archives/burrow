@@ -15,11 +15,12 @@
 package acm
 
 import (
+	"encoding/json"
+	"fmt"
 	"testing"
 
-	"encoding/json"
-
-	"fmt"
+	"github.com/hyperledger/burrow/event/query"
+	"github.com/hyperledger/burrow/execution/solidity"
 
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/permission"
@@ -100,4 +101,23 @@ func TestMarshalJSON(t *testing.T) {
 		acc.Address, acc.PublicKey)
 	assert.Equal(t, expected, string(bs))
 	assert.NoError(t, err)
+}
+
+func TestAccountTags(t *testing.T) {
+	perms := permission.DefaultAccountPermissions
+	perms.Roles = []string{"frogs", "dogs"}
+	acc := &Account{
+		Permissions: perms,
+		Code:        solidity.Bytecode_StrangeLoop,
+	}
+	tagged := acc.Tagged()
+	assert.Equal(t, []string{"Address", "Balance", "Sequence", "Code", "Permissions", "Roles"}, tagged.Keys())
+	str, _ := tagged.Get("Permissions")
+	assert.Equal(t, "send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | hasRole", str)
+	str, _ = tagged.Get("Roles")
+	assert.Equal(t, "frogs;dogs", str)
+	str, _ = tagged.Get("Code")
+	qry, err := query.New("Code CONTAINS '0116002556001600360006101000A815'")
+	require.NoError(t, err)
+	assert.True(t, qry.Matches(tagged))
 }

@@ -61,7 +61,7 @@ func (qs *queryServer) GetStorage(ctx context.Context, param *GetStorageParam) (
 }
 
 func (qs *queryServer) ListAccounts(param *ListAccountsParam, stream Query_ListAccountsServer) error {
-	qry, err := query.NewBuilder(param.Query).Query()
+	qry, err := query.NewOrEmpty(param.Query)
 	var streamErr error
 	_, err = qs.accounts.IterateAccounts(func(acc *acm.Account) (stop bool) {
 		if qry.Matches(acc.Tagged()) {
@@ -88,7 +88,7 @@ func (qs *queryServer) GetName(ctx context.Context, param *GetNameParam) (entry 
 }
 
 func (qs *queryServer) ListNames(param *ListNamesParam, stream Query_ListNamesServer) error {
-	qry, err := query.NewBuilder(param.Query).Query()
+	qry, err := query.NewOrEmpty(param.Query)
 	if err != nil {
 		return err
 	}
