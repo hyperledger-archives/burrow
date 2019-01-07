@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/lib/pq"
 	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/types"
+	"github.com/lib/pq"
 )
 
 var pgDataTypes = map[types.SQLColumnType]string{

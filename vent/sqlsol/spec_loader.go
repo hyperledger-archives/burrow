@@ -1,6 +1,7 @@
 package sqlsol
 
 import (
+	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/vent/types"
 	"github.com/pkg/errors"
 )
@@ -78,7 +79,7 @@ func getBlockTxTablesDefinition() types.EventTables {
 	txCol[types.TxTxHashLabel] = types.SQLTableColumn{
 		Name:    types.SQLColumnLabelTxHash,
 		Type:    types.SQLColumnTypeVarchar,
-		Length:  40,
+		Length:  txs.HashLengthHex,
 		Primary: true,
 		Order:   2,
 	}

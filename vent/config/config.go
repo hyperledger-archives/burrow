@@ -23,7 +23,7 @@ type Flags struct {
 func DefaultFlags() *Flags {
 	return &Flags{
 		DBAdapter: types.PostgresDB,
-		DBURL:     "postgres://user:pass@localhost:5432/vent?sslmode=disable",
+		DBURL:     "postgres://postgres@localhost:5432/postgres?sslmode=disable",
 		DBSchema:  "vent",
 		GRPCAddr:  "localhost:10997",
 		HTTPAddr:  "0.0.0.0:8080",

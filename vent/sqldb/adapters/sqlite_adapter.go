@@ -1,3 +1,6 @@
+// sqlite3 is a CGO dependency - we cannot have it on board if we want to use pure Go (e.g. for cross-compiling and other things)
+// +build sqlite
+
 package adapters
 
 import (
@@ -5,9 +8,9 @@ import (
 	"fmt"
 	"strings"
 
-	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/types"
+	sqlite3 "github.com/mattn/go-sqlite3"
 )
 
 var sqliteDataTypes = map[types.SQLColumnType]string{

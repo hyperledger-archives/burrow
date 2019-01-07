@@ -15,10 +15,9 @@
 package txs
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-
-	"github.com/tendermint/tendermint/crypto/tmhash"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
@@ -27,7 +26,10 @@ import (
 	"github.com/hyperledger/burrow/txs/payload"
 )
 
-const HashLength = tmhash.Size
+const (
+	HashLength    = 32
+	HashLengthHex = HashLength * 2
+)
 
 // Tx is the canonical object that we serialise to produce the SignBytes that we sign
 type Tx struct {
@@ -166,9 +168,10 @@ func (tx *Tx) String() string {
 
 // Regenerate the Tx hash if it has been mutated or as called by Hash() in first instance
 func (tx *Tx) Rehash() []byte {
-	hasher := tmhash.New()
+	hasher := sha256.New()
 	hasher.Write(tx.MustSignBytes())
 	tx.txHash = hasher.Sum(nil)
+	tx.txHash = tx.txHash[:HashLength]
 	return tx.txHash
 }
 

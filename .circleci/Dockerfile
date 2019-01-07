@@ -3,9 +3,10 @@ MAINTAINER Monax <support@monax.io>
 
 ENV DOCKER_VERSION "17.12.1-ce"
 ENV GORELEASER_VERSION "v0.83.0"
-# This is the image used by the Circle CI config in this directory pushed to quay.io/monax/bosmarmot:ci
-# docker build -t quay.io/monax/build:burrow-ci -f ./.circleci/Dockerfile .
-RUN apk add --update --no-cache nodejs npm netcat-openbsd git openssh-client openssl make bash gcc g++ jq curl parallel
+# This is the image used by the Circle CI config
+# Update remote with 'make push_ci_image'
+RUN apk add --update --no-cache nodejs npm netcat-openbsd git openssh-client openssl make bash gcc g++ jq curl parallel docker py-pip
+RUN pip install docker-compose
 RUN echo -ne "will cite" | parallel --citation || true
 # get docker client
 WORKDIR /usr/bin

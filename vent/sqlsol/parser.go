@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hyperledger/burrow/txs"
+
 	"github.com/hyperledger/burrow/vent/types"
 	"github.com/pkg/errors"
 )
@@ -250,7 +252,7 @@ func getGlobalColumns() map[string]types.SQLTableColumn {
 	globalColumns[types.TxTxHashLabel] = types.SQLTableColumn{
 		Name:    types.SQLColumnLabelTxHash,
 		Type:    types.SQLColumnTypeVarchar,
-		Length:  40,
+		Length:  txs.HashLengthHex,
 		Primary: false,
 		Order:   2,
 	}

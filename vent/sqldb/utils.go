@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hyperledger/burrow/txs"
+
 	"encoding/json"
 
 	"github.com/hyperledger/burrow/vent/types"
@@ -89,7 +91,7 @@ func (db *SQLDB) getSysTablesDefinition() types.EventTables {
 	logCol[types.SQLColumnLabelTxHash] = types.SQLTableColumn{
 		Name:    types.SQLColumnLabelTxHash,
 		Type:    types.SQLColumnTypeVarchar,
-		Length:  40,
+		Length:  txs.HashLengthHex,
 		Primary: false,
 		Order:   7,
 	}

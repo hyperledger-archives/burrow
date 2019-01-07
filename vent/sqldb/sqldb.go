@@ -44,12 +44,12 @@ func NewSQLDB(connection types.SQLConnection) (*SQLDB, error) {
 		return nil, errors.New("invalid database adapter")
 	}
 
-	dbc, err := db.DBAdapter.Open(url)
+	var err error
+	db.DB, err = db.DBAdapter.Open(url)
 	if err != nil {
 		db.Log.Info("msg", "Error opening database connection", "err", err)
 		return nil, err
 	}
-	db.DB = dbc
 
 	if err = db.Ping(); err != nil {
 		db.Log.Info("msg", "Error database not available", "err", err)

@@ -1,6 +1,7 @@
 package query
 
 import (
+	"sort"
 	"strings"
 )
 
@@ -46,6 +47,7 @@ func (ts TagMap) Keys() []string {
 	for k := range ts {
 		keys = append(keys, k)
 	}
+	sort.Strings(keys)
 	return keys
 }
 

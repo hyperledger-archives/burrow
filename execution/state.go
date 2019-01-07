@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/hyperledger/burrow/txs"
+
 	"github.com/hyperledger/burrow/txs/payload"
 
 	amino "github.com/tendermint/go-amino"
@@ -63,7 +65,7 @@ var (
 	// TODO: implement content-addressing of code and optionally blocks (to allow reference to block to be stored in state tree)
 	//codeKeyFormat   = storage.NewMustKeyFormat("c", sha256.Size)
 	//blockKeyFormat  = storage.NewMustKeyFormat("b", sha256.Size)
-	txKeyFormat = storage.NewMustKeyFormat("b", tmhash.Size)
+	txKeyFormat = storage.NewMustKeyFormat("b", txs.HashLength)
 	// Binding between apphash and version stto
 	commitKeyFormat = storage.NewMustKeyFormat("v", uint64Length)
 )

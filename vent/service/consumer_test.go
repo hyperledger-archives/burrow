@@ -25,19 +25,19 @@ func TestConsumer(t *testing.T) {
 	// generate events
 	name := "TestEvent1"
 	description := "Description of TestEvent1"
-	test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
+	txe := test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
 
 	name = "TestEvent2"
 	description = "Description of TestEvent2"
-	test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
+	txe = test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
 
 	name = "TestEvent3"
 	description = "Description of TestEvent3"
-	test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
+	txe = test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
 
 	name = "TestEvent4"
 	description = "Description of TestEvent4"
-	test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
+	txe = test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
 
 	// workaround for off-by-one on latest bound fixed in burrow
 	time.Sleep(time.Second * 2)
@@ -108,7 +108,7 @@ func TestConsumer(t *testing.T) {
 
 		tblData = eventData.Tables[types.SQLTxTableName]
 		require.Equal(t, 1, len(tblData))
-		require.Equal(t, "B216CCD3919E82BE7206DFDFF08D3625E1F9E6B9", tblData[0].RowData["_txhash"].(string))
+		require.Equal(t, txe.TxHash.String(), tblData[0].RowData["_txhash"].(string))
 	}
 
 	//Restore
