@@ -100,7 +100,7 @@ type State struct {
 	height       uint64
 	accountStats state.AccountStats
 	// Values not reassigned
-	sync.RWMutex
+	sync.Mutex
 	writeState *writeState
 	db         dbm.DB
 	cacheDB    *storage.CacheDB
