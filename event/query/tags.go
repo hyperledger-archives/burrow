@@ -1,7 +1,6 @@
 package query
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -29,17 +28,9 @@ func (ts TagMap) Get(key string) (value string, ok bool) {
 	var vint interface{}
 	vint, ok = ts[key]
 	if !ok {
-		return
+		return "", false
 	}
-	switch v := vint.(type) {
-	case string:
-		value = v
-	case fmt.Stringer:
-		value = v.String()
-	default:
-		value = fmt.Sprintf("%v", v)
-	}
-	return
+	return StringFromValue(vint), true
 }
 
 func (ts TagMap) Len() int {

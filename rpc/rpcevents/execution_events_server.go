@@ -74,7 +74,7 @@ func (ees *executionEventsServer) GetBlock(ctx context.Context, request *GetBloc
 }
 
 func (ees *executionEventsServer) GetBlocks(request *BlocksRequest, stream ExecutionEvents_GetBlocksServer) error {
-	qry, err := query.NewBuilder(request.Query).Query()
+	qry, err := query.NewOrEmpty(request.Query)
 	if err != nil {
 		return fmt.Errorf("could not parse BlockExecution query: %v", err)
 	}
@@ -115,7 +115,7 @@ func (ees *executionEventsServer) GetTx(ctx context.Context, request *GetTxReque
 }
 
 func (ees *executionEventsServer) GetTxs(request *BlocksRequest, stream ExecutionEvents_GetTxsServer) error {
-	qry, err := query.NewBuilder(request.Query).Query()
+	qry, err := query.NewOrEmpty(request.Query)
 	if err != nil {
 		return fmt.Errorf("could not parse TxExecution query: %v", err)
 	}
@@ -133,7 +133,7 @@ func (ees *executionEventsServer) GetTxs(request *BlocksRequest, stream Executio
 }
 
 func (ees *executionEventsServer) GetEvents(request *BlocksRequest, stream ExecutionEvents_GetEventsServer) error {
-	qry, err := query.NewBuilder(request.Query).Query()
+	qry, err := query.NewOrEmpty(request.Query)
 	if err != nil {
 		return fmt.Errorf("could not parse Event query: %v", err)
 	}

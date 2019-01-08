@@ -2,6 +2,7 @@ package query
 
 import (
 	"bytes"
+	"encoding"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -105,10 +106,14 @@ func (qb *Builder) Query() (Query, error) {
 	if qb.error != nil {
 		return nil, qb.error
 	}
-	if isEmpty(qb.queryString) {
+	return NewOrEmpty(qb.queryString)
+}
+
+func NewOrEmpty(queryString string) (Query, error) {
+	if isEmpty(queryString) {
 		return Empty{}, nil
 	}
-	return New(qb.String())
+	return New(queryString)
 }
 
 // Creates the conjunction of Builder and rightQuery
@@ -198,6 +203,9 @@ func StringFromValue(value interface{}) string {
 	switch v := value.(type) {
 	case string:
 		return v
+	case encoding.TextMarshaler:
+		bs, _ := v.MarshalText()
+		return string(bs)
 	case fmt.Stringer:
 		return v.String()
 	case bool:
