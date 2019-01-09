@@ -62,20 +62,20 @@ func (ms *MemoryState) SetStorage(address crypto.Address, key, value binary.Word
 	return nil
 }
 
-func (ms *MemoryState) IterateAccounts(consumer func(*acm.Account) (stop bool)) (stopped bool, err error) {
+func (ms *MemoryState) IterateAccounts(consumer func(*acm.Account) error) (err error) {
 	for _, acc := range ms.Accounts {
-		if consumer(acc) {
-			return true, nil
+		if err := consumer(acc); err != nil {
+			return err
 		}
 	}
-	return false, nil
+	return nil
 }
 
-func (ms *MemoryState) IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
+func (ms *MemoryState) IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) error) (err error) {
 	for key, value := range ms.Storage[address] {
-		if consumer(key, value) {
-			return true, nil
+		if err := consumer(key, value); err != nil {
+			return err
 		}
 	}
-	return false, nil
+	return nil
 }

@@ -23,7 +23,7 @@ type Provider interface {
 	// Get a partiualr TxExecution by hash
 	GetTx(txHash []byte) (*exec.TxExecution, error)
 	// Get events between startKey (inclusive) and endKey (exclusive) - i.e. the half open interval [start, end)
-	GetBlocks(startHeight, endHeight uint64, consumer func(*exec.BlockExecution) (stop bool)) (stopped bool, err error)
+	GetBlocks(startHeight, endHeight uint64, consumer func(*exec.BlockExecution) error) (err error)
 }
 
 type executionEventsServer struct {
@@ -220,14 +220,10 @@ func (ees *executionEventsServer) iterateBlocks(start, end uint64, consumer func
 	var streamErr error
 	var lastHeightSeen uint64
 
-	_, err := ees.eventsProvider.GetBlocks(start, end,
-		func(be *exec.BlockExecution) (stop bool) {
+	err := ees.eventsProvider.GetBlocks(start, end,
+		func(be *exec.BlockExecution) error {
 			lastHeightSeen = be.Height
-			streamErr = consumer(be)
-			if streamErr != nil {
-				return true
-			}
-			return false
+			return consumer(be)
 		})
 
 	if err != nil {

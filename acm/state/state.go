@@ -16,7 +16,7 @@ type AccountIterable interface {
 	// Iterates through accounts calling passed function once per account, if the consumer
 	// returns true the iteration breaks and returns true to indicate it iteration
 	// was escaped
-	IterateAccounts(consumer func(*acm.Account) (stop bool)) (stopped bool, err error)
+	IterateAccounts(consumer func(*acm.Account) error) (err error)
 }
 
 type AccountUpdater interface {
@@ -42,7 +42,7 @@ type StorageIterable interface {
 	// Iterates through the storage of account ad address calling the passed function once per account,
 	// if the iterator function returns true the iteration breaks and returns true to indicate it iteration
 	// was escaped
-	IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error)
+	IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) error) (err error)
 }
 
 type AccountStats struct {

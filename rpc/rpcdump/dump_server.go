@@ -48,47 +48,47 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 		return err
 	}
 
-	_, err = state.IterateAccounts(func(acc *acm.Account) (stopped bool) {
-		stream.Send(&dump.Dump{Account: acc})
+	err = state.IterateAccounts(func(acc *acm.Account) error {
+		err = stream.Send(&dump.Dump{Account: acc})
+		if err != nil {
+			return err
+		}
 
-		stopped, err = ds.state.IterateStorage(acc.Address, func(key, value binary.Word256) (stopped bool) {
-			stream.Send(&dump.Dump{
+		err = ds.state.IterateStorage(acc.Address, func(key, value binary.Word256) error {
+			return stream.Send(&dump.Dump{
 				AccountStorage: &dump.AccountStorage{
 					Address: acc.Address,
 					Storage: &dump.Storage{Key: key, Value: value},
 				},
 			})
-			return
 		})
 
-		if err != nil {
-			stopped = true
-		}
-
-		return false
+		return nil
 	})
 
 	if err != nil {
 		return err
 	}
 
-	_, err = state.IterateNames(func(entry *names.Entry) (stop bool) {
-		stream.Send(&dump.Dump{Name: entry})
-		return
+	err = state.IterateNames(func(entry *names.Entry) error {
+		return stream.Send(&dump.Dump{Name: entry})
 	})
 
 	if err != nil {
 		return err
 	}
 
-	_, err = ds.state.IterateTx(0, height, func(tx *exec.TxExecution) (stop bool) {
+	err = ds.state.IterateTx(0, height, func(tx *exec.TxExecution) error {
 		for i := 0; i < len(tx.Events); i++ {
 			event := tx.Events[i].GetLog()
 			if event != nil {
-				stream.Send(&dump.Dump{EVMEvent: &dump.EVMEvent{Height: tx.Height, Event: event}})
+				err := stream.Send(&dump.Dump{EVMEvent: &dump.EVMEvent{Height: tx.Height, Event: event}})
+				if err != nil {
+					return err
+				}
 			}
 		}
-		return
+		return nil
 	})
 
 	return nil

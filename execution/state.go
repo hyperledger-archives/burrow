@@ -242,13 +242,13 @@ func LoadState(db dbm.DB, version int64) (*State, error) {
 		return nil, fmt.Errorf("could not load current version of state tree: CommitID: %v", commitID)
 	}
 	// Populate stats. If this starts taking too long, store the value rather than the full scan at startup
-	_, err = s.IterateAccounts(func(acc *acm.Account) (stop bool) {
+	err = s.IterateAccounts(func(acc *acm.Account) error {
 		if len(acc.Code) > 0 {
 			s.accountStats.AccountsWithCode++
 		} else {
 			s.accountStats.AccountsWithoutCode++
 		}
-		return
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -377,19 +377,19 @@ func (ws *writeState) RemoveAccount(address crypto.Address) (err error) {
 	return err
 }
 
-func (s *StateTree) IterateAccounts(consumer func(*acm.Account) (stop bool)) (stopped bool, err error) {
+func (s *StateTree) IterateAccounts(consumer func(*acm.Account) error) (err error) {
 	it := accountKeyFormat.Iterator(s.tree, nil, nil)
 	for it.Valid() {
 		account, err := acm.Decode(it.Value())
 		if err != nil {
-			return true, fmt.Errorf("IterateAccounts could not decode account: %v", err)
+			return fmt.Errorf("IterateAccounts could not decode account: %v", err)
 		}
-		if consumer(account) {
-			return true, nil
+		if err = consumer(account); err != nil {
+			return err
 		}
 		it.Next()
 	}
-	return false, nil
+	return nil
 }
 
 func (s *State) GetAccountStats() state.AccountStats {
@@ -409,26 +409,26 @@ func (ws *writeState) SetStorage(address crypto.Address, key, value binary.Word2
 	return nil
 }
 
-func (s *StateTree) IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
+func (s *StateTree) IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) error) (err error) {
 	it := storageKeyFormat.Fix(address).Iterator(s.tree, nil, nil)
 	for it.Valid() {
 		key := it.Key()
 		// Note: no left padding should occur unless there is a bug and non-words have been written to this storage tree
 		if len(key) != binary.Word256Length {
-			return true, fmt.Errorf("key '%X' stored for account %s is not a %v-byte word",
+			return fmt.Errorf("key '%X' stored for account %s is not a %v-byte word",
 				key, address, binary.Word256Length)
 		}
 		value := it.Value()
 		if len(value) != binary.Word256Length {
-			return true, fmt.Errorf("value '%X' stored for account %s is not a %v-byte word",
+			return fmt.Errorf("value '%X' stored for account %s is not a %v-byte word",
 				key, address, binary.Word256Length)
 		}
-		if consumer(binary.LeftPadWord256(key), binary.LeftPadWord256(value)) {
-			return true, nil
+		if err = consumer(binary.LeftPadWord256(key), binary.LeftPadWord256(value)); err != nil {
+			return err
 		}
 		it.Next()
 	}
-	return false, nil
+	return nil
 }
 
 // State.storage
@@ -476,23 +476,23 @@ func (s *State) GetTx(txHash []byte) (*exec.TxExecution, error) {
 		index, height, txHash, len(be.TxExecutions))
 }
 
-func (s *State) IterateTx(start, end uint64, consumer func(tx *exec.TxExecution) (stop bool)) (stopped bool, err error) {
+func (s *State) IterateTx(start, end uint64, consumer func(tx *exec.TxExecution) error) (err error) {
 	for height := start; height <= end; height++ {
 		be, err := s.GetBlock(height)
 		if err != nil {
-			return false, fmt.Errorf("error getting block %v", height)
+			return fmt.Errorf("error getting block %v", height)
 		}
 		if be == nil {
 			continue
 		}
 		for i := 0; i < len(be.TxExecutions); i++ {
-			stopped = consumer(be.TxExecutions[i])
-			if stopped {
-				return stopped, err
+			err = consumer(be.TxExecutions[i])
+			if err != nil {
+				return err
 			}
 		}
 	}
-	return false, nil
+	return nil
 }
 
 func (s *State) GetBlock(height uint64) (*exec.BlockExecution, error) {
@@ -503,20 +503,20 @@ func (s *State) GetBlock(height uint64) (*exec.BlockExecution, error) {
 	return exec.DecodeBlockExecution(bs)
 }
 
-func (s *State) GetBlocks(startHeight, endHeight uint64, consumer func(*exec.BlockExecution) (stop bool)) (stopped bool, err error) {
+func (s *State) GetBlocks(startHeight, endHeight uint64, consumer func(*exec.BlockExecution) error) (err error) {
 	kf := blockRefKeyFormat
 	it := kf.Iterator(s.refs, kf.Suffix(startHeight), kf.Suffix(endHeight))
 	for it.Valid() {
 		block, err := exec.DecodeBlockExecution(it.Value())
 		if err != nil {
-			return true, fmt.Errorf("error unmarshalling ExecutionEvent in GetEvents: %v", err)
+			return fmt.Errorf("error unmarshalling ExecutionEvent in GetEvents: %v", err)
 		}
-		if consumer(block) {
-			return true, nil
+		if err = consumer(block); err != nil {
+			return err
 		}
 		it.Next()
 	}
-	return false, nil
+	return nil
 }
 
 func (s *State) Hash() []byte {
@@ -552,19 +552,19 @@ func (ws *writeState) RemoveName(name string) error {
 	return nil
 }
 
-func (s *StateTree) IterateNames(consumer func(*names.Entry) (stop bool)) (stopped bool, err error) {
+func (s *StateTree) IterateNames(consumer func(*names.Entry) error) (err error) {
 	it := nameKeyFormat.Iterator(s.tree, nil, nil)
 	for it.Valid() {
 		entry, err := names.DecodeEntry(it.Value())
 		if err != nil {
-			return true, fmt.Errorf("State.IterateNames() could not iterate over names: %v", err)
+			return fmt.Errorf("State.IterateNames() could not iterate over names: %v", err)
 		}
-		if consumer(entry) {
-			return true, nil
+		if err = consumer(entry); err != nil {
+			return err
 		}
 		it.Next()
 	}
-	return false, nil
+	return nil
 }
 
 // Proposal
@@ -594,19 +594,19 @@ func (ws *writeState) RemoveProposal(proposalHash []byte) error {
 	return nil
 }
 
-func (s *StateTree) IterateProposals(consumer func(proposalHash []byte, proposal *payload.Ballot) (stop bool)) (stopped bool, err error) {
+func (s *StateTree) IterateProposals(consumer func(proposalHash []byte, proposal *payload.Ballot) error) (err error) {
 	it := proposalKeyFormat.Iterator(s.tree, nil, nil)
 	for it.Valid() {
 		entry, err := payload.DecodeBallot(it.Value())
 		if err != nil {
-			return true, fmt.Errorf("State.IterateProposal() could not iterate over proposals: %v", err)
+			return fmt.Errorf("State.IterateProposal() could not iterate over proposals: %v", err)
 		}
-		if consumer(it.Key(), entry) {
-			return true, nil
+		if err = consumer(it.Key(), entry); err != nil {
+			return err
 		}
 		it.Next()
 	}
-	return false, nil
+	return nil
 }
 
 // Creates a copy of the database to the supplied db
