@@ -57,9 +57,8 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 			}
 
 			first := true
-			var height uint64
 
-			hash, _, err := s.Update(func(ws execution.Updatable) error {
+			_, _, err = s.Update(func(ws execution.Updatable) error {
 				for {
 					resp, err := dump.Recv()
 					if err == io.EOF {
@@ -70,9 +69,6 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 						return err
 					}
 
-					if resp.Height != nil {
-						height = resp.Height.Height
-					}
 					// update our temporary state
 					if resp.Account != nil {
 						ws.UpdateAccount(resp.Account)
@@ -114,8 +110,6 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 			if err := f.Close(); err != nil {
 				output.Fatalf("%s: failed to save dump: %v", *filename, err)
 			}
-
-			output.Printf("Height: %d\nAppHash: %x", height, hash)
 		}
 	}
 }

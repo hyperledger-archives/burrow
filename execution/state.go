@@ -191,7 +191,10 @@ func (s *State) LoadDump(filename string) error {
 		return err
 	}
 
-	tx := exec.TxExecution{TxHash: make([]byte, 32)}
+	tx := exec.TxExecution{
+		TxType: payload.TypeCall,
+		TxHash: make([]byte, 32),
+	}
 
 	for {
 		var row dump.Dump
@@ -211,7 +214,14 @@ func (s *State) LoadDump(filename string) error {
 			s.writeState.UpdateName(row.Name)
 		}
 		if row.EVMEvent != nil {
-			tx.Events = append(tx.Events, &exec.Event{Log: row.EVMEvent.Event})
+			tx.Events = append(tx.Events, &exec.Event{
+				Header: &exec.Header{
+					TxType:    payload.TypeCall,
+					EventType: exec.TypeLog,
+					Height:    row.EVMEvent.Height,
+				},
+				Log: row.EVMEvent.Event,
+			})
 		}
 	}
 
