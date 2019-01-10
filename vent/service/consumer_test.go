@@ -42,12 +42,12 @@ func TestConsumer(t *testing.T) {
 	// workaround for off-by-one on latest bound fixed in burrow
 	time.Sleep(time.Second * 2)
 
-	// create test db
-	db, closeDB := test.NewTestDB(t, types.PostgresDB)
-	defer closeDB()
-
 	// run consumer to listen to events
 	cfg := config.DefaultFlags()
+
+	// create test db
+	db, closeDB := test.NewTestDB(t, cfg)
+	defer closeDB()
 
 	cfg.DBSchema = db.Schema
 	cfg.SpecFile = os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_example.json"

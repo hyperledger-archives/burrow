@@ -7,175 +7,90 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/vent/config"
+
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/test"
 	"github.com/hyperledger/burrow/vent/types"
 	"github.com/stretchr/testify/require"
 )
 
-func TestSynchronizeDB(t *testing.T) {
-	t.Run("POSTGRES: successfully creates database tables and synchronizes db", func(t *testing.T) {
-		goodJSON := test.GoodJSONConfFile(t)
+func testSynchronizeDB(t *testing.T, cfg *config.Flags) {
+	t.Run(fmt.Sprintf("%s: successfully creates database tables and synchronizes db", cfg.DBAdapter),
+		func(t *testing.T) {
+			goodJSON := test.GoodJSONConfFile(t)
 
-		byteValue := []byte(goodJSON)
-		tableStructure, _ := sqlsol.NewParserFromBytes(byteValue)
+			byteValue := []byte(goodJSON)
+			tableStructure, _ := sqlsol.NewParserFromBytes(byteValue)
 
-		db, cleanUpDB := test.NewTestDB(t, types.PostgresDB)
-		defer cleanUpDB()
+			db, cleanUpDB := test.NewTestDB(t, cfg)
+			defer cleanUpDB()
 
-		err := db.Ping()
-		require.NoError(t, err)
+			err := db.Ping()
+			require.NoError(t, err)
 
-		err = db.SynchronizeDB(tableStructure.GetTables())
-		require.NoError(t, err)
-	})
-
-	t.Run("SQLITE: successfully creates database tables and synchronizes db", func(t *testing.T) {
-		goodJSON := test.GoodJSONConfFile(t)
-
-		byteValue := []byte(goodJSON)
-		tableStructure, _ := sqlsol.NewParserFromBytes(byteValue)
-
-		db, closeDB := test.NewTestDB(t, types.SQLiteDB)
-		defer closeDB()
-
-		err := db.Ping()
-		require.NoError(t, err)
-
-		err = db.SynchronizeDB(tableStructure.GetTables())
-		require.NoError(t, err)
-	})
+			err = db.SynchronizeDB(tableStructure.GetTables())
+			require.NoError(t, err)
+		})
 }
 
-func TestCleanDB(t *testing.T) {
-	t.Run("POSTGRES: successfully creates tables, updates chainID and drops all tables", func(t *testing.T) {
-		goodJSON := test.GoodJSONConfFile(t)
+func testCleanDB(t *testing.T, cfg *config.Flags) {
+	t.Run(fmt.Sprintf("%s: successfully creates tables, updates chainID and drops all tables", cfg.DBAdapter),
+		func(t *testing.T) {
+			goodJSON := test.GoodJSONConfFile(t)
 
-		byteValue := []byte(goodJSON)
-		tableStructure, _ := sqlsol.NewParserFromBytes(byteValue)
+			byteValue := []byte(goodJSON)
+			tableStructure, _ := sqlsol.NewParserFromBytes(byteValue)
 
-		db, cleanUpDB := test.NewTestDB(t, types.PostgresDB)
-		defer cleanUpDB()
+			db, cleanUpDB := test.NewTestDB(t, cfg)
+			defer cleanUpDB()
 
-		err := db.Ping()
-		require.NoError(t, err)
+			err := db.Ping()
+			require.NoError(t, err)
 
-		err = db.SynchronizeDB(tableStructure.GetTables())
-		require.NoError(t, err)
+			err = db.SynchronizeDB(tableStructure.GetTables())
+			require.NoError(t, err)
 
-		err = db.CleanTables("NEW_ID", "Version 1.0")
-		require.NoError(t, err)
-	})
-
-	t.Run("SQLITE: successfully creates tables, updates chainID and drops all tables", func(t *testing.T) {
-		goodJSON := test.GoodJSONConfFile(t)
-
-		byteValue := []byte(goodJSON)
-		tableStructure, _ := sqlsol.NewParserFromBytes(byteValue)
-
-		db, closeDB := test.NewTestDB(t, types.SQLiteDB)
-		defer closeDB()
-
-		err := db.Ping()
-		require.NoError(t, err)
-
-		err = db.SynchronizeDB(tableStructure.GetTables())
-		require.NoError(t, err)
-
-		err = db.CleanTables("NEW_ID", "Version 1.0")
-		require.NoError(t, err)
-
-	})
+			err = db.CleanTables("NEW_ID", "Version 1.0")
+			require.NoError(t, err)
+		})
 }
 
-func TestSetBlock(t *testing.T) {
-	t.Run("POSTGRES: successfully inserts a block", func(t *testing.T) {
-		db, closeDB := test.NewTestDB(t, types.PostgresDB)
-		defer closeDB()
+func testSetBlock(t *testing.T, cfg *config.Flags) {
+	t.Run(fmt.Sprintf("%s: successfully inserts a block", cfg.DBAdapter),
+		func(t *testing.T) {
+			db, closeDB := test.NewTestDB(t, cfg)
+			defer closeDB()
 
-		errp := db.Ping()
-		require.NoError(t, errp)
+			errp := db.Ping()
+			require.NoError(t, errp)
 
-		// new
-		str, dat := getBlock()
-		err := db.SetBlock(str, dat)
-		require.NoError(t, err)
+			// new
+			str, dat := getBlock()
+			err := db.SetBlock(str, dat)
+			require.NoError(t, err)
 
-		// read
-		_, err = db.GetLastBlockID()
-		require.NoError(t, err)
+			// read
+			_, err = db.GetLastBlockID()
+			require.NoError(t, err)
 
-		_, err = db.GetBlock(dat.Block)
-		require.NoError(t, err)
+			_, err = db.GetBlock(dat.Block)
+			require.NoError(t, err)
 
-		// alter
-		str, dat = getAlterBlock()
-		err = db.SetBlock(str, dat)
-		require.NoError(t, err)
+			// alter
+			str, dat = getAlterBlock()
+			err = db.SetBlock(str, dat)
+			require.NoError(t, err)
 
-		//restore
-		ti := time.Now().Local().AddDate(10, 0, 0)
-		err = db.RestoreDB(ti, "RESTORED")
-		require.NoError(t, err)
+			//restore
+			ti := time.Now().Local().AddDate(10, 0, 0)
+			err = db.RestoreDB(ti, "RESTORED")
+			require.NoError(t, err)
 
-	})
+		})
 
-	t.Run("SQLITE: successfully inserts a block", func(t *testing.T) {
-		db, closeDB := test.NewTestDB(t, types.SQLiteDB)
-		defer closeDB()
-
-		errp := db.Ping()
-		require.NoError(t, errp)
-
-		// new
-		str, dat := getBlock()
-		err := db.SetBlock(str, dat)
-		require.NoError(t, err)
-
-		// read
-		_, err = db.GetLastBlockID()
-		require.NoError(t, err)
-		_, err = db.GetBlock(dat.Block)
-		require.NoError(t, err)
-
-		// alter
-		str, dat = getAlterBlock()
-		err = db.SetBlock(str, dat)
-		require.NoError(t, err)
-
-		//restore
-		ti := time.Now().Local().AddDate(10, 0, 0)
-		err = db.RestoreDB(ti, "RESTORED")
-		require.NoError(t, err)
-
-	})
-
-	t.Run("POSTGRES: successfully creates an empty table", func(t *testing.T) {
-		db, closeDB := test.NewTestDB(t, types.PostgresDB)
-		defer closeDB()
-
-		errp := db.Ping()
-		require.NoError(t, errp)
-
-		//table 1
-		cols1 := make(map[string]types.SQLTableColumn)
-		cols1["ID"] = types.SQLTableColumn{Name: "test_id", Type: types.SQLColumnTypeSerial, Primary: true, Order: 1}
-		cols1["Column1"] = types.SQLTableColumn{Name: "col1", Type: types.SQLColumnTypeBool, Primary: false, Order: 2}
-		cols1["Column2"] = types.SQLTableColumn{Name: "col2", Type: types.SQLColumnTypeByteA, Primary: false, Order: 3}
-		cols1["Column3"] = types.SQLTableColumn{Name: "col3", Type: types.SQLColumnTypeInt, Primary: false, Order: 4}
-		cols1["Column4"] = types.SQLTableColumn{Name: "col4", Type: types.SQLColumnTypeText, Primary: false, Order: 5}
-		cols1["Column5"] = types.SQLTableColumn{Name: "col5", Type: types.SQLColumnTypeTimeStamp, Primary: false, Order: 6}
-		cols1["Column6"] = types.SQLTableColumn{Name: "col6", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false, Order: 7}
-		table1 := types.SQLTable{Name: "AllDataTypesTable", Columns: cols1}
-		tables := make(map[string]types.SQLTable)
-		tables["AllDataTypesTable"] = table1
-
-		err := db.SynchronizeDB(tables)
-		require.NoError(t, err)
-	})
-
-	t.Run("SQLITE: successfully creates an empty table", func(t *testing.T) {
-		db, closeDB := test.NewTestDB(t, types.SQLiteDB)
+	t.Run(fmt.Sprintf("%s: successfully creates an empty table", cfg.DBAdapter), func(t *testing.T) {
+		db, closeDB := test.NewTestDB(t, cfg)
 		defer closeDB()
 
 		errp := db.Ping()

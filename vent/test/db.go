@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"math/rand"
+	"syscall"
 	"testing"
 	"time"
 
@@ -21,10 +22,13 @@ func init() {
 }
 
 // NewTestDB creates a database connection for testing
-func NewTestDB(t *testing.T, dbAdapter string) (*sqldb.SQLDB, func()) {
+func NewTestDB(t *testing.T, cfg *config.Flags) (*sqldb.SQLDB, func()) {
 	t.Helper()
 
-	cfg := config.DefaultFlags()
+	if dbURL, ok := syscall.Getenv("DB_URL"); ok {
+		t.Logf("Using DB_URL '%s'", dbURL)
+		cfg.DBURL = dbURL
+	}
 
 	connection := types.SQLConnection{
 		DBAdapter:     cfg.DBAdapter,
@@ -34,12 +38,11 @@ func NewTestDB(t *testing.T, dbAdapter string) (*sqldb.SQLDB, func()) {
 		BurrowVersion: "Version 0.0",
 	}
 
-	switch dbAdapter {
+	switch cfg.DBAdapter {
 	case types.PostgresDB:
 		connection.DBSchema = fmt.Sprintf("test_%s", randString(10))
 
 	case types.SQLiteDB:
-		connection.DBAdapter = dbAdapter
 		connection.DBURL = fmt.Sprintf("./test_%s.sqlite", randString(10))
 
 	default:
@@ -52,7 +55,7 @@ func NewTestDB(t *testing.T, dbAdapter string) (*sqldb.SQLDB, func()) {
 	}
 
 	return db, func() {
-		if dbAdapter == types.SQLiteDB {
+		if cfg.DBAdapter == types.SQLiteDB {
 			db.Close()
 			os.Remove(connection.DBURL)
 			os.Remove(connection.DBURL + "-shm")

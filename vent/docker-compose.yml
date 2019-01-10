@@ -1,6 +1,0 @@
-version: "3"
-services:
-  postgres:
-    image: postgres:11-alpine
-    ports:
-    - "5432:5432"

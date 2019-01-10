@@ -172,9 +172,12 @@ test_keys: build_burrow
 
 .PHONY:	test_integration_vent
 test_integration_vent:
-	docker-compose -f vent/docker-compose.yml up -d
+	# Include sqlite adapter with tests - will build with CGO but that's probably fine
 	go test -v -tags 'integration sqlite' ./vent/...
-	docker-compose -f vent/docker-compose.yml down
+
+.PHONY:	test_integration_vent_postgres
+test_integration_vent_postgres:
+	docker-compose run burrow make test_integration_vent
 
 # Go will attempt to run separate packages in parallel
 .PHONY: test_integration

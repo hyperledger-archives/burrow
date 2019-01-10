@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/hyperledger/burrow/util"
-
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/core"
@@ -142,7 +140,6 @@ func (re *Replay) Blocks(startHeight, endHeight uint64) ([]*ReplayCapture, error
 		if err != nil {
 			return nil, err
 		}
-		util.Debugf("Apply block with height %d, numtxs: %d", block.Height, block.NumTxs)
 		if height > 1 && !bytes.Equal(st.Hash(), block.AppHash) {
 			return nil, fmt.Errorf("state hash (%X) retrieved for block AppHash (%X) do not match",
 				st.Hash(), block.AppHash[:])

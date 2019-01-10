@@ -42,8 +42,8 @@ import (
 )
 
 const (
-	ChainName = "Integration_Test_Chain"
-	scratchDir   = "test_scratch"
+	ChainName  = "Integration_Test_Chain"
+	scratchDir = "test_scratch"
 )
 
 // Enable logger output during tests

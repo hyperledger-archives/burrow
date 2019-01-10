@@ -26,12 +26,13 @@ jobs:
       - run: make build
 
   test_integration:
-    <<: *defaults
+    machine:
+      working_directory: /go/src/github.com/hyperledger/burrow
+      enabled: true
+      image: circleci/classic:201808-01
     steps:
       - checkout
-      - setup_remote_docker:
-          <<: *setup_docker
-      - run: make test_integration
+      - run: docker-compose run burrow make test_integration
 
   ensure_vendor:
     <<: *defaults
