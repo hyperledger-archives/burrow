@@ -171,7 +171,7 @@ echo "testing names"
 
 NAME=mykey
 ADDR=`$burrow_bin keys gen --name $NAME --no-password`
-ADDR2=`$burrow_bin keys list --name $NAME`
+ADDR2=`$burrow_bin keys list --name $NAME | jq -r '.[0].Address'`
 if [ "$ADDR" != "$ADDR2" ]; then
     echo "FAILED name: got $ADDR2 expected $ADDR"
     exit
@@ -179,7 +179,7 @@ fi
 
 NAME2=mykey2
 $burrow_bin keys name $NAME2 $ADDR
-ADDR2=`$burrow_bin keys list --name $NAME2`
+ADDR2=`$burrow_bin keys list --name $NAME2 | jq -r '.[0].Address'`
 if [ "$ADDR" != "$ADDR2" ]; then
     echo "FAILED rename: got $ADDR2 expected $ADDR"
     exit

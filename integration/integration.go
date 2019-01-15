@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"runtime"
 	"strconv"
@@ -41,8 +42,8 @@ import (
 )
 
 const (
-	ChainName = "Integration_Test_Chain"
-	testDir   = "./test_scratch/tm_test"
+	ChainName  = "Integration_Test_Chain"
+	scratchDir = "test_scratch"
 )
 
 // Enable logger output during tests
@@ -94,6 +95,10 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 }
 
 func EnterTestDirectory() (cleanup func()) {
+	testDir, err := ioutil.TempDir("", scratchDir)
+	if err != nil {
+		panic(fmt.Errorf("couldnot make temp dir for integration tests: %v", err))
+	}
 	os.RemoveAll(testDir)
 	os.MkdirAll(testDir, 0777)
 	os.Chdir(testDir)
