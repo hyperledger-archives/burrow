@@ -180,8 +180,8 @@ test_integration_vent_postgres:
 	docker-compose run burrow make test_integration_vent
 
 .PHONY: test_restore
-test_restore: build_burrow
-	burrow_bin="${REPO}/bin/burrow" dump/test.sh
+test_restore: build_burrow bin/solc
+	@tests/scripts/bin_wrapper.sh dump/test.sh
 
 # Go will attempt to run separate packages in parallel
 .PHONY: test_integration
