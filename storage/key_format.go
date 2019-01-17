@@ -6,14 +6,13 @@ import (
 	"strings"
 )
 
-const VariadicSegmentLength = 0
+const (
+	DelimiterSegmentLength = -1
+	VariadicSegmentLength  = 0
+)
 
 type ByteSlicable interface {
 	Bytes() []byte
-}
-
-type MustKeyFormat struct {
-	KeyFormat
 }
 
 func NewMustKeyFormat(prefix string, layout ...int) *MustKeyFormat {
@@ -26,54 +25,7 @@ func NewMustKeyFormat(prefix string, layout ...int) *MustKeyFormat {
 	}
 }
 
-func (kf *MustKeyFormat) KeyBytes(segments ...[]byte) []byte {
-	key, err := kf.KeyFormat.KeyBytes(segments...)
-	if err != nil {
-		panic(err)
-	}
-	return key
-}
-
-func (kf *MustKeyFormat) Key(args ...interface{}) []byte {
-	key, err := kf.KeyFormat.Key(args...)
-	if err != nil {
-		panic(err)
-	}
-	return key
-}
-
-func (kf *MustKeyFormat) Scan(key []byte, args ...interface{}) {
-	err := kf.KeyFormat.Scan(key, args...)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (kf *MustKeyFormat) Fix(args ...interface{}) *MustKeyFormat {
-	fkf, err := kf.KeyFormat.Fix(args...)
-	if err != nil {
-		panic(err)
-	}
-	return &MustKeyFormat{*fkf}
-}
-
-func (kf *MustKeyFormat) Prefix(args ...interface{}) Prefix {
-	prefix, err := kf.KeyFormat.Prefix(args...)
-	if err != nil {
-		panic(err)
-	}
-	return prefix
-}
-
-func (kf *MustKeyFormat) Suffix(args ...interface{}) Prefix {
-	prefix, err := kf.KeyFormat.Suffix(args...)
-	if err != nil {
-		panic(err)
-	}
-	return prefix
-}
-
-// Provides a fixed-width lexicograph}ically sortable []byte key format
+// Provides a fixed-width lexicographically sortable []byte key format
 type KeyFormat struct {
 	prefix Prefix
 	layout []int
@@ -97,40 +49,41 @@ type KeyFormat struct {
 //  	return keyFormat.Key(version, hasher.Sum(nil))
 //  }}
 func NewKeyFormat(prefix string, layout ...int) (*KeyFormat, error) {
-	// For prefix byte
-	p := Prefix(prefix)
-	length := p.Length()
-	for i, l := range layout {
-		if l < 0 {
-			panic(fmt.Errorf("KeyFormat layout must contain non-negative integers"))
-		}
-		if l == VariadicSegmentLength && i != len(layout)-1 {
-			return nil, fmt.Errorf("KeyFormat may only have a 0 in the last place of its layout to indicate a " +
-				"variadic segment")
-		}
-		length += int(l)
-	}
-	return &KeyFormat{
-		prefix: p,
+	kf := &KeyFormat{
+		prefix: Prefix(prefix),
 		layout: layout,
-		length: length,
-	}, nil
+	}
+	err := kf.init()
+	if err != nil {
+		return nil, err
+	}
+	return kf, nil
 }
 
 // Format the byte segments into the key format - will panic if the segment lengths do not match the layout.
 func (kf *KeyFormat) KeyBytes(segments ...[]byte) ([]byte, error) {
 	key := make([]byte, kf.length)
 	n := copy(key, kf.prefix)
-	for i, s := range segments {
-		l := kf.layout[i]
-		if l == VariadicSegmentLength {
+	var offset int
+	for i, l := range kf.layout {
+		si := i + offset
+		if len(segments) <= si {
+			break
+		}
+		s := segments[si]
+		switch l {
+		case VariadicSegmentLength:
 			// Must be a final variadic element
 			key = append(key, s...)
 			n += len(s)
-		} else if len(s) != l {
-			return nil, fmt.Errorf("the segment '0x%X' provided to KeyFormat.KeyBytes() does not have required "+
-				"%d bytes required by layout for segment %d", s, l, i)
-		} else {
+		case DelimiterSegmentLength:
+			// ignore
+			offset--
+		default:
+			if len(s) != l {
+				return nil, fmt.Errorf("the segment '0x%X' provided to KeyFormat.KeyBytes() does not have required "+
+					"%d bytes required by layout for segment %d", s, l, i)
+			}
 			n += l
 			// Big endian so pad on left if not given the full width for this segment
 			copy(key[n-len(s):n], s)
@@ -188,11 +141,12 @@ func (kf *KeyFormat) Scan(key []byte, args ...interface{}) error {
 }
 
 // Return the Key as a prefix - may just be the literal prefix, or an entire key
-func (kf *KeyFormat) Prefix(args ...interface{}) (Prefix, error) {
-	return kf.Key(args...)
+func (kf *KeyFormat) Prefix() Prefix {
+	return kf.prefix
 }
 
-func (kf *KeyFormat) Suffix(args ...interface{}) (Prefix, error) {
+// Like Prefix but removes the prefix string
+func (kf *KeyFormat) KeyNoPrefix(args ...interface{}) (Prefix, error) {
 	key, err := kf.Key(args...)
 	if err != nil {
 		return nil, err
@@ -243,7 +197,28 @@ func (kf *KeyFormat) String() string {
 	for i, l := range kf.layout {
 		ls[i] = fmt.Sprintf("[%d]byte", l)
 	}
-	return fmt.Sprintf("KeyFormat{%s|%s}", kf.prefix.HexString(), strings.Join(ls, "|"))
+	return fmt.Sprintf("KeyFormat{0x%s|%s}", kf.prefix.HexString(), strings.Join(ls, "|"))
+}
+
+func (kf *KeyFormat) init() error {
+	kf.length = kf.prefix.Length()
+	for i, l := range kf.layout {
+		switch l {
+		case VariadicSegmentLength:
+			if i != len(kf.layout)-1 {
+				return fmt.Errorf("KeyFormat may only have a 0 in the last place of its layout to indicate a " +
+					"variadic segment")
+			}
+		case DelimiterSegmentLength:
+			// ignore
+		default:
+			if l < 0 {
+				panic(fmt.Errorf("KeyFormat layout must contain non-negative integers"))
+			}
+			kf.length += int(l)
+		}
+	}
+	return nil
 }
 
 func scan(a interface{}, value []byte) {
@@ -288,4 +263,52 @@ func formatUint64(v uint64) []byte {
 	bs := make([]byte, 8)
 	binary.BigEndian.PutUint64(bs, v)
 	return bs
+}
+
+// MustKeyFormat for panicking early when a KeyFormat does not parse
+type MustKeyFormat struct {
+	KeyFormat
+}
+
+func (kf *MustKeyFormat) KeyBytes(segments ...[]byte) []byte {
+	key, err := kf.KeyFormat.KeyBytes(segments...)
+	if err != nil {
+		panic(err)
+	}
+	return key
+}
+
+func (kf *MustKeyFormat) Key(args ...interface{}) []byte {
+	key, err := kf.KeyFormat.Key(args...)
+	if err != nil {
+		panic(err)
+	}
+	return key
+}
+
+func (kf *MustKeyFormat) Scan(key []byte, args ...interface{}) {
+	err := kf.KeyFormat.Scan(key, args...)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (kf *MustKeyFormat) Unprefixed() *MustKeyFormat {
+	return &MustKeyFormat{*kf.KeyFormat.Unprefixed()}
+}
+
+func (kf *MustKeyFormat) Fix(args ...interface{}) *MustKeyFormat {
+	fkf, err := kf.KeyFormat.Fix(args...)
+	if err != nil {
+		panic(err)
+	}
+	return &MustKeyFormat{*fkf}
+}
+
+func (kf *MustKeyFormat) KeyNoPrefix(args ...interface{}) Prefix {
+	prefix, err := kf.KeyFormat.KeyNoPrefix(args...)
+	if err != nil {
+		panic(err)
+	}
+	return prefix
 }

@@ -231,17 +231,21 @@ func TestCallFails(t *testing.T) {
 
 	address4 := users[4].GetAddress()
 	// simple call tx should fail
-	tx, _ := payload.NewCallTx(exe.stateCache, users[0].GetPublicKey(), &address4, nil, 100, 100, 100)
+	tx, err := payload.NewCallTx(exe.stateCache, users[0].GetPublicKey(), &address4, nil, 100, 100, 100)
+	require.NoError(t, err)
+	fmt.Println(tx)
 	err = exe.signExecuteCommit(tx, users[0])
 	require.Error(t, err)
 
 	// simple call tx with send permission should fail
-	tx, _ = payload.NewCallTx(exe.stateCache, users[1].GetPublicKey(), &address4, nil, 100, 100, 100)
+	tx, err = payload.NewCallTx(exe.stateCache, users[1].GetPublicKey(), &address4, nil, 100, 100, 100)
+	require.NoError(t, err)
 	err = exe.signExecuteCommit(tx, users[1])
 	require.Error(t, err)
 
 	// simple call tx with create permission should fail
-	tx, _ = payload.NewCallTx(exe.stateCache, users[3].GetPublicKey(), &address4, nil, 100, 100, 100)
+	tx, err = payload.NewCallTx(exe.stateCache, users[3].GetPublicKey(), &address4, nil, 100, 100, 100)
+	require.NoError(t, err)
 	err = exe.signExecuteCommit(tx, users[3])
 	require.Error(t, err)
 
@@ -249,17 +253,20 @@ func TestCallFails(t *testing.T) {
 	// create txs
 
 	// simple call create tx should fail
-	tx, _ = payload.NewCallTx(exe.stateCache, users[0].GetPublicKey(), nil, nil, 100, 100, 100)
+	tx, err = payload.NewCallTx(exe.stateCache, users[0].GetPublicKey(), nil, nil, 100, 100, 100)
+	require.NoError(t, err)
 	err = exe.signExecuteCommit(tx, users[0])
 	require.Error(t, err)
 
 	// simple call create tx with send perm should fail
-	tx, _ = payload.NewCallTx(exe.stateCache, users[1].GetPublicKey(), nil, nil, 100, 100, 100)
+	tx, err = payload.NewCallTx(exe.stateCache, users[1].GetPublicKey(), nil, nil, 100, 100, 100)
+	require.NoError(t, err)
 	err = exe.signExecuteCommit(tx, users[1])
 	require.Error(t, err)
 
 	// simple call create tx with call perm should fail
-	tx, _ = payload.NewCallTx(exe.stateCache, users[2].GetPublicKey(), nil, nil, 100, 100, 100)
+	tx, err = payload.NewCallTx(exe.stateCache, users[2].GetPublicKey(), nil, nil, 100, 100, 100)
+	require.NoError(t, err)
 	err = exe.signExecuteCommit(tx, users[2])
 	require.Error(t, err)
 }
@@ -408,7 +415,7 @@ func TestCallPermission(t *testing.T) {
 }
 
 func TestCreatePermission(t *testing.T) {
-	stateDB := dbm.NewDB("state", dbBackend, dbDir)
+	stateDB := dbm.NewMemDB()
 	defer stateDB.Close()
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.CreateContract, true) // give the 0 account permission
@@ -424,7 +431,6 @@ func TestCreatePermission(t *testing.T) {
 
 	contractCode := []byte{0x60}
 	createCode := wrapContractForCreate(contractCode)
-	fmt.Println(acm.Bytecode(createCode).MustTokens())
 
 	// A single input, having the permission, should succeed
 	tx, err := payload.NewCallTx(exe.stateCache, users[0].GetPublicKey(), nil, createCode, 100, 100, 100)
@@ -1292,7 +1298,6 @@ func TestMerklePanic(t *testing.T) {
 func TestTxs(t *testing.T) {
 	st, privAccounts := makeGenesisState(3, true, 1000, 1, true, 1000)
 
-	//val0 := state.GetValidatorInfo(privValidators[0].Address)
 	acc0 := getAccount(st, privAccounts[0].GetAddress())
 	acc1 := getAccount(st, privAccounts[1].GetAddress())
 
@@ -1361,8 +1366,6 @@ func TestTxs(t *testing.T) {
 				acc1.Balance+1, newAcc1.Balance)
 		}
 	}
-	trygetacc0 := getAccount(st, privAccounts[0].GetAddress())
-	fmt.Println(trygetacc0.Address)
 
 	// NameTx.
 	{
@@ -1406,9 +1409,7 @@ proof-of-work chain as proof of what happened while they were gone `
 		}
 		entry, err := stateNameTx.GetName(entryName)
 		require.NoError(t, err)
-		if entry == nil {
-			t.Errorf("Expected an entry but got nil")
-		}
+		require.NotNil(t, entry, "Expected entry")
 		if entry.Data != entryData {
 			t.Errorf("Wrong data stored")
 		}

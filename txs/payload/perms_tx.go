@@ -15,7 +15,7 @@ func NewPermsTx(st state.AccountGetter, from crypto.PublicKey, args permission.P
 		return nil, err
 	}
 	if acc == nil {
-		return nil, fmt.Errorf("invalid address %s from pubkey %s", addr, from)
+		return nil, fmt.Errorf("NewPermsTx: could not find account with address %v", addr)
 	}
 
 	sequence := acc.Sequence + 1

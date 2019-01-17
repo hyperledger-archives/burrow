@@ -33,7 +33,7 @@ func (tx *SendTx) AddInput(st state.AccountGetter, pubkey crypto.PublicKey, amt 
 		return err
 	}
 	if acc == nil {
-		return fmt.Errorf("invalid address %s from pubkey %s", addr, pubkey)
+		return fmt.Errorf("AddInput: could not find account with address %v", addr)
 	}
 	return tx.AddInputWithSequence(pubkey, amt, acc.Sequence+1)
 }

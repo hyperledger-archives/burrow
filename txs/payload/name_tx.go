@@ -14,7 +14,7 @@ func NewNameTx(st state.AccountGetter, from crypto.PublicKey, name, data string,
 		return nil, err
 	}
 	if acc == nil {
-		return nil, fmt.Errorf("Invalid address %s from pubkey %s", addr, from)
+		return nil, fmt.Errorf("NewNameTx: could not find account with address %v", addr)
 	}
 
 	sequence := acc.Sequence + 1

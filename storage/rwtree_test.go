@@ -25,6 +25,12 @@ func TestSave(t *testing.T) {
 	assert.Equal(t, dam, rwt.Get(foo))
 }
 
+func TestEmptyTree(t *testing.T) {
+	db := dbm.NewMemDB()
+	rwt := NewRWTree(db, 100)
+	fmt.Printf("%X\n", rwt.Hash())
+}
+
 func TestRollback(t *testing.T) {
 	db := dbm.NewMemDB()
 	rwt := NewRWTree(db, 100)
@@ -42,9 +48,9 @@ func TestRollback(t *testing.T) {
 	rwt.Set(foo, gaa)
 	rwt.Set(gaa, dam)
 	hash2, version2, err := rwt.Save()
-	rwt.IterateRange(nil, nil, true, func(key []byte, value []byte) bool {
+	rwt.Iterate(nil, nil, true, func(key, value []byte) error {
 		fmt.Println(string(key), " => ", string(value))
-		return false
+		return nil
 	})
 	require.NoError(t, err)
 
@@ -60,9 +66,9 @@ func TestRollback(t *testing.T) {
 	rwt.Set(gaa, dam)
 	hash3, version3, err := rwt.Save()
 	require.NoError(t, err)
-	rwt.IterateRange(nil, nil, true, func(key []byte, value []byte) bool {
+	rwt.Iterate(nil, nil, true, func(key, value []byte) error {
 		fmt.Println(string(key), " => ", string(value))
-		return false
+		return nil
 	})
 
 	// Expect the same hashes

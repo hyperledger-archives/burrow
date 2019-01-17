@@ -2,59 +2,65 @@ package storage
 
 import (
 	"fmt"
-	"sync"
+	"unicode/utf8"
+
+	hex "github.com/tmthrgd/go-hex"
 
 	"github.com/tendermint/iavl"
 	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/xlab/treeprint"
 )
 
 type RWTree struct {
-	// Values not reassigned
-	sync.RWMutex
 	// Working tree accumulating writes
-	tree *iavl.MutableTree
-	// Read tree serving previous state
-	readTree *iavl.ImmutableTree
+	tree *MutableTree
+	// Read-only tree serving previous state
+	*ImmutableTree
+}
+
+// We wrap IAVL's tree types in order to provide iteration helpers and to harmonise other interface types with what we
+// expect
+
+type MutableTree struct {
+	*iavl.MutableTree
+}
+
+func NewMutableTree(db dbm.DB, cacheSize int) *MutableTree {
+	tree := iavl.NewMutableTree(db, cacheSize)
+	return &MutableTree{
+		MutableTree: tree,
+	}
+}
+
+type ImmutableTree struct {
+	*iavl.ImmutableTree
 }
 
 func NewRWTree(db dbm.DB, cacheSize int) *RWTree {
-	tree := iavl.NewMutableTree(db, cacheSize)
+	tree := NewMutableTree(db, cacheSize)
 	return &RWTree{
 		tree: tree,
 		// Initially we set readTree to be the inner ImmutableTree of our write tree - this allows us to keep treeVersion == height (FTW)
-		readTree: tree.ImmutableTree,
+		ImmutableTree: tree.asImmutable(),
 	}
 }
 
 // Tries to load the execution state from DB, returns nil with no error if no state found
 func (rwt *RWTree) Load(version int64) error {
+	const errHeader = "RWTree.Load():"
 	if version <= 0 {
-		return fmt.Errorf("trying to load RWTree from non-positive version: version %d", version)
+		return fmt.Errorf("%s trying to load from non-positive version %d", errHeader, version)
 	}
-	treeVersion, err := rwt.tree.LoadVersionForOverwriting(version)
+	err := rwt.tree.Load(version)
 	if err != nil {
-		return fmt.Errorf("could not load current version of RWTree: version %d", version)
-	}
-	if treeVersion != version {
-		return fmt.Errorf("tried to load version %d of RWTree, but got version %d", version, treeVersion)
+		return fmt.Errorf("%s %v", errHeader, err)
 	}
 	// Set readTree at commit point == tree
-	rwt.readTree, err = rwt.tree.GetImmutable(version)
+	rwt.ImmutableTree, err = rwt.tree.GetImmutable(version)
 	if err != nil {
-		return fmt.Errorf("could not load previous version of RWTree to use as read version")
+		return fmt.Errorf("%s %v", errHeader, errHeader)
 	}
 	return nil
-}
-
-func (rwt *RWTree) GetImmutableVersion(version int64) (*RWTree, error) {
-	readTree, err := rwt.tree.GetImmutable(version)
-	if err != nil {
-		return nil, fmt.Errorf("could not load previous version of RWTree to use as read version")
-	}
-
-	return &RWTree{
-		readTree: readTree,
-	}, nil
 }
 
 // Save the current write tree making writes accessible from read tree.
@@ -65,69 +71,119 @@ func (rwt *RWTree) Save() ([]byte, int64, error) {
 		return nil, 0, fmt.Errorf("could not save RWTree: %v", err)
 	}
 	// Take an immutable reference to the tree we just saved for querying
-	rwt.readTree, err = rwt.tree.GetImmutable(version)
+	rwt.ImmutableTree, err = rwt.tree.GetImmutable(version)
 	if err != nil {
 		return nil, 0, fmt.Errorf("RWTree.Save() could not obtain ImmutableTree read tree: %v", err)
 	}
 	return hash, version, nil
 }
 
-func (rwt *RWTree) Version() int64 {
-	return rwt.tree.Version()
-}
-
 func (rwt *RWTree) Set(key, value []byte) bool {
 	return rwt.tree.Set(key, value)
-}
-
-func (rwt *RWTree) Get(key []byte) []byte {
-	_, value := rwt.readTree.Get(key)
-	return value
-}
-
-func (rwt *RWTree) IterateRange(start, end []byte, ascending bool, fn func(key []byte, value []byte) bool) (stopped bool) {
-	return rwt.readTree.IterateRange(start, end, ascending, fn)
-}
-
-func (rwt *RWTree) Hash() []byte {
-	return rwt.readTree.Hash()
-}
-
-func (rwt *RWTree) Has(key []byte) bool {
-	return rwt.Get(key) != nil
 }
 
 func (rwt *RWTree) Delete(key []byte) ([]byte, bool) {
 	return rwt.tree.Remove(key)
 }
 
-func (rwt *RWTree) Iterator(start, end []byte) dbm.Iterator {
-	ch := make(chan KVPair)
-	go func() {
-		defer close(ch)
-		rwt.readTree.IterateRange(start, end, true, func(key, value []byte) (stop bool) {
-			ch <- KVPair{key, value}
-			return
-		})
-	}()
-	return NewChannelIterator(ch, start, end)
+func (rwt *RWTree) GetImmutable(version int64) (*ImmutableTree, error) {
+	return rwt.tree.GetImmutable(version)
 }
 
-func (rwt *RWTree) ReverseIterator(start, end []byte) dbm.Iterator {
-	ch := make(chan KVPair)
-	go func() {
-		defer close(ch)
-		rwt.readTree.IterateRange(start, end, false, func(key, value []byte) (stop bool) {
-			ch <- KVPair{key, value}
-			return
-		})
-	}()
-	return NewChannelIterator(ch, start, end)
+func (rwt *RWTree) IterateWriteTree(start, end []byte, ascending bool, fn func(key []byte, value []byte) error) error {
+	return rwt.tree.IterateWriteTree(start, end, ascending, fn)
 }
 
-func PrintTree(rwt *RWTree) {
-	fmt.Println("ReadTree")
-	iavl.PrintTree(rwt.readTree)
-	fmt.Println("WriteTree")
-	iavl.PrintTree(rwt.tree.ImmutableTree)
+// MutableTree
+func (mut *MutableTree) Load(version int64) error {
+	if version <= 0 {
+		return fmt.Errorf("trying to load MutableTree from non-positive version: version %d", version)
+	}
+	treeVersion, err := mut.LoadVersionForOverwriting(version)
+	if err != nil {
+		return fmt.Errorf("could not load current version of MutableTree (version %d): %v", version, err)
+	}
+	if treeVersion != version {
+		return fmt.Errorf("tried to load version %d of MutableTree, but got version %d", version, treeVersion)
+	}
+	return nil
+}
+
+func (mut *MutableTree) Get(key []byte) []byte {
+	_, bs := mut.MutableTree.Get(key)
+	return bs
+}
+
+func (mut *MutableTree) GetImmutable(version int64) (*ImmutableTree, error) {
+	tree, err := mut.MutableTree.GetImmutable(version)
+	if err != nil {
+		return nil, err
+	}
+	return &ImmutableTree{tree}, nil
+}
+
+// Get the current working tree as an ImmutableTree (for the methods - not immutable!)
+func (mut *MutableTree) asImmutable() *ImmutableTree {
+	return &ImmutableTree{mut.MutableTree.ImmutableTree}
+}
+
+func (mut *MutableTree) Iterate(start, end []byte, ascending bool, fn func(key []byte, value []byte) error) error {
+	return mut.asImmutable().Iterate(start, end, ascending, fn)
+}
+
+func (mut *MutableTree) IterateWriteTree(start, end []byte, ascending bool, fn func(key []byte, value []byte) error) error {
+	var err error
+	mut.MutableTree.IterateRange(start, end, ascending, func(key, value []byte) bool {
+		err = fn(key, value)
+		if err != nil {
+			// stop
+			return true
+		}
+		return false
+	})
+	return err
+}
+
+// ImmutableTree
+
+func (imt *ImmutableTree) Get(key []byte) []byte {
+	_, value := imt.ImmutableTree.Get(key)
+	return value
+}
+
+func (imt *ImmutableTree) Iterate(start, end []byte, ascending bool, fn func(key []byte, value []byte) error) error {
+	var err error
+	imt.ImmutableTree.IterateRange(start, end, ascending, func(key, value []byte) bool {
+		err = fn(key, value)
+		if err != nil {
+			// stop
+			return true
+		}
+		return false
+	})
+	return err
+}
+
+// Tree printing
+
+func (rwt *RWTree) Dump() string {
+	tree := treeprint.New()
+	AddTreePrintTree("ReadTree", tree, rwt)
+	AddTreePrintTree("WriteTree", tree, rwt.tree)
+	return tree.String()
+}
+
+func AddTreePrintTree(edge string, tree treeprint.Tree, rwt KVCallbackIterableReader) {
+	tree = tree.AddBranch(stringOrHex(edge))
+	rwt.Iterate(nil, nil, true, func(key []byte, value []byte) error {
+		tree.AddNode(fmt.Sprintf("%s -> %s", stringOrHex(string(key)), stringOrHex(string(value))))
+		return nil
+	})
+}
+
+func stringOrHex(str string) string {
+	if utf8.ValidString(str) {
+		return str
+	}
+	return hex.EncodeUpperToString([]byte(str))
 }

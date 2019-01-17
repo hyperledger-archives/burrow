@@ -51,15 +51,15 @@ func TestState_UpdateAccount(t *testing.T) {
 func TestWriteState_AddBlock(t *testing.T) {
 	s := NewState(db.NewMemDB())
 	height := uint64(100)
-	txs := uint64(5)
+	numTxs := uint64(5)
 	events := uint64(10)
 	_, _, err := s.Update(func(ws Updatable) error {
-		return ws.AddBlock(mkBlock(height, txs, events))
+		return ws.AddBlock(mkBlock(height, numTxs, events))
 	})
 	require.NoError(t, err)
 	err = s.GetBlocks(height, height+1,
 		func(be *exec.BlockExecution) error {
-			for ti := uint64(0); ti < txs; ti++ {
+			for ti := uint64(0); ti < numTxs; ti++ {
 				for e := uint64(0); e < events; e++ {
 					assert.Equal(t, mkEvent(height, ti, e).Header.TxHash.String(),
 						be.TxExecutions[ti].Events[e].Header.TxHash.String())

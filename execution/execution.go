@@ -65,8 +65,7 @@ type BatchExecutor interface {
 // Executes transactions
 type BatchCommitter interface {
 	BatchExecutor
-	// Commit execution results to underlying State and provide opportunity
-	// to mutate state before it is saved
+	// Commit execution results to underlying State and provide opportunity to mutate state before it is saved
 	Commit(blockHash []byte, blockTime time.Time, header *abciTypes.Header) (stateHash []byte, err error)
 }
 
