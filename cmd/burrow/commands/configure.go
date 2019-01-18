@@ -193,9 +193,9 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				}
 			} else if *genesisDocOpt != "" {
 				genesisDoc := new(genesis.GenesisDoc)
-				err := source.FromFile(*genesisSpecOpt, genesisDoc)
+				err := source.FromFile(*genesisDocOpt, genesisDoc)
 				if err != nil {
-					output.Fatalf("could not read GenesisSpec: %v", err)
+					output.Fatalf("could not read GenesisDoc: %v", err)
 				}
 				conf.GenesisDoc = genesisDoc
 			}
@@ -212,12 +212,16 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("no GenesisDoc/GenesisSpec provided, cannot restore dump")
 				}
 
+				if len(conf.GenesisDoc.Validators) == 0 {
+					output.Fatalf("On restore, validators must be provided in GenesisDoc or GenesisSpec")
+				}
+
 				state, err := execution.MakeGenesisState(db.NewMemDB(), conf.GenesisDoc)
 				if err != nil {
 					output.Fatalf("could not generate state from genesis: %v", err)
 				}
 
-				err = state.LoadDump(*restoreDumpOpt)
+				err = state.LoadDump(*restoreDumpOpt, conf.GenesisDoc)
 				if err != nil {
 					output.Fatalf("could not load restore file: %v", err)
 				}

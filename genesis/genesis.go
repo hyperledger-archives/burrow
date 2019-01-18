@@ -93,16 +93,17 @@ func (genesisDoc *GenesisDoc) JSONBytes() ([]byte, error) {
 }
 
 func (genesisDoc *GenesisDoc) Hash() []byte {
-	if genesisDoc.hash == nil {
-		genesisDocBytes, err := genesisDoc.JSONBytes()
-		if err != nil {
-			panic(fmt.Errorf("could not create hash of GenesisDoc: %v", err))
-		}
-		hasher := sha256.New()
-		hasher.Write(genesisDocBytes)
-		genesisDoc.hash = hasher.Sum(nil)
+	if genesisDoc.hash != nil {
+		return genesisDoc.hash
 	}
-	return genesisDoc.hash
+
+	genesisDocBytes, err := genesisDoc.JSONBytes()
+	if err != nil {
+		panic(fmt.Errorf("could not create hash of GenesisDoc: %v", err))
+	}
+	hasher := sha256.New()
+	hasher.Write(genesisDocBytes)
+	return hasher.Sum(nil)
 }
 
 func (genesisDoc *GenesisDoc) ShortHash() []byte {

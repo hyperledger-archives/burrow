@@ -132,7 +132,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 		}
 
 		if restore != "" {
-			err = kern.State.LoadDump(restore)
+			err = kern.State.LoadDump(restore, nil)
 			if err != nil {
 				return nil, fmt.Errorf("failed to restore from %s: %v", restore, err)
 			}

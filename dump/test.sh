@@ -47,39 +47,41 @@ echo "------------------------------------"
 
 $burrow_bin dump dump.bin
 $burrow_bin dump -j dump.json
+height=$(cat dump.json | jq .[0].Height.Height)
 
 kill $burrow_pid
 
 # Now we have a dump with out stuff in it. Delete everything apart from
 # the dump and the keys
-rm -rf .burrow genesis.json burrow.toml
+mv genesis.json genesis-original.json
+rm -rf .burrow burrow.toml
 
 echo "------------------------------------"
 echo "Create new chain based of dump with new name..."
 echo "------------------------------------"
 
-$burrow_bin spec -n "Restored chain" | $burrow_bin configure -s- -w genesis.json --restore-dump dump.bin > burrow.toml
+$burrow_bin configure -n "Restored Chain" -g genesis-original.json -w genesis.json --restore-dump dump.bin > burrow.toml
 
 $burrow_bin start --restore-dump dump.bin 2>> burrow.log &
 burrow_pid=$!
-sleep 3
+sleep 13
 
 echo "------------------------------------"
 echo "Dumping restored chain for comparison..."
 echo "------------------------------------"
 
-burrow dump -j dump-after-restore.json
+burrow dump -j --height $height dump-after-restore.json
 
 kill $burrow_pid
 
 if cmp dump.json dump-after-restore.json
 then
+	echo "------------------------------------"
+	echo "Done."
+	echo "------------------------------------"
+else
 	echo "RESTORE FAILURE"
 	echo "restored dump is different"
 	diff -u dump.json dump-after-restore.json
 	exit 1
 fi
-
-echo "------------------------------------"
-echo "Done."
-echo "------------------------------------"
