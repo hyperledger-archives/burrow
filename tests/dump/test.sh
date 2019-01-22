@@ -50,7 +50,7 @@ echo "------------------------------------"
 
 $burrow_bin dump dump.bin
 $burrow_bin dump -j dump.json
-height=$(cat dump.json | jq .[0].Height)
+height=$(head -1  dump.json | jq .Height)
 
 kill $burrow_pid
 
@@ -63,9 +63,9 @@ echo "------------------------------------"
 echo "Create new chain based of dump with new name..."
 echo "------------------------------------"
 
-$burrow_bin configure -n "Restored Chain" -g genesis-original.json -w genesis.json --restore-dump dump.bin > burrow.toml
+$burrow_bin configure -n "Restored Chain" -g genesis-original.json -w genesis.json --restore-dump dump.json > burrow.toml
 
-$burrow_bin start --restore-dump dump.bin 2>> burrow.log &
+$burrow_bin start --restore-dump dump.json 2>> burrow.log &
 burrow_pid=$!
 sleep 13
 

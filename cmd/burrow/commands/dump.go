@@ -52,11 +52,6 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 				output.Fatalf("%s: failed to save dump: %v", *filename, err)
 				return
 			}
-			if *useJSON {
-				f.Write([]byte("["))
-			}
-
-			first := true
 
 			_, _, err = s.Update(func(ws execution.Updatable) error {
 				for {
@@ -80,13 +75,12 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 						ws.UpdateName(resp.Name)
 					}
 
-					if !first && *useJSON {
-						f.Write([]byte(","))
-					}
-					first = false
 					var bs []byte
 					if *useJSON {
 						bs, err = json.Marshal(resp)
+						if bs != nil {
+							bs = append(bs, []byte("\n")...)
+						}
 					} else {
 						bs, err = cdc.MarshalBinaryLengthPrefixed(resp)
 					}
@@ -102,10 +96,6 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 
 				return nil
 			})
-
-			if *useJSON {
-				f.Write([]byte("]"))
-			}
 
 			if err := f.Close(); err != nil {
 				output.Fatalf("%s: failed to save dump: %v", *filename, err)
