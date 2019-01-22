@@ -21,7 +21,7 @@ type ReaderWriter interface {
 }
 
 type Iterable interface {
-	IterateProposals(consumer func(proposalHash []byte, proposal *payload.Ballot) (stop bool)) (stopped bool, err error)
+	IterateProposals(consumer func(proposalHash []byte, proposal *payload.Ballot) error) (err error)
 }
 
 type IterableReader interface {

@@ -520,7 +520,7 @@ func logEvents(txe *exec.TxExecution, do *def.DeployArgs) {
 		copy(eventID[:], eventLog.GetTopic(0).Bytes())
 
 		evAbi, err := abi.FindEventSpec(do.BinPath, eventID)
-		if err != nil {
+		if err != nil || evAbi == nil {
 			log.Errorf("Could not find ABI for Event with ID %x\n", eventID)
 			continue
 		}

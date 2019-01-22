@@ -123,7 +123,7 @@ build_race:	check build_race_db
 build_burrow: commit_hash
 	go build -ldflags "-extldflags '-static' \
 	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt) \
-	-X github.com/hyperledger/burrow/project.date=$(shell date -I)" \
+	-X github.com/hyperledger/burrow/project.date=$(shell date '+%Y-%m-%d')" \
 	-o ${REPO}/bin/burrow ./cmd/burrow
 
 # With the sqlite tag - enabling Vent sqlite adapter support, but building a CGO binary
@@ -168,7 +168,7 @@ test: check bin/solc
 
 .PHONY: test_keys
 test_keys: build_burrow
-	burrow_bin="${REPO}/bin/burrow" keys/test.sh
+	burrow_bin="${REPO}/bin/burrow" tests/keys_server/test.sh
 
 .PHONY:	test_integration_vent
 test_integration_vent:
@@ -179,11 +179,14 @@ test_integration_vent:
 test_integration_vent_postgres:
 	docker-compose run burrow make test_integration_vent
 
+.PHONY: test_restore
+test_restore: build_burrow bin/solc
+	@tests/scripts/bin_wrapper.sh tests/dump/test.sh
+
 # Go will attempt to run separate packages in parallel
 .PHONY: test_integration
-test_integration: test_keys test_deploy test_integration_vent
+test_integration: test_keys test_deploy test_integration_vent test_restore
 	@go test -v -tags integration ./integration/...
-
 
 .PHONY: test_deploy
 test_deploy: bin/solc
