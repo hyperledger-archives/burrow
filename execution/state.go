@@ -195,7 +195,7 @@ func (s *State) LoadDump(filename string) error {
 
 	apply := func(row dump.Dump) error {
 		if row.Account != nil {
-			if row.Account.Address != crypto.ZeroAddress {
+			if row.Account.Address != acm.GlobalPermissionsAddress {
 				return s.writeState.UpdateAccount(row.Account)
 			}
 		}
