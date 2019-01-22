@@ -13,8 +13,9 @@
 
 set -e
 
-tmp_dir="./dump/test_scratch"
-mkdir -p $tmp_dir
+burrow_dump="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+tmp_dir=$(mktemp -d 2>/dev/null || mktemp -d -t 'tmpdumpXXX')
+trap "rm -f $tmp_dir" EXIT
 cd $tmp_dir
 rm -rf .burrow genesis.json burrow.toml burrow.log
 
@@ -29,7 +30,8 @@ $burrow_bin spec -n "Fresh Chain" -v1 | $burrow_bin configure -s- -w genesis.jso
 $burrow_bin start 2>> burrow.log &
 burrow_pid=$!
 function kill_burrow {
-    kill -KILL $burrow_pid
+	kill -KILL $burrow_pid
+	rm -rf $tmp_dir
 }
 trap kill_burrow EXIT
 
@@ -39,7 +41,8 @@ echo "------------------------------------"
 echo "Creating code, events and names..."
 echo "------------------------------------"
 
-$burrow_bin deploy -a Validator_0 --file ../deploy.yaml --dir ..
+$burrow_bin deploy -a Validator_0 --file deploy.yaml --dir $burrow_dump
+
 
 echo "------------------------------------"
 echo "Dumping chain..."
@@ -47,7 +50,7 @@ echo "------------------------------------"
 
 $burrow_bin dump dump.bin
 $burrow_bin dump -j dump.json
-height=$(cat dump.json | jq .[0].Height.Height)
+height=$(cat dump.json | jq .[0].Height)
 
 kill $burrow_pid
 
