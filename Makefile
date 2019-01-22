@@ -168,7 +168,7 @@ test: check bin/solc
 
 .PHONY: test_keys
 test_keys: build_burrow
-	burrow_bin="${REPO}/bin/burrow" keys/test.sh
+	burrow_bin="${REPO}/bin/burrow" tests/keys_server/test.sh
 
 .PHONY:	test_integration_vent
 test_integration_vent:

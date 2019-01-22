@@ -9,7 +9,7 @@ set -e
 
 burrow_bin=${burrow_bin:-burrow}
 
-test_dir="./keys/test_scratch"
+test_dir="./tests/keys_server/test_scratch"
 keys_dir="$test_dir/.keys"
 tmp_dir="$test_dir/tmp"
 mkdir -p "$tmp_dir"
