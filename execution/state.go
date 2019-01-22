@@ -107,7 +107,7 @@ type State struct {
 	height       uint64
 	accountStats state.AccountStats
 	// Values not reassigned
-	sync.RWMutex
+	sync.Mutex
 	StateTree
 	writeState *writeState
 	db         dbm.DB
@@ -181,7 +181,7 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 	return s, nil
 }
 
-func (s *State) LoadDump(filename string, genesisDoc *genesis.GenesisDoc) error {
+func (s *State) LoadDump(filename string) error {
 	f, err := os.OpenFile(filename, os.O_RDONLY, 0644)
 	if err != nil {
 		return err
@@ -202,32 +202,10 @@ func (s *State) LoadDump(filename string, genesisDoc *genesis.GenesisDoc) error 
 
 		if row.Account != nil {
 			if row.Account.Address == crypto.ZeroAddress {
-				if genesisDoc != nil {
-					genesisDoc.GlobalPermissions.Base = row.Account.Permissions.Base
-				}
 				continue
 			}
 
 			s.writeState.UpdateAccount(row.Account)
-
-			if genesisDoc != nil {
-				found := false
-
-				if len(row.Account.PublicKey.PublicKey) == 0 {
-					// no public key, so not an account
-					continue
-				}
-
-				for _, acc := range genesisDoc.Accounts {
-					if acc.Address == row.Account.Address {
-						found = true
-						break
-					}
-				}
-				if !found {
-					genesisDoc.Accounts = append(genesisDoc.Accounts, genesis.GenesisAccountFromAccount("", row.Account))
-				}
-			}
 		}
 		if row.AccountStorage != nil {
 			s.writeState.SetStorage(row.AccountStorage.Address, row.AccountStorage.Storage.Key, row.AccountStorage.Storage.Value)
@@ -240,9 +218,9 @@ func (s *State) LoadDump(filename string, genesisDoc *genesis.GenesisDoc) error 
 				Header: &exec.Header{
 					TxType:    payload.TypeCall,
 					EventType: exec.TypeLog,
-					Height:    row.EVMEvent.Height,
+					Height:    row.Height,
 				},
-				Log: row.EVMEvent.Event,
+				Log: row.EVMEvent,
 			})
 		}
 	}

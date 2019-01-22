@@ -118,6 +118,9 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				if err != nil {
 					output.Fatalf("Could not read GenesisSpec: %v", err)
 				}
+				if *restoreDumpOpt != "" {
+					output.Fatalf("Cannot restore using GenesisSpec, please provide GenesisDoc")
+				}
 				if conf.Keys.RemoteAddress == "" {
 					dir := conf.Keys.KeysDirectory
 					if *keysDir != "" {
@@ -209,7 +212,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 			if *restoreDumpOpt != "" {
 				if conf.GenesisDoc == nil {
-					output.Fatalf("no GenesisDoc/GenesisSpec provided, cannot restore dump")
+					output.Fatalf("no GenesisDoc provided, cannot restore dump")
 				}
 
 				if len(conf.GenesisDoc.Validators) == 0 {
@@ -221,7 +224,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("could not generate state from genesis: %v", err)
 				}
 
-				err = state.LoadDump(*restoreDumpOpt, conf.GenesisDoc)
+				err = state.LoadDump(*restoreDumpOpt)
 				if err != nil {
 					output.Fatalf("could not load restore file: %v", err)
 				}
