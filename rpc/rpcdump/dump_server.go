@@ -86,13 +86,18 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 		return err
 	}
 
-	err = ds.state.IterateTx(0, height, func(tx *exec.TxExecution) error {
-		for i := 0; i < len(tx.Events); i++ {
-			event := tx.Events[i]
-			if event.Log != nil {
-				err := stream.Send(&dump.Dump{Height: event.Header.Height, EVMEvent: event.Log})
-				if err != nil {
-					return err
+	err = ds.state.GetBlocks(0, height, func(be *exec.BlockExecution) error {
+		if be.TxExecutions == nil {
+			return nil
+		}
+		for _, tx := range be.TxExecutions {
+			for i := 0; i < len(tx.Events); i++ {
+				event := tx.Events[i]
+				if event.Log != nil {
+					err := stream.Send(&dump.Dump{Height: event.Header.Height, EVMEvent: event.Log})
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
