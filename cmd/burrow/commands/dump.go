@@ -69,7 +69,9 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 						ws.UpdateAccount(resp.Account)
 					}
 					if resp.AccountStorage != nil {
-						ws.SetStorage(resp.AccountStorage.Address, resp.AccountStorage.Storage.Key, resp.AccountStorage.Storage.Value)
+						for _, storage := range resp.AccountStorage.Storage {
+							ws.SetStorage(resp.AccountStorage.Address, storage.Key, storage.Value)
+						}
 					}
 					if resp.Name != nil {
 						ws.UpdateName(resp.Name)

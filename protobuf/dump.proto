@@ -28,7 +28,7 @@ message Storage {
 
 message AccountStorage {
     bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
-    Storage Storage = 2;
+    repeated Storage Storage = 2;
 }
 
 message Dump {
