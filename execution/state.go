@@ -532,7 +532,7 @@ func (s *State) GetBlocks(startHeight, endHeight uint64, consumer func(*exec.Blo
 	for it.Valid() {
 		block, err := exec.DecodeBlockExecution(it.Value())
 		if err != nil {
-			return fmt.Errorf("error unmarshalling ExecutionEvent in GetEvents: %v", err)
+			return fmt.Errorf("error unmarshalling BlockExecution in GetBlocks: %v", err)
 		}
 		if err = consumer(block); err != nil {
 			return err

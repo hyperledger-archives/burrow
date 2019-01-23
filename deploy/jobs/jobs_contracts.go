@@ -128,11 +128,11 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 
 		contract, err := compilers.LoadSolidityContract(contractPath)
 		if err != nil {
-			return nil, nil, fmt.Errorf("unable able to read %s: %v", contractPath, err)
+			return nil, nil, fmt.Errorf("unable to read contract %s: %v", contractPath, err)
 		}
 		err = contract.Link(libs)
 		if err != nil {
-			return nil, nil, fmt.Errorf("Something went wrong with linking: %v", err)
+			return nil, nil, fmt.Errorf("unable to link contract %s: %v", contractPath, err)
 		}
 		contractCode := contract.Evm.Bytecode.Object
 
