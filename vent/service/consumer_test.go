@@ -3,7 +3,8 @@
 package service_test
 
 import (
-	"os"
+	"path"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -12,9 +13,11 @@ import (
 	"github.com/hyperledger/burrow/vent/config"
 	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/service"
+	"github.com/hyperledger/burrow/vent/sqldb"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/test"
 	"github.com/hyperledger/burrow/vent/types"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -42,39 +45,13 @@ func TestConsumer(t *testing.T) {
 	// workaround for off-by-one on latest bound fixed in burrow
 	time.Sleep(time.Second * 2)
 
-	// run consumer to listen to events
 	cfg := config.DefaultFlags()
-
 	// create test db
 	db, closeDB := test.NewTestDB(t, cfg)
 	defer closeDB()
 
-	cfg.DBSchema = db.Schema
-	cfg.SpecFile = os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_example.json"
-	cfg.AbiFile = os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/EventsTest.abi"
-	cfg.GRPCAddr = testConfig.RPC.GRPC.ListenAddress
-	cfg.DBBlockTx = true
-
-	log := logger.NewLogger(cfg.LogLevel)
-	consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
-
-	parser, err := sqlsol.SpecLoader("", cfg.SpecFile, cfg.DBBlockTx)
-	abiSpec, err := sqlsol.AbiLoader("", cfg.AbiFile)
-
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := consumer.Run(parser, abiSpec, false)
-		require.NoError(t, err)
-	}()
-
-	// shutdown consumer in a few secs and wait for its end
-	time.Sleep(time.Second * 2)
-	consumer.Shutdown()
-
-	wg.Wait()
+	err := runConsumer(db, cfg)
+	require.NoError(t, err)
 
 	// test data stored in database for two different block ids
 	eventName := "EventTest"
@@ -115,4 +92,71 @@ func TestConsumer(t *testing.T) {
 	ti := time.Now().Local().AddDate(10, 0, 0)
 	err = db.RestoreDB(ti, "RESTORED")
 	require.NoError(t, err)
+}
+
+func TestInvalidUTF8(t *testing.T) {
+	tCli := test.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
+	create := test.CreateContract(t, tCli, inputAccount.GetAddress())
+
+	// The code point for ó is less than 255 but needs two unicode bytes - it's value expressed as a single byte
+	// is in the private use area so is invalid.
+	goodString := "Cliente - Doc. identificación"
+
+	// generate events
+	name := service.BadStringToHexFunction(goodString)
+	description := "Description of TestEvent1"
+	test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
+
+	cfg := config.DefaultFlags()
+	// create test db
+	db, closeDB := test.NewTestDB(t, cfg)
+	defer closeDB()
+
+	// Run the consumer with this event - this used to create an error on UPSERT
+	err := runConsumer(db, cfg)
+	require.NoError(t, err)
+
+	// Error we used to get before fixing this test case:
+	//require.Error(t, err)
+	//require.Contains(t, err.Error(), "pq: invalid byte sequence for encoding \"UTF8\": 0xf3 0x6e")
+}
+
+// Run consumer to listen to events
+func runConsumer(db *sqldb.SQLDB, cfg *config.Flags) (err error) {
+	// Resolve relative path to test dir
+	_, testFile, _, _ := runtime.Caller(0)
+	testDir := path.Join(path.Dir(testFile), "..", "test")
+
+	cfg.DBSchema = db.Schema
+	cfg.SpecFile = path.Join(testDir, "sqlsol_example.json")
+	cfg.AbiFile = path.Join(testDir, "EventsTest.abi")
+	cfg.GRPCAddr = testConfig.RPC.GRPC.ListenAddress
+	cfg.DBBlockTx = true
+
+	log := logger.NewLogger(cfg.LogLevel)
+	consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
+
+	parser, err := sqlsol.SpecLoader("", cfg.SpecFile, cfg.DBBlockTx)
+	if err != nil {
+		return err
+	}
+	abiSpec, err := sqlsol.AbiLoader("", cfg.AbiFile)
+	if err != nil {
+		return err
+	}
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err = consumer.Run(parser, abiSpec, false)
+	}()
+
+	// wait for block streams to start
+	time.Sleep(time.Second * 2)
+	consumer.Shutdown()
+
+	wg.Wait()
+	return
 }
