@@ -110,5 +110,3 @@ func (rwf *MutableForest) setCommit(prefix, hash []byte, version int64) error {
 	rwf.commitsTree.Set([]byte(prefix), bs)
 	return nil
 }
-
-

@@ -32,7 +32,12 @@ func (s *State) LoadDump(filename string) error {
 			}
 		}
 		if row.AccountStorage != nil {
-			return s.writeState.SetStorage(row.AccountStorage.Address, row.AccountStorage.Storage.Key, row.AccountStorage.Storage.Value)
+			for _, storage := range row.AccountStorage.Storage {
+				err := s.writeState.SetStorage(row.AccountStorage.Address, storage.Key, storage.Value)
+				if err != nil {
+					return err
+				}
+			}
 		}
 		if row.Name != nil {
 			return s.writeState.UpdateName(row.Name)
