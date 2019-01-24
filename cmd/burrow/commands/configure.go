@@ -283,7 +283,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				if err != nil {
 					output.Fatalf("Could not form GenesisDoc JSON: %v", err)
 				}
-				err = ioutil.WriteFile(*separateGenesisDoc, genesisDocJSON, 0700)
+				err = ioutil.WriteFile(*separateGenesisDoc, genesisDocJSON, 0644)
 				if err != nil {
 					output.Fatalf("Could not write GenesisDoc JSON: %v", err)
 				}

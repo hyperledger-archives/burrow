@@ -200,7 +200,12 @@ func (s *State) LoadDump(filename string) error {
 			}
 		}
 		if row.AccountStorage != nil {
-			return s.writeState.SetStorage(row.AccountStorage.Address, row.AccountStorage.Storage.Key, row.AccountStorage.Storage.Value)
+			for _, storage := range row.AccountStorage.Storage {
+				err := s.writeState.SetStorage(row.AccountStorage.Address, storage.Key, storage.Value)
+				if err != nil {
+					return err
+				}
+			}
 		}
 		if row.Name != nil {
 			return s.writeState.UpdateName(row.Name)
@@ -513,25 +518,6 @@ func (s *State) GetTx(txHash []byte) (*exec.TxExecution, error) {
 		index, height, txHash, len(be.TxExecutions))
 }
 
-func (s *State) IterateTx(start, end uint64, consumer func(tx *exec.TxExecution) error) (err error) {
-	for height := start; height <= end; height++ {
-		be, err := s.GetBlock(height)
-		if err != nil {
-			return fmt.Errorf("error getting block %v", height)
-		}
-		if be == nil {
-			continue
-		}
-		for i := 0; i < len(be.TxExecutions); i++ {
-			err = consumer(be.TxExecutions[i])
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 func (s *State) GetBlock(height uint64) (*exec.BlockExecution, error) {
 	bs := s.refs.Get(blockRefKeyFormat.Key(height))
 	if len(bs) == 0 {
@@ -546,7 +532,7 @@ func (s *State) GetBlocks(startHeight, endHeight uint64, consumer func(*exec.Blo
 	for it.Valid() {
 		block, err := exec.DecodeBlockExecution(it.Value())
 		if err != nil {
-			return fmt.Errorf("error unmarshalling ExecutionEvent in GetEvents: %v", err)
+			return fmt.Errorf("error unmarshalling BlockExecution in GetBlocks: %v", err)
 		}
 		if err = consumer(block); err != nil {
 			return err

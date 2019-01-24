@@ -50,15 +50,26 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 			return err
 		}
 
+		storage := dump.AccountStorage{
+			Address: acc.Address,
+			Storage: make([]*dump.Storage, 0),
+		}
+
 		err = ds.state.IterateStorage(acc.Address, func(key, value binary.Word256) error {
-			return stream.Send(&dump.Dump{
-				Height: height,
-				AccountStorage: &dump.AccountStorage{
-					Address: acc.Address,
-					Storage: &dump.Storage{Key: key, Value: value},
-				},
-			})
+			storage.Storage = append(storage.Storage, &dump.Storage{Key: key, Value: value})
+			return nil
 		})
+
+		if err != nil {
+			return err
+		}
+
+		if len(storage.Storage) > 0 {
+			return stream.Send(&dump.Dump{
+				Height:         height,
+				AccountStorage: &storage,
+			})
+		}
 
 		return nil
 	})
@@ -75,13 +86,18 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 		return err
 	}
 
-	err = ds.state.IterateTx(0, height, func(tx *exec.TxExecution) error {
-		for i := 0; i < len(tx.Events); i++ {
-			event := tx.Events[i]
-			if event.Log != nil {
-				err := stream.Send(&dump.Dump{Height: event.Header.Height, EVMEvent: event.Log})
-				if err != nil {
-					return err
+	err = ds.state.GetBlocks(0, height, func(be *exec.BlockExecution) error {
+		if be.TxExecutions == nil {
+			return nil
+		}
+		for _, tx := range be.TxExecutions {
+			for i := 0; i < len(tx.Events); i++ {
+				event := tx.Events[i]
+				if event.Log != nil {
+					err := stream.Send(&dump.Dump{Height: event.Header.Height, EVMEvent: event.Log})
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
