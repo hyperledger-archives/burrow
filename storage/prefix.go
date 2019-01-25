@@ -9,8 +9,10 @@ import (
 
 type Prefix []byte
 
-func NewPrefix(p string) Prefix {
-	return Prefix(p)
+func NewPrefix(bs []byte) Prefix {
+	p := make(Prefix, len(bs))
+	copy(p, bs)
+	return p
 }
 
 func (p Prefix) Key(key []byte) []byte {
@@ -19,11 +21,14 @@ func (p Prefix) Key(key []byte) []byte {
 }
 
 func (p Prefix) Suffix(key []byte) []byte {
-	return key[len(p):]
+	bs := make([]byte, len(key)-len(p))
+	copy(bs, key[len(p):])
+	return bs
+
 }
 
 // Get the lexicographical sibling above this prefix (i.e. the fixed length integer plus one)
-func (p Prefix) Above() []byte {
+func (p Prefix) Above() []gbyte {
 	for i := len(p) - 1; i >= 0; i-- {
 		c := p[i]
 		if c < 0xff {
