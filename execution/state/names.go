@@ -4,12 +4,15 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/execution/names"
+	"github.com/hyperledger/burrow/storage"
 )
+
+var nameKeyFormat = storage.NewMustKeyFormat("n", storage.VariadicSegmentLength)
 
 var _ names.IterableReader = &State{}
 
 func (s *ReadState) GetName(name string) (*names.Entry, error) {
-	tree, err := s.forest.Reader(nameKeyFormat.Prefix())
+	tree, err := s.Forest.Reader(nameKeyFormat.Prefix())
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +47,7 @@ func (ws *writeState) RemoveName(name string) error {
 }
 
 func (s *ReadState) IterateNames(consumer func(*names.Entry) error) error {
-	tree, err := s.forest.Reader(nameKeyFormat.Prefix())
+	tree, err := s.Forest.Reader(nameKeyFormat.Prefix())
 	if err != nil {
 		return err
 	}

@@ -18,11 +18,18 @@ func NewMutableTree(db dbm.DB, cacheSize int) *MutableTree {
 	}
 }
 
-func (mut *MutableTree) Load(version int64) error {
+func (mut *MutableTree) Load(version int64, overwriting bool) error {
 	if version <= 0 {
 		return fmt.Errorf("trying to load MutableTree from non-positive version: version %d", version)
 	}
-	treeVersion, err := mut.LoadVersionForOverwriting(version)
+	var err error
+	var treeVersion int64
+	if overwriting {
+		// Deletes all version above version!
+		treeVersion, err = mut.MutableTree.LoadVersionForOverwriting(version)
+	} else {
+		treeVersion, err = mut.MutableTree.LoadVersion(version)
+	}
 	if err != nil {
 		return fmt.Errorf("could not load current version of MutableTree (version %d): %v", version, err)
 	}

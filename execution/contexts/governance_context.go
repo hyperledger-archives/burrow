@@ -18,7 +18,7 @@ import (
 
 type GovernanceContext struct {
 	StateWriter  acmstate.ReaderWriter
-	ValidatorSet validator.Writer
+	ValidatorSet validator.Alterer
 	Logger       *logging.Logger
 	tx           *payload.GovTx
 	txe          *exec.TxExecution

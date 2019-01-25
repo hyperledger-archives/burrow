@@ -163,7 +163,8 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	committer := execution.NewBatchCommitter(kern.State, kern.Blockchain, kern.Emitter, kern.Logger, exeOptions...)
 
 	kern.nodeInfo = fmt.Sprintf("Burrow_%s_ValidatorID:%X", genesisDoc.ChainID(), privValidator.GetAddress())
-	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, checker, committer, txCodec, authorizedPeersProvider, kern.Panic, logger)
+	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, kern.State, checker, committer, txCodec, authorizedPeersProvider,
+		kern.Panic, logger)
 	// We could use this to provide/register our own metrics (though this will register them with us). Unfortunately
 	// Tendermint currently ignores the metrics passed unless its own server is turned on.
 	metricsProvider := node.DefaultMetricsProvider(&tmConfig.InstrumentationConfig{
@@ -185,7 +186,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	if err != nil {
 		return nil, err
 	}
-	kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, nodeView, kern.Logger)
+	kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, kern.State, nodeView, kern.Logger)
 
 	kern.Launchers = []process.Launcher{
 		{
@@ -287,7 +288,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 				}
 
 				rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(kern.State, nameRegState, proposalRegState,
-					kern.Blockchain, nodeView, kern.Logger))
+					kern.Blockchain, kern.State, nodeView, kern.Logger))
 
 				rpctransact.RegisterTransactServer(grpcServer, rpctransact.NewTransactServer(kern.Transactor, txCodec))
 

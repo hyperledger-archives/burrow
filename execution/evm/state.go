@@ -64,10 +64,10 @@ type State struct {
 
 func NewState(st acmstate.ReaderWriter, bci bcm.BlockchainInfo, cacheOptions ...acmstate.CacheOption) *State {
 	return &State{
-		backend:      st,
+		backend:        st,
 		blockchainInfo: bci,
-		cache:        acmstate.NewCache(st, cacheOptions...),
-		cacheOptions: cacheOptions,
+		cache:          acmstate.NewCache(st, cacheOptions...),
+		cacheOptions:   cacheOptions,
 	}
 }
 

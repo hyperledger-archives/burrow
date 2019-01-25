@@ -4,7 +4,13 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/storage"
+	"github.com/hyperledger/burrow/txs"
 )
+
+var blockRefKeyFormat = storage.NewMustKeyFormat("b", uint64Length)
+var txKeyFormat = storage.NewMustKeyFormat("t", txs.HashLength)
+var txRefKeyFormat = storage.NewMustKeyFormat("", uint64Length, uint64Length)
 
 func (ws *writeState) AddEvents(evs []*exec.Event) error {
 	// TODO: unwrap blocks
@@ -42,7 +48,7 @@ func (ws *writeState) addTx(txHash []byte, height, index uint64) error {
 }
 
 func (s *State) GetTx(txHash []byte) (*exec.TxExecution, error) {
-	tree, err := s.forest.Reader(txKeyFormat.Prefix())
+	tree, err := s.Forest.Reader(txKeyFormat.Prefix())
 	if err != nil {
 		return nil, err
 	}
@@ -64,11 +70,11 @@ func (s *State) GetTx(txHash []byte) (*exec.TxExecution, error) {
 }
 
 func (s *State) GetBlock(height uint64) (*exec.BlockExecution, error) {
-	tree, err := s.forest.Reader(blockRefKeyFormat.Prefix())
+	tree, err := s.Forest.Reader(blockRefKeyFormat.Prefix())
 	if err != nil {
 		return nil, err
 	}
-	bs := tree.Get(blockRefKeyFormat.Key(height))
+	bs := tree.Get(blockRefKeyFormat.KeyNoPrefix(height))
 	if len(bs) == 0 {
 		return nil, nil
 	}
@@ -76,7 +82,7 @@ func (s *State) GetBlock(height uint64) (*exec.BlockExecution, error) {
 }
 
 func (s *State) GetBlocks(startHeight, endHeight uint64, consumer func(*exec.BlockExecution) error) error {
-	tree, err := s.forest.Reader(blockRefKeyFormat.Prefix())
+	tree, err := s.Forest.Reader(blockRefKeyFormat.Prefix())
 	if err != nil {
 		return err
 	}

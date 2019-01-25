@@ -3,15 +3,20 @@ package state
 import (
 	"fmt"
 
+	"github.com/hyperledger/burrow/storage"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 )
 
+var accountKeyFormat = storage.NewMustKeyFormat("a", crypto.AddressLength)
+var storageKeyFormat = storage.NewMustKeyFormat("s", crypto.AddressLength, binary.Word256Length)
+
 // Returns nil if account does not exist with given address.
 func (s *ReadState) GetAccount(address crypto.Address) (*acm.Account, error) {
-	tree, err := s.forest.Reader(accountKeyFormat.Prefix())
+	tree, err := s.Forest.Reader(accountKeyFormat.Prefix())
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +88,7 @@ func (ws *writeState) RemoveAccount(address crypto.Address) error {
 }
 
 func (s *ReadState) IterateAccounts(consumer func(*acm.Account) error) error {
-	tree, err := s.forest.Reader(accountKeyFormat.Prefix())
+	tree, err := s.Forest.Reader(accountKeyFormat.Prefix())
 	if err != nil {
 		return err
 	}
@@ -104,7 +109,7 @@ func (s *State) GetAccountStats() acmstate.AccountStats {
 
 func (s *ReadState) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
 	keyFormat := storageKeyFormat.Fix(address)
-	tree, err := s.forest.Reader(keyFormat.Prefix())
+	tree, err := s.Forest.Reader(keyFormat.Prefix())
 	if err != nil {
 		return binary.Zero256, err
 	}
@@ -127,7 +132,7 @@ func (ws *writeState) SetStorage(address crypto.Address, key, value binary.Word2
 
 func (s *ReadState) IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) error) error {
 	keyFormat := storageKeyFormat.Fix(address)
-	tree, err := s.forest.Reader(keyFormat.Prefix())
+	tree, err := s.Forest.Reader(keyFormat.Prefix())
 	if err != nil {
 		return err
 	}

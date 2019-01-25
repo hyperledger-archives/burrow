@@ -35,7 +35,7 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 	if height <= 0 {
 		height = ds.blockchain.LastBlockHeight()
 	}
-	state, err := ds.state.LoadHeight(height)
+	st, err := ds.state.LoadHeight(height)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 		return err
 	}
 
-	err = state.IterateAccounts(func(acc *acm.Account) error {
+	err = st.IterateAccounts(func(acc *acm.Account) error {
 		err = stream.Send(&dump.Dump{Height: height, Account: acc})
 		if err != nil {
 			return err
@@ -78,7 +78,7 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 		return err
 	}
 
-	err = state.IterateNames(func(entry *names.Entry) error {
+	err = st.IterateNames(func(entry *names.Entry) error {
 		return stream.Send(&dump.Dump{Height: height, Name: entry})
 	})
 

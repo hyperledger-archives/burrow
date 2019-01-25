@@ -1,16 +1,20 @@
 package state
 
 import (
+	"crypto/sha256"
 	"fmt"
+
+	"github.com/hyperledger/burrow/storage"
 
 	"github.com/hyperledger/burrow/execution/proposal"
 	"github.com/hyperledger/burrow/txs/payload"
 )
 
+var proposalKeyFormat = storage.NewMustKeyFormat("p", sha256.Size)
 var _ proposal.IterableReader = &State{}
 
 func (s *ReadState) GetProposal(proposalHash []byte) (*payload.Ballot, error) {
-	tree, err := s.forest.Reader(proposalKeyFormat.Prefix())
+	tree, err := s.Forest.Reader(proposalKeyFormat.Prefix())
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +50,7 @@ func (ws *writeState) RemoveProposal(proposalHash []byte) error {
 }
 
 func (s *ReadState) IterateProposals(consumer func(proposalHash []byte, proposal *payload.Ballot) error) error {
-	tree, err := s.forest.Reader(proposalKeyFormat.Prefix())
+	tree, err := s.Forest.Reader(proposalKeyFormat.Prefix())
 	if err != nil {
 		return err
 	}

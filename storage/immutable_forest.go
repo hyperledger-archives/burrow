@@ -18,19 +18,31 @@ type ImmutableForest struct {
 	// Cache size is used in multiple places - for the LRU cache and node cache for any trees created - it probably
 	// makes sense for them to be roughly the same size
 	cacheSize int
+	// Determines whether we use LoadVersionForOverwriting on underlying MutableTrees - since ImmutableForest is used
+	// by MutableForest in a writing context sometimes we do need to load a version destructively
+	overwriting bool
 }
 
-func NewImmutableForest(commitsTree KVCallbackIterableReader, treeDB dbm.DB, cacheSize int) (*ImmutableForest, error) {
+type ForestOption func(*ImmutableForest)
+
+var WithOverwriting ForestOption = func(imf *ImmutableForest) { imf.overwriting = true }
+
+func NewImmutableForest(commitsTree KVCallbackIterableReader, treeDB dbm.DB, cacheSize int,
+	options ...ForestOption) (*ImmutableForest, error) {
 	cache, err := lru.New(cacheSize)
 	if err != nil {
 		return nil, fmt.Errorf("NewImmutableForest() could not create cache: %v", err)
 	}
-	return &ImmutableForest{
+	imf := &ImmutableForest{
 		commitsTree: commitsTree,
 		treeDB:      treeDB,
 		treeCache:   cache,
 		cacheSize:   cacheSize,
-	}, nil
+	}
+	for _, opt := range options {
+		opt(imf)
+	}
+	return imf, nil
 }
 
 func (imf *ImmutableForest) Iterate(start, end []byte, ascending bool, fn func(prefix []byte, tree KVCallbackIterableReader) error) error {
@@ -91,7 +103,7 @@ func (imf *ImmutableForest) loadOrCreateTree(prefix []byte) (*RWTree, error) {
 		// This is the first time we have been asked to load this tree
 		return imf.newTree(prefix), nil
 	}
-	err = tree.Load(commitID.Version)
+	err = tree.Load(commitID.Version, imf.overwriting)
 	if err != nil {
 		return nil, fmt.Errorf("%s could not load tree: %v", errHeader, err)
 	}

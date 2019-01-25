@@ -235,7 +235,6 @@ func TestCallFails(t *testing.T) {
 	// simple call tx should fail
 	tx, err := payload.NewCallTx(exe.stateCache, users[0].GetPublicKey(), &address4, nil, 100, 100, 100)
 	require.NoError(t, err)
-	fmt.Println(tx)
 	err = exe.signExecuteCommit(tx, users[0])
 	require.Error(t, err)
 
@@ -1287,8 +1286,6 @@ func TestMerklePanic(t *testing.T) {
 		err = stateCallTx.signExecuteCommit(tx, privAccounts[0])
 		require.NoError(t, err)
 	}
-	trygetacc0 := getAccount(st, privAccounts[0].GetAddress())
-	fmt.Println(trygetacc0.Address)
 }
 
 // TODO: test overflows.

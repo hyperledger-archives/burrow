@@ -223,6 +223,8 @@ func (kf *KeyFormat) init() error {
 
 func scan(a interface{}, value []byte) {
 	switch v := a.(type) {
+	case nil:
+		// Ignore - allows for omitted values
 	case *int64:
 		// Negative values will be mapped correctly when read in as uint64 and then type converted
 		*v = int64(binary.BigEndian.Uint64(value))

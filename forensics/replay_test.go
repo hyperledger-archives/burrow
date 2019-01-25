@@ -9,6 +9,7 @@ import (
 
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/require"

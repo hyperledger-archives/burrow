@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hyperledger/burrow/execution/state"
+
+	"github.com/hyperledger/burrow/acm/validator"
+
 	"github.com/hyperledger/burrow/txs/payload"
 
 	"github.com/hyperledger/burrow/execution/proposal"
@@ -23,6 +27,7 @@ type queryServer struct {
 	nameReg     names.IterableReader
 	proposalReg proposal.IterableReader
 	blockchain  bcm.BlockchainInfo
+	validators  validator.History
 	nodeView    *tendermint.NodeView
 	logger      *logging.Logger
 }
@@ -30,19 +35,20 @@ type queryServer struct {
 var _ QueryServer = &queryServer{}
 
 func NewQueryServer(state acmstate.IterableStatsReader, nameReg names.IterableReader, proposalReg proposal.IterableReader,
-	blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, logger *logging.Logger) *queryServer {
+	blockchain bcm.BlockchainInfo, validators validator.History, nodeView *tendermint.NodeView, logger *logging.Logger) *queryServer {
 	return &queryServer{
 		accounts:    state,
 		nameReg:     nameReg,
 		proposalReg: proposalReg,
 		blockchain:  blockchain,
+		validators:  validators,
 		nodeView:    nodeView,
 		logger:      logger,
 	}
 }
 
 func (qs *queryServer) Status(ctx context.Context, param *StatusParam) (*rpc.ResultStatus, error) {
-	return rpc.Status(qs.blockchain, qs.nodeView, param.BlockTimeWithin, param.BlockSeenTimeWithin)
+	return rpc.Status(qs.blockchain, qs.validators, qs.nodeView, param.BlockTimeWithin, param.BlockSeenTimeWithin)
 }
 
 // Account state
@@ -105,20 +111,34 @@ func (qs *queryServer) ListNames(param *ListNamesParam, stream Query_ListNamesSe
 }
 
 func (qs *queryServer) GetValidatorSet(ctx context.Context, param *GetValidatorSetParam) (*ValidatorSet, error) {
-	set, deltas, height := qs.blockchain.ValidatorsHistory()
-	vs := &ValidatorSet{
-		Height: height,
-		Set:    set.Validators(),
+	set := validator.Copy(qs.validators.Validators(0))
+	return &ValidatorSet{
+		Set: set.Validators(),
+	}, nil
+}
+
+func (qs *queryServer) GetValidatorSetHistory(ctx context.Context, param *GetValidatorSetHistoryParam) (*ValidatorSetHistory, error) {
+	lookback := int(param.IncludePrevious)
+	switch {
+	case lookback == 0:
+		lookback = 1
+	case lookback < 0 || lookback > state.DefaultValidatorsWindowSize:
+		lookback = state.DefaultValidatorsWindowSize
 	}
-	if param.IncludeHistory {
-		vs.History = make([]*ValidatorSetDeltas, len(deltas))
-		for i, d := range deltas {
-			vs.History[i] = &ValidatorSetDeltas{
-				Validators: d.Validators(),
-			}
+	height := qs.blockchain.LastBlockHeight()
+	if height < uint64(lookback) {
+		lookback = int(height)
+	}
+	history := &ValidatorSetHistory{}
+	for i := 0; i < lookback; i++ {
+		set := validator.Copy(qs.validators.Validators(i))
+		vs := &ValidatorSet{
+			Height: height - uint64(i),
+			Set:    set.Validators(),
 		}
+		history.History = append(history.History, vs)
 	}
-	return vs, nil
+	return history, nil
 }
 
 func (qs *queryServer) GetProposal(ctx context.Context, param *GetProposalParam) (proposal *payload.Ballot, err error) {

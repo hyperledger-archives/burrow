@@ -21,6 +21,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger/burrow/acm/validator"
+
 	"github.com/hyperledger/burrow/execution/state"
 
 	"github.com/hyperledger/burrow/acm"
@@ -52,11 +54,13 @@ type ExecutorState interface {
 	names.Reader
 	proposal.Reader
 	acmstate.IterableReader
+	validator.IterableReader
 }
 
 type BatchExecutor interface {
 	// Provides access to write lock for a BatchExecutor so reads can be prevented for the duration of a commit
 	sync.Locker
+	// Used by execution.Accounts to implement memory pool signing
 	acmstate.Reader
 	// Execute transaction against block cache (i.e. block buffer)
 	Executor
@@ -79,6 +83,7 @@ type executor struct {
 	stateCache       *acmstate.Cache
 	nameRegCache     *names.Cache
 	proposalRegCache *proposal.Cache
+	validatorCache   *validator.Cache
 	publisher        event.Publisher
 	blockExecution   *exec.BlockExecution
 	logger           *logging.Logger
@@ -92,31 +97,16 @@ var _ BatchExecutor = (*executor)(nil)
 func NewBatchChecker(backend ExecutorState, blockchain *bcm.Blockchain, logger *logging.Logger,
 	options ...ExecutionOption) BatchExecutor {
 
-	exe := newExecutor("CheckCache", false, backend, blockchain, event.NewNoOpPublisher(),
+	return newExecutor("CheckCache", false, backend, blockchain, event.NewNoOpPublisher(),
 		logger.WithScope("NewBatchExecutor"), options...)
-
-	return exe.AddContext(payload.TypeGovernance,
-		&contexts.GovernanceContext{
-			ValidatorSet: exe.blockchain.ValidatorChecker(),
-			StateWriter:  exe.stateCache,
-			Logger:       exe.logger,
-		},
-	)
 }
 
 func NewBatchCommitter(backend ExecutorState, blockchain *bcm.Blockchain, emitter event.Publisher,
 	logger *logging.Logger, options ...ExecutionOption) BatchCommitter {
 
-	exe := newExecutor("CommitCache", true, backend, blockchain, emitter,
+	return newExecutor("CommitCache", true, backend, blockchain, emitter,
 		logger.WithScope("NewBatchCommitter"), options...)
 
-	return exe.AddContext(payload.TypeGovernance,
-		&contexts.GovernanceContext{
-			ValidatorSet: exe.blockchain.ValidatorWriter(),
-			StateWriter:  exe.stateCache,
-			Logger:       exe.logger,
-		},
-	)
 }
 
 func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *bcm.Blockchain, publisher event.Publisher,
@@ -128,6 +118,7 @@ func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *b
 		stateCache:       acmstate.NewCache(backend, acmstate.Named(name)),
 		nameRegCache:     names.NewCache(backend),
 		proposalRegCache: proposal.NewCache(backend),
+		validatorCache:   validator.NewCache(backend),
 		publisher:        publisher,
 		blockExecution: &exec.BlockExecution{
 			Height: blockchain.LastBlockHeight() + 1,
@@ -161,6 +152,11 @@ func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *b
 			Tip:         blockchain,
 			StateWriter: exe.stateCache,
 			Logger:      exe.logger,
+		},
+		payload.TypeGovernance: &contexts.GovernanceContext{
+			ValidatorSet: exe.validatorCache,
+			StateWriter:  exe.stateCache,
+			Logger:       exe.logger,
 		},
 	}
 
@@ -315,6 +311,10 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 		if err != nil {
 			return err
 		}
+		err = exe.validatorCache.Flush(ws, exe.state)
+		if err != nil {
+			return err
+		}
 		err = ws.AddBlock(blockExecution)
 		if err != nil {
 			return err
@@ -326,14 +326,11 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 	}
 	// Commit to our blockchain state which will checkpoint the previous app hash by saving it to the database
 	// (we know the previous app hash is safely committed because we are about to commit the next)
-	totalPowerChange, totalFlow, err := exe.blockchain.CommitBlock(blockTime, blockHash, hash)
+	_, _, err = exe.blockchain.CommitBlock(blockTime, blockHash, hash)
 	if err != nil {
 		panic(fmt.Errorf("could not commit block to blockchain state: %v", err))
 	}
-	exe.logger.InfoMsg("Committed block",
-		"total_validator_power", exe.blockchain.CurrentValidators().TotalPower(),
-		"total_validator_power_change", totalPowerChange,
-		"total_validator_flow", totalFlow)
+	exe.logger.InfoMsg("Committed block")
 	expectedHeight := HeightAtVersion(version)
 	if expectedHeight != exe.blockchain.LastBlockHeight() {
 		return nil, fmt.Errorf("expected height at state tree version %d is %d but actual height is %d",
@@ -348,6 +345,8 @@ func (exe *executor) Reset() error {
 	// As with Commit() we do not take the write lock here
 	exe.stateCache.Reset(exe.state)
 	exe.nameRegCache.Reset(exe.state)
+	exe.proposalRegCache.Reset(exe.state)
+	exe.validatorCache.Reset(exe.state)
 	return nil
 }
 
@@ -368,6 +367,10 @@ func (exe *executor) GetStorage(address crypto.Address, key binary.Word256) (bin
 	exe.RLock()
 	defer exe.RUnlock()
 	return exe.stateCache.GetStorage(address, key)
+}
+
+func (exe *executor) PendingValidators() validator.IterableReader {
+	return exe.validatorCache.Delta
 }
 
 func (exe *executor) finaliseBlockExecution(header *abciTypes.Header) (*exec.BlockExecution, error) {

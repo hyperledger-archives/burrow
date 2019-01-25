@@ -32,19 +32,19 @@ func NewRWTree(db dbm.DB, cacheSize int) *RWTree {
 }
 
 // Tries to load the execution state from DB, returns nil with no error if no state found
-func (rwt *RWTree) Load(version int64) error {
+func (rwt *RWTree) Load(version int64, overwriting bool) error {
 	const errHeader = "RWTree.Load():"
 	if version <= 0 {
 		return fmt.Errorf("%s trying to load from non-positive version %d", errHeader, version)
 	}
-	err := rwt.tree.Load(version)
+	err := rwt.tree.Load(version, overwriting)
 	if err != nil {
-		return fmt.Errorf("%s %v", errHeader, err)
+		return fmt.Errorf("%s loading version %d: %v", errHeader, version, err)
 	}
 	// Set readTree at commit point == tree
 	rwt.ImmutableTree, err = rwt.tree.GetImmutable(version)
 	if err != nil {
-		return fmt.Errorf("%s %v", errHeader, errHeader)
+		return fmt.Errorf("%s loading version %d: %v", errHeader, version, err)
 	}
 	return nil
 }

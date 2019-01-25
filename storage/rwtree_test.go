@@ -56,7 +56,7 @@ func TestRollback(t *testing.T) {
 
 	// Make a new tree
 	rwt = NewRWTree(db, 100)
-	err = rwt.Load(version1)
+	err = rwt.Load(version1, true)
 	require.NoError(t, err)
 	// If you load version1 the working hash is that which you saved after version0, i.e. hash0
 	require.Equal(t, hash1, rwt.Hash())

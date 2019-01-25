@@ -66,7 +66,7 @@ type MutableForest struct {
 
 func NewMutableForest(db dbm.DB, cacheSize int) (*MutableForest, error) {
 	tree := NewRWTree(NewPrefixDB(db, commitsPrefix), cacheSize)
-	forest, err := NewImmutableForest(tree, NewPrefixDB(db, treePrefix), cacheSize)
+	forest, err := NewImmutableForest(tree, NewPrefixDB(db, treePrefix), cacheSize, WithOverwriting)
 	if err != nil {
 		return nil, err
 	}
@@ -77,8 +77,10 @@ func NewMutableForest(db dbm.DB, cacheSize int) (*MutableForest, error) {
 	}, nil
 }
 
+// Load mutable forest from database, pass overwriting = true if you wish to make writes to version version + 1.
+// this will
 func (muf *MutableForest) Load(version int64) error {
-	return muf.commitsTree.Load(version)
+	return muf.commitsTree.Load(version, true)
 }
 
 func (muf *MutableForest) Save() ([]byte, int64, error) {

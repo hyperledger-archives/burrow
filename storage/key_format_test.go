@@ -27,6 +27,13 @@ func TestKeyFormat(t *testing.T) {
 	assert.Equal(t, b, *bo)
 	assert.Equal(t, c, *co)
 
+	// Allow for omitted values
+	bo, co = new(int64), new(int64)
+	kf.Scan(key, nil, bo, co)
+	assert.Equal(t, b, *bo)
+	assert.Equal(t, c, *co)
+
+	ao, bo, co = new(int64), new(int64), new(int64)
 	bs := new([]byte)
 	kf.Scan(key, ao, bo, bs)
 	assert.Equal(t, a, *ao)

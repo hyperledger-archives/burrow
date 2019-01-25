@@ -166,7 +166,7 @@ func (c *Client) GetValidatorSet() (*rpcquery.ValidatorSet, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
-	return c.queryClient.GetValidatorSet(ctx, &rpcquery.GetValidatorSetParam{IncludeHistory: true})
+	return c.queryClient.GetValidatorSet(ctx, &rpcquery.GetValidatorSetParam{})
 }
 
 func (c *Client) GetProposal(hash []byte) (*payload.Ballot, error) {

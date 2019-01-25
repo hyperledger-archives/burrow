@@ -15,47 +15,32 @@
 package state
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"sync"
 
+	"github.com/hyperledger/burrow/binary"
+
+	"github.com/hyperledger/burrow/logging"
+
+	"github.com/hyperledger/burrow/acm/validator"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
-	"github.com/hyperledger/burrow/binary"
-	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/execution/proposal"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/storage"
-	"github.com/hyperledger/burrow/txs"
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
 const (
-	defaultCacheCapacity = 1024
-	uint64Length         = 8
-
+	DefaultValidatorsWindowSize = 10
+	defaultCacheCapacity        = 1024
+	uint64Length                = 8
 	// Prefix under which the versioned merkle state tree resides - tracking previous versions of history
 	forestPrefix = "f"
-)
-
-var (
-	accountKeyFormat  = storage.NewMustKeyFormat("a", crypto.AddressLength)
-	storageKeyFormat  = storage.NewMustKeyFormat("s", crypto.AddressLength, binary.Word256Length)
-	nameKeyFormat     = storage.NewMustKeyFormat("n", storage.VariadicSegmentLength)
-	proposalKeyFormat = storage.NewMustKeyFormat("p", sha256.Size)
-
-	// Keys that reference references
-	blockRefKeyFormat = storage.NewMustKeyFormat("b", uint64Length)
-	txRefKeyFormat    = storage.NewMustKeyFormat("t", uint64Length, uint64Length)
-
-	// Reference keys (that do not contribute to state hash)
-	// TODO: implement content-addressing of code and optionally blocks (to allow reference to block to be stored in state tree)
-	//codeKeyFormat   = storage.NewMustKeyFormat("c", sha256.Size)
-	//blockKeyFormat  = storage.NewMustKeyFormat("b", sha256.Size)
-	txKeyFormat = storage.NewMustKeyFormat("b", txs.HashLength)
 )
 
 // Implements account and blockchain state
@@ -67,6 +52,7 @@ type Updatable interface {
 	acmstate.Writer
 	names.Writer
 	proposal.Writer
+	validator.Writer
 	AddBlock(blockExecution *exec.BlockExecution) error
 }
 
@@ -74,14 +60,12 @@ type Updatable interface {
 type writeState struct {
 	forest       *storage.MutableForest
 	accountStats acmstate.AccountStats
+	ring         *validator.Ring
 }
 
 type ReadState struct {
-	forest storage.ForestReader
-}
-
-func NewReadState(forest storage.ForestReader) ReadState {
-	return ReadState{forest: forest}
+	Forest storage.ForestReader
+	validator.History
 }
 
 // Writers to state are responsible for calling State.Lock() before calling
@@ -91,6 +75,7 @@ type State struct {
 	cacheDB *storage.CacheDB
 	ReadState
 	writeState writeState
+	logger     *logging.Logger
 }
 
 // Create a new State object
@@ -101,11 +86,15 @@ func NewState(db dbm.DB) *State {
 		// This should only happen if we have negative cache capacity, which for us is a positive compile-time constant
 		panic(fmt.Errorf("could not create new state because error creating MutableForest"))
 	}
+	ring := validator.NewRing(nil, DefaultValidatorsWindowSize)
+	rs := ReadState{Forest: forest, History: ring}
+	ws := writeState{forest: forest, ring: ring}
 	return &State{
 		db:         db,
 		cacheDB:    cacheDB,
-		ReadState:  NewReadState(forest),
-		writeState: writeState{forest: forest},
+		ReadState:  rs,
+		writeState: ws,
+		logger:     logging.NewNoopLogger(),
 	}
 }
 
@@ -113,6 +102,7 @@ func NewState(db dbm.DB) *State {
 func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error) {
 	s := NewState(db)
 
+	const errHeader = "MakeGenesisState():"
 	// Make accounts state tree
 	for _, genAcc := range genesisDoc.Accounts {
 		perm := genAcc.Permissions
@@ -123,10 +113,14 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 		}
 		err := s.writeState.UpdateAccount(acc)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s %v", errHeader, err)
 		}
 	}
-
+	// Make genesis validators
+	err := s.writeState.MakeGenesisValidators(genesisDoc)
+	if err != nil {
+		return nil, fmt.Errorf("%s %v", errHeader, err)
+	}
 	// global permissions are saved as the 0 address
 	// so they are included in the accounts tree
 	globalPerms := permission.DefaultAccountPermissions
@@ -140,18 +134,17 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 		Balance:     1337,
 		Permissions: globalPerms,
 	}
-	err := s.writeState.UpdateAccount(permsAcc)
+	err = s.writeState.UpdateAccount(permsAcc)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s %v", errHeader, err)
 	}
-
 	_, version, err := s.commit()
 	if err != nil {
-		return nil, fmt.Errorf("could not save genesis state: %v", err)
+		return nil, fmt.Errorf("%s could not save genesis state: %v", errHeader, err)
 	}
 	if version != VersionOffset {
-		return nil, fmt.Errorf("got version %d after committing genesis state but version offset should be %d",
-			version, VersionOffset)
+		return nil, fmt.Errorf("%s got version %d after committing genesis state but version offset should be %d",
+			errHeader, version, VersionOffset)
 	}
 	return s, nil
 }
@@ -175,6 +168,13 @@ func LoadState(db dbm.DB, version int64) (*State, error) {
 	if err != nil {
 		return nil, err
 	}
+	// load the validator ring
+	ring, err := LoadValidatorRing(version, DefaultValidatorsWindowSize, s.writeState.forest.GetImmutable)
+	if err != nil {
+		return nil, err
+	}
+	s.writeState.ring = ring
+	s.ReadState.History = ring
 
 	return s, nil
 }
@@ -188,13 +188,18 @@ func (s *State) Hash() []byte {
 }
 
 func (s *State) LoadHeight(height uint64) (*ReadState, error) {
-	tree, err := s.writeState.forest.GetImmutable(int64(height))
+	version := VersionAtHeight(height)
+	forest, err := s.writeState.forest.GetImmutable(version)
 	if err != nil {
 		return nil, err
 	}
-
+	ring, err := LoadValidatorRing(version, DefaultValidatorsWindowSize, s.writeState.forest.GetImmutable)
+	if err != nil {
+		return nil, err
+	}
 	return &ReadState{
-		tree,
+		Forest:  forest,
+		History: ring,
 	}, nil
 }
 
@@ -215,6 +220,14 @@ func (s *State) commit() ([]byte, int64, error) {
 	hash, version, err := s.writeState.forest.Save()
 	if err != nil {
 		return nil, 0, err
+	}
+	totalPowerChange, totalFlow, err := s.writeState.ring.Rotate()
+	if err != nil {
+		return nil, 0, err
+	}
+	if totalFlow.Sign() != 0 {
+		//noinspection ALL
+		s.logger.InfoMsg("validator set changes", "total_power_change", totalPowerChange, "total_flow", totalFlow)
 	}
 	// Commit the state in cacheDB atomically for this block (synchronous)
 	batch := s.db.NewBatch()
@@ -241,4 +254,19 @@ func (s *State) Copy(db dbm.DB) (*State, error) {
 		return nil, err
 	}
 	return stateCopy, nil
+}
+
+func (s *State) SetLogger(logger *logging.Logger) {
+	s.logger = logger
+}
+
+func (s *State) GetBlockHash(blockHeight uint64) (binary.Word256, error) {
+	be, err := s.GetBlock(blockHeight)
+	if err != nil {
+		return binary.Zero256, err
+	}
+	if be == nil {
+		return binary.Zero256, fmt.Errorf("block %v does not exist", blockHeight)
+	}
+	return binary.LeftPadWord256(be.BlockHeader.AppHash), nil
 }

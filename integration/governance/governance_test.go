@@ -4,7 +4,6 @@ package governance
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"testing"
 
@@ -37,31 +36,31 @@ func TestAlterValidators(t *testing.T) {
 
 	// Build a batch of validator alterations to make
 	vs := validator.NewTrimSet()
-	alterPower(vs, 3, 2131)
-	alterPower(vs, 2, 4561)
-	alterPower(vs, 5, 7831)
-	alterPower(vs, 8, 9931)
+	changePower(vs, 3, 2131)
+	changePower(vs, 2, 4561)
+	changePower(vs, 5, 7831)
+	changePower(vs, 8, 9931)
 
-	vs.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
+	err := vs.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
 		_, err := govSync(tcli, governance.AlterPowerTx(inputAddress, id, power.Uint64()))
-		require.NoError(t, err)
-		return
+		return err
 	})
+	require.NoError(t, err)
 
-	vsOut := getValidatorHistory(t, qcli)
+	vsOut := getValidatorSet(t, qcli)
 	// Include the genesis validator and compare the sets
-	alterPower(vs, 0, genesisDoc.Validators[0].Amount)
+	changePower(vs, 0, genesisDoc.Validators[0].Amount)
 	assertValidatorsEqual(t, vs, vsOut)
 
 	// Remove validator from chain
-	_, err := govSync(tcli, governance.AlterPowerTx(inputAddress, account(3), 0))
+	_, err = govSync(tcli, governance.AlterPowerTx(inputAddress, account(3), 0))
 	// Mirror in our check set
-	alterPower(vs, 3, 0)
-	vsOut = getValidatorHistory(t, qcli)
+	changePower(vs, 3, 0)
+	vsOut = getValidatorSet(t, qcli)
 	assertValidatorsEqual(t, vs, vsOut)
 
 	// Now check Tendermint
-	waitNBlocks(t, ecli, 3)
+	waitNBlocks(t, ecli, 4)
 	height := int64(kernels[0].Blockchain.LastBlockHeight())
 	kernels[0].Node.ConfigureRPC()
 	tmVals, err := core.Validators(&height)
@@ -71,7 +70,7 @@ func TestAlterValidators(t *testing.T) {
 	for _, v := range tmVals.Validators {
 		publicKey, err := crypto.PublicKeyFromTendermintPubKey(v.PubKey)
 		require.NoError(t, err)
-		vsOut.AlterPower(publicKey, big.NewInt(v.VotingPower))
+		vsOut.ChangePower(publicKey, big.NewInt(v.VotingPower))
 	}
 	assertValidatorsEqual(t, vs, vsOut)
 }
@@ -211,14 +210,11 @@ func getMaxFlow(t testing.TB, qcli rpcquery.QueryClient) uint64 {
 	return maxFlow.Sub(maxFlow.Div(totalPower, big.NewInt(3)), big.NewInt(1)).Uint64()
 }
 
-func getValidatorHistory(t testing.TB, qcli rpcquery.QueryClient) *validator.Set {
-	history, err := qcli.GetValidatorSet(context.Background(), &rpcquery.GetValidatorSetParam{
-		IncludeHistory: true,
-	})
+func getValidatorSet(t testing.TB, qcli rpcquery.QueryClient) *validator.Set {
+	vs, err := qcli.GetValidatorSet(context.Background(), &rpcquery.GetValidatorSetParam{})
 	require.NoError(t, err)
-
 	// Include the genesis validator and compare the sets
-	return validator.UnpersistSet(history.Set)
+	return validator.UnpersistSet(vs.Set)
 }
 
 func account(i int) *acm.PrivateAccount {
@@ -232,13 +228,12 @@ func govSync(cli rpctransact.TransactClient, tx *payload.GovTx) (*exec.TxExecuti
 }
 
 func assertValidatorsEqual(t testing.TB, expected, actual *validator.Set) {
-	if !assert.True(t, expected.Equal(actual), "sets should be equal") {
-		fmt.Printf("Expected:\n%v\nActual:\n%v\n", expected, actual)
-	}
+	require.NoError(t, expected.Equal(actual), "validator sets should be equal\nExpected: %v\n\nActual: %v\n",
+		expected, actual)
 }
 
-func alterPower(vs *validator.Set, i int, power uint64) {
-	vs.AlterPower(account(i).GetPublicKey(), new(big.Int).SetUint64(power))
+func changePower(vs *validator.Set, i int, power uint64) {
+	vs.ChangePower(account(i).GetPublicKey(), new(big.Int).SetUint64(power))
 }
 
 func setSequence(t testing.TB, qcli rpcquery.QueryClient, tx payload.Payload) {

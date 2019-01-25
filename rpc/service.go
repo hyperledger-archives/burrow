@@ -48,6 +48,7 @@ type Service struct {
 	state      acmstate.IterableStatsReader
 	nameReg    names.IterableReader
 	blockchain bcm.BlockchainInfo
+	validators validator.History
 	nodeView   *tendermint.NodeView
 	logger     *logging.Logger
 }
@@ -55,12 +56,13 @@ type Service struct {
 // Service provides an internal query and information service with serialisable return types on which can accomodate
 // a number of transport front ends
 func NewService(state acmstate.IterableStatsReader, nameReg names.IterableReader, blockchain bcm.BlockchainInfo,
-	nodeView *tendermint.NodeView, logger *logging.Logger) *Service {
+	validators validator.History, nodeView *tendermint.NodeView, logger *logging.Logger) *Service {
 
 	return &Service{
 		state:      state,
 		nameReg:    nameReg,
 		blockchain: blockchain,
+		validators: validators,
 		nodeView:   nodeView,
 		logger:     logger.With(structure.ComponentKey, "Service"),
 	}
@@ -95,11 +97,11 @@ func (s *Service) UnconfirmedTxs(maxTxs int64) (*ResultUnconfirmedTxs, error) {
 }
 
 func (s *Service) Status() (*ResultStatus, error) {
-	return Status(s.BlockchainInfo(), s.nodeView, "", "")
+	return Status(s.BlockchainInfo(), s.validators, s.nodeView, "", "")
 }
 
 func (s *Service) StatusWithin(blockTimeWithin, blockSeenTimeWithin string) (*ResultStatus, error) {
-	return Status(s.BlockchainInfo(), s.nodeView, blockTimeWithin, blockSeenTimeWithin)
+	return Status(s.BlockchainInfo(), s.validators, s.nodeView, blockTimeWithin, blockSeenTimeWithin)
 }
 
 func (s *Service) ChainIdentifiers() (*ResultChainId, error) {
@@ -306,15 +308,15 @@ func (s *Service) Blocks(minHeight, maxHeight int64) (*ResultBlocks, error) {
 }
 
 func (s *Service) Validators() (*ResultValidators, error) {
-	validators := make([]*validator.Validator, 0, s.blockchain.NumValidators())
-	s.blockchain.Validators().Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
+	var validators []*validator.Validator
+	s.validators.Validators(0).IterateValidators(func(id crypto.Addressable, power *big.Int) error {
 		address := id.GetAddress()
 		validators = append(validators, &validator.Validator{
 			Address:   &address,
 			PublicKey: id.GetPublicKey(),
 			Power:     power.Uint64(),
 		})
-		return
+		return nil
 	})
 	return &ResultValidators{
 		BlockHeight:         s.blockchain.LastBlockHeight(),
@@ -362,9 +364,14 @@ func (s *Service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error
 	}, nil
 }
 
-func Status(blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, blockTimeWithin, blockSeenTimeWithin string) (*ResultStatus, error) {
+func Status(blockchain bcm.BlockchainInfo, validators validator.History, nodeView *tendermint.NodeView, blockTimeWithin,
+	blockSeenTimeWithin string) (*ResultStatus, error) {
 	publicKey := nodeView.ValidatorPublicKey()
 	address := publicKey.GetAddress()
+	power, err := validators.Validators(0).Power(address)
+	if err != nil {
+		return nil, err
+	}
 	res := &ResultStatus{
 		ChainID:       blockchain.ChainID(),
 		RunID:         nodeView.RunID().String(),
@@ -382,7 +389,7 @@ func Status(blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, blockT
 		ValidatorInfo: &validator.Validator{
 			Address:   &address,
 			PublicKey: publicKey,
-			Power:     blockchain.Validators().Power(address).Uint64(),
+			Power:     power.Uint64(),
 		},
 	}
 

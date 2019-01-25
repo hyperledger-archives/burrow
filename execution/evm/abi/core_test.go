@@ -3,7 +3,6 @@ package abi
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -125,11 +124,6 @@ func TestPacker(t *testing.T) {
 		},
 	} {
 		t.Log(test.args)
-		fmt.Println(test.name)
-		/*abiStruct, err := JSON(strings.NewReader(test.ABI))
-		if err != nil {
-			t.Errorf("Incorrect ABI: ", err)
-		}*/
 		if output, err := Packer(test.ABI, test.name, test.args...); err != nil {
 			t.Error("Unexpected error in ", test.name, ": ", err)
 		} else {

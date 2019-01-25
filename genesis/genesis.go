@@ -217,7 +217,7 @@ func (basicAccount *BasicAccount) Clone() BasicAccount {
 // failure.  In particular MakeGenesisDocFromAccount uses the local time as a
 // timestamp for the GenesisDoc.
 func MakeGenesisDocFromAccounts(chainName string, salt []byte, genesisTime time.Time, accounts map[string]*acm.Account,
-	validators map[string]validator.Validator) *GenesisDoc {
+	validators map[string]*validator.Validator) *GenesisDoc {
 
 	// Establish deterministic order of accounts by name so we obtain identical GenesisDoc
 	// from identical input

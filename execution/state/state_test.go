@@ -12,34 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package execution
+package state
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
-
-	"github.com/hyperledger/burrow/execution/state"
-
-	"github.com/hyperledger/burrow/crypto/sha3"
-	"github.com/hyperledger/burrow/txs"
-	"github.com/hyperledger/burrow/txs/payload"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/permission"
+	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/libs/db"
+	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
 func TestState_UpdateAccount(t *testing.T) {
-	s := state.NewState(db.NewMemDB())
+	s := NewState(dbm.NewMemDB())
 	account := acm.NewAccountFromSecret("Foo")
 	account.Permissions.Base.Perms = permission.SetGlobal | permission.HasRole
-	_, _, err := s.Update(func(ws state.Updatable) error {
+	_, _, err := s.Update(func(ws Updatable) error {
 		return ws.UpdateAccount(account)
 	})
 	require.NoError(t, err)
@@ -51,11 +47,11 @@ func TestState_UpdateAccount(t *testing.T) {
 }
 
 func TestWriteState_AddBlock(t *testing.T) {
-	s := state.NewState(db.NewMemDB())
+	s := NewState(dbm.NewMemDB())
 	height := uint64(100)
 	numTxs := uint64(5)
 	events := uint64(10)
-	_, _, err := s.Update(func(ws state.Updatable) error {
+	_, _, err := s.Update(func(ws Updatable) error {
 		return ws.AddBlock(mkBlock(height, numTxs, events))
 	})
 	require.NoError(t, err)
@@ -71,7 +67,7 @@ func TestWriteState_AddBlock(t *testing.T) {
 		})
 	require.NoError(t, err)
 	// non-increasing events
-	_, _, err = s.Update(func(ws state.Updatable) error {
+	_, _, err = s.Update(func(ws Updatable) error {
 		return nil
 	})
 	require.NoError(t, err)
@@ -114,10 +110,4 @@ func mkEvent(height, tx, index uint64) *exec.Event {
 			Topics:  []binary.Word256{{1, 2, 3}},
 		},
 	}
-}
-
-func asJSON(t *testing.T, v interface{}) string {
-	bs, err := json.Marshal(v)
-	require.NoError(t, err)
-	return string(bs)
 }
