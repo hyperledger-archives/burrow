@@ -322,20 +322,6 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 	if err != nil {
 		return nil, err
 	}
-	// Now state is committed publish events
-	for _, txe := range blockExecution.TxExecutions {
-		publishErr := exe.publisher.Publish(context.Background(), txe, txe.Tagged())
-		if publishErr != nil {
-			exe.logger.InfoMsg("Error publishing TxExecution",
-				"tx_hash", txe.TxHash,
-				structure.ErrorKey, publishErr)
-		}
-	}
-	publishErr := exe.publisher.Publish(context.Background(), blockExecution, blockExecution.Tagged())
-	if publishErr != nil {
-		exe.logger.InfoMsg("Error publishing BlockExecution",
-			"height", blockExecution.Height, structure.ErrorKey, publishErr)
-	}
 	// Commit to our blockchain state which will checkpoint the previous app hash by saving it to the database
 	// (we know the previous app hash is safely committed because we are about to commit the next)
 	totalPowerChange, totalFlow, err := exe.blockchain.CommitBlock(blockTime, blockHash, hash)
@@ -351,7 +337,8 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 		return nil, fmt.Errorf("expected height at state tree version %d is %d but actual height is %d",
 			version, expectedHeight, exe.blockchain.LastBlockHeight())
 	}
-
+	// Now state is fully committed publish events (this should be the last thing we do)
+	exe.publishBlock(blockExecution)
 	return hash, nil
 }
 
@@ -425,4 +412,20 @@ func (exe *executor) updateSignatories(txEnv *txs.Envelope) error {
 		}
 	}
 	return nil
+}
+
+func (exe *executor) publishBlock(blockExecution *exec.BlockExecution) {
+	for _, txe := range blockExecution.TxExecutions {
+		publishErr := exe.publisher.Publish(context.Background(), txe, txe.Tagged())
+		if publishErr != nil {
+			exe.logger.InfoMsg("Error publishing TxExecution",
+				"tx_hash", txe.TxHash,
+				structure.ErrorKey, publishErr)
+		}
+	}
+	publishErr := exe.publisher.Publish(context.Background(), blockExecution, blockExecution.Tagged())
+	if publishErr != nil {
+		exe.logger.InfoMsg("Error publishing BlockExecution",
+			"height", blockExecution.Height, structure.ErrorKey, publishErr)
+	}
 }

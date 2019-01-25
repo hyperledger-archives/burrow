@@ -54,10 +54,9 @@ func TestAlterValidators(t *testing.T) {
 	assertValidatorsEqual(t, vs, vsOut)
 
 	// Remove validator from chain
-	txe, err := govSync(tcli, governance.AlterPowerTx(inputAddress, account(3), 0))
+	_, err := govSync(tcli, governance.AlterPowerTx(inputAddress, account(3), 0))
 	// Mirror in our check set
 	alterPower(vs, 3, 0)
-	fmt.Println(txe.Events)
 	vsOut = getValidatorHistory(t, qcli)
 	assertValidatorsEqual(t, vs, vsOut)
 
@@ -264,7 +263,6 @@ func waitNBlocks(t testing.TB, ecli rpcevents.ExecutionEventsClient, n int) {
 	})
 	defer stream.CloseSend()
 	for i := 0; i < n; i++ {
-		fmt.Println("block")
 		require.NoError(t, err)
 		_, err = stream.Recv()
 	}
