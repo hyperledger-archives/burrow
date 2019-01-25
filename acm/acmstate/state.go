@@ -1,4 +1,4 @@
-package state
+package acmstate
 
 import (
 	"github.com/hyperledger/burrow/acm"

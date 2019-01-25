@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hyperledger/burrow/execution/state"
+
 	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -34,10 +36,10 @@ import (
 )
 
 func TestState_UpdateAccount(t *testing.T) {
-	s := NewState(db.NewMemDB())
+	s := state.NewState(db.NewMemDB())
 	account := acm.NewAccountFromSecret("Foo")
 	account.Permissions.Base.Perms = permission.SetGlobal | permission.HasRole
-	_, _, err := s.Update(func(ws Updatable) error {
+	_, _, err := s.Update(func(ws state.Updatable) error {
 		return ws.UpdateAccount(account)
 	})
 	require.NoError(t, err)
@@ -49,11 +51,11 @@ func TestState_UpdateAccount(t *testing.T) {
 }
 
 func TestWriteState_AddBlock(t *testing.T) {
-	s := NewState(db.NewMemDB())
+	s := state.NewState(db.NewMemDB())
 	height := uint64(100)
 	numTxs := uint64(5)
 	events := uint64(10)
-	_, _, err := s.Update(func(ws Updatable) error {
+	_, _, err := s.Update(func(ws state.Updatable) error {
 		return ws.AddBlock(mkBlock(height, numTxs, events))
 	})
 	require.NoError(t, err)
@@ -69,7 +71,7 @@ func TestWriteState_AddBlock(t *testing.T) {
 		})
 	require.NoError(t, err)
 	// non-increasing events
-	_, _, err = s.Update(func(ws Updatable) error {
+	_, _, err = s.Update(func(ws state.Updatable) error {
 		return nil
 	})
 	require.NoError(t, err)

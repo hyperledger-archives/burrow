@@ -88,7 +88,7 @@ func replayBlock(t *testing.T, burrowDir string, height uint64) {
 	fmt.Println(recap)
 }
 
-func getState(t *testing.T, burrowDir string, height uint64) *execution.State {
+func getState(t *testing.T, burrowDir string, height uint64) *state.State {
 	st, err := newReplay(t, burrowDir).State(height)
 	require.NoError(t, err)
 	return st

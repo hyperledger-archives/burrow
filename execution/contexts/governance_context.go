@@ -5,7 +5,7 @@ import (
 	"math/big"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
@@ -17,7 +17,7 @@ import (
 )
 
 type GovernanceContext struct {
-	StateWriter  state.ReaderWriter
+	StateWriter  acmstate.ReaderWriter
 	ValidatorSet validator.Writer
 	Logger       *logging.Logger
 	tx           *payload.GovTx

@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
@@ -45,7 +45,7 @@ const MaxBlockLookback = 1000
 
 // Base service that provides implementation for all underlying RPC methods
 type Service struct {
-	state      state.IterableStatsReader
+	state      acmstate.IterableStatsReader
 	nameReg    names.IterableReader
 	blockchain bcm.BlockchainInfo
 	nodeView   *tendermint.NodeView
@@ -54,7 +54,7 @@ type Service struct {
 
 // Service provides an internal query and information service with serialisable return types on which can accomodate
 // a number of transport front ends
-func NewService(state state.IterableStatsReader, nameReg names.IterableReader, blockchain bcm.BlockchainInfo,
+func NewService(state acmstate.IterableStatsReader, nameReg names.IterableReader, blockchain bcm.BlockchainInfo,
 	nodeView *tendermint.NodeView, logger *logging.Logger) *Service {
 
 	return &Service{
@@ -66,7 +66,7 @@ func NewService(state state.IterableStatsReader, nameReg names.IterableReader, b
 	}
 }
 
-func (s *Service) State() state.IterableStatsReader {
+func (s *Service) State() acmstate.IterableStatsReader {
 	return s.state
 }
 

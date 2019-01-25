@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/deploy/def"
@@ -16,7 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func getAcccountSequence(seq string, addressStr string, seqCache *state.Cache) (string, error) {
+func getAcccountSequence(seq string, addressStr string, seqCache *acmstate.Cache) (string, error) {
 	if seq != "" {
 		return seq, nil
 	}
@@ -33,7 +33,7 @@ func getAcccountSequence(seq string, addressStr string, seqCache *state.Cache) (
 	return fmt.Sprintf("%d", acc.Sequence), err
 }
 
-func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playbook, client *def.Client, seqCache *state.Cache) error {
+func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playbook, client *def.Client, seqCache *acmstate.Cache) error {
 	script := def.Playbook{Jobs: jobs, Account: useDefault(prop.Source, parentScript.Account), Parent: parentScript}
 
 	for _, job := range script.Jobs {
@@ -166,7 +166,7 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playbook, client *def.Client) (string, error) {
 	var proposeBatch payload.BatchTx
 
-	seqCache := state.NewCache(client)
+	seqCache := acmstate.NewCache(client)
 
 	err := recurseJobs(&proposeBatch, prop.Jobs, prop, do, parentScript, client, seqCache)
 	if err != nil {

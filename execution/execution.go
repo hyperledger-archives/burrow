@@ -21,8 +21,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger/burrow/execution/state"
+
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
@@ -46,16 +48,16 @@ type Executor interface {
 }
 
 type ExecutorState interface {
-	Update(updater func(ws Updatable) error) (hash []byte, version int64, err error)
+	Update(updater func(ws state.Updatable) error) (hash []byte, version int64, err error)
 	names.Reader
 	proposal.Reader
-	state.IterableReader
+	acmstate.IterableReader
 }
 
 type BatchExecutor interface {
 	// Provides access to write lock for a BatchExecutor so reads can be prevented for the duration of a commit
 	sync.Locker
-	state.Reader
+	acmstate.Reader
 	// Execute transaction against block cache (i.e. block buffer)
 	Executor
 	// Reset executor to underlying State
@@ -74,7 +76,7 @@ type executor struct {
 	runCall          bool
 	blockchain       *bcm.Blockchain
 	state            ExecutorState
-	stateCache       *state.Cache
+	stateCache       *acmstate.Cache
 	nameRegCache     *names.Cache
 	proposalRegCache *proposal.Cache
 	publisher        event.Publisher
@@ -123,7 +125,7 @@ func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *b
 		runCall:          runCall,
 		state:            backend,
 		blockchain:       blockchain,
-		stateCache:       state.NewCache(backend, state.Named(name)),
+		stateCache:       acmstate.NewCache(backend, acmstate.Named(name)),
 		nameRegCache:     names.NewCache(backend),
 		proposalRegCache: proposal.NewCache(backend),
 		publisher:        publisher,
@@ -248,7 +250,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 	return nil, fmt.Errorf("unknown transaction type: %v", txEnv.Tx.Type())
 }
 
-func validateInputs(tx *txs.Tx, getter state.AccountGetter) error {
+func validateInputs(tx *txs.Tx, getter acmstate.AccountGetter) error {
 	for _, in := range tx.GetInputs() {
 		acc, err := getter.GetAccount(in.Address)
 		if err != nil {
@@ -272,7 +274,7 @@ func validateInputs(tx *txs.Tx, getter state.AccountGetter) error {
 			return errors.ErrorCodeInsufficientFunds
 		}
 		// Check for Input permission
-		v, err := acc.Permissions.Base.Compose(state.GlobalAccountPermissions(getter).Base).Get(permission.Input)
+		v, err := acc.Permissions.Base.Compose(acmstate.GlobalAccountPermissions(getter).Base).Get(permission.Input)
 		if err != nil {
 			return err
 		}
@@ -299,7 +301,7 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 	}
 	// First commit the app state, this app hash will not get checkpointed until the next block when we are sure
 	// that nothing in the downstream commit process could have failed. At worst we go back one block.
-	hash, version, err := exe.state.Update(func(ws Updatable) error {
+	hash, version, err := exe.state.Update(func(ws state.Updatable) error {
 		// flush the caches
 		err := exe.stateCache.Flush(ws, exe.state)
 		if err != nil {

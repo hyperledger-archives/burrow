@@ -6,7 +6,7 @@ import (
 	"runtime/debug"
 	"unicode"
 
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/crypto"
@@ -21,7 +21,7 @@ import (
 
 type ProposalContext struct {
 	Tip          bcm.BlockchainInfo
-	StateWriter  state.ReaderWriter
+	StateWriter  acmstate.ReaderWriter
 	ValidatorSet validator.Writer
 	ProposalReg  proposal.ReaderWriter
 	Logger       *logging.Logger
@@ -161,7 +161,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 		}
 	}
 
-	stateCache := state.NewCache(ctx.StateWriter)
+	stateCache := acmstate.NewCache(ctx.StateWriter)
 
 	for i, step := range ballot.Proposal.BatchTx.Txs {
 		txEnv := txs.EnvelopeFromAny(ctx.Tip.ChainID(), step)

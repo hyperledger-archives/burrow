@@ -9,7 +9,7 @@ import (
 	"github.com/hyperledger/burrow/execution/proposal"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/event/query"
@@ -19,7 +19,7 @@ import (
 )
 
 type queryServer struct {
-	accounts    state.IterableStatsReader
+	accounts    acmstate.IterableStatsReader
 	nameReg     names.IterableReader
 	proposalReg proposal.IterableReader
 	blockchain  bcm.BlockchainInfo
@@ -29,7 +29,7 @@ type queryServer struct {
 
 var _ QueryServer = &queryServer{}
 
-func NewQueryServer(state state.IterableStatsReader, nameReg names.IterableReader, proposalReg proposal.IterableReader,
+func NewQueryServer(state acmstate.IterableStatsReader, nameReg names.IterableReader, proposalReg proposal.IterableReader,
 	blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, logger *logging.Logger) *queryServer {
 	return &queryServer{
 		accounts:    state,

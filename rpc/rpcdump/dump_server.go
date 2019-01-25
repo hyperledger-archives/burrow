@@ -6,14 +6,14 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	dump "github.com/hyperledger/burrow/dump"
-	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
+	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/logging"
 )
 
 type dumpServer struct {
-	state      *execution.State
+	state      *state.State
 	blockchain bcm.BlockchainInfo
 	nodeView   *tendermint.NodeView
 	logger     *logging.Logger
@@ -21,7 +21,7 @@ type dumpServer struct {
 
 var _ DumpServer = &dumpServer{}
 
-func NewDumpServer(state *execution.State, blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, logger *logging.Logger) *dumpServer {
+func NewDumpServer(state *state.State, blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, logger *logging.Logger) *dumpServer {
 	return &dumpServer{
 		state:      state,
 		blockchain: blockchain,

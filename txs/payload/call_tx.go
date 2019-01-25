@@ -3,11 +3,11 @@ package payload
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
 )
 
-func NewCallTx(st state.AccountGetter, from crypto.PublicKey, to *crypto.Address, data []byte,
+func NewCallTx(st acmstate.AccountGetter, from crypto.PublicKey, to *crypto.Address, data []byte,
 	amt, gasLimit, fee uint64) (*CallTx, error) {
 
 	addr := from.GetAddress()

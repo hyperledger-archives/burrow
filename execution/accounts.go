@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys"
 	burrow_sync "github.com/hyperledger/burrow/sync"
@@ -14,7 +14,7 @@ import (
 // it also maintains a lock over addresses to provide a linearisation of signing events using SequentialSigningAccount
 type Accounts struct {
 	burrow_sync.RingMutex
-	state.Reader
+	acmstate.Reader
 	keyClient keys.KeyClient
 }
 
@@ -29,7 +29,7 @@ type SequentialSigningAccount struct {
 	getter        func() (*SigningAccount, error)
 }
 
-func NewAccounts(reader state.Reader, keyClient keys.KeyClient, mutexCount int) *Accounts {
+func NewAccounts(reader acmstate.Reader, keyClient keys.KeyClient, mutexCount int) *Accounts {
 	return &Accounts{
 		RingMutex: *burrow_sync.NewRingMutexNoHash(mutexCount),
 		Reader:    reader,

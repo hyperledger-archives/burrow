@@ -1,4 +1,4 @@
-package execution
+package state
 
 import (
 	"encoding/json"
@@ -102,5 +102,5 @@ func (s *State) LoadDump(filename string) error {
 }
 
 func (s *State) Dump() string {
-	return s.forest.Dump()
+	return s.writeState.forest.Dump()
 }
