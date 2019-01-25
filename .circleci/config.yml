@@ -32,7 +32,7 @@ jobs:
       image: circleci/classic:201808-01
     steps:
       - checkout
-      - run: docker-compose run burrow make test_integration
+      - run: docker-compose run burrow make test_integration_no_postgres
 
   ensure_vendor:
     <<: *defaults

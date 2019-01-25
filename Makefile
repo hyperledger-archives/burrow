@@ -185,7 +185,11 @@ test_restore: build_burrow bin/solc
 
 # Go will attempt to run separate packages in parallel
 .PHONY: test_integration
-test_integration: test_keys test_deploy test_integration_vent test_restore
+test_integration: test_keys test_deploy test_integration_vent_postgres test_restore
+	@go test -v -tags integration ./integration/...
+
+.PHONY: test_integration_no_postgres
+test_integration_no_postgres: test_keys test_deploy test_integration_vent test_restore
 	@go test -v -tags integration ./integration/...
 
 .PHONY: test_deploy
