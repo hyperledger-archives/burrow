@@ -6,7 +6,6 @@ import (
 	"github.com/xlab/treeprint"
 
 	lru "github.com/hashicorp/golang-lru"
-	amino "github.com/tendermint/go-amino"
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
@@ -14,26 +13,23 @@ type ImmutableForest struct {
 	// Store of tree prefix -> last commitID (version + hash) - serves as a set of all known trees and provides a global hash
 	commitsTree KVCallbackIterableReader
 	treeDB      dbm.DB
-	// Map of prefix -> tree for trees requiring a save
-	dirty map[string]*RWTree
 	// Cache for frequently used trees
 	treeCache *lru.Cache
+	// Cache size is used in multiple places - for the LRU cache and node cache for any trees created - it probably
+	// makes sense for them to be roughly the same size
 	cacheSize int
-	codec     *amino.Codec
 }
 
 func NewImmutableForest(commitsTree KVCallbackIterableReader, treeDB dbm.DB, cacheSize int) (*ImmutableForest, error) {
 	cache, err := lru.New(cacheSize)
 	if err != nil {
-		return nil, fmt.Errorf("NewRWForest() could not create cache: %v", err)
+		return nil, fmt.Errorf("NewImmutableForest() could not create cache: %v", err)
 	}
 	return &ImmutableForest{
 		commitsTree: commitsTree,
 		treeDB:      treeDB,
-		dirty:       make(map[string]*RWTree),
 		treeCache:   cache,
 		cacheSize:   cacheSize,
-		codec:       amino.NewCodec(),
 	}, nil
 }
 
@@ -68,21 +64,8 @@ func (imf *ImmutableForest) tree(prefix []byte) (*RWTree, error) {
 	if value, ok := imf.treeCache.Get(string(prefix)); ok {
 		return value.(*RWTree), nil
 	}
-	// Try dirty
-	if tree, ok := imf.dirty[string(prefix)]; ok {
-		return tree, nil
-	}
-	// If we don't have tree in either of our caches and we are on zeroth version this is the first time it has been
-	// requested so create a new one
-	commitID, err := imf.commitID(prefix)
-	if err != nil {
-		return nil, err
-	}
-	if commitID.Version == 0 {
-		return imf.newTree(prefix), nil
-	}
 	// Not in caches but non-negative version - we should be able to load into memory
-	return imf.loadTree(prefix)
+	return imf.loadOrCreateTree(prefix)
 }
 
 func (imf *ImmutableForest) commitID(prefix []byte) (*CommitID, error) {
@@ -97,12 +80,16 @@ func (imf *ImmutableForest) commitID(prefix []byte) (*CommitID, error) {
 	return commitID, nil
 }
 
-func (imf *ImmutableForest) loadTree(prefix []byte) (*RWTree, error) {
-	const errHeader = "RWForest.loadTree():"
+func (imf *ImmutableForest) loadOrCreateTree(prefix []byte) (*RWTree, error) {
+	const errHeader = "ImmutableForest.loadOrCreateTree():"
 	tree := imf.newTree(prefix)
 	commitID, err := imf.commitID(prefix)
 	if err != nil {
 		return nil, fmt.Errorf("%s %v", errHeader, err)
+	}
+	if commitID.Version == 0 {
+		// This is the first time we have been asked to load this tree
+		return imf.newTree(prefix), nil
 	}
 	err = tree.Load(commitID.Version)
 	if err != nil {

@@ -346,9 +346,10 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 		"total_validator_power", exe.blockchain.CurrentValidators().TotalPower(),
 		"total_validator_power_change", totalPowerChange,
 		"total_validator_flow", totalFlow)
-	if uint64(version) != exe.blockchain.LastBlockHeight() {
-		return nil, fmt.Errorf("state tree version %d does not equal blockchain height %d but that "+
-			"is meant to be a guaranteed invariant", version, exe.blockchain.LastBlockHeight())
+	expectedHeight := HeightAtVersion(version)
+	if expectedHeight != exe.blockchain.LastBlockHeight() {
+		return nil, fmt.Errorf("expected height at state tree version %d is %d but actual height is %d",
+			version, expectedHeight, exe.blockchain.LastBlockHeight())
 	}
 
 	return hash, nil

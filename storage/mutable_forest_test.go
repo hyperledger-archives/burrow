@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -21,6 +22,8 @@ func TestMutableForest_Genesis(t *testing.T) {
 	val1 := bz("nog")
 	tree.Set(key1, val1)
 
+	_, _, err = rwf.Save()
+	require.NoError(t, err)
 	var dump string
 	rwf.Iterate(nil, nil, true, func(prefix []byte, tree KVCallbackIterableReader) error {
 		dump = tree.(*RWTree).Dump()
@@ -31,8 +34,6 @@ func TestMutableForest_Genesis(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, val1, reader.Get(key1))
 
-	_, _, err = rwf.Save()
-	require.NoError(t, err)
 }
 
 func TestMutableForest_Save(t *testing.T) {
@@ -101,16 +102,60 @@ func TestMutableForest_Load(t *testing.T) {
 	require.Equal(t, dump, forest.Dump())
 }
 
-func TestMut(t *testing.T) {
+func TestSorted(t *testing.T) {
+	forest, err := NewMutableForest(dbm.NewMemDB(), 100)
+	require.NoError(t, err)
+	setForest(t, forest, "names", "Edward", "male")
+	setForest(t, forest, "names", "Caitlin", "female")
+	setForest(t, forest, "names", "Lindsay", "unisex")
+	setForest(t, forest, "names", "Cora", "female")
+	_, _, err = forest.Save()
+	require.NoError(t, err)
+	setForest(t, forest, "balances", "Edward", "34")
+	setForest(t, forest, "balances", "Caitlin", "2344")
+	_, _, err = forest.Save()
+	require.NoError(t, err)
+	setForest(t, forest, "balances", "Lindsay", "654")
+	setForest(t, forest, "balances", "Cora", "654456")
+	_, _, err = forest.Save()
+	tree, err := forest.Writer(bz("age"))
+	tree.Get(bz("foo"))
+	setForest(t, forest, "age", "Lindsay", "34")
+	setForest(t, forest, "age", "Cora", "1")
+	_, _, err = forest.Save()
+	require.NoError(t, err)
+	assertDump(t, forest, `
+        .
+        ├── age
+        │   ├── Cora -> 1
+        │   └── Lindsay -> 34
+        ├── balances
+        │   ├── Caitlin -> 2344
+        │   ├── Cora -> 654456
+        │   ├── Edward -> 34
+        │   └── Lindsay -> 654
+        └── names
+            ├── Caitlin -> female
+            ├── Cora -> female
+            ├── Edward -> male
+            └── Lindsay -> unisex
+        `)
+	fmt.Println(forest.Dump())
+}
+
+func setForest(t *testing.T, forest *MutableForest, prefix, key, value string) {
+	tree, err := forest.Writer([]byte(prefix))
+	require.NoError(t, err)
+	tree.Set([]byte(key), []byte(value))
 
 }
 
-func assertDump(t *testing.T, forest interface{ Dump() string }, dump string) {
+func assertDump(t *testing.T, forest interface{ Dump() string }, expectedDump string) {
 	actual := forest.Dump()
-	dump = trimMargin(dump)
-	if dump != actual {
-		t.Errorf("Dump did not match expected dump, do you want this assertion instead:\n"+
-			"assertDump(t, forest,`\n%s`)\n\n", actual)
+	expectedDump = trimMargin(expectedDump)
+	if expectedDump != actual {
+		t.Errorf("forest.Dump() did not match expected dump:\n%s\nDo you want this assertion instead:\n\n"+
+			"assertDump(t, forest,`\n%s`)\n\n", expectedDump, actual)
 	}
 }
 

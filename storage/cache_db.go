@@ -5,13 +5,13 @@ import (
 )
 
 type CacheDB struct {
-	cache   *KVCache
+	cache   *KVCacheSync
 	backend KVIterableReader
 }
 
 func NewCacheDB(backend KVIterableReader) *CacheDB {
 	return &CacheDB{
-		cache:   NewKVCache(),
+		cache:   NewKVCacheSync(),
 		backend: backend,
 	}
 }
@@ -64,7 +64,7 @@ func (cdb *CacheDB) Close() {
 
 func (cdb *CacheDB) NewBatch() dbm.Batch {
 	return &cacheBatch{
-		cache:   NewKVCache(),
+		cache:   NewKVCacheSync(),
 		backend: cdb,
 	}
 }
@@ -75,7 +75,7 @@ func (cdb *CacheDB) Commit(writer KVWriter) {
 }
 
 type cacheBatch struct {
-	cache   *KVCache
+	cache   *KVCacheSync
 	backend *CacheDB
 }
 

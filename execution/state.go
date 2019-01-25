@@ -102,7 +102,7 @@ func NewState(db dbm.DB) *State {
 	forest, err := storage.NewMutableForest(storage.NewPrefixDB(cacheDB, forestPrefix), defaultCacheCapacity)
 	if err != nil {
 		// This should only happen if we have negative cache capacity, which for us is a positive compile-time constant
-		panic(fmt.Errorf("could not create new state because error creating RWForest"))
+		panic(fmt.Errorf("could not create new state because error creating MutableForest"))
 	}
 	s := &State{
 		db:        db,
@@ -151,6 +151,14 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 		return nil, err
 	}
 
+	_, version, err := s.writeState.commit()
+	if err != nil {
+		return nil, fmt.Errorf("could not save genesis state: %v", err)
+	}
+	if version != VersionOffset {
+		return nil, fmt.Errorf("got version %d after committing genesis state but version offset should be %d",
+			version, VersionOffset)
+	}
 	return s, nil
 }
 
@@ -246,7 +254,7 @@ func LoadState(db dbm.DB, version int64) (*State, error) {
 	s := NewState(db)
 	err := s.forest.Load(version)
 	if err != nil {
-		return nil, fmt.Errorf("could not load RWForest at version %d: %v", version, err)
+		return nil, fmt.Errorf("could not load MutableForest at version %d: %v", version, err)
 	}
 	// Populate stats. If this starts taking too long, store the value rather than the full scan at startup
 	err = s.IterateAccounts(func(acc *acm.Account) error {

@@ -1563,7 +1563,7 @@ type testExecutor struct {
 
 func makeExecutor(state *State) *testExecutor {
 	blockchain := newBlockchain(testGenesisDoc)
-	blockchain.CommitBlockAtHeight(time.Now(), []byte("hashily"), state.Hash(), uint64(state.Version()))
+	blockchain.CommitBlockAtHeight(time.Now(), []byte("hashily"), state.Hash(), HeightAtVersion(state.Version()))
 	return &testExecutor{
 		executor: newExecutor("makeExecutorCache", true, state, blockchain, event.NewNoOpPublisher(),
 			logger),

@@ -24,11 +24,10 @@ func (p Prefix) Suffix(key []byte) []byte {
 	bs := make([]byte, len(key)-len(p))
 	copy(bs, key[len(p):])
 	return bs
-
 }
 
 // Get the lexicographical sibling above this prefix (i.e. the fixed length integer plus one)
-func (p Prefix) Above() []gbyte {
+func (p Prefix) Above() []byte {
 	for i := len(p) - 1; i >= 0; i-- {
 		c := p[i]
 		if c < 0xff {
