@@ -15,6 +15,7 @@
 package execution
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -190,7 +191,7 @@ func (s *State) LoadDump(filename string) error {
 
 	tx := exec.TxExecution{
 		TxType: payload.TypeCall,
-		TxHash: make([]byte, 32),
+		TxHash: make([]byte, txs.HashLength),
 	}
 
 	apply := func(row dump.Dump) error {
@@ -486,7 +487,11 @@ func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
 	ws.state.height = be.Height
 	// Index transactions so they can be retrieved by their TxHash
 	for i, txe := range be.TxExecutions {
-		ws.addTx(txe.TxHash, be.Height, uint64(i))
+		// When restoring a dump, events are loaded without their associated Tx, so their
+		// TxHash wills be all 0.
+		if bytes.Compare(txe.TxHash, make([]byte, txs.HashLength)) != 0 {
+			ws.addTx(txe.TxHash, be.Height, uint64(i))
+		}
 	}
 	bs, err := be.Encode()
 	if err != nil {
