@@ -97,7 +97,7 @@ func buildBlkData(tbls types.EventTables, block *exec.BlockExecution) (types.Eve
 }
 
 // buildTxData builds transaction data from tx stream
-func buildTxData(tbls types.EventTables, txe *exec.TxExecution) (types.EventDataRow, error) {
+func buildTxData(tbls types.EventTables, txe *exec.TxExecution, height uint64) (types.EventDataRow, error) {
 
 	// a fresh new row to store column/value data
 	row := make(map[string]interface{})
@@ -130,7 +130,7 @@ func buildTxData(tbls types.EventTables, txe *exec.TxExecution) (types.EventData
 			return types.EventDataRow{}, fmt.Errorf("Couldn't marshal exception in tx %v", txe)
 		}
 
-		row[tbl.Columns[types.BlockHeightLabel].Name] = fmt.Sprintf("%v", txe.Height)
+		row[tbl.Columns[types.BlockHeightLabel].Name] = fmt.Sprintf("%v", height)
 		row[tbl.Columns[types.TxTxHashLabel].Name] = txe.TxHash.String()
 		row[tbl.Columns[types.TxIndexLabel].Name] = txe.Index
 		row[tbl.Columns[types.TxTxTypeLabel].Name] = txe.TxType.String()
