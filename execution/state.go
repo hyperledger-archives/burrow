@@ -216,9 +216,11 @@ func (s *State) LoadDump(filename string) error {
 				Header: &exec.Header{
 					TxType:    payload.TypeCall,
 					EventType: exec.TypeLog,
+					Index:     uint64(len(tx.Events)),
 					Height:    row.Height,
+					Time:      row.EVMEvent.Time,
 				},
-				Log: row.EVMEvent,
+				Log: row.EVMEvent.Event,
 			})
 		}
 		return nil

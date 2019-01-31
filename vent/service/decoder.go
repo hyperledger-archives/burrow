@@ -26,7 +26,7 @@ func decodeEvent(header *exec.Header, log *exec.LogEvent, abiSpec *abi.AbiSpec) 
 
 	// decode header to get context data for each event
 	data[types.EventNameLabel] = evAbi.Name
-	data[types.BlockHeightLabel] = fmt.Sprintf("%v", header.GetHeight())
+	data[types.BlockTimeLabel] = header.GetTime().String()
 	data[types.EventTypeLabel] = header.GetEventType().String()
 	data[types.TxTxHashLabel] = header.TxHash.String()
 

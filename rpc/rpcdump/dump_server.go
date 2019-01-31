@@ -94,7 +94,11 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 			for i := 0; i < len(tx.Events); i++ {
 				event := tx.Events[i]
 				if event.Log != nil {
-					err := stream.Send(&dump.Dump{Height: event.Header.Height, EVMEvent: event.Log})
+					err := stream.Send(&dump.Dump{
+						Height: event.Header.Height,
+						EVMEvent: &dump.EVMEvent{
+							Event: event.Log,
+							Time:  be.BlockHeader.Time}})
 					if err != nil {
 						return err
 					}

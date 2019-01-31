@@ -81,6 +81,7 @@ const (
 
 	// block related
 	BlockHeightLabel = "height"
+	BlockTimeLabel   = "blockTime"
 	BlockHeaderLabel = "blockHeader"
 	BlockTxExecLabel = "txExecutions"
 

@@ -196,7 +196,7 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 				c.Log.Debug("msg", "Getting transaction", "TxHash", txe.TxHash, "num_events", len(txe.Events))
 
 				if c.Config.DBBlockTx {
-					txRawData, err := buildTxData(tables, txe, resp.Height)
+					txRawData, err := buildTxData(tables, txe)
 					if err != nil {
 						doneCh <- errors.Wrapf(err, "Error building tx raw data")
 					}

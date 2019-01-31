@@ -6,6 +6,7 @@ option go_package = "github.com/hyperledger/burrow/execution/exec";
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "github.com/tendermint/tendermint/abci/types/types.proto";
+import "google/protobuf/timestamp.proto";
 
 import "errors.proto";
 import "names.proto";
@@ -65,6 +66,8 @@ message Header {
     uint64 Index = 6;
     // If event is exception
     errors.Exception Exception = 7;
+    // BlockTime at with time event was emitted
+    google.protobuf.Timestamp Time = 8 [(gogoproto.nullable)=false, (gogoproto.stdtime)=true];
 }
 
 message Event {
