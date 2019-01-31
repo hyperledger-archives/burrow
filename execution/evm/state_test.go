@@ -6,12 +6,13 @@ import (
 	"github.com/hyperledger/burrow/acm/state"
 	"github.com/stretchr/testify/require"
 
+	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestState_PushError(t *testing.T) {
-	st := NewState(newAppState())
+	st := NewState(newAppState(), newBlockchainInfo())
 	// This will be a wrapped nil - it should not register as first error
 	var ex errors.CodedError = (*errors.Exception)(nil)
 	st.PushError(ex)
@@ -22,14 +23,14 @@ func TestState_PushError(t *testing.T) {
 }
 
 func TestState_CreateAccount(t *testing.T) {
-	st := NewState(newAppState())
+	st := NewState(newAppState(), newBlockchainInfo())
 	address := newAddress("frogs")
 	st.CreateAccount(address)
 	require.Nil(t, st.Error())
 	st.CreateAccount(address)
 	assertErrorCode(t, errors.ErrorCodeDuplicateAddress, st.Error())
 
-	st = NewState(newAppState())
+	st = NewState(newAppState(), newBlockchainInfo())
 	st.CreateAccount(address)
 	require.Nil(t, st.Error())
 	st.InitCode(address, []byte{1, 2, 3})
@@ -38,7 +39,7 @@ func TestState_CreateAccount(t *testing.T) {
 
 func TestState_Sync(t *testing.T) {
 	backend := state.NewCache(newAppState())
-	st := NewState(backend)
+	st := NewState(backend, newBlockchainInfo())
 	address := newAddress("frogs")
 
 	st.CreateAccount(address)
@@ -54,7 +55,7 @@ func TestState_Sync(t *testing.T) {
 }
 
 func TestState_NewCache(t *testing.T) {
-	st := NewState(newAppState())
+	st := NewState(newAppState(), newBlockchainInfo())
 	address := newAddress("frogs")
 
 	cache := st.NewCache()
@@ -76,4 +77,8 @@ func TestState_NewCache(t *testing.T) {
 	require.Nil(t, st.Error())
 	cache.AddToBalance(address, amt)
 	assertErrorCode(t, errors.ErrorCodeIllegalWrite, cache.Error())
+}
+
+func newBlockchainInfo() *bcm.Blockchain {
+	return &bcm.Blockchain{}
 }

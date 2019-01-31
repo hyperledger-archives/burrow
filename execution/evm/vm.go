@@ -612,8 +612,24 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			vm.Debugf(" => [%v, %v, %v] %X\n", memOff, outputOff, length, returnData)
 
 		case BLOCKHASH: // 0x40
-			stack.Push(Zero256)
-			vm.Debugf(" => 0x%X (NOT SUPPORTED)\n", stack.Peek().Bytes())
+			blockNumber := stack.PopU64()
+
+			if blockNumber > vm.params.BlockHeight {
+				vm.Debugf(" => attempted to get block hash of a non-existent block: %v", blockNumber)
+				callState.PushError(errors.ErrorCodeInvalidBlockNumber)
+			} else if vm.params.BlockHeight-blockNumber > 256 {
+				vm.Debugf(" => attempted to get block hash of a block outside of allowed range: %v", blockNumber)
+				callState.PushError(errors.ErrorCodeBlockNumberOutOfRange)
+			} else {
+				blockHash, err := callState.GetBlockHash(blockNumber)
+				if err != nil {
+					vm.Debugf(" => error attempted to get block hash: %v, %v", blockNumber, err)
+					callState.PushError(errors.ErrorCodeInvalidBlockNumber)
+				} else {
+					stack.Push(blockHash)
+					vm.Debugf(" => 0x%X\n", blockHash)
+				}
+			}
 
 		case COINBASE: // 0x41
 			stack.Push(Zero256)

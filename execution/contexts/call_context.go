@@ -130,7 +130,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		callee  crypto.Address = crypto.ZeroAddress // initialized below
 		code    []byte         = nil
 		ret     []byte         = nil
-		txCache                = evm.NewState(ctx.StateWriter, state.Named("TxCache"))
+		txCache                = evm.NewState(ctx.StateWriter, ctx.Tip, state.Named("TxCache"))
 		params                 = evm.Params{
 			BlockHeight: ctx.Tip.LastBlockHeight(),
 			BlockHash:   binary.LeftPadWord256(ctx.Tip.LastBlockHash()),

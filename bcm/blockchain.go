@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/hyperledger/burrow/acm/validator"
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	amino "github.com/tendermint/go-amino"
@@ -46,6 +47,8 @@ type BlockchainInfo interface {
 	Validators() validator.IterableReader
 	ValidatorsHistory() (currentSet *validator.Set, deltas []*validator.Set, height uint64)
 	NumValidators() int
+	// GetBlockHash returns	hash of the specific block
+	GetBlockHash(blockNumber uint64) (binary.Word256, error)
 }
 
 type Blockchain struct {
@@ -61,6 +64,7 @@ type Blockchain struct {
 	appHashAfterLastBlock []byte
 	validatorCache        *validator.Ring
 	validatorCheckCache   *validator.Ring
+	BlockHashProvider     func(blockNumber uint64) (binary.Word256, error)
 }
 
 var _ BlockchainInfo = &Blockchain{}
@@ -295,4 +299,8 @@ func (bc *Blockchain) NumValidators() int {
 	bc.RLock()
 	defer bc.RUnlock()
 	return bc.validatorCache.CurrentSet().Count()
+}
+
+func (bc *Blockchain) GetBlockHash(blockHeight uint64) (binary.Word256, error) {
+	return bc.BlockHashProvider(blockHeight)
 }

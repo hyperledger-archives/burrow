@@ -76,7 +76,7 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	}
 	require.NoError(t, st.UpdateAccount(caller))
 	require.NoError(t, st.UpdateAccount(grantee))
-	cache := NewState(st)
+	cache := NewState(st, newBlockchainInfo())
 
 	function, err := contract.FunctionByName("addRole")
 	if err != nil {

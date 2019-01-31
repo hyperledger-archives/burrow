@@ -149,6 +149,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 			}
 		}
 	}
+	kern.Blockchain.BlockHashProvider = kern.State.GetBlockHash
 
 	kern.Logger.InfoMsg("State loading successful")
 

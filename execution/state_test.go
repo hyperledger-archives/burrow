@@ -73,6 +73,11 @@ func TestWriteState_AddBlock(t *testing.T) {
 		return nil
 	})
 	require.NoError(t, err)
+
+	be, err := s.GetBlock(height)
+	require.NoError(t, err)
+	require.NotNil(t, be)
+	require.Equal(t, height, be.Height)
 }
 
 func mkBlock(height, numTxs, events uint64) *exec.BlockExecution {

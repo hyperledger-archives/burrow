@@ -1,0 +1,1 @@
+* tests BLOCKHASH op code
