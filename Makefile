@@ -9,10 +9,6 @@ SHELL := /bin/bash
 REPO := $(shell pwd)
 GOFILES_NOVENDOR := $(shell go list -f "{{.Dir}}" ./...)
 PACKAGES_NOVENDOR := $(shell go list ./...)
-# Bosmarmot integration testing
-BOSMARMOT_PROJECT := github.com/monax/bosmarmot
-BOSMARMOT_GOPATH := ${REPO}/.gopath_bos
-BOSMARMOT_CHECKOUT := ${BOSMARMOT_GOPATH}/src/${BOSMARMOT_PROJECT}
 
 # Protobuf generated go files
 PROTO_FILES = $(shell find . -path ./vendor -prune -o -path ./.gopath_bos -prune -o -type f -name '*.proto' -print)
@@ -122,13 +118,22 @@ build:	check build_burrow
 .PHONY: build_race
 build_race:	check build_race_db
 
-# build burrow
+# build burrow and vent
 .PHONY: build_burrow
 build_burrow: commit_hash
 	go build -ldflags "-extldflags '-static' \
 	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt) \
-	-X github.com/hyperledger/burrow/project.date=$(shell date -I)" \
+	-X github.com/hyperledger/burrow/project.date=$(shell date '+%Y-%m-%d')" \
 	-o ${REPO}/bin/burrow ./cmd/burrow
+
+# With the sqlite tag - enabling Vent sqlite adapter support, but building a CGO binary
+.PHONY: build_burrow_sqlite
+build_burrow_sqlite: commit_hash
+	go build -tags sqlite \
+	 -ldflags "-extldflags '-static' \
+	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt) \
+	-X github.com/hyperledger/burrow/project.date=$(shell date -I)" \
+	-o ${REPO}/bin/burrow-vent-sqlite ./cmd/burrow
 
 .PHONY: install_burrow
 install_burrow: build_burrow
@@ -139,14 +144,6 @@ install_burrow: build_burrow
 build_race_db:
 	go build -race -o ${REPO}/bin/burrow ./cmd/burrow
 
-# Get the Bosmarmot code
-.PHONY: bos
-bos: ./scripts/deps/bos.sh
-	scripts/git_get_revision.sh \
-	https://${BOSMARMOT_PROJECT}.git \
-	${BOSMARMOT_CHECKOUT} \
-	$(shell ./scripts/deps/bos.sh)
-
 ### Build docker images for github.com/hyperledger/burrow
 
 # build docker image for burrow
@@ -155,7 +152,6 @@ docker_build: check commit_hash
 	@scripts/build_tool.sh
 
 ### Testing github.com/hyperledger/burrow
-
 
 # Solidity fixtures
 %.sol.go: %.sol
@@ -172,29 +168,29 @@ test: check bin/solc
 
 .PHONY: test_keys
 test_keys: build_burrow
-	burrow_bin="${REPO}/bin/burrow" keys/test.sh
+	burrow_bin="${REPO}/bin/burrow" tests/keys_server/test.sh
 
-rpc/test/strange_loop.go: integration/rpctest
-	@rpc/test/strange_loop.sh
+.PHONY:	test_integration_vent
+test_integration_vent:
+	# Include sqlite adapter with tests - will build with CGO but that's probably fine
+	go test -v -tags 'integration sqlite' ./vent/...
+
+.PHONY:	test_integration_vent_postgres
+test_integration_vent_postgres:
+	docker-compose run burrow make test_integration_vent
+
+.PHONY: test_restore
+test_restore: build_burrow bin/solc
+	@tests/scripts/bin_wrapper.sh tests/dump/test.sh
 
 # Go will attempt to run separate packages in parallel
 .PHONY: test_integration
-test_integration: test_keys test_deploy
+test_integration: test_keys test_deploy test_integration_vent test_restore
 	@go test -v -tags integration ./integration/...
 
 .PHONY: test_deploy
 test_deploy: bin/solc
 	@tests/scripts/bin_wrapper.sh tests/deploy.sh
-
-# Run integration test from bosmarmot (separated from other integration tests so we can
-# make exception when this test fails when we make a breaking change in Burrow)
-.PHONY: test_integration_bosmarmot
-test_integration_bosmarmot: bos build_burrow
-	cd "${BOSMARMOT_CHECKOUT}" &&\
-	make npm_install && \
-	GOPATH="${BOSMARMOT_GOPATH}" \
-	burrow_bin="${REPO}/bin/burrow" \
-	make test_burrow_js_no_burrow
 
 bin/solc: ./tests/scripts/deps/solc.sh
 	@mkdir -p bin

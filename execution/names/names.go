@@ -85,7 +85,7 @@ type ReaderWriter interface {
 }
 
 type Iterable interface {
-	IterateNames(consumer func(*Entry) (stop bool)) (stopped bool, err error)
+	IterateNames(consumer func(*Entry) error) (err error)
 }
 
 type IterableReader interface {

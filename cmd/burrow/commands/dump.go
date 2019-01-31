@@ -1,103 +1,107 @@
 package commands
 
 import (
+	"context"
 	"encoding/json"
+	"io"
 	"os"
-	"os/signal"
+	"time"
 
-	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/execution"
 
-	"github.com/hyperledger/burrow/forensics"
-	"github.com/hyperledger/burrow/txs"
-	cli "github.com/jawher/mow.cli"
+	"github.com/hyperledger/burrow/rpc/rpcdump"
+	amino "github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/libs/db"
+
+	cli "github.com/jawher/mow.cli"
+	"google.golang.org/grpc"
 )
 
+var cdc = amino.NewCodec()
+
 func Dump(output Output) func(cmd *cli.Cmd) {
-	return func(dump *cli.Cmd) {
-		configOpt := dump.StringOpt("c config", "", "Use the a specified burrow config file")
+	return func(cmd *cli.Cmd) {
+		chainURLOpt := cmd.StringOpt("u chain-url", "127.0.0.1:10997", "chain-url to be used in IP:PORT format")
+		heightOpt := cmd.IntOpt("h height", 0, "Block height to dump to, defaults to latest block height")
+		filename := cmd.StringArg("FILE", "", "Save dump here")
+		useJSON := cmd.BoolOpt("j json", false, "Output in json")
 
-		var explorer *forensics.BlockExplorer
+		s := execution.NewState(db.NewMemDB())
 
-		dump.Before = func() {
-			conf, err := obtainBurrowConfig(*configOpt, "")
+		cmd.Action = func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			var opts []grpc.DialOption
+			opts = append(opts, grpc.WithInsecure())
+			conn, err := grpc.Dial(*chainURLOpt, opts...)
 			if err != nil {
-				output.Fatalf("Could not obtain config: %v", err)
+				output.Fatalf("failed to connect: %v", err)
+				return
 			}
-			tmConf := conf.Tendermint.TendermintConfig()
+			dc := rpcdump.NewDumpClient(conn)
 
-			explorer = forensics.NewBlockExplorer(db.DBBackendType(tmConf.DBBackend), tmConf.DBDir())
+			dump, err := dc.GetDump(ctx, &rpcdump.GetDumpParam{Height: uint64(*heightOpt)})
+			if err != nil {
+				output.Fatalf("failed to retrieve dump: %v", err)
+				return
+			}
+
+			f, err := os.OpenFile(*filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+			if err != nil {
+				output.Fatalf("%s: failed to save dump: %v", *filename, err)
+				return
+			}
+
+			_, _, err = s.Update(func(ws execution.Updatable) error {
+				for {
+					resp, err := dump.Recv()
+					if err == io.EOF {
+						break
+					}
+					if err != nil {
+						output.Fatalf("failed to recv dump: %v", err)
+						return err
+					}
+
+					// update our temporary state
+					if resp.Account != nil {
+						ws.UpdateAccount(resp.Account)
+					}
+					if resp.AccountStorage != nil {
+						for _, storage := range resp.AccountStorage.Storage {
+							ws.SetStorage(resp.AccountStorage.Address, storage.Key, storage.Value)
+						}
+					}
+					if resp.Name != nil {
+						ws.UpdateName(resp.Name)
+					}
+
+					var bs []byte
+					if *useJSON {
+						bs, err = json.Marshal(resp)
+						if bs != nil {
+							bs = append(bs, []byte("\n")...)
+						}
+					} else {
+						bs, err = cdc.MarshalBinaryLengthPrefixed(resp)
+					}
+					if err != nil {
+						output.Fatalf("failed to marshall dump: %v", *filename, err)
+					}
+
+					n, err := f.Write(bs)
+					if err == nil && n < len(bs) {
+						output.Fatalf("%s: failed to save dump: %v", *filename, err)
+					}
+				}
+
+				return nil
+			})
+
+			if err := f.Close(); err != nil {
+				output.Fatalf("%s: failed to save dump: %v", *filename, err)
+			}
 		}
-
-		dump.Command("blocks", "dump blocks to stdout", func(cmd *cli.Cmd) {
-			rangeArg := cmd.StringArg("RANGE", "", "Range as START_HEIGHT:END_HEIGHT where omitting "+
-				"either endpoint implicitly describes the start/end and a negative index counts back from the last block")
-
-			cmd.Spec = "[RANGE]"
-
-			cmd.Action = func() {
-				start, end, err := parseRange(*rangeArg)
-
-				sigCh := make(chan os.Signal, 1)
-				signal.Notify(sigCh)
-				_, err = explorer.Blocks(start, end,
-					func(block *forensics.Block) (stop bool) {
-						bs, err := json.Marshal(block)
-						if err != nil {
-							output.Fatalf("Could not serialise block: %v", err)
-						}
-						output.Printf(string(bs))
-						select {
-						case <-sigCh:
-							return true
-						default:
-							return false
-						}
-					})
-				if err != nil {
-					output.Fatalf("Error iterating over blocks: %v", err)
-				}
-			}
-		})
-
-		dump.Command("txs", "dump transactions to stdout", func(cmd *cli.Cmd) {
-			rangeArg := cmd.StringArg("RANGE", "", "Range as START_HEIGHT:END_HEIGHT where omitting "+
-				"either endpoint implicitly describes the start/end and a negative index counts back from the last block")
-
-			cmd.Spec = "[RANGE]"
-
-			cmd.Action = func() {
-				start, end, err := parseRange(*rangeArg)
-
-				_, err = explorer.Blocks(start, end,
-					func(block *forensics.Block) (stop bool) {
-						stopped, err := block.Transactions(func(txEnv *txs.Envelope) (stop bool) {
-							wrapper := struct {
-								Height int64
-								TxHash binary.HexBytes
-								Tx     *txs.Envelope
-							}{
-								Height: block.Height,
-								TxHash: txEnv.Tx.Hash(),
-								Tx:     txEnv,
-							}
-							bs, err := json.Marshal(wrapper)
-							if err != nil {
-								output.Fatalf("Could not deserialise transaction: %v", err)
-							}
-							output.Printf(string(bs))
-							return false
-						})
-						if err != nil {
-							output.Fatalf("Error iterating over transactions: %v", err)
-						}
-						// If we stopped transactions stop everything
-						return stopped
-					})
-				if err != nil {
-					output.Fatalf("Error iterating over blocks: %v", err)
-				}
-			}
-		})
 	}
 }

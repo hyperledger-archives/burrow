@@ -15,10 +15,17 @@
 package execution
 
 import (
+	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"sync"
 
+	"github.com/hyperledger/burrow/txs"
+
+	"github.com/hyperledger/burrow/dump"
 	"github.com/hyperledger/burrow/txs/payload"
 
 	amino "github.com/tendermint/go-amino"
@@ -63,10 +70,12 @@ var (
 	// TODO: implement content-addressing of code and optionally blocks (to allow reference to block to be stored in state tree)
 	//codeKeyFormat   = storage.NewMustKeyFormat("c", sha256.Size)
 	//blockKeyFormat  = storage.NewMustKeyFormat("b", sha256.Size)
-	txKeyFormat = storage.NewMustKeyFormat("b", tmhash.Size)
+	txKeyFormat = storage.NewMustKeyFormat("b", txs.HashLength)
 	// Binding between apphash and version stto
 	commitKeyFormat = storage.NewMustKeyFormat("v", uint64Length)
 )
+
+var cdc = amino.NewCodec()
 
 // Implements account and blockchain state
 var _ state.IterableReader = &State{}
@@ -76,6 +85,7 @@ var _ Updatable = &writeState{}
 type Updatable interface {
 	state.Writer
 	names.Writer
+	proposal.Writer
 	AddBlock(blockExecution *exec.BlockExecution) error
 }
 
@@ -99,27 +109,35 @@ type State struct {
 	height       uint64
 	accountStats state.AccountStats
 	// Values not reassigned
-	sync.RWMutex
+	sync.Mutex
+	StateTree
 	writeState *writeState
 	db         dbm.DB
 	cacheDB    *storage.CacheDB
-	tree       *storage.RWTree
 	refs       storage.KVStore
 	codec      *amino.Codec
+}
+
+type StateTree struct {
+	tree *storage.RWTree
+}
+
+func newStateTree(cacheDB *storage.CacheDB) StateTree {
+	return StateTree{tree: storage.NewRWTree(storage.NewPrefixDB(cacheDB, treePrefix), defaultCacheCapacity)}
 }
 
 // Create a new State object
 func NewState(db dbm.DB) *State {
 	// We collapse all db operations into a single batch committed by save()
 	cacheDB := storage.NewCacheDB(db)
-	tree := storage.NewRWTree(storage.NewPrefixDB(cacheDB, treePrefix), defaultCacheCapacity)
+	statetree := newStateTree(cacheDB)
 	refs := storage.NewPrefixDB(cacheDB, refsPrefix)
 	s := &State{
-		db:      db,
-		cacheDB: cacheDB,
-		tree:    tree,
-		refs:    refs,
-		codec:   amino.NewCodec(),
+		db:        db,
+		cacheDB:   cacheDB,
+		StateTree: statetree,
+		refs:      refs,
+		codec:     amino.NewCodec(),
 	}
 
 	s.writeState = &writeState{state: s}
@@ -128,10 +146,6 @@ func NewState(db dbm.DB) *State {
 
 // Make genesis state from GenesisDoc and save to DB
 func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error) {
-	if len(genesisDoc.Validators) == 0 {
-		return nil, fmt.Errorf("the genesis file has no validators")
-	}
-
 	s := NewState(db)
 
 	// Make accounts state tree
@@ -169,6 +183,93 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 	return s, nil
 }
 
+func (s *State) LoadDump(filename string) error {
+	f, err := os.OpenFile(filename, os.O_RDONLY, 0644)
+	if err != nil {
+		return err
+	}
+
+	tx := exec.TxExecution{
+		TxType: payload.TypeCall,
+		TxHash: make([]byte, txs.HashLength),
+	}
+
+	apply := func(row dump.Dump) error {
+		if row.Account != nil {
+			if row.Account.Address != acm.GlobalPermissionsAddress {
+				return s.writeState.UpdateAccount(row.Account)
+			}
+		}
+		if row.AccountStorage != nil {
+			for _, storage := range row.AccountStorage.Storage {
+				err := s.writeState.SetStorage(row.AccountStorage.Address, storage.Key, storage.Value)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		if row.Name != nil {
+			return s.writeState.UpdateName(row.Name)
+		}
+		if row.EVMEvent != nil {
+			tx.Events = append(tx.Events, &exec.Event{
+				Header: &exec.Header{
+					TxType:    payload.TypeCall,
+					EventType: exec.TypeLog,
+					Height:    row.Height,
+				},
+				Log: row.EVMEvent,
+			})
+		}
+		return nil
+	}
+
+	// first try amino
+	first := true
+
+	for err == nil {
+		var row dump.Dump
+
+		_, err = cdc.UnmarshalBinaryLengthPrefixedReader(f, &row, 0)
+		if err != nil {
+			break
+		}
+
+		first = false
+		err = apply(row)
+	}
+
+	// if we failed at the first row, try json
+	if err != io.EOF && first {
+		err = nil
+		f.Seek(0, 0)
+
+		decoder := json.NewDecoder(f)
+
+		for err == nil {
+			var row dump.Dump
+
+			err = decoder.Decode(&row)
+			if err != nil {
+				break
+			}
+
+			err = apply(row)
+		}
+	}
+
+	s.writeState.AddBlock(&exec.BlockExecution{
+		Height:       0,
+		TxExecutions: []*exec.TxExecution{&tx},
+	})
+
+	if err == io.EOF {
+		return nil
+	}
+
+	return err
+}
+
 // Tries to load the execution state from DB, returns nil with no error if no state found
 func LoadState(db dbm.DB, version int64) (*State, error) {
 	s := NewState(db)
@@ -184,13 +285,13 @@ func LoadState(db dbm.DB, version int64) (*State, error) {
 		return nil, fmt.Errorf("could not load current version of state tree: CommitID: %v", commitID)
 	}
 	// Populate stats. If this starts taking too long, store the value rather than the full scan at startup
-	_, err = s.IterateAccounts(func(acc *acm.Account) (stop bool) {
+	err = s.IterateAccounts(func(acc *acm.Account) error {
 		if len(acc.Code) > 0 {
 			s.accountStats.AccountsWithCode++
 		} else {
 			s.accountStats.AccountsWithoutCode++
 		}
-		return
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -211,6 +312,17 @@ func (s *State) CommitID(version int64) (*CommitID, error) {
 		return nil, fmt.Errorf("could not decode CommitID: %v", err)
 	}
 	return commitID, nil
+}
+
+func (s *State) LoadHeight(height uint64) (*StateTree, error) {
+	tree, err := s.tree.GetImmutableVersion(int64(height))
+	if err != nil {
+		return nil, err
+	}
+
+	return &StateTree{
+		tree,
+	}, nil
 }
 
 // Perform updates to state whilst holding the write lock, allows a commit to hold the write lock across multiple
@@ -253,7 +365,7 @@ func (ws *writeState) commit() ([]byte, int64, error) {
 }
 
 // Returns nil if account does not exist with given address.
-func (s *State) GetAccount(address crypto.Address) (*acm.Account, error) {
+func (s *StateTree) GetAccount(address crypto.Address) (*acm.Account, error) {
 	accBytes := s.tree.Get(accountKeyFormat.Key(address))
 	if accBytes == nil {
 		return nil, nil
@@ -308,26 +420,26 @@ func (ws *writeState) RemoveAccount(address crypto.Address) (err error) {
 	return err
 }
 
-func (s *State) IterateAccounts(consumer func(*acm.Account) (stop bool)) (stopped bool, err error) {
+func (s *StateTree) IterateAccounts(consumer func(*acm.Account) error) (err error) {
 	it := accountKeyFormat.Iterator(s.tree, nil, nil)
 	for it.Valid() {
 		account, err := acm.Decode(it.Value())
 		if err != nil {
-			return true, fmt.Errorf("IterateAccounts could not decode account: %v", err)
+			return fmt.Errorf("IterateAccounts could not decode account: %v", err)
 		}
-		if consumer(account) {
-			return true, nil
+		if err = consumer(account); err != nil {
+			return err
 		}
 		it.Next()
 	}
-	return false, nil
+	return nil
 }
 
 func (s *State) GetAccountStats() state.AccountStats {
 	return s.accountStats
 }
 
-func (s *State) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
+func (s *StateTree) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
 	return binary.LeftPadWord256(s.tree.Get(storageKeyFormat.Key(address, key))), nil
 }
 
@@ -340,26 +452,26 @@ func (ws *writeState) SetStorage(address crypto.Address, key, value binary.Word2
 	return nil
 }
 
-func (s *State) IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
+func (s *StateTree) IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) error) (err error) {
 	it := storageKeyFormat.Fix(address).Iterator(s.tree, nil, nil)
 	for it.Valid() {
 		key := it.Key()
 		// Note: no left padding should occur unless there is a bug and non-words have been written to this storage tree
 		if len(key) != binary.Word256Length {
-			return true, fmt.Errorf("key '%X' stored for account %s is not a %v-byte word",
+			return fmt.Errorf("key '%X' stored for account %s is not a %v-byte word",
 				key, address, binary.Word256Length)
 		}
 		value := it.Value()
 		if len(value) != binary.Word256Length {
-			return true, fmt.Errorf("value '%X' stored for account %s is not a %v-byte word",
+			return fmt.Errorf("value '%X' stored for account %s is not a %v-byte word",
 				key, address, binary.Word256Length)
 		}
-		if consumer(binary.LeftPadWord256(key), binary.LeftPadWord256(value)) {
-			return true, nil
+		if err = consumer(binary.LeftPadWord256(key), binary.LeftPadWord256(value)); err != nil {
+			return err
 		}
 		it.Next()
 	}
-	return false, nil
+	return nil
 }
 
 // State.storage
@@ -375,7 +487,11 @@ func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
 	ws.state.height = be.Height
 	// Index transactions so they can be retrieved by their TxHash
 	for i, txe := range be.TxExecutions {
-		ws.addTx(txe.TxHash, be.Height, uint64(i))
+		// When restoring a dump, events are loaded without their associated Tx, so their
+		// TxHash wills be all 0.
+		if bytes.Compare(txe.TxHash, make([]byte, txs.HashLength)) != 0 {
+			ws.addTx(txe.TxHash, be.Height, uint64(i))
+		}
 	}
 	bs, err := be.Encode()
 	if err != nil {
@@ -415,20 +531,20 @@ func (s *State) GetBlock(height uint64) (*exec.BlockExecution, error) {
 	return exec.DecodeBlockExecution(bs)
 }
 
-func (s *State) GetBlocks(startHeight, endHeight uint64, consumer func(*exec.BlockExecution) (stop bool)) (stopped bool, err error) {
+func (s *State) GetBlocks(startHeight, endHeight uint64, consumer func(*exec.BlockExecution) error) (err error) {
 	kf := blockRefKeyFormat
 	it := kf.Iterator(s.refs, kf.Suffix(startHeight), kf.Suffix(endHeight))
 	for it.Valid() {
 		block, err := exec.DecodeBlockExecution(it.Value())
 		if err != nil {
-			return true, fmt.Errorf("error unmarshalling ExecutionEvent in GetEvents: %v", err)
+			return fmt.Errorf("error unmarshalling BlockExecution in GetBlocks: %v", err)
 		}
-		if consumer(block) {
-			return true, nil
+		if err = consumer(block); err != nil {
+			return err
 		}
 		it.Next()
 	}
-	return false, nil
+	return nil
 }
 
 func (s *State) Hash() []byte {
@@ -441,7 +557,7 @@ func (s *State) Hash() []byte {
 
 var _ names.IterableReader = &State{}
 
-func (s *State) GetName(name string) (*names.Entry, error) {
+func (s *StateTree) GetName(name string) (*names.Entry, error) {
 	entryBytes := s.tree.Get(nameKeyFormat.Key(name))
 	if entryBytes == nil {
 		return nil, nil
@@ -464,25 +580,25 @@ func (ws *writeState) RemoveName(name string) error {
 	return nil
 }
 
-func (s *State) IterateNames(consumer func(*names.Entry) (stop bool)) (stopped bool, err error) {
+func (s *StateTree) IterateNames(consumer func(*names.Entry) error) (err error) {
 	it := nameKeyFormat.Iterator(s.tree, nil, nil)
 	for it.Valid() {
 		entry, err := names.DecodeEntry(it.Value())
 		if err != nil {
-			return true, fmt.Errorf("State.IterateNames() could not iterate over names: %v", err)
+			return fmt.Errorf("State.IterateNames() could not iterate over names: %v", err)
 		}
-		if consumer(entry) {
-			return true, nil
+		if err = consumer(entry); err != nil {
+			return err
 		}
 		it.Next()
 	}
-	return false, nil
+	return nil
 }
 
 // Proposal
 var _ proposal.IterableReader = &State{}
 
-func (s *State) GetProposal(proposalHash []byte) (*payload.Ballot, error) {
+func (s *StateTree) GetProposal(proposalHash []byte) (*payload.Ballot, error) {
 	bs := s.tree.Get(proposalKeyFormat.Key(proposalHash))
 	if len(bs) == 0 {
 		return nil, nil
@@ -496,6 +612,7 @@ func (ws *writeState) UpdateProposal(proposalHash []byte, p *payload.Ballot) err
 	if err != nil {
 		return err
 	}
+
 	ws.state.tree.Set(proposalKeyFormat.Key(proposalHash), bs)
 	return nil
 }
@@ -505,21 +622,19 @@ func (ws *writeState) RemoveProposal(proposalHash []byte) error {
 	return nil
 }
 
-func (s *State) IterateProposals(consumer func(proposalHash []byte, proposal *payload.Ballot) (stop bool)) (stopped bool, err error) {
+func (s *StateTree) IterateProposals(consumer func(proposalHash []byte, proposal *payload.Ballot) error) (err error) {
 	it := proposalKeyFormat.Iterator(s.tree, nil, nil)
 	for it.Valid() {
 		entry, err := payload.DecodeBallot(it.Value())
 		if err != nil {
-			return true, fmt.Errorf("State.IterateProposal() could not iterate over proposals: %v", err)
+			return fmt.Errorf("State.IterateProposal() could not iterate over proposals: %v", err)
 		}
-		var proposalHash [sha256.Size]byte
-		proposalKeyFormat.Scan(it.Key(), &proposalHash)
-		if consumer(proposalHash[:], entry) {
-			return true, nil
+		if err = consumer(it.Key(), entry); err != nil {
+			return err
 		}
 		it.Next()
 	}
-	return false, nil
+	return nil
 }
 
 // Creates a copy of the database to the supplied db

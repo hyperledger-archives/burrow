@@ -45,6 +45,8 @@ message TxExecution {
     txs.Receipt Receipt = 9;
     // If execution was an exception
     errors.Exception Exception = 10;
+    // A proposal may contain other transactions
+    repeated TxExecution TxExecutions = 11;
 }
 
 message Header {
@@ -74,7 +76,6 @@ message Event {
     CallEvent Call = 4;
     LogEvent Log = 5;
     GovernAccountEvent GovernAccount = 6;
-    PayloadEvent Payload = 7;
 }
 
 // Could structure this further if needed - sum type of various results relevant to different transaction types
@@ -113,13 +114,6 @@ message InputEvent {
 
 message OutputEvent {
     bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
-}
-
-message PayloadEvent {
-    // Transaction type
-    uint32 TxType = 1[(gogoproto.casttype) = "github.com/hyperledger/burrow/txs/payload.Type"];
-    // Index into BatchTx
-    uint32 Index = 2;
 }
 
 message CallData {

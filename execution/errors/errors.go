@@ -56,6 +56,7 @@ const (
 	ErrorCodeNoInputPermission
 	ErrorCodeInvalidBlockNumber
 	ErrorCodeBlockNumberOutOfRange
+	ErrorCodeAlreadyVoted
 )
 
 func (c Code) ErrorCode() Code {
@@ -146,6 +147,8 @@ func (c Code) String() string {
 		return "Invalid block number"
 	case ErrorCodeBlockNumberOutOfRange:
 		return "Block number out of range"
+	case ErrorCodeAlreadyVoted:
+		return "Vote already registered for this address"
 	default:
 		return "Unknown error"
 	}

@@ -55,17 +55,20 @@ func (qs *queryServer) GetAccount(ctx context.Context, param *GetAccountParam) (
 	return acc, err
 }
 
+func (qs *queryServer) GetStorage(ctx context.Context, param *GetStorageParam) (*StorageValue, error) {
+	val, err := qs.accounts.GetStorage(param.Address, param.Key)
+	return &StorageValue{Value: val}, err
+}
+
 func (qs *queryServer) ListAccounts(param *ListAccountsParam, stream Query_ListAccountsServer) error {
-	qry, err := query.NewBuilder(param.Query).Query()
+	qry, err := query.NewOrEmpty(param.Query)
 	var streamErr error
-	_, err = qs.accounts.IterateAccounts(func(acc *acm.Account) (stop bool) {
+	err = qs.accounts.IterateAccounts(func(acc *acm.Account) error {
 		if qry.Matches(acc.Tagged()) {
-			streamErr = stream.Send(acc)
-			if streamErr != nil {
-				return true
-			}
+			return stream.Send(acc)
+		} else {
+			return nil
 		}
-		return
 	})
 	if err != nil {
 		return err
@@ -83,19 +86,17 @@ func (qs *queryServer) GetName(ctx context.Context, param *GetNameParam) (entry 
 }
 
 func (qs *queryServer) ListNames(param *ListNamesParam, stream Query_ListNamesServer) error {
-	qry, err := query.NewBuilder(param.Query).Query()
+	qry, err := query.NewOrEmpty(param.Query)
 	if err != nil {
 		return err
 	}
 	var streamErr error
-	_, err = qs.nameReg.IterateNames(func(entry *names.Entry) (stop bool) {
+	err = qs.nameReg.IterateNames(func(entry *names.Entry) error {
 		if qry.Matches(entry.Tagged()) {
-			streamErr = stream.Send(entry)
-			if streamErr != nil {
-				return true
-			}
+			return stream.Send(entry)
+		} else {
+			return nil
 		}
-		return
 	})
 	if err != nil {
 		return err
@@ -130,14 +131,12 @@ func (qs *queryServer) GetProposal(ctx context.Context, param *GetProposalParam)
 
 func (qs *queryServer) ListProposals(param *ListProposalsParam, stream Query_ListProposalsServer) error {
 	var streamErr error
-	_, err := qs.proposalReg.IterateProposals(func(hash []byte, ballot *payload.Ballot) (stop bool) {
-		if param.GetProposed() == true || ballot.ProposalState == payload.Ballot_PROPOSED {
-			streamErr = stream.Send(&ProposalResult{Hash: hash, Ballot: ballot})
-			if streamErr != nil {
-				return true
-			}
+	err := qs.proposalReg.IterateProposals(func(hash []byte, ballot *payload.Ballot) error {
+		if param.GetProposed() == false || ballot.ProposalState == payload.Ballot_PROPOSED {
+			return stream.Send(&ProposalResult{Hash: hash, Ballot: ballot})
+		} else {
+			return nil
 		}
-		return
 	})
 	if err != nil {
 		return err

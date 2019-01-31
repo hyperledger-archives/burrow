@@ -57,15 +57,15 @@ func TestWriteState_AddBlock(t *testing.T) {
 		return ws.AddBlock(mkBlock(height, txs, events))
 	})
 	require.NoError(t, err)
-	_, err = s.GetBlocks(height, height+1,
-		func(be *exec.BlockExecution) (stop bool) {
+	err = s.GetBlocks(height, height+1,
+		func(be *exec.BlockExecution) error {
 			for ti := uint64(0); ti < txs; ti++ {
 				for e := uint64(0); e < events; e++ {
 					assert.Equal(t, mkEvent(height, ti, e).Header.TxHash.String(),
 						be.TxExecutions[ti].Events[e].Header.TxHash.String())
 				}
 			}
-			return false
+			return nil
 		})
 	require.NoError(t, err)
 	// non-increasing events

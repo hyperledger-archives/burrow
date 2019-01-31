@@ -1,0 +1,17 @@
+version: "3"
+services:
+  db:
+    image: postgres:11-alpine
+    ports:
+      - 5432
+
+  burrow:
+    image: hyperledger/burrow:ci
+    environment:
+      DB_URL: "postgres://postgres@db:5432/postgres?sslmode=disable"
+    depends_on:
+      - db
+    volumes:
+    - .:/go/src/github.com/hyperledger/burrow
+#    - /var/run/docker.sock:/var/run/docker.sock
+    working_dir: /go/src/github.com/hyperledger/burrow

@@ -71,7 +71,11 @@ func BasePermissionsFromStringList(permissions []string) (BasePermissions, error
 func PermFlagFromStringList(permissions []string) (PermFlag, error) {
 	var permFlag PermFlag
 	for _, perm := range permissions {
-		flag, err := PermStringToFlag(strings.TrimSpace(perm))
+		s := strings.TrimSpace(perm)
+		if s == "" {
+			continue
+		}
+		flag, err := PermStringToFlag(s)
 		if err != nil {
 			return permFlag, err
 		}

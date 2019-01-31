@@ -1,0 +1,20 @@
+jobs:
+
+- name: deployEventsTest
+  deploy:
+      contract: EventsTest.sol
+
+- name: addEvent
+  call:
+      destination: $deployEventsTest
+      function: addEvent
+      data:
+        - foosball!
+        - "the foo"
+
+- name: getName
+  call:
+      destination: $deployEventsTest
+      function: getEventNameAtIndex
+      data:
+        - 0

@@ -110,7 +110,11 @@ func (acc Account) String() string {
 func (acc *Account) Tagged() query.Tagged {
 	return &TaggedAccount{
 		Account: acc,
-		Tagged:  query.MustReflectTags(acc),
+		Tagged: query.MergeTags(query.MustReflectTags(acc, "Address", "Balance", "Sequence", "Code"),
+			query.TagMap{
+				"Permissions": acc.Permissions.Base.ResultantPerms(),
+				"Roles":       acc.Permissions.Roles,
+			}),
 	}
 }
 

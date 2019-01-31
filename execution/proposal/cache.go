@@ -16,19 +16,19 @@ package proposal
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"sort"
 	"sync"
 
 	"github.com/hyperledger/burrow/txs/payload"
-	"github.com/tendermint/tendermint/crypto/tmhash"
 )
 
 // The Cache helps prevent unnecessary IAVLTree updates and garbage generation.
 type Cache struct {
 	sync.RWMutex
 	backend   Reader
-	proposals map[[tmhash.Size]byte]*proposalInfo
+	proposals map[[sha256.Size]byte]*proposalInfo
 }
 
 type proposalInfo struct {
@@ -38,7 +38,7 @@ type proposalInfo struct {
 	updated bool
 }
 
-type ProposalHash [tmhash.Size]byte
+type ProposalHash [sha256.Size]byte
 
 type ProposalHashArray []ProposalHash
 
@@ -69,7 +69,7 @@ var _ Writer = &Cache{}
 func NewCache(backend Reader) *Cache {
 	return &Cache{
 		backend:   backend,
-		proposals: make(map[[tmhash.Size]byte]*proposalInfo),
+		proposals: make(map[[sha256.Size]byte]*proposalInfo),
 	}
 }
 
@@ -156,7 +156,7 @@ func (cache *Cache) Reset(backend Reader) {
 	cache.Lock()
 	defer cache.Unlock()
 	cache.backend = backend
-	cache.proposals = make(map[[tmhash.Size]byte]*proposalInfo)
+	cache.proposals = make(map[[sha256.Size]byte]*proposalInfo)
 }
 
 // Syncs the Cache and Resets it to use Writer as the backend Reader

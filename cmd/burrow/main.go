@@ -41,14 +41,20 @@ func burrow(output commands.Output) *cli.Cli {
 	app.Command("keys", "A tool for doing a bunch of cool stuff with keys",
 		commands.Keys(output))
 
-	app.Command("dump", "Dump objects from an offline Burrow .burrow directory",
-		commands.Dump(output))
+	app.Command("examine", "Dump objects from an offline Burrow .burrow directory",
+		commands.Examine(output))
 
 	app.Command("deploy", "Deploy and test contracts",
 		commands.Deploy(output))
 
 	app.Command("snatives", "Dump Solidity interface contracts for SNatives",
 		commands.Snatives(output))
+
+	app.Command("vent", "Start the Vent EVM event and blocks consumer service to populated databases from smart contracts",
+		commands.Vent(output))
+
+	app.Command("dump", "Dump and restore chain",
+		commands.Dump(output))
 
 	return app
 }

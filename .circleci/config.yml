@@ -26,22 +26,13 @@ jobs:
       - run: make build
 
   test_integration:
-    <<: *defaults
+    machine:
+      working_directory: /go/src/github.com/hyperledger/burrow
+      enabled: true
+      image: circleci/classic:201808-01
     steps:
       - checkout
-      - run: make test_integration
-
-  test_integration_bosmarmot:
-    <<: *defaults
-    steps:
-      - checkout
-      - run: make test_integration_bosmarmot
-      - store_artifacts:
-          path: ./.gopath_bos/src/github.com/monax/bosmarmot/monax/tests/burrow.log
-          destination: burrow.log
-      - store_artifacts:
-          path: ./.gopath_bos/src/github.com/monax/bosmarmot/monax/tests/keys.log
-          destination: keys.log
+      - run: docker-compose run burrow make test_integration
 
   ensure_vendor:
     <<: *defaults
@@ -89,10 +80,6 @@ workflows:
           filters:
             <<: *tags_filters
 
-      - test_integration_bosmarmot:
-          filters:
-            <<: *tags_filters
-
       - ensure_vendor:
           filters:
             <<: *tags_filters
@@ -108,7 +95,6 @@ workflows:
           requires:
           - test
           - test_integration
-          - test_integration_bosmarmot
           filters:
             branches:
               only: develop
@@ -117,7 +103,6 @@ workflows:
           requires:
           - test
           - test_integration
-          - test_integration_bosmarmot
           filters:
             <<: *tags_filters
             branches:

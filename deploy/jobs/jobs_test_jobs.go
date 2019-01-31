@@ -11,10 +11,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, client *def.Client) (string, []*abi.Variable, error) {
+func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, script *def.Playbook, client *def.Client) (string, []*abi.Variable, error) {
 	var queryDataArray []string
 	var err error
-	query.Function, queryDataArray, err = util.PreProcessInputData(query.Function, query.Data, do, client, false)
+	query.Function, queryDataArray, err = util.PreProcessInputData(query.Function, query.Data, do, script, client, false)
 	if err != nil {
 		return "", nil, err
 	}

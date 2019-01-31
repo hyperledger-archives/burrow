@@ -155,11 +155,11 @@ func (s *Service) Account(address crypto.Address) (*ResultAccount, error) {
 
 func (s *Service) Accounts(predicate func(*acm.Account) bool) (*ResultAccounts, error) {
 	accounts := make([]*acm.Account, 0)
-	s.state.IterateAccounts(func(account *acm.Account) (stop bool) {
+	s.state.IterateAccounts(func(account *acm.Account) error {
 		if predicate(account) {
 			accounts = append(accounts, account)
 		}
-		return
+		return nil
 	})
 
 	return &ResultAccounts{
@@ -196,9 +196,9 @@ func (s *Service) DumpStorage(address crypto.Address) (*ResultDumpStorage, error
 		return nil, fmt.Errorf("UnknownAddress: %X", address)
 	}
 	var storageItems []StorageItem
-	s.state.IterateStorage(address, func(key, value binary.Word256) (stop bool) {
+	s.state.IterateStorage(address, func(key, value binary.Word256) error {
 		storageItems = append(storageItems, StorageItem{Key: key.UnpadLeft(), Value: value.UnpadLeft()})
-		return
+		return nil
 	})
 	return &ResultDumpStorage{
 		StorageItems: storageItems,
@@ -256,11 +256,11 @@ func (s *Service) Name(name string) (*ResultName, error) {
 
 func (s *Service) Names(predicate func(*names.Entry) bool) (*ResultNames, error) {
 	var nms []*names.Entry
-	s.nameReg.IterateNames(func(entry *names.Entry) (stop bool) {
+	s.nameReg.IterateNames(func(entry *names.Entry) error {
 		if predicate(entry) {
 			nms = append(nms, entry)
 		}
-		return
+		return nil
 	})
 	return &ResultNames{
 		BlockHeight: s.blockchain.LastBlockHeight(),

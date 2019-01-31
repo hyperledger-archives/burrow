@@ -310,6 +310,10 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 		if err != nil {
 			return err
 		}
+		err = exe.proposalRegCache.Flush(ws, exe.state)
+		if err != nil {
+			return err
+		}
 		err = ws.AddBlock(blockExecution)
 		if err != nil {
 			return err
@@ -344,7 +348,7 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 		"total_validator_power_change", totalPowerChange,
 		"total_validator_flow", totalFlow)
 	if uint64(version) != exe.blockchain.LastBlockHeight() {
-		return nil, fmt.Errorf("state tree version %d does not equal blockchain height %d but their equality "+
+		return nil, fmt.Errorf("state tree version %d does not equal blockchain height %d but that "+
 			"is meant to be a guaranteed invariant", version, exe.blockchain.LastBlockHeight())
 	}
 

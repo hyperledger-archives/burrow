@@ -1,9 +1,9 @@
 package payload
 
 import (
+	"crypto/sha256"
 	"fmt"
 
-	"github.com/hyperledger/burrow/crypto/sha3"
 	amino "github.com/tendermint/go-amino"
 )
 
@@ -52,7 +52,9 @@ func (p *Proposal) Hash() []byte {
 		panic("failed to encode Proposal")
 	}
 
-	return sha3.Sha3(bs)
+	hash := sha256.Sum256(bs)
+
+	return hash[:]
 }
 
 func (p *Proposal) String() string {

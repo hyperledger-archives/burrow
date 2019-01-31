@@ -6,12 +6,14 @@ import (
 	"io"
 	"os"
 
+	"github.com/hyperledger/burrow/txs/payload"
+
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
 	log "github.com/sirupsen/logrus"
 )
 
-func SendJob(send *def.Send, account string, client *def.Client) (string, error) {
+func FormulateSendJob(send *def.Send, account string, client *def.Client) (*payload.SendTx, error) {
 	// Use Default
 	send.Source = useDefault(send.Source, account)
 
@@ -22,15 +24,15 @@ func SendJob(send *def.Send, account string, client *def.Client) (string, error)
 		"amount":      send.Amount,
 	}).Info("Sending Transaction")
 
-	tx, err := client.Send(&def.SendArg{
+	return client.Send(&def.SendArg{
 		Input:    send.Source,
 		Output:   send.Destination,
 		Amount:   send.Amount,
 		Sequence: send.Sequence,
 	})
-	if err != nil {
-		return "", util.ChainErrorHandler(account, err)
-	}
+}
+
+func SendJob(send *def.Send, tx *payload.SendTx, account string, client *def.Client) (string, error) {
 
 	// Sign, broadcast, display
 	txe, err := client.SignAndBroadcast(tx)
@@ -46,7 +48,9 @@ func SendJob(send *def.Send, account string, client *def.Client) (string, error)
 	return txe.Receipt.TxHash.String(), nil
 }
 
-func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, client *def.Client) (string, error) {
+func FormulateRegisterNameJob(name *def.RegisterName, do *def.DeployArgs, account string, client *def.Client) ([]*payload.NameTx, error) {
+	txs := make([]*payload.NameTx, 0)
+
 	// If a data file is given it should be in csv format and
 	// it will be read first. Once the file is parsed and sent
 	// to the chain then a single nameRegTx will be sent if that
@@ -55,7 +59,7 @@ func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, client *def.Cli
 		// open the file and use a reader
 		fileReader, err := os.Open(name.DataFile)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		defer fileReader.Close()
@@ -71,7 +75,7 @@ func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, client *def.Cli
 				break
 			}
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 
 			// Sink the Amount into the third slot in the record if
@@ -89,17 +93,19 @@ func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, client *def.Cli
 				Amount:   record[2],
 				Fee:      name.Fee,
 				Sequence: name.Sequence,
-			}, do, client)
+			}, do, account, client)
 
 			if err != nil {
-				return "", err
+				return nil, err
 			}
+
+			txs = append(txs, r)
 
 			n := fmt.Sprintf("%s:%s", record[0], record[1])
 
 			// TODO: write smarter
-			if err = WriteJobResultCSV(n, r); err != nil {
-				return "", err
+			if err = WriteJobResultCSV(n, r.String()); err != nil {
+				return nil, err
 			}
 		}
 	}
@@ -107,16 +113,24 @@ func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, client *def.Cli
 	// If the data field is populated then there is a single
 	// nameRegTx to send. So do that *now*.
 	if name.Data != "" {
-		return registerNameTx(name, do, client)
-	} else {
-		return "data_file_parsed", nil
+		tx, err := registerNameTx(name, do, account, client)
+		if err != nil {
+			return nil, err
+		}
+		txs = append(txs, tx)
 	}
+
+	if len(txs) == 0 {
+		return nil, fmt.Errorf("nothing to do")
+	}
+
+	return txs, nil
 }
 
 // Runs an individual nametx.
-func registerNameTx(name *def.RegisterName, do *def.DeployArgs, client *def.Client) (string, error) {
+func registerNameTx(name *def.RegisterName, do *def.DeployArgs, account string, client *def.Client) (*payload.NameTx, error) {
 	// Set Defaults
-	name.Source = useDefault(name.Source, do.Package.Account)
+	name.Source = useDefault(name.Source, account)
 	name.Fee = useDefault(name.Fee, do.DefaultFee)
 	name.Amount = useDefault(name.Amount, do.DefaultAmount)
 
@@ -127,7 +141,7 @@ func registerNameTx(name *def.RegisterName, do *def.DeployArgs, client *def.Clie
 		"amount": name.Amount,
 	}).Info("NameReg Transaction")
 
-	tx, err := client.Name(&def.NameArg{
+	return client.Name(&def.NameArg{
 		Input:    name.Source,
 		Sequence: name.Sequence,
 		Name:     name.Name,
@@ -135,24 +149,29 @@ func registerNameTx(name *def.RegisterName, do *def.DeployArgs, client *def.Clie
 		Data:     name.Data,
 		Fee:      name.Fee,
 	})
-	if err != nil {
-		return "", util.ChainErrorHandler(do.Package.Account, err)
-	}
-	// Sign, broadcast, display
-	txe, err := client.SignAndBroadcast(tx)
-	if err != nil {
-		return "", util.ChainErrorHandler(do.Package.Account, err)
-	}
-
-	util.ReadTxSignAndBroadcast(txe, err)
-	if err != nil {
-		return "", err
-	}
-
-	return txe.Receipt.TxHash.String(), nil
 }
 
-func PermissionJob(perm *def.Permission, account string, client *def.Client) (string, error) {
+func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, script *def.Playbook, txs []*payload.NameTx, client *def.Client) (string, error) {
+	var result string
+
+	for _, tx := range txs {
+		// Sign, broadcast, display
+		txe, err := client.SignAndBroadcast(tx)
+		if err != nil {
+			return "", util.ChainErrorHandler(script.Account, err)
+		}
+
+		util.ReadTxSignAndBroadcast(txe, err)
+		if err != nil {
+			return "", err
+		}
+
+		result = txe.Receipt.TxHash.String()
+	}
+	return result, nil
+}
+
+func FormulatePermissionJob(perm *def.Permission, account string, client *def.Client) (*payload.PermsTx, error) {
 	// Set defaults
 	perm.Source = useDefault(perm.Source, account)
 
@@ -162,7 +181,7 @@ func PermissionJob(perm *def.Permission, account string, client *def.Client) (st
 	// Populate the transaction appropriately
 
 	// Formulate tx
-	tx, err := client.Permissions(&def.PermArg{
+	return client.Permissions(&def.PermArg{
 		Input:      perm.Source,
 		Sequence:   perm.Sequence,
 		Action:     perm.Action,
@@ -171,10 +190,9 @@ func PermissionJob(perm *def.Permission, account string, client *def.Client) (st
 		Role:       perm.Role,
 		Value:      perm.Value,
 	})
-	if err != nil {
-		return "", util.ChainErrorHandler(account, err)
-	}
+}
 
+func PermissionJob(perm *def.Permission, account string, tx *payload.PermsTx, client *def.Client) (string, error) {
 	log.Debug("What are the args returned in transaction: ", tx.PermArgs)
 
 	// Sign, broadcast, display

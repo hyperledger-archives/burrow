@@ -2,8 +2,8 @@
 # ----------------------------------------------------------
 # PURPOSE
 
-# This is the test runner for bosmarmot. It is responsible for starting up a single node burrow test chain and tearing
-# it down afterwards
+# This is the test runner for burrow integration tests.
+# It is responsible for starting up a single node burrow test chain and tearing it down afterwards.
 
 # ----------------------------------------------------------
 # REQUIREMENTS
