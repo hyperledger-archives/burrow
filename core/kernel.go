@@ -151,8 +151,6 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 			}
 		}
 	}
-	kern.Blockchain.BlockHashProvider = kern.State.GetBlockHash
-
 	kern.Logger.InfoMsg("State loading successful")
 
 	txCodec := txs.NewAminoCodec()
@@ -186,6 +184,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	if err != nil {
 		return nil, err
 	}
+	kern.Blockchain.SetBlockStore(bcm.NewBlockStore(nodeView.BlockStore()))
 	kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, kern.State, nodeView, kern.Logger)
 
 	kern.Launchers = []process.Launcher{

@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/config/source"
-	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
@@ -68,11 +67,11 @@ func TestCriticalBlock(t *testing.T) {
 	goodState := getState(t, goodDir, criticalBlock)
 	require.Equal(t, goodState.Hash(), badState.Hash())
 	fmt.Printf("good: %X, bad: %X\n", goodState.Hash(), badState.Hash())
-	_, _, err := badState.Update(func(up execution.Updatable) error {
+	_, _, err := badState.Update(func(up state.Updatable) error {
 		return nil
 	})
 	require.NoError(t, err)
-	_, _, err = goodState.Update(func(up execution.Updatable) error {
+	_, _, err = goodState.Update(func(up state.Updatable) error {
 		return nil
 	})
 	require.NoError(t, err)

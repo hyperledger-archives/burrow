@@ -22,7 +22,6 @@ import (
 
 	"sync"
 
-	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	amino "github.com/tendermint/go-amino"
@@ -41,7 +40,7 @@ type BlockchainInfo interface {
 	LastBlockHash() []byte
 	AppHashAfterLastBlock() []byte
 	// GetBlockHash returns	hash of the specific block
-	GetBlockHash(blockNumber uint64) (binary.Word256, error)
+	GetBlockHash(blockNumber uint64) ([]byte, error)
 }
 
 type Blockchain struct {
@@ -55,7 +54,7 @@ type Blockchain struct {
 	lastBlockHash         []byte
 	lastCommitTime        time.Time
 	appHashAfterLastBlock []byte
-	BlockHashProvider     func(blockNumber uint64) (binary.Word256, error)
+	blockStore            *BlockStore
 }
 
 var _ BlockchainInfo = &Blockchain{}
@@ -220,6 +219,21 @@ func (bc *Blockchain) AppHashAfterLastBlock() []byte {
 	return bc.appHashAfterLastBlock
 }
 
-func (bc *Blockchain) GetBlockHash(blockHeight uint64) (binary.Word256, error) {
-	return bc.BlockHashProvider(blockHeight)
+// Tendermint block access
+
+func (bc *Blockchain) SetBlockStore(bs *BlockStore) {
+	bc.blockStore = bs
+}
+
+func (bc *Blockchain) GetBlockHash(height uint64) ([]byte, error) {
+	const errHeader = "GetBlockHash():"
+	if bc == nil {
+		return nil, fmt.Errorf("%s could not get block hash because Blockchain has not been given access to "+
+			"tendermint BlockStore", errHeader)
+	}
+	blockMeta, err := bc.blockStore.BlockMeta(int64(height))
+	if err != nil {
+		return nil, fmt.Errorf("%s could not get BlockMeta: %v", errHeader, err)
+	}
+	return blockMeta.Header.Hash(), nil
 }
