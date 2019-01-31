@@ -86,7 +86,7 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 		return err
 	}
 
-	err = ds.state.GetBlocks(0, height, func(be *exec.BlockExecution) error {
+	return ds.state.GetBlocks(0, height, func(be *exec.BlockExecution) error {
 		if be.TxExecutions == nil {
 			return nil
 		}
@@ -103,6 +103,4 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 		}
 		return nil
 	})
-
-	return nil
 }
