@@ -15,16 +15,20 @@ type EventType uint32
 
 // Execution event types
 const (
-	TypeCall           = EventType(0x00)
-	TypeLog            = EventType(0x01)
-	TypeAccountInput   = EventType(0x02)
-	TypeAccountOutput  = EventType(0x03)
-	TypeTxExecution    = EventType(0x04)
-	TypeBlockExecution = EventType(0x05)
-	TypeGovernAccount  = EventType(0x06)
+	TypeUnknown EventType = iota
+	TypeCall
+	TypeLog
+	TypeAccountInput
+	TypeAccountOutput
+	TypeTxExecution
+	TypeBlockExecution
+	TypeGovernAccount
+	TypeBeginBlock
+	TypeEndBlock
 )
 
 var nameFromType = map[EventType]string{
+	TypeUnknown:        "UnknownEvent",
 	TypeCall:           "CallEvent",
 	TypeLog:            "LogEvent",
 	TypeAccountInput:   "AccountInputEvent",
@@ -32,6 +36,8 @@ var nameFromType = map[EventType]string{
 	TypeTxExecution:    "TxExecutionEvent",
 	TypeBlockExecution: "BlockExecutionEvent",
 	TypeGovernAccount:  "GovernAccountEvent",
+	TypeBeginBlock:     "BeginBlockEvent",
+	TypeEndBlock:       "EndBlockEvent",
 }
 
 var typeFromName = make(map[string]EventType)

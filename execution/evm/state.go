@@ -271,11 +271,11 @@ func (st *State) RemoveRole(address crypto.Address, role string) bool {
 }
 
 func (st *State) GetBlockHash(blockNumber uint64) (binary.Word256, error) {
-	hash, err := st.blockchainInfo.GetBlockHash(blockNumber)
+	header, err := st.blockchainInfo.GetBlockHeader(blockNumber)
 	if err != nil {
 		st.PushError(err)
 	}
-	return binary.LeftPadWord256(hash), nil
+	return binary.LeftPadWord256(header.Hash()), nil
 }
 
 // Helpers

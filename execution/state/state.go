@@ -15,21 +15,23 @@
 package state
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"sync"
 
-	"github.com/hyperledger/burrow/logging"
-
-	"github.com/hyperledger/burrow/acm/validator"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
+	"github.com/hyperledger/burrow/acm/validator"
+	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/execution/proposal"
 	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/storage"
+	"github.com/hyperledger/burrow/txs"
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
@@ -45,6 +47,40 @@ const (
 var _ acmstate.IterableReader = &State{}
 var _ names.IterableReader = &State{}
 var _ Updatable = &writeState{}
+
+type KeyFormatStore struct {
+	Account   *storage.MustKeyFormat
+	Storage   *storage.MustKeyFormat
+	Name      *storage.MustKeyFormat
+	Proposal  *storage.MustKeyFormat
+	Validator *storage.MustKeyFormat
+	Event     *storage.MustKeyFormat
+	TxHash    *storage.MustKeyFormat
+}
+
+var keys = KeyFormatStore{
+	// AccountAddress -> Account
+	Account: storage.NewMustKeyFormat("a", crypto.AddressLength),
+	// AccountAddress, Key -> Value
+	Storage: storage.NewMustKeyFormat("s", crypto.AddressLength, binary.Word256Length),
+	// Name -> Entry
+	Name: storage.NewMustKeyFormat("n", storage.VariadicSegmentLength),
+	// ProposalHash -> Proposal
+	Proposal: storage.NewMustKeyFormat("p", sha256.Size),
+	// ValidatorAddress -> Power
+	Validator: storage.NewMustKeyFormat("v", crypto.AddressLength),
+	// Height, EventIndex -> BlockEvent
+	Event: storage.NewMustKeyFormat("t", uint64Length, uint64Length),
+	// TxHash -> TxHeight, TxIndex
+	TxHash: storage.NewMustKeyFormat("th", txs.HashLength),
+}
+
+func init() {
+	err := storage.EnsureKeyFormatStore(keys)
+	if err != nil {
+		panic(fmt.Errorf("KeyFormatStore is invalid: %v", err))
+	}
+}
 
 type Updatable interface {
 	acmstate.Writer

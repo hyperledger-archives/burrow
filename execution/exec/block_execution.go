@@ -3,17 +3,15 @@ package exec
 import (
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/txs"
-	abciTypes "github.com/tendermint/tendermint/abci/types"
 )
 
 func EventStringBlockExecution(height uint64) string { return fmt.Sprintf("Execution/Block/%v", height) }
 
-func DecodeBlockExecution(bs []byte) (*BlockExecution, error) {
-	be := new(BlockExecution)
+func DecodeBlockEvent(bs []byte) (*BlockEvent, error) {
+	be := new(BlockEvent)
 	err := cdc.UnmarshalBinaryBare(bs, be)
 	if err != nil {
 		return nil, err
@@ -21,7 +19,41 @@ func DecodeBlockExecution(bs []byte) (*BlockExecution, error) {
 	return be, nil
 }
 
+// Write out TxExecutions parenthetically
+func (be *BlockExecution) Events() []*BlockEvent {
+	evs := make([]*BlockEvent, len(be.TxExecutions)+2)
+	evs[0] = &BlockEvent{
+		Index: 0,
+		BeginBlock: &BeginBlock{
+			Height: be.Height,
+			Header: be.Header,
+		},
+	}
+	for i, txe := range be.TxExecutions {
+		evs[i+1] = &BlockEvent{
+			Index:       uint64(i + 1),
+			TxExecution: txe,
+		}
+	}
+	end := len(evs) - 1
+	evs[end] = &BlockEvent{
+		Index: uint64(end),
+		EndBlock: &EndBlock{
+			Height: be.Height,
+		},
+	}
+	return evs
+}
+
 func (be *BlockExecution) Encode() ([]byte, error) {
+	return cdc.MarshalBinaryBare(be)
+}
+
+func (be *BlockExecution) EncodeHeader() ([]byte, error) {
+	return cdc.MarshalBinaryBare(be.Header)
+}
+
+func (be *BlockEvent) Encode() ([]byte, error) {
 	return cdc.MarshalBinaryBare(be)
 }
 
@@ -57,23 +89,10 @@ func (be *BlockExecution) Tagged() *TaggedBlockExecution {
 				event.EventTypeKey: be.EventType(),
 			},
 			query.MustReflectTags(be),
-			query.MustReflectTags(be.BlockHeader),
+			query.MustReflectTags(be.Header),
 		),
 		BlockExecution: be,
 	}
-}
-
-type ABCIHeader struct {
-	*abciTypes.Header
-}
-
-// Gogo proto support
-func (h *ABCIHeader) Marshal() ([]byte, error) {
-	return proto.Marshal(h.Header)
-}
-
-func (h *ABCIHeader) Unmarshal(data []byte) error {
-	return proto.Unmarshal(data, h.Header)
 }
 
 func QueryForBlockExecutionFromHeight(height uint64) *query.Builder {
@@ -82,4 +101,36 @@ func QueryForBlockExecutionFromHeight(height uint64) *query.Builder {
 
 func QueryForBlockExecution() *query.Builder {
 	return query.NewBuilder().AndEquals(event.EventTypeKey, TypeBlockExecution)
+}
+
+type TaggedBlockEvent struct {
+	query.Tagged
+	*BlockEvent
+}
+
+func (ev *BlockEvent) EventType() EventType {
+	switch {
+	case ev.BeginBlock != nil:
+		return TypeBeginBlock
+	case ev.TxExecution != nil:
+		return TypeTxExecution
+	case ev.EndBlock != nil:
+		return TypeEndBlock
+	}
+	return TypeUnknown
+}
+
+func (ev *BlockEvent) Tagged() *TaggedBlockEvent {
+	return &TaggedBlockEvent{
+		Tagged: query.MergeTags(
+			ev.TxExecution.Tagged(),
+			query.TagMap{
+				event.EventTypeKey: ev.EventType(),
+			},
+			query.MustReflectTags(ev.BeginBlock, "Height"),
+			query.MustReflectTags(ev.BeginBlock.GetHeader()),
+			query.MustReflectTags(ev.EndBlock, "Height"),
+		),
+		BlockEvent: ev,
+	}
 }

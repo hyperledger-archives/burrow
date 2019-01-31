@@ -253,12 +253,16 @@ func localSignAndBroadcastSync(t testing.TB, tcli rpctransact.TransactClient, tx
 }
 
 func waitNBlocks(t testing.TB, ecli rpcevents.ExecutionEventsClient, n int) {
-	stream, err := ecli.GetBlocks(context.Background(), &rpcevents.BlocksRequest{
+	stream, err := ecli.GetBlockEvents(context.Background(), &rpcevents.BlocksRequest{
 		BlockRange: rpcevents.NewBlockRange(rpcevents.LatestBound(), rpcevents.StreamBound()),
 	})
-	defer stream.CloseSend()
-	for i := 0; i < n; i++ {
-		require.NoError(t, err)
-		_, err = stream.Recv()
+	defer require.NoError(t, stream.CloseSend())
+	var ev *exec.BlockEvent
+	for err == nil && n > 0 {
+		ev, err = stream.Recv()
+		if err == nil && ev.EndBlock != nil {
+			n--
+		}
 	}
+	require.NoError(t, err)
 }

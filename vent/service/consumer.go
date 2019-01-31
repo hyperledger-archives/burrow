@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hyperledger/burrow/execution/exec"
+
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
@@ -140,40 +142,25 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 		}
 
 		// gets blocks in given range based on last processed block taken from database
-		blocks, err := cli.GetBlocks(context.Background(), request)
+		blocks, err := cli.GetBlockEvents(context.Background(), request)
 		if err != nil {
 			doneCh <- errors.Wrapf(err, "Error connecting to block stream")
 			return
 		}
 
 		// get blocks
-		for {
+
+		c.Log.Debug("msg", "Waiting for blocks...")
+
+		err = rpcevents.ConsumeBlockExecutions(blocks, func(blockExecution *exec.BlockExecution) error {
+
 			if c.Closing {
-				break
+				return io.EOF
 			}
-
-			c.Log.Debug("msg", "Waiting for blocks...")
-
-			resp, err := blocks.Recv()
-			if err != nil {
-				if err == io.EOF {
-					c.Log.Debug("msg", "EOF stream received...")
-					continue
-				} else {
-					if c.Closing {
-						c.Log.Debug("msg", "GRPC connection closed")
-						break
-					} else {
-						doneCh <- errors.Wrapf(err, "Error receiving blocks")
-						return
-					}
-				}
-			}
-
-			c.Log.Debug("msg", "Block received", "height", resp.Height, "num_txs", len(resp.TxExecutions))
+			c.Log.Debug("msg", "Block received", "height", blockExecution.Height, "num_txs", len(blockExecution.TxExecutions))
 
 			// set new block number
-			fromBlock = fmt.Sprintf("%v", resp.Height)
+			fromBlock = fmt.Sprintf("%v", blockExecution.Height)
 
 			// create a fresh new structure to store block data
 			blockData := sqlsol.NewBlockData()
@@ -182,7 +169,7 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 			blockData.SetBlockID(fromBlock)
 
 			if c.Config.DBBlockTx {
-				blkRawData, err := buildBlkData(tables, resp)
+				blkRawData, err := buildBlkData(tables, blockExecution)
 				if err != nil {
 					doneCh <- errors.Wrapf(err, "Error building block raw data")
 				}
@@ -191,7 +178,7 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 			}
 
 			// get transactions for a given block
-			for _, txe := range resp.TxExecutions {
+			for _, txe := range blockExecution.TxExecutions {
 
 				c.Log.Debug("msg", "Getting transaction", "TxHash", txe.TxHash, "num_events", len(txe.Events))
 
@@ -219,7 +206,7 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 
 							if err != nil {
 								doneCh <- errors.Wrapf(err, "Error parsing query from filter string")
-								return
+								return io.EOF
 							}
 
 							// there's a matching filter, add data to the rows
@@ -251,6 +238,20 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 				c.Log.Info("msg", fmt.Sprintf("Upserting rows in SQL tables %v", blk), "block", fromBlock)
 
 				eventCh <- blk
+			}
+			return nil
+		})
+
+		if err != nil {
+			if err == io.EOF {
+				c.Log.Debug("msg", "EOF stream received...")
+			} else {
+				if c.Closing {
+					c.Log.Debug("msg", "GRPC connection closed")
+				} else {
+					doneCh <- errors.Wrapf(err, "Error receiving blocks")
+					return
+				}
 			}
 		}
 	}()

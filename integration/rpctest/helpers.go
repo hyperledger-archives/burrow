@@ -64,7 +64,7 @@ func CommittedTxCount(t *testing.T, em event.Emitter) chan int {
 		defer em.UnsubscribeAll(context.Background(), subID)
 		for msg := range ch {
 			be := msg.(*exec.BlockExecution)
-			if be.BlockHeader.NumTxs == 0 {
+			if be.Header.NumTxs == 0 {
 				emptyBlocks++
 			} else {
 				emptyBlocks = 0
@@ -72,8 +72,8 @@ func CommittedTxCount(t *testing.T, em event.Emitter) chan int {
 			if emptyBlocks > maxEmptyBlocks {
 				break
 			}
-			numTxs += be.BlockHeader.NumTxs
-			fmt.Printf("Total TXs committed at block %v: %v (+%v)\n", be.Height, numTxs, be.BlockHeader.NumTxs)
+			numTxs += be.Header.NumTxs
+			fmt.Printf("Total TXs committed at block %v: %v (+%v)\n", be.Height, numTxs, be.Header.NumTxs)
 		}
 		outCh <- int(numTxs)
 	}()

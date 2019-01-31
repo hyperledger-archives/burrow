@@ -197,14 +197,18 @@ type TaggedTxExecution struct {
 }
 
 func (txe *TxExecution) Tagged() *TaggedTxExecution {
-	return &TaggedTxExecution{
-		Tagged: query.MergeTags(
+	var tagged query.Tagged = query.TagMap{}
+	if txe != nil {
+		tagged = query.MergeTags(
 			query.TagMap{
 				event.EventIDKey:   EventStringTxExecution(txe.TxHash),
 				event.EventTypeKey: txe.EventType()},
 			query.MustReflectTags(txe),
 			txe.Envelope.Tagged(),
-		),
+		)
+	}
+	return &TaggedTxExecution{
+		Tagged:      tagged,
 		TxExecution: txe,
 	}
 }

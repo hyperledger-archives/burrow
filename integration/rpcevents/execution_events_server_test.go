@@ -19,6 +19,7 @@ package rpcevents
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"strconv"
 	"testing"
@@ -38,53 +39,98 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetBlocks(t *testing.T) {
+func TestGetBlockEventsDB(t *testing.T) {
 	request := &rpcevents.BlocksRequest{
-		BlockRange: rpcevents.NewBlockRange(rpcevents.LatestBound(), rpcevents.StreamBound()),
+		BlockRange: rpcevents.NewBlockRange(rpcevents.AbsoluteBound(0), rpcevents.LatestBound()),
 	}
 	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	ecli := rpctest.NewExecutionEventsClient(t, testConfig.RPC.GRPC.ListenAddress)
-	stream, err := ecli.GetBlocks(context.Background(), request)
-	require.NoError(t, err)
-	pulls := 3
-	sendsPerPull := 4
+	numSends := 4
 	var blocks []*exec.BlockExecution
-	for i := 0; i < pulls; i++ {
-		doSends(t, sendsPerPull, tcli)
-		block, err := stream.Recv()
-		require.NoError(t, err)
-		blocks = append(blocks, block)
-	}
+	doSends(t, numSends, tcli)
+	stream, err := ecli.GetBlockEvents(context.Background(), request)
+	require.NoError(t, err)
+
+	err = rpcevents.ConsumeBlockExecutions(stream, func(be *exec.BlockExecution) error {
+		blocks = append(blocks, be)
+		return nil
+	})
+	require.NoError(t, err)
+
 	assert.True(t, len(blocks) > 0, "should see at least one block (height 2)")
 	var height uint64
 	for _, b := range blocks {
 		if height > 0 {
 			assert.Equal(t, height+1, b.Height)
 		}
+		for range b.TxExecutions {
+			numSends--
+		}
 		height = b.Height
 	}
+	require.Equal(t, 0, numSends, "all transactions should be observed")
 	require.NoError(t, stream.CloseSend())
 }
-func TestGetBlocksContains2(t *testing.T) {
+
+func TestGetBlockEventsStream(t *testing.T) {
 	request := &rpcevents.BlocksRequest{
-		BlockRange: rpcevents.NewBlockRange(rpcevents.LatestBound(), rpcevents.StreamBound()),
+		BlockRange: rpcevents.NewBlockRange(rpcevents.AbsoluteBound(0), rpcevents.StreamBound()),
+	}
+	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
+	ecli := rpctest.NewExecutionEventsClient(t, testConfig.RPC.GRPC.ListenAddress)
+	stream, err := ecli.GetBlockEvents(context.Background(), request)
+	require.NoError(t, err)
+	batches := 3
+	sendsPerBatch := 4
+	total := batches * sendsPerBatch
+	doneCh := make(chan []struct{})
+	go func() {
+		for i := 0; i < batches; i++ {
+			doSends(t, sendsPerBatch, tcli)
+		}
+		close(doneCh)
+	}()
+
+	err = rpcevents.ConsumeBlockExecutions(stream, func(be *exec.BlockExecution) error {
+		for range be.TxExecutions {
+			total--
+		}
+		if total == 0 {
+			return io.EOF
+		}
+		return nil
+	})
+	require.Equal(t, io.EOF, err)
+	assert.Equal(t, 0, total)
+	require.NoError(t, stream.CloseSend())
+	<-doneCh
+}
+
+func TestGetBlockEventsContains2(t *testing.T) {
+	request := &rpcevents.BlocksRequest{
+		BlockRange: rpcevents.AbsoluteRange(0, 12),
 		Query:      "Height CONTAINS '2'",
 	}
 	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	ecli := rpctest.NewExecutionEventsClient(t, testConfig.RPC.GRPC.ListenAddress)
-	stream, err := ecli.GetBlocks(context.Background(), request)
+	stream, err := ecli.GetBlockEvents(context.Background(), request)
 	require.NoError(t, err)
-	pulls := 2
-	sendsPerPull := 4
+	numSends := 4
 	var blocks []*exec.BlockExecution
-	for i := 0; i < pulls; i++ {
-		doSends(t, sendsPerPull, tcli)
-		block, err := stream.Recv()
-		require.NoError(t, err)
-		blocks = append(blocks, block)
-		assert.Contains(t, strconv.FormatUint(block.Height, 10), "2")
-	}
-	assert.True(t, len(blocks) > 0, "should see at least one block (height 2)")
+	require.NoError(t, err)
+	doSends(t, numSends, tcli)
+	require.NoError(t, err)
+	err = rpcevents.ConsumeBlockExecutions(stream, func(be *exec.BlockExecution) error {
+		blocks = append(blocks, be)
+		assert.Contains(t, strconv.FormatUint(be.Height, 10), "2")
+		fmt.Println(be.Height)
+		return nil
+	})
+	// should record blocks 2 and 12
+	require.Len(t, blocks, 2)
+	assert.Equal(t, uint64(2), blocks[0].Height)
+	assert.Equal(t, uint64(12), blocks[1].Height)
+
 	require.NoError(t, stream.CloseSend())
 }
 

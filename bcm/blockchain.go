@@ -20,6 +20,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/tendermint/tendermint/types"
+
 	"sync"
 
 	"github.com/hyperledger/burrow/genesis"
@@ -40,7 +42,7 @@ type BlockchainInfo interface {
 	LastBlockHash() []byte
 	AppHashAfterLastBlock() []byte
 	// GetBlockHash returns	hash of the specific block
-	GetBlockHash(blockNumber uint64) ([]byte, error)
+	GetBlockHeader(blockNumber uint64) (*types.Header, error)
 }
 
 type Blockchain struct {
@@ -225,8 +227,8 @@ func (bc *Blockchain) SetBlockStore(bs *BlockStore) {
 	bc.blockStore = bs
 }
 
-func (bc *Blockchain) GetBlockHash(height uint64) ([]byte, error) {
-	const errHeader = "GetBlockHash():"
+func (bc *Blockchain) GetBlockHeader(height uint64) (*types.Header, error) {
+	const errHeader = "GetBlockHeader():"
 	if bc == nil {
 		return nil, fmt.Errorf("%s could not get block hash because Blockchain has not been given access to "+
 			"tendermint BlockStore", errHeader)
@@ -235,5 +237,5 @@ func (bc *Blockchain) GetBlockHash(height uint64) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s could not get BlockMeta: %v", errHeader, err)
 	}
-	return blockMeta.Header.Hash(), nil
+	return &blockMeta.Header, nil
 }

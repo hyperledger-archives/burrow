@@ -85,7 +85,7 @@ type executor struct {
 	proposalRegCache *proposal.Cache
 	validatorCache   *validator.Cache
 	publisher        event.Publisher
-	blockExecution   *exec.BlockExecution
+	block            *exec.BlockExecution
 	logger           *logging.Logger
 	vmOptions        []func(*evm.VM)
 	contexts         map[payload.Type]contexts.Context
@@ -120,7 +120,7 @@ func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *b
 		proposalRegCache: proposal.NewCache(backend),
 		validatorCache:   validator.NewCache(backend),
 		publisher:        publisher,
-		blockExecution: &exec.BlockExecution{
+		block: &exec.BlockExecution{
 			Height: blockchain.LastBlockHeight() + 1,
 		},
 		logger: logger.With(structure.ComponentKey, "Executor"),
@@ -208,7 +208,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 
 	if txExecutor, ok := exe.contexts[txEnv.Tx.Type()]; ok {
 		// Establish new TxExecution
-		txe := exe.blockExecution.Tx(txEnv)
+		txe := exe.block.Tx(txEnv)
 		defer func() {
 			if r := recover(); r != nil {
 				err = fmt.Errorf("recovered from panic in executor.Execute(%s): %v\n%s", txEnv.String(), r,
@@ -289,7 +289,7 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 			err = fmt.Errorf("recovered from panic in executor.Commit(): %v\n%s", r, debug.Stack())
 		}
 	}()
-	exe.logger.InfoMsg("Executor committing", "height", exe.blockExecution.Height)
+	exe.logger.InfoMsg("Executor committing", "height", exe.block.Height)
 	// Form BlockExecution for this block from TxExecutions and Tendermint block header
 	blockExecution, err := exe.finaliseBlockExecution(header)
 	if err != nil {
@@ -374,17 +374,17 @@ func (exe *executor) PendingValidators() validator.IterableReader {
 }
 
 func (exe *executor) finaliseBlockExecution(header *abciTypes.Header) (*exec.BlockExecution, error) {
-	if header != nil && uint64(header.Height) != exe.blockExecution.Height {
+	if header != nil && uint64(header.Height) != exe.block.Height {
 		return nil, fmt.Errorf("trying to finalise block execution with height %v but passed Tendermint"+
-			"block header at height %v", exe.blockExecution.Height, header.Height)
+			"block header at height %v", exe.block.Height, header.Height)
 	}
 	// Capture BlockExecution to return
-	be := exe.blockExecution
+	be := exe.block
 	// Set the header when provided
-	be.BlockHeader = header
+	be.Header = header
 	// Start new execution for the next height
-	exe.blockExecution = &exec.BlockExecution{
-		Height: exe.blockExecution.Height + 1,
+	exe.block = &exec.BlockExecution{
+		Height: exe.block.Height + 1,
 	}
 	return be, nil
 }

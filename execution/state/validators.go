@@ -11,9 +11,6 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 )
 
-// public key -> power
-var validatorKeyFormat = storage.NewMustKeyFormat("v", crypto.AddressLength)
-
 // Initialises the validator Ring from the validator storage in forest
 func LoadValidatorRing(version int64, ringSize int,
 	getImmutable func(version int64) (*storage.ImmutableForest, error)) (*validator.Ring, error) {
@@ -90,11 +87,11 @@ func (ws *writeState) MakeGenesisValidators(genesisDoc *genesis.GenesisDoc) erro
 }
 
 func (s *ReadState) Power(id crypto.Address) (*big.Int, error) {
-	tree, err := s.Forest.Reader(validatorKeyFormat.Prefix())
+	tree, err := s.Forest.Reader(keys.Validator.Prefix())
 	if err != nil {
 		return nil, err
 	}
-	bs := tree.Get(validatorKeyFormat.KeyNoPrefix(id))
+	bs := tree.Get(keys.Validator.KeyNoPrefix(id))
 	if len(bs) == 0 {
 		return new(big.Int), nil
 	}
@@ -106,7 +103,7 @@ func (s *ReadState) Power(id crypto.Address) (*big.Int, error) {
 }
 
 func (s *ReadState) IterateValidators(fn func(id crypto.Addressable, power *big.Int) error) error {
-	tree, err := s.Forest.Reader(validatorKeyFormat.Prefix())
+	tree, err := s.Forest.Reader(keys.Validator.Prefix())
 	if err != nil {
 		return err
 	}
@@ -140,11 +137,11 @@ func (ws *writeState) SetPower(id crypto.PublicKey, power *big.Int) error {
 }
 
 func (ws *writeState) setPower(id crypto.PublicKey, power *big.Int) error {
-	tree, err := ws.forest.Writer(validatorKeyFormat.Prefix())
+	tree, err := ws.forest.Writer(keys.Validator.Prefix())
 	if err != nil {
 		return err
 	}
-	key := validatorKeyFormat.KeyNoPrefix(id.GetAddress())
+	key := keys.Validator.KeyNoPrefix(id.GetAddress())
 	if power.Sign() == 0 {
 		tree.Delete(key)
 		return nil
