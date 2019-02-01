@@ -18,8 +18,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hyperledger/burrow/binary"
-
 	"github.com/hyperledger/burrow/logging"
 
 	"github.com/hyperledger/burrow/acm/validator"
@@ -239,17 +237,21 @@ func (s *State) commit() ([]byte, int64, error) {
 // Creates a copy of the database to the supplied db
 func (s *State) Copy(db dbm.DB) (*State, error) {
 	stateCopy := NewState(db)
-	s.writeState.forest.IterateRWTree(nil, nil, true, func(prefix []byte, tree *storage.RWTree) error {
-		treeCopy, err := stateCopy.writeState.forest.Writer(prefix)
-		if err != nil {
-			return err
-		}
-		return tree.IterateWriteTree(nil, nil, true, func(key []byte, value []byte) error {
-			treeCopy.Set(key, value)
-			return nil
+	err := s.writeState.forest.IterateRWTree(nil, nil, true,
+		func(prefix []byte, tree *storage.RWTree) error {
+			treeCopy, err := stateCopy.writeState.forest.Writer(prefix)
+			if err != nil {
+				return err
+			}
+			return tree.IterateWriteTree(nil, nil, true, func(key []byte, value []byte) error {
+				treeCopy.Set(key, value)
+				return nil
+			})
 		})
-	})
-	_, _, err := stateCopy.commit()
+	if err != nil {
+		return nil, err
+	}
+	_, _, err = stateCopy.commit()
 	if err != nil {
 		return nil, err
 	}
@@ -258,15 +260,4 @@ func (s *State) Copy(db dbm.DB) (*State, error) {
 
 func (s *State) SetLogger(logger *logging.Logger) {
 	s.logger = logger
-}
-
-func (s *State) GetBlockHash(blockHeight uint64) (binary.Word256, error) {
-	be, err := s.GetBlock(blockHeight)
-	if err != nil {
-		return binary.Zero256, err
-	}
-	if be == nil {
-		return binary.Zero256, fmt.Errorf("block %v does not exist", blockHeight)
-	}
-	return binary.LeftPadWord256(be.BlockHeader.AppHash), nil
 }

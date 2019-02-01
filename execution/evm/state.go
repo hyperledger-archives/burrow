@@ -270,6 +270,14 @@ func (st *State) RemoveRole(address crypto.Address, role string) bool {
 	return removed
 }
 
+func (st *State) GetBlockHash(blockNumber uint64) (binary.Word256, error) {
+	hash, err := st.blockchainInfo.GetBlockHash(blockNumber)
+	if err != nil {
+		st.PushError(err)
+	}
+	return binary.LeftPadWord256(hash), nil
+}
+
 // Helpers
 
 func (st *State) account(address crypto.Address) *acm.Account {
@@ -301,8 +309,4 @@ func (st *State) removeAccount(address crypto.Address) {
 	if err != nil {
 		st.PushError(err)
 	}
-}
-
-func (st *State) GetBlockHash(blockNumber uint64) (binary.Word256, error) {
-	return st.blockchainInfo.GetBlockHash(blockNumber)
 }

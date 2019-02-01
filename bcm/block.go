@@ -1,4 +1,4 @@
-package forensics
+package bcm
 
 import (
 	"github.com/hyperledger/burrow/txs"

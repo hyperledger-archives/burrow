@@ -21,7 +21,7 @@ import (
 )
 
 type Replay struct {
-	explorer   *BlockExplorer
+	explorer   *bcm.BlockStore
 	burrowDB   *storage.CacheDB
 	blockchain *bcm.Blockchain
 	genesisDoc *genesis.GenesisDoc
@@ -42,7 +42,7 @@ func NewReplay(dbDir string, genesisDoc *genesis.GenesisDoc, logger *logging.Log
 	// Avoid writing through to underlying DB
 	burrowDB := storage.NewCacheDB(core.NewBurrowDB(dbDir))
 	return &Replay{
-		explorer:   NewBlockExplorer(dbm.LevelDBBackend, dbDir),
+		explorer:   bcm.NewBlockExplorer(dbm.LevelDBBackend, dbDir),
 		burrowDB:   burrowDB,
 		blockchain: bcm.NewBlockchain(burrowDB, genesisDoc),
 		genesisDoc: genesisDoc,

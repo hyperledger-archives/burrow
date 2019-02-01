@@ -35,8 +35,9 @@ import (
 )
 
 const (
-	DataStackInitialCapacity = 1024
-	uint64Length             = 8
+	DataStackInitialCapacity    = 1024
+	MaximumAllowedBlockLookBack = 256
+	uint64Length                = 8
 )
 
 type Params struct {
@@ -614,11 +615,12 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 		case BLOCKHASH: // 0x40
 			blockNumber := stack.PopU64()
 
-			if blockNumber > vm.params.BlockHeight {
+			if blockNumber >= vm.params.BlockHeight {
 				vm.Debugf(" => attempted to get block hash of a non-existent block: %v", blockNumber)
 				callState.PushError(errors.ErrorCodeInvalidBlockNumber)
-			} else if vm.params.BlockHeight-blockNumber > 256 {
-				vm.Debugf(" => attempted to get block hash of a block outside of allowed range: %v", blockNumber)
+			} else if vm.params.BlockHeight-blockNumber > MaximumAllowedBlockLookBack {
+				vm.Debugf(" => attempted to get block hash of a block %d outside of the allowed range "+
+					"(must be within %d blocks)", blockNumber, MaximumAllowedBlockLookBack)
 				callState.PushError(errors.ErrorCodeBlockNumberOutOfRange)
 			} else {
 				blockHash, err := callState.GetBlockHash(blockNumber)

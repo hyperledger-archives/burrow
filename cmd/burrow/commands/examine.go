@@ -3,7 +3,8 @@ package commands
 import (
 	"encoding/json"
 
-	"github.com/hyperledger/burrow/forensics"
+	"github.com/hyperledger/burrow/bcm"
+
 	"github.com/hyperledger/burrow/txs"
 	cli "github.com/jawher/mow.cli"
 	"github.com/tendermint/tendermint/libs/db"
@@ -13,7 +14,7 @@ func Examine(output Output) func(cmd *cli.Cmd) {
 	return func(dump *cli.Cmd) {
 		configOpt := dump.StringOpt("c config", "", "Use the a specified burrow config file")
 
-		var explorer *forensics.BlockExplorer
+		var explorer *bcm.BlockStore
 
 		dump.Before = func() {
 			conf, err := obtainBurrowConfig(*configOpt, "")
@@ -22,7 +23,7 @@ func Examine(output Output) func(cmd *cli.Cmd) {
 			}
 			tmConf := conf.Tendermint.TendermintConfig()
 
-			explorer = forensics.NewBlockExplorer(db.DBBackendType(tmConf.DBBackend), tmConf.DBDir())
+			explorer = bcm.NewBlockExplorer(db.DBBackendType(tmConf.DBBackend), tmConf.DBDir())
 		}
 
 		dump.Command("blocks", "dump blocks to stdout", func(cmd *cli.Cmd) {
@@ -35,7 +36,7 @@ func Examine(output Output) func(cmd *cli.Cmd) {
 				start, end, err := parseRange(*rangeArg)
 
 				_, err = explorer.Blocks(start, end,
-					func(block *forensics.Block) (stop bool) {
+					func(block *bcm.Block) (stop bool) {
 						bs, err := json.Marshal(block)
 						if err != nil {
 							output.Fatalf("Could not serialise block: %v", err)
@@ -59,7 +60,7 @@ func Examine(output Output) func(cmd *cli.Cmd) {
 				start, end, err := parseRange(*rangeArg)
 
 				_, err = explorer.Blocks(start, end,
-					func(block *forensics.Block) (stop bool) {
+					func(block *bcm.Block) (stop bool) {
 						stopped, err := block.Transactions(func(txEnv *txs.Envelope) (stop bool) {
 							wrapper := struct {
 								Height int64

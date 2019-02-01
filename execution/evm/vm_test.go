@@ -19,9 +19,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/acm/acmstate"
+	"github.com/hyperledger/burrow/bcm"
+
 	"fmt"
 
 	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/binary"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
@@ -41,6 +45,19 @@ import (
 //var logger, _, _ = lifecycle.NewStdErrLogger()
 //
 var logger = logging.NewNoopLogger()
+
+type testState struct {
+	*State
+	BlockHashProvider func(blockNumber uint64) (Word256, error)
+}
+
+func NewTestState(st acmstate.ReaderWriter, bci bcm.BlockchainInfo) *testState {
+	evmState := NewState(st, bci)
+	return &testState{
+		State:             evmState,
+		BlockHashProvider: evmState.GetBlockHash,
+	}
+}
 
 func newAppState() *FakeAppState {
 	fas := &FakeAppState{
@@ -1102,9 +1119,13 @@ func TestCallNonExistent(t *testing.T) {
 	assert.Equal(t, uint64(0), cache.GetBalance(unknownAddress))
 }
 
+func (ts testState) GetBlockHash(blockNumber uint64) (binary.Word256, error) {
+	return ts.BlockHashProvider(blockNumber)
+}
+
 func TestGetBlockHash(t *testing.T) {
 	bci := newBlockchainInfo()
-	cache := NewState(newAppState(), bci)
+	cache := NewTestState(newAppState(), bci)
 	params := newParams()
 
 	// Create accounts
@@ -1131,8 +1152,9 @@ func TestGetBlockHash(t *testing.T) {
 
 	// Get block hash
 	cache.error = nil
-	params.BlockHeight = 258
-	bci.BlockHashProvider = func(blockNumber uint64) (Word256, error) {
+	params.BlockHeight = 257
+	cache.BlockHashProvider = func(blockNumber uint64) (Word256, error) {
+		// Should be just within range 257 - 2 = 255 (and the first and last block count in that range so add one = 256)
 		assert.Equal(t, uint64(2), blockNumber)
 		return One256, nil
 	}
@@ -1146,7 +1168,7 @@ func TestGetBlockHash(t *testing.T) {
 	// Get block hash fail
 	cache.error = nil
 	params.BlockHeight = 3
-	bci.BlockHashProvider = func(blockNumber uint64) (Word256, error) {
+	cache.BlockHashProvider = func(blockNumber uint64) (Word256, error) {
 		assert.Equal(t, uint64(1), blockNumber)
 		return Zero256, fmt.Errorf("unknown block %v", blockNumber)
 	}
