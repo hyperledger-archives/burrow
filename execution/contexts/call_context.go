@@ -132,7 +132,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		ret     []byte         = nil
 		txCache                = evm.NewState(ctx.StateWriter, ctx.Tip, acmstate.Named("TxCache"))
 		params                 = evm.Params{
-			BlockHeight: ctx.Tip.LastBlockHeight(),
+			BlockHeight: ctx.Tip.LastBlockHeight() + 1,
 			BlockHash:   binary.LeftPadWord256(ctx.Tip.LastBlockHash()),
 			BlockTime:   ctx.Tip.LastBlockTime().Unix(),
 			GasLimit:    GasLimit,

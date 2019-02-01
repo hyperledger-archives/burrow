@@ -615,10 +615,10 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 		case BLOCKHASH: // 0x40
 			blockNumber := stack.PopU64()
 
-			if blockNumber > vm.params.BlockHeight {
+			if blockNumber >= vm.params.BlockHeight {
 				vm.Debugf(" => attempted to get block hash of a non-existent block: %v", blockNumber)
 				callState.PushError(errors.ErrorCodeInvalidBlockNumber)
-			} else if vm.params.BlockHeight-blockNumber >= MaximumAllowedBlockLookBack {
+			} else if vm.params.BlockHeight-blockNumber > MaximumAllowedBlockLookBack {
 				vm.Debugf(" => attempted to get block hash of a block %d outside of the allowed range "+
 					"(must be within %d blocks)", blockNumber, MaximumAllowedBlockLookBack)
 				callState.PushError(errors.ErrorCodeBlockNumberOutOfRange)
