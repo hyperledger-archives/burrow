@@ -36,4 +36,3 @@ func EnsureKeyFormatStore(ks interface{}) error {
 	}
 	return nil
 }
-

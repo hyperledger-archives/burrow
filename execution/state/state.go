@@ -19,23 +19,19 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/txs"
-
-	"github.com/hyperledger/burrow/binary"
-
-	"github.com/hyperledger/burrow/logging"
-
-	"github.com/hyperledger/burrow/acm/validator"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
+	"github.com/hyperledger/burrow/acm/validator"
+	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/execution/proposal"
 	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/storage"
+	"github.com/hyperledger/burrow/txs"
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 

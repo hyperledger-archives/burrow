@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/tendermint/tendermint/types"
+
 	"io"
 
 	"github.com/gogo/protobuf/proto"
@@ -19,11 +21,11 @@ const SubscribeBufferSize = 100
 
 type Provider interface {
 	// Get a particular BlockExecution
-	GetBlock(height uint64) (*exec.BlockExecution, error)
-	// Get a partiualr TxExecution by hash
-	GetTx(txHash []byte) (*exec.TxExecution, error)
+	GetTxsAtHeight(height uint64) ([]*exec.TxExecution, error)
+	// Get a particular TxExecution by hash
+	GetTxByHash(txHash []byte) (*exec.TxExecution, error)
 	// Get events between startKey (inclusive) and endKey (exclusive) - i.e. the half open interval [start, end)
-	GetBlocks(startHeight, endHeight uint64, consumer func(*exec.BlockExecution) error) (err error)
+	GetTxs(startHeight, endHeight uint64, consumer func(*exec.TxExecution) error) (err error)
 }
 
 type executionEventsServer struct {
@@ -45,13 +47,15 @@ func NewExecutionEventsServer(eventsProvider Provider, subscribable event.Subscr
 }
 
 func (ees *executionEventsServer) GetBlock(ctx context.Context, request *GetBlockRequest) (*exec.BlockExecution, error) {
-	be, err := ees.eventsProvider.GetBlock(request.GetHeight())
+	txExecutions, err := ees.eventsProvider.GetTxsAtHeight(request.GetHeight())
 	if err != nil {
 		return nil, err
 	}
-	if be != nil {
-		return be, nil
+	// If block of TxExecutions found at height then this is a previous block so make and return
+	if txExecutions != nil {
+		return ees.makeBlock(request.Height, txExecutions)
 	}
+	// Otherwise see if we should wait
 	if !request.Wait {
 		if ees.tip.LastBlockHeight() < request.Height {
 			return nil, fmt.Errorf("block at height %v not yet produced (last block height: %v)",
@@ -60,17 +64,22 @@ func (ees *executionEventsServer) GetBlock(ctx context.Context, request *GetBloc
 		return nil, fmt.Errorf("block at height %v not found in state but should have been! (last block height: %v)",
 			request.Height, ees.tip.LastBlockHeight())
 	}
-	err = ees.streamBlocks(ctx, &BlockRange{End: StreamBound()}, func(block *exec.BlockExecution) error {
-		if block.Height == request.Height {
-			be = block
-			return io.EOF
-		}
-		return nil
-	})
+	var block *exec.BlockExecution
+	err = ees.streamTxsByBlock(ctx, &BlockRange{End: StreamBound()},
+		func(height uint64, txExecutions []*exec.TxExecution) error {
+			if height == request.Height {
+				block, err = ees.makeBlock(height, txExecutions)
+				if err != nil {
+					return err
+				}
+				return io.EOF
+			}
+			return nil
+		})
 	if err != io.EOF {
 		return nil, err
 	}
-	return be, nil
+	return block, nil
 }
 
 func (ees *executionEventsServer) GetBlocks(request *BlocksRequest, stream ExecutionEvents_GetBlocksServer) error {
@@ -78,16 +87,21 @@ func (ees *executionEventsServer) GetBlocks(request *BlocksRequest, stream Execu
 	if err != nil {
 		return fmt.Errorf("could not parse BlockExecution query: %v", err)
 	}
-	return ees.streamBlocks(stream.Context(), request.BlockRange, func(block *exec.BlockExecution) error {
-		if qry.Matches(block.Tagged()) {
-			return flush(stream, block)
-		}
-		return nil
-	})
+	return ees.streamTxsByBlock(stream.Context(), request.BlockRange,
+		func(height uint64, txExecutions []*exec.TxExecution) error {
+			block, err := ees.makeBlock(height, txExecutions)
+			if err != nil {
+				return err
+			}
+			if qry.Matches(block.Tagged()) {
+				return flush(stream, block)
+			}
+			return nil
+		})
 }
 
 func (ees *executionEventsServer) GetTx(ctx context.Context, request *GetTxRequest) (*exec.TxExecution, error) {
-	txe, err := ees.eventsProvider.GetTx(request.TxHash)
+	txe, err := ees.eventsProvider.GetTxByHash(request.TxHash)
 	if err != nil {
 		return nil, err
 	}
@@ -119,17 +133,18 @@ func (ees *executionEventsServer) GetTxs(request *BlocksRequest, stream Executio
 	if err != nil {
 		return fmt.Errorf("could not parse TxExecution query: %v", err)
 	}
-	return ees.streamBlocks(stream.Context(), request.BlockRange, func(block *exec.BlockExecution) error {
-		txs := filterTxs(block, qry)
-		if len(txs) > 0 {
-			response := &GetTxsResponse{
-				Height:       block.Height,
-				TxExecutions: txs,
+	return ees.streamTxsByBlock(stream.Context(), request.BlockRange,
+		func(height uint64, txExecutions []*exec.TxExecution) error {
+			txs := filterTxs(txExecutions, qry)
+			if len(txs) > 0 {
+				response := &GetTxsResponse{
+					Height:       height,
+					TxExecutions: txs,
+				}
+				return flush(stream, response)
 			}
-			return flush(stream, response)
-		}
-		return nil
-	})
+			return nil
+		})
 }
 
 func (ees *executionEventsServer) GetEvents(request *BlocksRequest, stream ExecutionEvents_GetEventsServer) error {
@@ -137,21 +152,41 @@ func (ees *executionEventsServer) GetEvents(request *BlocksRequest, stream Execu
 	if err != nil {
 		return fmt.Errorf("could not parse Event query: %v", err)
 	}
-	return ees.streamBlocks(stream.Context(), request.BlockRange, func(block *exec.BlockExecution) error {
-		evs := filterEvents(block, qry)
+	return ees.streamTxsByBlock(stream.Context(), request.BlockRange, func(height uint64, txe []*exec.TxExecution) error {
+		evs := filterEvents(txe, qry)
 		if len(evs) == 0 {
 			return nil
 		}
 		response := &GetEventsResponse{
-			Height: block.Height,
+			Height: height,
 			Events: evs,
 		}
 		return flush(stream, response)
 	})
 }
+func (ees *executionEventsServer) streamTxsByBlock(ctx context.Context, blockRange *BlockRange,
+	consumer func(height uint64, txes []*exec.TxExecution) error) error {
+	var txExecutions []*exec.TxExecution
+	var height uint64
+	return ees.streamTxs(ctx, blockRange, func(txe *exec.TxExecution) error {
+		if txe.Height > height {
+			if len(txExecutions) > 0 {
+				err := consumer(height, txExecutions)
+				if err != nil {
+					return err
+				}
+			}
+			txExecutions = txExecutions[:0]
+			height = txe.Height
+		} else {
+			txExecutions = append(txExecutions, txe)
+		}
+		return nil
+	})
+}
 
-func (ees *executionEventsServer) streamBlocks(ctx context.Context, blockRange *BlockRange,
-	consumer func(*exec.BlockExecution) error) error {
+func (ees *executionEventsServer) streamTxs(ctx context.Context, blockRange *BlockRange,
+	consumer func(*exec.TxExecution) error) error {
 
 	// Converts the bounds to half-open interval needed
 	start, end, streaming := blockRange.Bounds(ees.tip.LastBlockHeight())
@@ -159,7 +194,7 @@ func (ees *executionEventsServer) streamBlocks(ctx context.Context, blockRange *
 
 	// Pull blocks from state and receive the upper bound (exclusive) on the what we were able to send
 	// Set this to start since it will be the start of next streaming batch (if needed)
-	start, err := ees.iterateBlocks(start, end, consumer)
+	start, err := ees.iterateTxs(start, end, consumer)
 
 	// If we are not streaming and all blocks requested were retrieved from state then we are done
 	if !streaming && start == end {
@@ -194,7 +229,7 @@ func (ees *executionEventsServer) streamBlocks(ctx context.Context, blockRange *
 				// we have not emitted so we will pull them from state. This can occur if a block is emitted during/after
 				// the initial streaming but before we have subscribed to block events or if we spill BlockExecutions
 				// when streaming them and need to catch up
-				_, err := ees.iterateBlocks(start, streamEnd, consumer)
+				_, err := ees.iterateTxs(start, streamEnd, consumer)
 				if err != nil {
 					return err
 				}
@@ -202,9 +237,11 @@ func (ees *executionEventsServer) streamBlocks(ctx context.Context, blockRange *
 			if finished {
 				return nil
 			}
-			err = consumer(block)
-			if err != nil {
-				return err
+			for _, txe := range block.TxExecutions {
+				err = consumer(txe)
+				if err != nil {
+					return err
+				}
 			}
 			// We've just streamed block so our next start marker is the next block
 			start = block.Height + 1
@@ -216,14 +253,14 @@ func (ees *executionEventsServer) streamBlocks(ctx context.Context, blockRange *
 
 // Converts blocks into responses and streams them returning the height one greater than the last seen block
 // that can be used as next start point (half-open interval)
-func (ees *executionEventsServer) iterateBlocks(start, end uint64, consumer func(*exec.BlockExecution) error) (uint64, error) {
+func (ees *executionEventsServer) iterateTxs(start, end uint64, consumer func(*exec.TxExecution) error) (uint64, error) {
 	var streamErr error
 	var lastHeightSeen uint64
 
-	err := ees.eventsProvider.GetBlocks(start, end,
-		func(be *exec.BlockExecution) error {
-			lastHeightSeen = be.Height
-			return consumer(be)
+	err := ees.eventsProvider.GetTxs(start, end,
+		func(txe *exec.TxExecution) error {
+			lastHeightSeen = txe.Height
+			return consumer(txe)
 		})
 
 	if err != nil {
@@ -236,9 +273,23 @@ func (ees *executionEventsServer) iterateBlocks(start, end uint64, consumer func
 	return lastHeightSeen + 1, nil
 }
 
-func filterTxs(be *exec.BlockExecution, qry query.Query) []*exec.TxExecution {
+func (ees *executionEventsServer) makeBlock(height uint64, txExecutions []*exec.TxExecution) (*exec.BlockExecution, error) {
+	header, err := ees.tip.GetBlockHeader(height)
+	if err != nil {
+		return nil, err
+	}
+
+	abciHeader := types.TM2PB.Header(header)
+	return &exec.BlockExecution{
+		BlockHeader:  &abciHeader,
+		Height:       height,
+		TxExecutions: txExecutions,
+	}, nil
+}
+
+func filterTxs(txExecutions []*exec.TxExecution, qry query.Query) []*exec.TxExecution {
 	var txs []*exec.TxExecution
-	for _, txe := range be.TxExecutions {
+	for _, txe := range txExecutions {
 		if qry.Matches(txe.Tagged()) {
 			txs = append(txs, txe)
 		}
@@ -246,9 +297,9 @@ func filterTxs(be *exec.BlockExecution, qry query.Query) []*exec.TxExecution {
 	return txs
 }
 
-func filterEvents(be *exec.BlockExecution, qry query.Query) []*exec.Event {
+func filterEvents(txExecutions []*exec.TxExecution, qry query.Query) []*exec.Event {
 	var evs []*exec.Event
-	for _, txe := range be.TxExecutions {
+	for _, txe := range txExecutions {
 		if txe.Exception == nil {
 			for _, ev := range txe.Events {
 				if qry.Matches(ev.Tagged()) {

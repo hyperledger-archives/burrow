@@ -76,7 +76,7 @@ func TestWriteState_AddBlock(t *testing.T) {
 	txExecutions, err := s.GetTxsAtHeight(height)
 	require.NoError(t, err)
 	require.NotNil(t, txExecutions)
-	require.Equal(t, numTxs, len(txExecutions))
+	require.Equal(t, numTxs, uint64(len(txExecutions)))
 }
 
 func mkBlock(height, numTxs, events uint64) *exec.BlockExecution {
@@ -89,6 +89,7 @@ func mkBlock(height, numTxs, events uint64) *exec.BlockExecution {
 		txe := &exec.TxExecution{
 			TxHash: hash,
 			Height: height,
+			Index:  ti,
 		}
 		for e := uint64(0); e < events; e++ {
 			txe.Events = append(txe.Events, mkEvent(height, ti, e))

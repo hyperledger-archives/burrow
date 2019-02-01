@@ -86,18 +86,12 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 		return err
 	}
 
-	return ds.state.GetTxs(0, height, func(be *exec.BlockExecution) error {
-		if be.TxExecutions == nil {
-			return nil
-		}
-		for _, tx := range be.TxExecutions {
-			for i := 0; i < len(tx.Events); i++ {
-				event := tx.Events[i]
-				if event.Log != nil {
-					err := stream.Send(&dump.Dump{Height: event.Header.Height, EVMEvent: event.Log})
-					if err != nil {
-						return err
-					}
+	return ds.state.GetTxs(0, height, func(txe *exec.TxExecution) error {
+		for _, event := range txe.Events {
+			if event.Log != nil {
+				err := stream.Send(&dump.Dump{Height: event.Header.Height, EVMEvent: event.Log})
+				if err != nil {
+					return err
 				}
 			}
 		}

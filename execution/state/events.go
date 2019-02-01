@@ -58,7 +58,7 @@ func (s *ReadState) GetTxsAtHeight(height uint64) ([]*exec.TxExecution, error) {
 	return txExecutions, nil
 }
 
-func (s *State) GetTx(height, index uint64) (*exec.TxExecution, error) {
+func (s *ReadState) GetTx(height, index uint64) (*exec.TxExecution, error) {
 	tree, err := s.Forest.Reader(keys.Tx.Prefix())
 	if err != nil {
 		return nil, err
