@@ -15,8 +15,14 @@
 package state
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"sync"
+
+	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/txs"
+
+	"github.com/hyperledger/burrow/binary"
 
 	"github.com/hyperledger/burrow/logging"
 
@@ -46,12 +52,46 @@ var _ acmstate.IterableReader = &State{}
 var _ names.IterableReader = &State{}
 var _ Updatable = &writeState{}
 
+type KeyFormatStore struct {
+	Account   *storage.MustKeyFormat
+	Storage   *storage.MustKeyFormat
+	Name      *storage.MustKeyFormat
+	Proposal  *storage.MustKeyFormat
+	Validator *storage.MustKeyFormat
+	Tx        *storage.MustKeyFormat
+	TxHash    *storage.MustKeyFormat
+}
+
+var keys = KeyFormatStore{
+	// AccountAddress -> Account
+	Account: storage.NewMustKeyFormat("a", crypto.AddressLength),
+	// AccountAddress, Key -> Value
+	Storage: storage.NewMustKeyFormat("s", crypto.AddressLength, binary.Word256Length),
+	// Name -> Entry
+	Name: storage.NewMustKeyFormat("n", storage.VariadicSegmentLength),
+	// ProposalHash -> Proposal
+	Proposal: storage.NewMustKeyFormat("p", sha256.Size),
+	// ValidatorAddress -> Power
+	Validator: storage.NewMustKeyFormat("v", crypto.AddressLength),
+	// TxHeight, TxIndex -> TxExecution
+	Tx: storage.NewMustKeyFormat("t", uint64Length, uint64Length),
+	// TxHash -> TxHeight, TxIndex
+	TxHash: storage.NewMustKeyFormat("th", txs.HashLength),
+}
+
+func init() {
+	err := storage.EnsureKeyFormatStore(keys)
+	if err != nil {
+		panic(fmt.Errorf("KeyFormatStore is invalid: %v", err))
+	}
+}
+
 type Updatable interface {
 	acmstate.Writer
 	names.Writer
 	proposal.Writer
 	validator.Writer
-	AddBlock(blockExecution *exec.BlockExecution) error
+	AddTxs(blockExecution []*exec.TxExecution) error
 }
 
 // Wraps state to give access to writer methods

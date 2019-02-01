@@ -35,6 +35,8 @@ message TxExecution {
     uint64 Height = 4;
     // The index of this transaction within the block
     uint64 Index = 5;
+    // The origin information from the chain on which this tx was originally committed (if restored or otherwise imported)
+    Origin Origin = 12;
     // Signed Tx that triggered this execution
     txs.Envelope Envelope = 6 [(gogoproto.customtype) = "github.com/hyperledger/burrow/txs.Envelope"];
     // Execution events
@@ -47,6 +49,15 @@ message TxExecution {
     errors.Exception Exception = 10;
     // A proposal may contain other transactions
     repeated TxExecution TxExecutions = 11;
+}
+
+message Origin {
+    // The original ChainID from for this transaction
+    string ChainID = 1;
+    // The original height at which this transaction was committed
+    uint64 Height = 2;
+    // The original index in the block
+    uint64 Index = 3;
 }
 
 message Header {

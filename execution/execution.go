@@ -315,7 +315,7 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 		if err != nil {
 			return err
 		}
-		err = ws.AddBlock(blockExecution)
+		err = ws.AddTxs(blockExecution.TxExecutions)
 		if err != nil {
 			return err
 		}

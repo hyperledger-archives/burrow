@@ -51,18 +51,19 @@ func TestWriteState_AddBlock(t *testing.T) {
 	height := uint64(100)
 	numTxs := uint64(5)
 	events := uint64(10)
+	block := mkBlock(height, numTxs, events)
 	_, _, err := s.Update(func(ws Updatable) error {
-		return ws.AddBlock(mkBlock(height, numTxs, events))
+		return ws.AddTxs(block.TxExecutions)
 	})
 	require.NoError(t, err)
-	err = s.GetBlocks(height, height+1,
-		func(be *exec.BlockExecution) error {
-			for ti := uint64(0); ti < numTxs; ti++ {
-				for e := uint64(0); e < events; e++ {
-					assert.Equal(t, mkEvent(height, ti, e).Header.TxHash.String(),
-						be.TxExecutions[ti].Events[e].Header.TxHash.String())
-				}
+	ti := uint64(0)
+	err = s.GetTxs(height, height+1,
+		func(txe *exec.TxExecution) error {
+			for e := uint64(0); e < events; e++ {
+				require.Equal(t, mkEvent(height, ti, e).Header.TxHash.String(),
+					txe.Events[e].Header.TxHash.String(), "event TxHash mismatch at tx #%d event #%d", ti, e)
 			}
+			ti++
 			return nil
 		})
 	require.NoError(t, err)
@@ -72,10 +73,10 @@ func TestWriteState_AddBlock(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	be, err := s.GetBlock(height)
+	txExecutions, err := s.GetTxsAtHeight(height)
 	require.NoError(t, err)
-	require.NotNil(t, be)
-	require.Equal(t, height, be.Height)
+	require.NotNil(t, txExecutions)
+	require.Equal(t, numTxs, len(txExecutions))
 }
 
 func mkBlock(height, numTxs, events uint64) *exec.BlockExecution {

@@ -89,10 +89,10 @@ func (s *State) LoadDump(filename string) error {
 		}
 	}
 
-	s.writeState.AddBlock(&exec.BlockExecution{
-		Height:       0,
-		TxExecutions: []*exec.TxExecution{&tx},
-	})
+	errAddTxs := s.writeState.AddTxs([]*exec.TxExecution{&tx})
+	if errAddTxs != nil {
+		return errAddTxs
+	}
 
 	if err == io.EOF {
 		return nil
