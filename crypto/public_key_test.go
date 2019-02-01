@@ -28,3 +28,28 @@ func TestPublicKeySerialisation(t *testing.T) {
 	assert.Equal(t, `{"CurveType":"ed25519","PublicKey":"34D26579DBB456693E540672CF922F52DDE0D6532E35BF06BE013A7C532F20E0"}`,
 		string(bs))
 }
+
+func TestPublicKey_EncodeFixedWidth(t *testing.T) {
+	privEd25519 := PrivateKeyFromSecret("foo1", CurveTypeEd25519)
+	assertFixedWidthEncodeRoundTrip(t, privEd25519.GetPublicKey())
+
+	privSecp256k1 := PrivateKeyFromSecret("foo2", CurveTypeSecp256k1)
+	assertFixedWidthEncodeRoundTrip(t, privSecp256k1.GetPublicKey())
+
+	privUnset := PrivateKeyFromSecret("foo3", CurveTypeUnset)
+	assertFixedWidthEncodeRoundTrip(t, privUnset.GetPublicKey())
+
+	// Unknown CurveType
+	privUnset.CurveType = CurveType(5)
+	bs := privUnset.GetPublicKey().EncodeFixedWidth()
+	_, err := DecodePublicKeyFixedWidth(bs)
+	assert.Error(t, err, "should not decode unset")
+}
+
+func assertFixedWidthEncodeRoundTrip(t *testing.T, p PublicKey) {
+	bs := p.EncodeFixedWidth()
+	assert.Len(t, bs, PublicKeyFixedWidthEncodingLength)
+	pOut, err := DecodePublicKeyFixedWidth(bs)
+	require.NoError(t, err)
+	assert.Equal(t, p, pOut)
+}

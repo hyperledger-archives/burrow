@@ -25,6 +25,23 @@ type KVIterable interface {
 	ReverseIterator(start, end []byte) KVIterator
 }
 
+// Provides the native iteration for IAVLTree
+type KVCallbackIterable interface {
+	Iterate(start, end []byte, ascending bool, fn func(key []byte, value []byte) error) error
+}
+
+func KVCallbackIterator(rit KVCallbackIterable, ascending bool, start, end []byte) dbm.Iterator {
+	ch := make(chan KVPair)
+	go func() {
+		defer close(ch)
+		rit.Iterate(start, end, ascending, func(key, value []byte) (err error) {
+			ch <- KVPair{key, value}
+			return
+		})
+	}()
+	return NewChannelIterator(ch, start, end)
+}
+
 type KVReader interface {
 	// Get returns nil iff key doesn't exist. Panics on nil key.
 	Get(key []byte) []byte
@@ -42,6 +59,11 @@ type KVWriter interface {
 type KVIterableReader interface {
 	KVReader
 	KVIterable
+}
+
+type KVCallbackIterableReader interface {
+	KVReader
+	KVCallbackIterable
 }
 
 // KVStore is a simple interface to get/set data

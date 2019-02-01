@@ -29,6 +29,7 @@ service Query {
     rpc ListNames (ListNamesParam) returns (stream names.Entry);
 
     rpc GetValidatorSet (GetValidatorSetParam) returns (ValidatorSet);
+    rpc GetValidatorSetHistory (GetValidatorSetHistoryParam) returns (ValidatorSetHistory);
 
     rpc GetProposal(GetProposalParam) returns (payload.Ballot);
     rpc ListProposals(ListProposalsParam) returns (stream ProposalResult);
@@ -67,17 +68,21 @@ message ListNamesParam {
 }
 
 message GetValidatorSetParam {
-    bool IncludeHistory = 1;
+
+}
+
+message GetValidatorSetHistoryParam {
+    // Use -1 for all available history
+    int64 IncludePrevious = 1;
+}
+
+message ValidatorSetHistory {
+    repeated ValidatorSet History = 1;
 }
 
 message ValidatorSet {
     uint64 height = 1;
     repeated validator.Validator Set = 2;
-    repeated ValidatorSetDeltas History = 3;
-}
-
-message ValidatorSetDeltas {
-    repeated validator.Validator Validators = 2;
 }
 
 message GetProposalParam {

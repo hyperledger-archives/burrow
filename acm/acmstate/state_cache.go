@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package state
+package acmstate
 
 import (
 	"fmt"
@@ -186,21 +186,21 @@ func (cache *Cache) SetStorage(address crypto.Address, key binary.Word256, value
 
 // Iterates over all cached storage items first in cache and then in backend until consumer returns true for 'stop'
 func (cache *Cache) IterateCachedStorage(address crypto.Address,
-	consumer func(key, value binary.Word256) (stop bool)) (stopped bool, err error) {
+	consumer func(key, value binary.Word256) error) error {
 	accInfo, err := cache.get(address)
 	if err != nil {
-		return false, err
+		return err
 	}
 	accInfo.RLock()
 	// Try cache first for early exit
 	for key, value := range accInfo.storage {
-		if consumer(key, value) {
+		if err := consumer(key, value); err != nil {
 			accInfo.RUnlock()
-			return true, nil
+			return err
 		}
 	}
 	accInfo.RUnlock()
-	return false, nil
+	return err
 }
 
 // Syncs changes to the backend in deterministic order. Sends storage updates before updating

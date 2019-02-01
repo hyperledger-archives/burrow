@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/execution/state"
+
 	"github.com/hyperledger/burrow/event/query"
 
 	"github.com/hyperledger/burrow/execution/evm/abi"
@@ -30,7 +32,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/bcm"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
@@ -133,7 +135,7 @@ func TestSendFails(t *testing.T) {
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)
 	genDoc.Accounts[2].Permissions.Base.Set(permission.Call, true)
 	genDoc.Accounts[3].Permissions.Base.Set(permission.CreateContract, true)
-	st, err := MakeGenesisState(stateDB, &genDoc)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	exe := makeExecutor(st)
 
@@ -190,7 +192,7 @@ func TestName(t *testing.T) {
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Name, true)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Input, true)
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Input, true)
-	st, err := MakeGenesisState(stateDB, &genDoc)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	exe := makeExecutor(st)
 
@@ -222,7 +224,7 @@ func TestCallFails(t *testing.T) {
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)
 	genDoc.Accounts[2].Permissions.Base.Set(permission.Call, true)
 	genDoc.Accounts[3].Permissions.Base.Set(permission.CreateContract, true)
-	st, err := MakeGenesisState(stateDB, &genDoc)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	exe := makeExecutor(st)
 
@@ -231,17 +233,20 @@ func TestCallFails(t *testing.T) {
 
 	address4 := users[4].GetAddress()
 	// simple call tx should fail
-	tx, _ := payload.NewCallTx(exe.stateCache, users[0].GetPublicKey(), &address4, nil, 100, 100, 100)
+	tx, err := payload.NewCallTx(exe.stateCache, users[0].GetPublicKey(), &address4, nil, 100, 100, 100)
+	require.NoError(t, err)
 	err = exe.signExecuteCommit(tx, users[0])
 	require.Error(t, err)
 
 	// simple call tx with send permission should fail
-	tx, _ = payload.NewCallTx(exe.stateCache, users[1].GetPublicKey(), &address4, nil, 100, 100, 100)
+	tx, err = payload.NewCallTx(exe.stateCache, users[1].GetPublicKey(), &address4, nil, 100, 100, 100)
+	require.NoError(t, err)
 	err = exe.signExecuteCommit(tx, users[1])
 	require.Error(t, err)
 
 	// simple call tx with create permission should fail
-	tx, _ = payload.NewCallTx(exe.stateCache, users[3].GetPublicKey(), &address4, nil, 100, 100, 100)
+	tx, err = payload.NewCallTx(exe.stateCache, users[3].GetPublicKey(), &address4, nil, 100, 100, 100)
+	require.NoError(t, err)
 	err = exe.signExecuteCommit(tx, users[3])
 	require.Error(t, err)
 
@@ -249,17 +254,20 @@ func TestCallFails(t *testing.T) {
 	// create txs
 
 	// simple call create tx should fail
-	tx, _ = payload.NewCallTx(exe.stateCache, users[0].GetPublicKey(), nil, nil, 100, 100, 100)
+	tx, err = payload.NewCallTx(exe.stateCache, users[0].GetPublicKey(), nil, nil, 100, 100, 100)
+	require.NoError(t, err)
 	err = exe.signExecuteCommit(tx, users[0])
 	require.Error(t, err)
 
 	// simple call create tx with send perm should fail
-	tx, _ = payload.NewCallTx(exe.stateCache, users[1].GetPublicKey(), nil, nil, 100, 100, 100)
+	tx, err = payload.NewCallTx(exe.stateCache, users[1].GetPublicKey(), nil, nil, 100, 100, 100)
+	require.NoError(t, err)
 	err = exe.signExecuteCommit(tx, users[1])
 	require.Error(t, err)
 
 	// simple call create tx with call perm should fail
-	tx, _ = payload.NewCallTx(exe.stateCache, users[2].GetPublicKey(), nil, nil, 100, 100, 100)
+	tx, err = payload.NewCallTx(exe.stateCache, users[2].GetPublicKey(), nil, nil, 100, 100, 100)
+	require.NoError(t, err)
 	err = exe.signExecuteCommit(tx, users[2])
 	require.Error(t, err)
 }
@@ -270,7 +278,7 @@ func TestSendPermission(t *testing.T) {
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true)  // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Input, true) // give the 0 account permission
-	st, err := MakeGenesisState(stateDB, &genDoc)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	exe := makeExecutor(st)
 
@@ -298,7 +306,7 @@ func TestCallPermission(t *testing.T) {
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true)  // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Input, true) // give the 0 account permission
-	st, err := MakeGenesisState(stateDB, &genDoc)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	exe := makeExecutor(st)
 
@@ -408,13 +416,13 @@ func TestCallPermission(t *testing.T) {
 }
 
 func TestCreatePermission(t *testing.T) {
-	stateDB := dbm.NewDB("state", dbBackend, dbDir)
+	stateDB := dbm.NewMemDB()
 	defer stateDB.Close()
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.CreateContract, true) // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true)           // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Input, true)          // give the 0 account permission
-	st, err := MakeGenesisState(stateDB, &genDoc)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	exe := makeExecutor(st)
 
@@ -424,7 +432,6 @@ func TestCreatePermission(t *testing.T) {
 
 	contractCode := []byte{0x60}
 	createCode := wrapContractForCreate(contractCode)
-	fmt.Println(acm.Bytecode(createCode).MustTokens())
 
 	// A single input, having the permission, should succeed
 	tx, err := payload.NewCallTx(exe.stateCache, users[0].GetPublicKey(), nil, createCode, 100, 100, 100)
@@ -531,7 +538,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	genDoc.Accounts[0].Permissions.Base.Set(permission.CreateAccount, true) // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Input, true)         // give the 0 account permission
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Input, true)         // give the 0 account permission
-	st, err := MakeGenesisState(stateDB, &genDoc)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	exe := makeExecutor(st)
 
@@ -666,7 +673,7 @@ func TestSNativeCALL(t *testing.T) {
 	genDoc.Accounts[3].Permissions.AddRole("bumble")
 	genDoc.Accounts[3].Permissions.AddRole("bee")
 
-	st, err := MakeGenesisState(stateDB, &genDoc)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	exe := makeExecutor(st)
 
@@ -807,7 +814,7 @@ func TestSNativeTx(t *testing.T) {
 	genDoc.Accounts[3].Permissions.Base.Set(permission.Bond, true) // some arbitrary permission to play with
 	genDoc.Accounts[3].Permissions.AddRole("bumble")
 	genDoc.Accounts[3].Permissions.AddRole("bee")
-	st, err := MakeGenesisState(stateDB, &genDoc)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
 	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
@@ -914,9 +921,8 @@ func TestTxSequence(t *testing.T) {
 }
 
 func TestNameTxs(t *testing.T) {
-	st, err := MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
+	st, err := state.MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
 	require.NoError(t, err)
-	st.writeState.commit()
 
 	names.MinNameRegistrationPeriod = 5
 	exe := makeExecutor(st)
@@ -1183,7 +1189,7 @@ func TestContractSend(t *testing.T) {
 
 	newAcc1 := getAccount(st, acc1.Address)
 	newAcc1.Code = callerCode
-	_, _, err := st.Update(func(up Updatable) error {
+	_, _, err := st.Update(func(up state.Updatable) error {
 		return up.UpdateAccount(newAcc1)
 	})
 	require.NoError(t, err)
@@ -1235,11 +1241,9 @@ func TestMerklePanic(t *testing.T) {
 	st, privAccounts := makeGenesisState(3, true, 1000, 1, true,
 		1000)
 
-	//val0 := state.GetValidatorInfo(privValidators[0].Address)
 	acc0 := getAccount(st, privAccounts[0].GetAddress())
 	acc1 := getAccount(st, privAccounts[1].GetAddress())
 
-	st.writeState.commit()
 	// SendTx.
 	{
 		tx := &payload.SendTx{
@@ -1282,9 +1286,6 @@ func TestMerklePanic(t *testing.T) {
 		err = stateCallTx.signExecuteCommit(tx, privAccounts[0])
 		require.NoError(t, err)
 	}
-	st.writeState.commit()
-	trygetacc0 := getAccount(st, privAccounts[0].GetAddress())
-	fmt.Println(trygetacc0.Address)
 }
 
 // TODO: test overflows.
@@ -1292,7 +1293,6 @@ func TestMerklePanic(t *testing.T) {
 func TestTxs(t *testing.T) {
 	st, privAccounts := makeGenesisState(3, true, 1000, 1, true, 1000)
 
-	//val0 := state.GetValidatorInfo(privValidators[0].Address)
 	acc0 := getAccount(st, privAccounts[0].GetAddress())
 	acc1 := getAccount(st, privAccounts[1].GetAddress())
 
@@ -1334,7 +1334,7 @@ func TestTxs(t *testing.T) {
 		stateCallTx := copyState(t, st)
 		newAcc1 := getAccount(stateCallTx, acc1.Address)
 		newAcc1.Code = []byte{0x60}
-		_, _, err := stateCallTx.Update(func(up Updatable) error {
+		_, _, err := stateCallTx.Update(func(up state.Updatable) error {
 			return up.UpdateAccount(newAcc1)
 		})
 		require.NoError(t, err)
@@ -1361,8 +1361,6 @@ func TestTxs(t *testing.T) {
 				acc1.Balance+1, newAcc1.Balance)
 		}
 	}
-	trygetacc0 := getAccount(st, privAccounts[0].GetAddress())
-	fmt.Println(trygetacc0.Address)
 
 	// NameTx.
 	{
@@ -1406,9 +1404,7 @@ proof-of-work chain as proof of what happened while they were gone `
 		}
 		entry, err := stateNameTx.GetName(entryName)
 		require.NoError(t, err)
-		if entry == nil {
-			t.Errorf("Expected an entry but got nil")
-		}
+		require.NotNil(t, entry, "Expected entry")
 		if entry.Data != entryData {
 			t.Errorf("Wrong data stored")
 		}
@@ -1441,7 +1437,7 @@ func TestSelfDestruct(t *testing.T) {
 	contractCode = append(contractCode, acc2.Address.Bytes()...)
 	contractCode = append(contractCode, 0xff)
 	newAcc1.Code = contractCode
-	_, _, err := st.Update(func(up Updatable) error {
+	_, _, err := st.Update(func(up state.Updatable) error {
 		return up.UpdateAccount(newAcc1)
 	})
 	require.NoError(t, err)
@@ -1527,18 +1523,17 @@ func newBaseGenDoc(globalPerm, accountPerm permission.AccountPermissions) genesi
 }
 
 func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numValidators int, randBonded bool,
-	minBonded int64) (*State, []*acm.PrivateAccount) {
+	minBonded int64) (*state.State, []*acm.PrivateAccount) {
 	testGenesisDoc, privAccounts, _ := deterministicGenesis.GenesisDoc(numAccounts, randBalance, minBalance,
 		numValidators, randBonded, minBonded)
-	s0, err := MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
+	s0, err := state.MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
 	if err != nil {
 		panic(fmt.Errorf("could not make genesis state: %v", err))
 	}
-	//s0.writeState.commit()
 	return s0, privAccounts
 }
 
-func getAccount(accountGetter state.AccountGetter, address crypto.Address) *acm.Account {
+func getAccount(accountGetter acmstate.AccountGetter, address crypto.Address) *acm.Account {
 	acc, err := accountGetter.GetAccount(address)
 	if err != nil {
 		panic(err)
@@ -1560,16 +1555,16 @@ type testExecutor struct {
 	*executor
 }
 
-func makeExecutor(state *State) *testExecutor {
+func makeExecutor(state *state.State) *testExecutor {
 	blockchain := newBlockchain(testGenesisDoc)
-	blockchain.CommitBlockAtHeight(time.Now(), []byte("hashily"), state.Hash(), uint64(state.Version()))
+	blockchain.CommitBlockAtHeight(time.Now(), []byte("hashily"), state.Hash(), HeightAtVersion(state.Version()))
 	return &testExecutor{
 		executor: newExecutor("makeExecutorCache", true, state, blockchain, event.NewNoOpPublisher(),
 			logger),
 	}
 }
 
-func copyState(t testing.TB, st *State) *State {
+func copyState(t testing.TB, st *state.State) *state.State {
 	cpy, err := st.Copy(dbm.NewMemDB())
 	require.NoError(t, err)
 	return cpy

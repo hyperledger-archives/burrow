@@ -9,6 +9,7 @@ import (
 
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/require"
@@ -88,7 +89,7 @@ func replayBlock(t *testing.T, burrowDir string, height uint64) {
 	fmt.Println(recap)
 }
 
-func getState(t *testing.T, burrowDir string, height uint64) *execution.State {
+func getState(t *testing.T, burrowDir string, height uint64) *state.State {
 	st, err := newReplay(t, burrowDir).State(height)
 	require.NoError(t, err)
 	return st

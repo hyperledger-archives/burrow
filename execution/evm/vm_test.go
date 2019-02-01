@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"fmt"
+
 	"github.com/hyperledger/burrow/acm"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"

@@ -3,6 +3,7 @@
 package service_test
 
 import (
+	"fmt"
 	"path"
 	"runtime"
 	"strings"
@@ -104,6 +105,7 @@ func TestInvalidUTF8(t *testing.T) {
 
 	// generate events
 	name := service.BadStringToHexFunction(goodString)
+	fmt.Println(name)
 	description := "Description of TestEvent1"
 	test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
 
@@ -133,7 +135,7 @@ func runConsumer(db *sqldb.SQLDB, cfg *config.Flags) (err error) {
 	cfg.GRPCAddr = testConfig.RPC.GRPC.ListenAddress
 	cfg.DBBlockTx = true
 
-	log := logger.NewLogger(cfg.LogLevel)
+	log := logger.NewLogger("info")
 	consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
 
 	parser, err := sqlsol.SpecLoader("", cfg.SpecFile, cfg.DBBlockTx)

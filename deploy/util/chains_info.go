@@ -102,17 +102,11 @@ func ValidatorsInfo(query string, client *def.Client) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	history := make([]interface{}, len(validatorSet.History))
-	for i, vs := range validatorSet.History {
-		history[i] = validatorMap(vs.Validators)
-	}
 	// Yes, this feels a bit silly, but it is the easiest way to get the generic map of slice object that gojq needs
 	// mapstructure is not able to do this it would seem.
 	bs, err := json.Marshal(map[string]interface{}{
-		"Height":  validatorSet.Height,
-		"Set":     validatorMap(validatorSet.Set),
-		"History": history,
+		"Height": validatorSet.Height,
+		"Set":    validatorMap(validatorSet.Set),
 	})
 	if err != nil {
 		return nil, err

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/hyperledger/burrow/execution/state"
+
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/core"
@@ -48,8 +50,8 @@ func NewReplay(dbDir string, genesisDoc *genesis.GenesisDoc, logger *logging.Log
 	}
 }
 
-func (re *Replay) State(height uint64) (*execution.State, error) {
-	return execution.LoadState(re.burrowDB, int64(height))
+func (re *Replay) State(height uint64) (*state.State, error) {
+	return state.LoadState(re.burrowDB, int64(height))
 }
 
 func (re *Replay) Block(height uint64) (*ReplayCapture, error) {
@@ -109,7 +111,7 @@ func (re *Replay) Block(height uint64) (*ReplayCapture, error) {
 
 func (re *Replay) Blocks(startHeight, endHeight uint64) ([]*ReplayCapture, error) {
 	var err error
-	var st *execution.State
+	var st *state.State
 	if startHeight > 1 {
 		// Load and commit previous block
 		block, err := re.explorer.Block(int64(startHeight - 1))
@@ -127,7 +129,7 @@ func (re *Replay) Blocks(startHeight, endHeight uint64) ([]*ReplayCapture, error
 			return nil, err
 		}
 	} else {
-		st, err = execution.MakeGenesisState(re.burrowDB, re.genesisDoc)
+		st, err = state.MakeGenesisState(re.burrowDB, re.genesisDoc)
 		if err != nil {
 			return nil, err
 		}

@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/crypto/sha3"
@@ -877,7 +877,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 						callState.GetCode(address), args, value, &gasLimit, exec.CallTypeDelegate)
 
 				case STATICCALL:
-					childCallState = callState.NewCache(state.ReadOnly)
+					childCallState = callState.NewCache(acmstate.ReadOnly)
 					returnData, callErr = vm.delegateCall(childCallState, NewLogFreeEventSink(eventSink),
 						caller, callee, callState.GetCode(address), args, value, &gasLimit, exec.CallTypeStatic)
 

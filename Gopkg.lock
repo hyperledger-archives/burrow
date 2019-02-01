@@ -186,6 +186,17 @@
   version = "v1.4.0"
 
 [[projects]]
+  digest = "1:b42cde0e1f3c816dd57f57f7bbcf05ca40263ad96f168714c130c611fc0856a6"
+  name = "github.com/hashicorp/golang-lru"
+  packages = [
+    ".",
+    "simplelru",
+  ]
+  pruneopts = "NUT"
+  revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
+  version = "v0.5.0"
+
+[[projects]]
   digest = "1:11c6c696067d3127ecf332b10f89394d386d9083f82baf71f40f2da31841a009"
   name = "github.com/hashicorp/hcl"
   packages = [
@@ -590,6 +601,14 @@
   revision = "14226a535f434c12dbb6c0a0a59e40716f1534b4"
 
 [[projects]]
+  branch = "master"
+  digest = "1:52514b8139bc98de95c107b35d339a229c9233e2ca6893c78c8480d800139c2c"
+  name = "github.com/xlab/treeprint"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "a009c3971eca89777614839eb7f69abed3ea3959"
+
+[[projects]]
   digest = "1:fda2fde01556c582685ab0a5cf270ea0bd657f572fbdfc89b9acc31e1d48dc8a"
   name = "golang.org/x/crypto"
   packages = [
@@ -736,6 +755,7 @@
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/gorilla/websocket",
+    "github.com/hashicorp/golang-lru",
     "github.com/howeyc/gopass",
     "github.com/iancoleman/strcase",
     "github.com/imdario/mergo",
@@ -776,6 +796,7 @@
     "github.com/tendermint/tendermint/types",
     "github.com/tendermint/tendermint/types/time",
     "github.com/tmthrgd/go-hex",
+    "github.com/xlab/treeprint",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/ripemd160",
     "golang.org/x/crypto/scrypt",

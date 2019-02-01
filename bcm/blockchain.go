@@ -22,16 +22,12 @@ import (
 
 	"sync"
 
-	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	amino "github.com/tendermint/go-amino"
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
-
-// Blocks to average validator power over
-const DefaultValidatorsWindowSize = 10
 
 var stateKey = []byte("BlockchainState")
 
@@ -44,9 +40,6 @@ type BlockchainInfo interface {
 	LastCommitTime() time.Time
 	LastBlockHash() []byte
 	AppHashAfterLastBlock() []byte
-	Validators() validator.IterableReader
-	ValidatorsHistory() (currentSet *validator.Set, deltas []*validator.Set, height uint64)
-	NumValidators() int
 	// GetBlockHash returns	hash of the specific block
 	GetBlockHash(blockNumber uint64) (binary.Word256, error)
 }
@@ -62,8 +55,6 @@ type Blockchain struct {
 	lastBlockHash         []byte
 	lastCommitTime        time.Time
 	appHashAfterLastBlock []byte
-	validatorCache        *validator.Ring
-	validatorCheckCache   *validator.Ring
 	BlockHashProvider     func(blockNumber uint64) (binary.Word256, error)
 }
 
@@ -73,8 +64,6 @@ type PersistedState struct {
 	AppHashAfterLastBlock []byte
 	LastBlockHeight       uint64
 	GenesisDoc            genesis.GenesisDoc
-	ValidatorSet          []validator.Validator
-	ValidatorCache        validator.PersistedRing
 }
 
 func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc, logger *logging.Logger) (*Blockchain, error) {
@@ -102,10 +91,6 @@ func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc, logger *logg
 
 // Pointer to blockchain state initialised from genesis
 func NewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *Blockchain {
-	vs := validator.NewTrimSet()
-	for _, gv := range genesisDoc.Validators {
-		vs.ChangePower(gv.PublicKey, new(big.Int).SetUint64(gv.Amount))
-	}
 	bc := &Blockchain{
 		db:                    db,
 		genesisHash:           genesisDoc.Hash(),
@@ -113,8 +98,6 @@ func NewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *Blockchain {
 		chainID:               genesisDoc.ChainID(),
 		lastBlockTime:         genesisDoc.GenesisTime,
 		appHashAfterLastBlock: genesisDoc.Hash(),
-		validatorCache:        validator.NewRing(vs, DefaultValidatorsWindowSize),
-		validatorCheckCache:   validator.NewRing(vs, 1),
 	}
 	return bc
 }
@@ -132,14 +115,6 @@ func loadBlockchain(db dbm.DB) (*Blockchain, error) {
 	return bc, nil
 }
 
-func (bc *Blockchain) ValidatorChecker() validator.Writer {
-	return validator.SyncWriter(bc, bc.validatorCheckCache.AlterPower)
-}
-
-func (bc *Blockchain) ValidatorWriter() validator.Writer {
-	return validator.SyncWriter(bc, bc.validatorCache.AlterPower)
-}
-
 func (bc *Blockchain) CommitBlock(blockTime time.Time, blockHash,
 	appHash []byte) (totalPowerChange, totalFlow *big.Int, err error) {
 	return bc.CommitBlockAtHeight(blockTime, blockHash, appHash, bc.lastBlockHeight+1)
@@ -153,18 +128,6 @@ func (bc *Blockchain) CommitBlockAtHeight(blockTime time.Time, blockHash, appHas
 	// has been written successfully since we are committing the next block.
 	// If we fall over we can resume a safe committed state and Tendermint will catch us up
 	err = bc.save()
-	if err != nil {
-		return
-	}
-	// TODO: Because our blockchain reference is unversioned we have no easy way (i.e. other than replaying all blocks)
-	// to recover the validator set. This probably suggests that validator set may not be in the correct place...
-	// should it be a versioned tree in state? Should it be its own DB. We probably ought to do a better job of breaking
-	// apart our various concerns.
-	totalPowerChange, totalFlow, err = bc.validatorCache.Rotate()
-	if err != nil {
-		return
-	}
-	_, _, err = bc.validatorCheckCache.Rotate()
 	if err != nil {
 		return
 	}
@@ -194,7 +157,6 @@ func (bc *Blockchain) Encode() ([]byte, error) {
 		GenesisDoc:            bc.genesisDoc,
 		AppHashAfterLastBlock: bc.appHashAfterLastBlock,
 		LastBlockHeight:       bc.lastBlockHeight,
-		ValidatorCache:        bc.validatorCache.Persistable(),
 	}
 	encodedState, err := cdc.MarshalBinaryBare(persistedState)
 	if err != nil {
@@ -213,8 +175,6 @@ func DecodeBlockchain(encodedState []byte) (*Blockchain, error) {
 	//bc.lastBlockHeight = persistedState.LastBlockHeight
 	bc.lastBlockHeight = persistedState.LastBlockHeight
 	bc.appHashAfterLastBlock = persistedState.AppHashAfterLastBlock
-	bc.validatorCache = validator.UnpersistRing(persistedState.ValidatorCache)
-	bc.validatorCheckCache = validator.UnpersistRing(persistedState.ValidatorCache)
 	return bc, nil
 }
 
@@ -258,47 +218,6 @@ func (bc *Blockchain) AppHashAfterLastBlock() []byte {
 	bc.RLock()
 	defer bc.RUnlock()
 	return bc.appHashAfterLastBlock
-}
-
-func (bc *Blockchain) PendingValidators() validator.IterableReader {
-	bc.RLock()
-	defer bc.RUnlock()
-	return bc.validatorCache.Head()
-}
-
-func (bc *Blockchain) Validators() validator.IterableReader {
-	bc.RLock()
-	defer bc.RUnlock()
-	return bc.validatorCache.CurrentSet()
-}
-
-func (bc *Blockchain) ValidatorsHistory() (*validator.Set, []*validator.Set, uint64) {
-	bc.RLock()
-	defer bc.RUnlock()
-	delta, _ := bc.validatorCache.OrderedBuckets()
-	deltas := make([]*validator.Set, len(delta))
-	for i, d := range delta {
-		deltas[i] = validator.Copy(d)
-	}
-	return validator.CopyTrim(bc.validatorCache.CurrentSet()), deltas, bc.lastBlockHeight
-}
-
-func (bc *Blockchain) CurrentValidators() *validator.Set {
-	bc.RLock()
-	defer bc.RUnlock()
-	return bc.validatorCache.CurrentSet()
-}
-
-func (bc *Blockchain) PreviousValidators(delay int) *validator.Set {
-	bc.RLock()
-	defer bc.RUnlock()
-	return bc.validatorCache.PreviousSet(int64(delay))
-}
-
-func (bc *Blockchain) NumValidators() int {
-	bc.RLock()
-	defer bc.RUnlock()
-	return bc.validatorCache.CurrentSet().Count()
 }
 
 func (bc *Blockchain) GetBlockHash(blockHeight uint64) (binary.Word256, error) {

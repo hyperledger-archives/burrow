@@ -41,15 +41,16 @@ func NewTrimSet() *Set {
 }
 
 // Implements Writer, but will never error
-func (vs *Set) AlterPower(id crypto.PublicKey, power *big.Int) (flow *big.Int, err error) {
-	return vs.ChangePower(id, power), nil
+func (vs *Set) SetPower(id crypto.PublicKey, power *big.Int) error {
+	vs.ChangePower(id, power)
+	return nil
 }
 
 // Add the power of a validator and returns the flow into that validator
 func (vs *Set) ChangePower(id crypto.PublicKey, power *big.Int) *big.Int {
 	address := id.GetAddress()
-	// Calculcate flow into this validator (postive means in, negative means out)
-	flow := new(big.Int).Sub(power, vs.Power(id.GetAddress()))
+	// Calculate flow into this validator (positive means in, negative means out)
+	flow := vs.Flow(id, power)
 	vs.totalPower.Add(vs.totalPower, flow)
 
 	if vs.trim && power.Sign() == 0 {
@@ -66,6 +67,19 @@ func (vs *Set) TotalPower() *big.Int {
 	return new(big.Int).Set(vs.totalPower)
 }
 
+// Returns the maximum allowable flow whilst ensuring the majority of validators are non-byzantine after the transition
+// So need at most ceiling((Total Power)/3) - 1, in integer division we have ceiling(X*p/q) = (p(X+1)-1)/q
+// For p = 1 just X/q so we want (Total Power)/3 - 1
+func (vs *Set) MaxFlow() *big.Int {
+	max := vs.TotalPower()
+	return max.Sub(max.Div(max, big3), big1)
+}
+
+// Returns the flow that would be induced by a validator power change
+func (vs *Set) Flow(id crypto.PublicKey, power *big.Int) *big.Int {
+	return new(big.Int).Sub(power, vs.GetPower(id.GetAddress()))
+}
+
 // Returns the power of id but only if it is set
 func (vs *Set) MaybePower(id crypto.Address) *big.Int {
 	if vs.powers[id] == nil {
@@ -74,31 +88,38 @@ func (vs *Set) MaybePower(id crypto.Address) *big.Int {
 	return new(big.Int).Set(vs.powers[id])
 }
 
-func (vs *Set) Power(id crypto.Address) *big.Int {
+// Version of Power to match interface
+func (vs *Set) Power(id crypto.Address) (*big.Int, error) {
+	return vs.GetPower(id), nil
+}
+
+// Error free version of Power
+func (vs *Set) GetPower(id crypto.Address) *big.Int {
 	if vs.powers[id] == nil {
 		return new(big.Int)
 	}
 	return new(big.Int).Set(vs.powers[id])
 }
 
-func (vs *Set) Equal(vsOther *Set) bool {
-	if vs.Count() != vsOther.Count() {
-		return false
+// Returns an error if the Sets are not equal describing which part of their structures differ
+func (vs *Set) Equal(vsOther *Set) error {
+	if vs.Size() != vsOther.Size() {
+		return fmt.Errorf("set size %d != other set size %d", vs.Size(), vsOther.Size())
 	}
 	// Stop iteration IFF we find a non-matching validator
-	return !vs.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		otherPower := vsOther.Power(id.GetAddress())
+	return vs.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
+		otherPower := vsOther.GetPower(id.GetAddress())
 		if otherPower.Cmp(power) != 0 {
-			return true
+			return fmt.Errorf("set power %d != other set power %d", power, otherPower)
 		}
-		return false
+		return nil
 	})
 }
 
 // Iterates over validators sorted by address
-func (vs *Set) Iterate(iter func(id crypto.Addressable, power *big.Int) (stop bool)) (stopped bool) {
+func (vs *Set) IterateValidators(iter func(id crypto.Addressable, power *big.Int) error) error {
 	if vs == nil {
-		return
+		return nil
 	}
 	addresses := make(crypto.Addresses, 0, len(vs.powers))
 	for address := range vs.powers {
@@ -106,25 +127,32 @@ func (vs *Set) Iterate(iter func(id crypto.Addressable, power *big.Int) (stop bo
 	}
 	sort.Sort(addresses)
 	for _, address := range addresses {
-		if iter(vs.publicKeys[address], new(big.Int).Set(vs.powers[address])) {
-			return true
+		err := iter(vs.publicKeys[address], new(big.Int).Set(vs.powers[address]))
+		if err != nil {
+			return err
 		}
 	}
-	return
+	return nil
+}
+
+func (vs *Set) Flush(output Writer, backend Reader) error {
+	return vs.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
+		return output.SetPower(id.GetPublicKey(), power)
+	})
 }
 
 func (vs *Set) CountNonZero() int {
 	var count int
-	vs.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
+	vs.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
 		if power.Sign() != 0 {
 			count++
 		}
-		return
+		return nil
 	})
 	return count
 }
 
-func (vs *Set) Count() int {
+func (vs *Set) Size() int {
 	return len(vs.publicKeys)
 }
 
@@ -132,10 +160,10 @@ func (vs *Set) Validators() []*Validator {
 	if vs == nil {
 		return nil
 	}
-	pvs := make([]*Validator, 0, vs.Count())
-	vs.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
+	pvs := make([]*Validator, 0, vs.Size())
+	vs.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
 		pvs = append(pvs, &Validator{PublicKey: id.GetPublicKey(), Power: power.Uint64()})
-		return
+		return nil
 	})
 	return pvs
 }
@@ -149,15 +177,15 @@ func UnpersistSet(pvs []*Validator) *Set {
 }
 
 func (vs *Set) String() string {
-	return fmt.Sprintf("Validators{TotalPower: %v; Count: %v; %v}", vs.TotalPower(), vs.Count(),
+	return fmt.Sprintf("Validators{TotalPower: %v; Count: %v; %v}", vs.TotalPower(), vs.Size(),
 		vs.Strings())
 }
 
 func (vs *Set) Strings() string {
-	strs := make([]string, 0, vs.Count())
-	vs.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
+	strs := make([]string, 0, vs.Size())
+	vs.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
 		strs = append(strs, fmt.Sprintf("%v->%v", id.GetAddress(), power))
-		return
+		return nil
 	})
 	return strings.Join(strs, ", ")
 }

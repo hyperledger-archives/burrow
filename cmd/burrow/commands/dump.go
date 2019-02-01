@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/state"
 
 	"github.com/hyperledger/burrow/rpc/rpcdump"
 	amino "github.com/tendermint/go-amino"
@@ -26,7 +26,7 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 		filename := cmd.StringArg("FILE", "", "Save dump here")
 		useJSON := cmd.BoolOpt("j json", false, "Output in json")
 
-		s := execution.NewState(db.NewMemDB())
+		s := state.NewState(db.NewMemDB())
 
 		cmd.Action = func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -53,7 +53,7 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 				return
 			}
 
-			_, _, err = s.Update(func(ws execution.Updatable) error {
+			_, _, err = s.Update(func(ws state.Updatable) error {
 				for {
 					resp, err := dump.Recv()
 					if err == io.EOF {

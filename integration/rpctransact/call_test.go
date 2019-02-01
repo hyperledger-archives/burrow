@@ -384,8 +384,6 @@ func TestRevertWithoutReason(t *testing.T) {
 	require.NoError(t, err)
 	txe = rpctest.CallContract(t, cli, inputAddress, txe.Receipt.ContractAddress, data)
 	assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
-	fmt.Println(txe.Exception)
-	fmt.Printf("%x\n", txe.Result.Return)
 	revertReason, err := abi.UnpackRevert(txe.Result.Return)
 	require.NoError(t, err)
 	assert.Nil(t, revertReason)

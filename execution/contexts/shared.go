@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -22,7 +22,7 @@ type Context interface {
 // acm.PublicKey().(type) != nil, (it must be known),
 // or it must be specified in the TxInput.  If redeclared,
 // the TxInput is modified and input.PublicKey() set to nil.
-func getInputs(accountGetter state.AccountGetter, ins []*payload.TxInput) (map[crypto.Address]*acm.Account, uint64, error) {
+func getInputs(accountGetter acmstate.AccountGetter, ins []*payload.TxInput) (map[crypto.Address]*acm.Account, uint64, error) {
 	var total uint64
 	accounts := map[crypto.Address]*acm.Account{}
 	for _, in := range ins {
@@ -43,7 +43,7 @@ func getInputs(accountGetter state.AccountGetter, ins []*payload.TxInput) (map[c
 	return accounts, total, nil
 }
 
-func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.Account,
+func getOrMakeOutputs(accountGetter acmstate.AccountGetter, accs map[crypto.Address]*acm.Account,
 	outs []*payload.TxOutput, logger *logging.Logger) (map[crypto.Address]*acm.Account, error) {
 	if accs == nil {
 		accs = make(map[crypto.Address]*acm.Account)
@@ -59,7 +59,7 @@ func getOrMakeOutputs(accountGetter state.AccountGetter, accs map[crypto.Address
 	return accs, nil
 }
 
-func getOrMakeOutput(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.Account,
+func getOrMakeOutput(accountGetter acmstate.AccountGetter, accs map[crypto.Address]*acm.Account,
 	outputAddress crypto.Address, logger *logging.Logger) (*acm.Account, error) {
 
 	// Account shouldn't be duplicated
@@ -126,7 +126,7 @@ func adjustByOutputs(accs map[crypto.Address]*acm.Account, outs []*payload.TxOut
 //---------------------------------------------------------------
 
 // Get permission on an account or fall back to global value
-func HasPermission(accountGetter state.AccountGetter, acc *acm.Account, perm permission.PermFlag, logger *logging.Logger) bool {
+func HasPermission(accountGetter acmstate.AccountGetter, acc *acm.Account, perm permission.PermFlag, logger *logging.Logger) bool {
 	if perm > permission.AllPermFlags {
 		logger.InfoMsg(
 			fmt.Sprintf("HasPermission called on invalid permission 0b%b (invalid) > 0b%b (maximum) ",
@@ -136,7 +136,7 @@ func HasPermission(accountGetter state.AccountGetter, acc *acm.Account, perm per
 		return false
 	}
 
-	v, err := acc.Permissions.Base.Compose(state.GlobalAccountPermissions(accountGetter).Base).Get(perm)
+	v, err := acc.Permissions.Base.Compose(acmstate.GlobalAccountPermissions(accountGetter).Base).Get(perm)
 	if err != nil {
 		logger.TraceMsg("Error obtaining permission value (will default to false/deny)",
 			"perm_flag", perm.String(),
@@ -155,7 +155,7 @@ func HasPermission(accountGetter state.AccountGetter, acc *acm.Account, perm per
 	return v
 }
 
-func allHavePermission(accountGetter state.AccountGetter, perm permission.PermFlag,
+func allHavePermission(accountGetter acmstate.AccountGetter, perm permission.PermFlag,
 	accs map[crypto.Address]*acm.Account, logger *logging.Logger) error {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, perm, logger) {
@@ -168,37 +168,37 @@ func allHavePermission(accountGetter state.AccountGetter, perm permission.PermFl
 	return nil
 }
 
-func hasProposalPermission(accountGetter state.AccountGetter, acc *acm.Account,
+func hasProposalPermission(accountGetter acmstate.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Proposal, logger)
 }
 
-func hasInputPermission(accountGetter state.AccountGetter, acc *acm.Account,
+func hasInputPermission(accountGetter acmstate.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Input, logger)
 }
 
-func hasBatchPermission(accountGetter state.AccountGetter, acc *acm.Account,
+func hasBatchPermission(accountGetter acmstate.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Batch, logger)
 }
 
-func hasNamePermission(accountGetter state.AccountGetter, acc *acm.Account,
+func hasNamePermission(accountGetter acmstate.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Name, logger)
 }
 
-func hasCallPermission(accountGetter state.AccountGetter, acc *acm.Account,
+func hasCallPermission(accountGetter acmstate.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Call, logger)
 }
 
-func hasCreateContractPermission(accountGetter state.AccountGetter, acc *acm.Account,
+func hasCreateContractPermission(accountGetter acmstate.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.CreateContract, logger)
 }
 
-func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.Account,
+func hasCreateAccountPermission(accountGetter acmstate.AccountGetter, accs map[crypto.Address]*acm.Account,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.CreateAccount, logger) {
@@ -208,12 +208,12 @@ func hasCreateAccountPermission(accountGetter state.AccountGetter, accs map[cryp
 	return true
 }
 
-func hasBondPermission(accountGetter state.AccountGetter, acc *acm.Account,
+func hasBondPermission(accountGetter acmstate.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Bond, logger)
 }
 
-func hasBondOrSendPermission(accountGetter state.AccountGetter, accs map[crypto.Address]*acm.Account,
+func hasBondOrSendPermission(accountGetter acmstate.AccountGetter, accs map[crypto.Address]*acm.Account,
 	logger *logging.Logger) bool {
 	for _, acc := range accs {
 		if !HasPermission(accountGetter, acc, permission.Bond, logger) {

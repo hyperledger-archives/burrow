@@ -46,11 +46,13 @@ func TestMain(m *testing.M) {
 	for i, acc := range privateAccounts {
 		testConfig := integration.NewTestConfig(genesisDoc)
 		testConfigs[i] = testConfig
+		logconf := logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
+			return sink.SetTransform(logconfig.FilterTransform(logconfig.IncludeWhenAllMatch,
+				"total_validator")).SetOutput(logconfig.StdoutOutput())
+		})
+		//logconf = logconfig.New()
 		kernels[i] = integration.TestKernel(acc, privateAccounts, testConfigs[i],
-			logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
-				return sink.SetTransform(logconfig.FilterTransform(logconfig.IncludeWhenAllMatch,
-					"total_validator")).SetOutput(logconfig.StdoutOutput())
-			}))
+			logconf)
 		err := kernels[i].Boot()
 		if err != nil {
 			panic(err)

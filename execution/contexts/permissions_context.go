@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
@@ -16,7 +16,7 @@ import (
 
 type PermissionsContext struct {
 	Tip         bcm.BlockchainInfo
-	StateWriter state.ReaderWriter
+	StateWriter acmstate.ReaderWriter
 	Logger      *logging.Logger
 	tx          *payload.PermsTx
 }
@@ -119,7 +119,7 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution, p payload.Payload)
 	return nil
 }
 
-func mutatePermissions(stateReader state.Reader, address crypto.Address,
+func mutatePermissions(stateReader acmstate.Reader, address crypto.Address,
 	mutator func(*permission.AccountPermissions) error) (*acm.Account, error) {
 
 	account, err := stateReader.GetAccount(address)

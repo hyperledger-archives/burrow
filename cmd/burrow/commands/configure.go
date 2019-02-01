@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/deployment"
 	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/genesis/spec"
 	"github.com/hyperledger/burrow/keys"
@@ -219,17 +220,17 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("On restore, validators must be provided in GenesisDoc or GenesisSpec")
 				}
 
-				state, err := execution.MakeGenesisState(db.NewMemDB(), conf.GenesisDoc)
+				st, err := state.MakeGenesisState(db.NewMemDB(), conf.GenesisDoc)
 				if err != nil {
 					output.Fatalf("could not generate state from genesis: %v", err)
 				}
 
-				err = state.LoadDump(*restoreDumpOpt)
+				err = st.LoadDump(*restoreDumpOpt)
 				if err != nil {
 					output.Fatalf("could not load restore file: %v", err)
 				}
 
-				conf.GenesisDoc.AppHash = hex.EncodeUpperToString(state.Hash())
+				conf.GenesisDoc.AppHash = hex.EncodeUpperToString(st.Hash())
 			}
 
 			if conf.GenesisDoc != nil {

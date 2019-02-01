@@ -6,14 +6,14 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	dump "github.com/hyperledger/burrow/dump"
-	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
+	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/logging"
 )
 
 type dumpServer struct {
-	state      *execution.State
+	state      *state.State
 	blockchain bcm.BlockchainInfo
 	nodeView   *tendermint.NodeView
 	logger     *logging.Logger
@@ -21,7 +21,7 @@ type dumpServer struct {
 
 var _ DumpServer = &dumpServer{}
 
-func NewDumpServer(state *execution.State, blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, logger *logging.Logger) *dumpServer {
+func NewDumpServer(state *state.State, blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, logger *logging.Logger) *dumpServer {
 	return &dumpServer{
 		state:      state,
 		blockchain: blockchain,
@@ -35,7 +35,7 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 	if height <= 0 {
 		height = ds.blockchain.LastBlockHeight()
 	}
-	state, err := ds.state.LoadHeight(height)
+	st, err := ds.state.LoadHeight(height)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 		return err
 	}
 
-	err = state.IterateAccounts(func(acc *acm.Account) error {
+	err = st.IterateAccounts(func(acc *acm.Account) error {
 		err = stream.Send(&dump.Dump{Height: height, Account: acc})
 		if err != nil {
 			return err
@@ -78,7 +78,7 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 		return err
 	}
 
-	err = state.IterateNames(func(entry *names.Entry) error {
+	err = st.IterateNames(func(entry *names.Entry) error {
 		return stream.Send(&dump.Dump{Height: height, Name: entry})
 	})
 

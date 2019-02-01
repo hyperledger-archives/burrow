@@ -3,19 +3,19 @@ package payload
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/permission"
 )
 
-func NewPermsTx(st state.AccountGetter, from crypto.PublicKey, args permission.PermArgs) (*PermsTx, error) {
+func NewPermsTx(st acmstate.AccountGetter, from crypto.PublicKey, args permission.PermArgs) (*PermsTx, error) {
 	addr := from.GetAddress()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
 		return nil, err
 	}
 	if acc == nil {
-		return nil, fmt.Errorf("invalid address %s from pubkey %s", addr, from)
+		return nil, fmt.Errorf("NewPermsTx: could not find account with address %v", addr)
 	}
 
 	sequence := acc.Sequence + 1

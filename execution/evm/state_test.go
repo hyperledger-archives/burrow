@@ -3,7 +3,7 @@ package evm
 import (
 	"testing"
 
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/stretchr/testify/require"
 
 	"github.com/hyperledger/burrow/bcm"
@@ -38,7 +38,7 @@ func TestState_CreateAccount(t *testing.T) {
 }
 
 func TestState_Sync(t *testing.T) {
-	backend := state.NewCache(newAppState())
+	backend := acmstate.NewCache(newAppState())
 	st := NewState(backend, newBlockchainInfo())
 	address := newAddress("frogs")
 
@@ -73,7 +73,7 @@ func TestState_NewCache(t *testing.T) {
 	assert.Equal(t, amt, st.GetBalance(address))
 	require.Nil(t, st.Error())
 
-	cache = st.NewCache(state.ReadOnly).NewCache()
+	cache = st.NewCache(acmstate.ReadOnly).NewCache()
 	require.Nil(t, st.Error())
 	cache.AddToBalance(address, amt)
 	assertErrorCode(t, errors.ErrorCodeIllegalWrite, cache.Error())

@@ -3,7 +3,7 @@ package payload
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
 )
 
@@ -26,7 +26,7 @@ func (tx *BondTx) String() string {
 	return fmt.Sprintf("BondTx{%v -> %v}", tx.Inputs, tx.UnbondTo)
 }
 
-func (tx *BondTx) AddInput(st state.AccountGetter, pubkey crypto.PublicKey, amt uint64) error {
+func (tx *BondTx) AddInput(st acmstate.AccountGetter, pubkey crypto.PublicKey, amt uint64) error {
 	addr := pubkey.GetAddress()
 	acc, err := st.GetAccount(addr)
 	if err != nil {

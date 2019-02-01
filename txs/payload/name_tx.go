@@ -3,18 +3,18 @@ package payload
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
 )
 
-func NewNameTx(st state.AccountGetter, from crypto.PublicKey, name, data string, amt, fee uint64) (*NameTx, error) {
+func NewNameTx(st acmstate.AccountGetter, from crypto.PublicKey, name, data string, amt, fee uint64) (*NameTx, error) {
 	addr := from.GetAddress()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
 		return nil, err
 	}
 	if acc == nil {
-		return nil, fmt.Errorf("Invalid address %s from pubkey %s", addr, from)
+		return nil, fmt.Errorf("NewNameTx: could not find account with address %v", addr)
 	}
 
 	sequence := acc.Sequence + 1

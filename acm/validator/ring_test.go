@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
 	"testing"
@@ -54,13 +55,14 @@ func TestValidatorsWindow_AlterPower(t *testing.T) {
 	_, err = vw.AlterPower(pubB, big.NewInt(2000))
 	assert.Error(t, err)
 
-	// Take a bit off shouhd work
+	// Take a bit off should work
 	_, err = vw.AlterPower(pubA, big.NewInt(7000))
 	assert.NoError(t, err)
 
 	_, err = vw.AlterPower(pubB, big.NewInt(2000))
 	assert.NoError(t, err)
-	vw.Rotate()
+	_, _, err = vw.Rotate()
+	require.NoError(t, err)
 
 	powerChange, totalFlow, err = alterPowers(t, vw, powA, powB, powC)
 	require.NoError(t, err)
@@ -78,20 +80,46 @@ func TestValidatorsWindow_AlterPower(t *testing.T) {
 	assert.Equal(t, big0, totalFlow)
 }
 
-func TestValidatorsRing_Persistable(t *testing.T) {
+func TestRing_Rotate(t *testing.T) {
+	ring := NewRing(nil, 3)
+	err := ring.SetPower(pubA, big.NewInt(234))
+	require.NoError(t, err)
+	fmt.Println(printBuckets(ring))
+	_, _, err = ring.Rotate()
+	require.NoError(t, err)
 
-	vs := NewSet()
-	powAInitial := int64(10000)
-	vs.ChangePower(pubA, big.NewInt(powAInitial))
-	vw := NewRing(vs, 30)
+	err = ring.SetPower(pubA, big.NewInt(111))
+	require.NoError(t, err)
+	fmt.Println(printBuckets(ring))
+	_, _, err = ring.Rotate()
+	require.NoError(t, err)
+	fmt.Println(printBuckets(ring))
 
-	for i := int64(0); i < 61; i++ {
-		_, _, err := alterPowers(t, vw, 10000, 200*i, 200*((i+1)%4))
-		require.NoError(t, err)
+	err = ring.SetPower(pubB, big.NewInt(40))
+	require.NoError(t, err)
+	fmt.Println(printBuckets(ring))
+	_, _, err = ring.Rotate()
+	require.NoError(t, err)
+	fmt.Println(printBuckets(ring))
+
+	err = ring.SetPower(pubC, big.NewInt(99990))
+	require.NoError(t, err)
+	fmt.Println(printBuckets(ring))
+	_, _, err = ring.Rotate()
+	require.NoError(t, err)
+	fmt.Println(printBuckets(ring))
+
+	fmt.Println(ring.ValidatorChanges(1))
+}
+
+func printBuckets(ring *Ring) string {
+	buf := new(bytes.Buffer)
+	for i, b := range ring.OrderedBuckets() {
+		buf.WriteString(fmt.Sprintf("%d: ", i))
+		buf.WriteString(b.String())
+		buf.WriteString("\n")
 	}
-
-	vwOut := UnpersistRing(vw.Persistable())
-	assert.True(t, vw.Equal(vwOut), "should re equal across persistence")
+	return buf.String()
 }
 
 func alterPowers(t testing.TB, vw *Ring, powA, powB, powC int64) (powerChange, totalFlow *big.Int, err error) {
@@ -108,7 +136,7 @@ func alterPowers(t testing.TB, vw *Ring, powA, powB, powC int64) (powerChange, t
 	if err != nil {
 		return nil, nil, err
 	}
-	maxFlow := vw.MaxFlow()
+	maxFlow := vw.Head().Cum.MaxFlow()
 	powerChange, totalFlow, err = vw.Rotate()
 	require.NoError(t, err)
 	// totalFlow > maxFlow

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -38,7 +38,7 @@ func (txEnv *Envelope) String() string {
 // Attempts to 'realise' the PublicKey and Address of a Signatory possibly referring to state
 // in the case where the Signatory contains an Address by no PublicKey. Checks consistency in other
 // cases, possibly generating the Address from the PublicKey
-func (s *Signatory) RealisePublicKey(getter state.AccountGetter) error {
+func (s *Signatory) RealisePublicKey(getter acmstate.AccountGetter) error {
 	const errPrefix = "could not realise public key for signatory"
 	if s.PublicKey == nil {
 		if s.Address == nil {
@@ -93,7 +93,7 @@ func (sig *Signatory) Validate() error {
 
 // Verifies the validity of the Signatories' Signatures in the Envelope. The Signatories must
 // appear in the same order as the inputs as returned by Tx.GetInputs().
-func (txEnv *Envelope) Verify(getter state.AccountGetter, chainID string) error {
+func (txEnv *Envelope) Verify(getter acmstate.AccountGetter, chainID string) error {
 	err := txEnv.Validate()
 	if err != nil {
 		return err

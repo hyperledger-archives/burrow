@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -196,6 +197,21 @@ func TestPrefixDBReverseIterator7(t *testing.T) {
 	checkNext(t, itr, false)
 	checkInvalid(t, itr)
 	itr.Close()
+}
+
+func (p Prefix) BadSuffix(key []byte) []byte {
+	return key[len(p):]
+}
+
+func TestBadSuffix(t *testing.T) {
+	p := Prefix([]byte("foo"))
+	fmt.Println(cap(p))
+	key1 := p.BadSuffix([]byte("fooaaa"))
+	fmt.Println(cap(p), p, string(key1))
+	key2 := p.BadSuffix([]byte("foobbb"))
+	fmt.Println(cap(p), p, string(key1))
+	fmt.Println(cap(p), p, string(key2))
+
 }
 
 func checkValue(t *testing.T, db dbm.DB, key []byte, valueWanted []byte) {

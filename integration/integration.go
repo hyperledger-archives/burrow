@@ -120,7 +120,7 @@ func TestGenesisDoc(addressables []*acm.PrivateAccount) *genesis.GenesisDoc {
 		panic("could not parse test genesis time")
 	}
 	return genesis.MakeGenesisDocFromAccounts(ChainName, nil, genesisTime, accounts,
-		map[string]validator.Validator{
+		map[string]*validator.Validator{
 			"genesis_validator": validator.FromAccount(accounts["user_0"], 1<<16),
 		})
 }

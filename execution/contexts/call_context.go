@@ -6,7 +6,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/execution/errors"
@@ -22,7 +22,7 @@ const GasLimit = uint64(1000000)
 
 type CallContext struct {
 	Tip         bcm.BlockchainInfo
-	StateWriter state.ReaderWriter
+	StateWriter acmstate.ReaderWriter
 	RunCall     bool
 	VMOptions   []func(*evm.VM)
 	Logger      *logging.Logger
@@ -130,7 +130,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		callee  crypto.Address = crypto.ZeroAddress // initialized below
 		code    []byte         = nil
 		ret     []byte         = nil
-		txCache                = evm.NewState(ctx.StateWriter, ctx.Tip, state.Named("TxCache"))
+		txCache                = evm.NewState(ctx.StateWriter, ctx.Tip, acmstate.Named("TxCache"))
 		params                 = evm.Params{
 			BlockHeight: ctx.Tip.LastBlockHeight(),
 			BlockHash:   binary.LeftPadWord256(ctx.Tip.LastBlockHash()),

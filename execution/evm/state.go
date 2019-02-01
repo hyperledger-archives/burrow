@@ -5,7 +5,7 @@ import (
 
 	"github.com/go-stack/stack"
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
@@ -20,7 +20,7 @@ type Interface interface {
 	errors.Provider
 	errors.Sink
 	// Create a new cached state over this one inheriting any cache options
-	NewCache(cacheOptions ...state.CacheOption) Interface
+	NewCache(cacheOptions ...acmstate.CacheOption) Interface
 	// Sync this state cache to into its originator
 	Sync() errors.CodedError
 }
@@ -51,27 +51,27 @@ type Writer interface {
 
 type State struct {
 	// Where we sync
-	backend state.ReaderWriter
+	backend acmstate.ReaderWriter
 	// Block chain info
 	blockchainInfo bcm.BlockchainInfo
 	// Cache this State wraps
-	cache *state.Cache
+	cache *acmstate.Cache
 	// Any error that may have occurred
 	error errors.CodedError
 	// In order for nested cache to inherit any options
-	cacheOptions []state.CacheOption
+	cacheOptions []acmstate.CacheOption
 }
 
-func NewState(st state.ReaderWriter, bci bcm.BlockchainInfo, cacheOptions ...state.CacheOption) *State {
+func NewState(st acmstate.ReaderWriter, bci bcm.BlockchainInfo, cacheOptions ...acmstate.CacheOption) *State {
 	return &State{
 		backend:        st,
 		blockchainInfo: bci,
-		cache:          state.NewCache(st, cacheOptions...),
+		cache:          acmstate.NewCache(st, cacheOptions...),
 		cacheOptions:   cacheOptions,
 	}
 }
 
-func (st *State) NewCache(cacheOptions ...state.CacheOption) Interface {
+func (st *State) NewCache(cacheOptions ...acmstate.CacheOption) Interface {
 	return NewState(st.cache, st.blockchainInfo, append(st.cacheOptions, cacheOptions...)...)
 }
 
