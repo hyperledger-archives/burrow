@@ -8,7 +8,6 @@ import (
 
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/acm/validator"
-	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -20,13 +19,14 @@ import (
 )
 
 type ProposalContext struct {
-	Tip          bcm.BlockchainInfo
-	StateWriter  acmstate.ReaderWriter
-	ValidatorSet validator.Writer
-	ProposalReg  proposal.ReaderWriter
-	Logger       *logging.Logger
-	tx           *payload.ProposalTx
-	Contexts     map[payload.Type]Context
+	ChainID           string
+	ProposalThreshold uint64
+	StateWriter       acmstate.ReaderWriter
+	ValidatorSet      validator.Writer
+	ProposalReg       proposal.ReaderWriter
+	Logger            *logging.Logger
+	tx                *payload.ProposalTx
+	Contexts          map[payload.Type]Context
 }
 
 func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) error {
@@ -164,7 +164,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 	stateCache := acmstate.NewCache(ctx.StateWriter)
 
 	for i, step := range ballot.Proposal.BatchTx.Txs {
-		txEnv := txs.EnvelopeFromAny(ctx.Tip.ChainID(), step)
+		txEnv := txs.EnvelopeFromAny(ctx.ChainID, step)
 
 		for _, input := range txEnv.Tx.GetInputs() {
 			acc, err := stateCache.GetAccount(input.Address)
@@ -182,13 +182,13 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 		}
 	}
 
-	if power >= ctx.Tip.GenesisDoc().Params.ProposalThreshold {
+	if power >= ctx.ProposalThreshold {
 		ballot.ProposalState = payload.Ballot_EXECUTED
 
 		txe.TxExecutions = make([]*exec.TxExecution, 0)
 
 		for i, step := range ballot.Proposal.BatchTx.Txs {
-			txEnv := txs.EnvelopeFromAny(ctx.Tip.ChainID(), step)
+			txEnv := txs.EnvelopeFromAny(ctx.ChainID, step)
 
 			containedTxe := exec.NewTxExecution(txEnv)
 

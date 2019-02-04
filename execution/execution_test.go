@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tendermint/tendermint/abci/types"
+
 	"github.com/hyperledger/burrow/execution/state"
 
 	"github.com/hyperledger/burrow/event/query"
@@ -926,7 +928,7 @@ func TestNameTxs(t *testing.T) {
 
 	names.MinNameRegistrationPeriod = 5
 	exe := makeExecutor(st)
-	startingBlock := exe.blockchain.LastBlockHeight()
+	startingBlock := exe.Blockchain.LastBlockHeight()
 
 	// try some bad names. these should all fail
 	nameStrings := []string{"", "\n", "123#$%", "\x00", string([]byte{20, 40, 60, 80}),
@@ -1011,17 +1013,17 @@ func TestNameTxs(t *testing.T) {
 
 	// fail to update it as non-owner
 	// Fast forward
-	for exe.blockchain.LastBlockHeight() < entry.Expires-1 {
-		_, err = exe.Commit(nil, time.Now(), nil)
+	for exe.Blockchain.LastBlockHeight() < entry.Expires-1 {
+		_, err = exe.Commit(nil)
 		require.NoError(t, err)
 	}
 	tx, _ = payload.NewNameTx(st, testPrivAccounts[1].GetPublicKey(), name, data, amt, fee)
 	require.Error(t, exe.signExecuteCommit(tx, testPrivAccounts[1]))
-	_, err = exe.Commit(nil, time.Now(), nil)
+	_, err = exe.Commit(nil)
 	require.NoError(t, err)
 
 	// once expires, non-owner succeeds
-	startingBlock = exe.blockchain.LastBlockHeight()
+	startingBlock = exe.Blockchain.LastBlockHeight()
 	tx, _ = payload.NewNameTx(st, testPrivAccounts[1].GetPublicKey(), name, data, amt, fee)
 	require.NoError(t, exe.signExecuteCommit(tx, testPrivAccounts[1]))
 
@@ -1055,7 +1057,7 @@ func TestNameTxs(t *testing.T) {
 
 	// create entry by key0,
 	// test removal by key1 after expiry
-	startingBlock = exe.blockchain.LastBlockHeight()
+	startingBlock = exe.Blockchain.LastBlockHeight()
 	name = "looking_good/karaoke_bar"
 	data = "some data"
 	amt = fee + numDesiredBlocks*names.NameByteCostMultiplier*names.NameBlockCostMultiplier*names.NameBaseCost(name, data)
@@ -1066,8 +1068,8 @@ func TestNameTxs(t *testing.T) {
 	require.NoError(t, err)
 	validateEntry(t, entry, name, data, testPrivAccounts[0].GetAddress(), startingBlock+numDesiredBlocks)
 	// Fast forward
-	for exe.blockchain.LastBlockHeight() < entry.Expires {
-		_, err = exe.Commit(nil, time.Now(), nil)
+	for exe.Blockchain.LastBlockHeight() < entry.Expires {
+		_, err = exe.Commit(nil)
 		require.NoError(t, err)
 	}
 
@@ -1456,7 +1458,7 @@ func TestSelfDestruct(t *testing.T) {
 	assertErrorCode(t, errors.ErrorCodeInvalidAddress, err)
 
 	// commit the block
-	_, err = exe.Commit([]byte("Blocky McHash"), time.Now(), nil)
+	_, err = exe.Commit(nil)
 	require.NoError(t, err)
 
 	// acc2 should receive the sent funds and the contracts balance
@@ -1553,14 +1555,16 @@ var ExceptionTimeOut = errors.NewException(errors.ErrorCodeGeneric, "timed out w
 
 type testExecutor struct {
 	*executor
+	*bcm.Blockchain
 }
 
 func makeExecutor(state *state.State) *testExecutor {
 	blockchain := newBlockchain(testGenesisDoc)
 	blockchain.CommitBlockAtHeight(time.Now(), []byte("hashily"), state.Hash(), HeightAtVersion(state.Version()))
 	return &testExecutor{
-		executor: newExecutor("makeExecutorCache", true, state, blockchain, event.NewNoOpPublisher(),
-			logger),
+		Blockchain: blockchain,
+		executor: newExecutor("makeExecutorCache", true, ParamsFromGenesis(testGenesisDoc), state,
+			blockchain, event.NewNoOpPublisher(), logger),
 	}
 }
 
@@ -1568,6 +1572,18 @@ func copyState(t testing.TB, st *state.State) *state.State {
 	cpy, err := st.Copy(dbm.NewMemDB())
 	require.NoError(t, err)
 	return cpy
+}
+
+func (te *testExecutor) Commit(header *types.Header) ([]byte, error) {
+	appHash, err := te.executor.Commit(header)
+	if err != nil {
+		return nil, err
+	}
+	_, _, err = te.Blockchain.CommitBlock(time.Now(), nil, appHash)
+	if err != nil {
+		return nil, err
+	}
+	return appHash, nil
 }
 
 func (te *testExecutor) getAccount(t *testing.T, address crypto.Address) *acm.Account {
@@ -1587,7 +1603,7 @@ func (te *testExecutor) updateAccounts(t *testing.T, accounts ...*acm.Account) {
 	for _, acc := range accounts {
 		err := te.stateCache.UpdateAccount(acc)
 		require.NoError(t, err)
-		_, err = te.Commit(nil, time.Now(), nil)
+		_, err = te.Commit(nil)
 		require.NoError(t, err)
 	}
 }
@@ -1609,7 +1625,7 @@ func (te *testExecutor) signExecuteCommit(tx payload.Payload, signers ...acm.Add
 	if txe.Exception != nil {
 		return txe.Exception
 	}
-	_, err = te.Commit(nil, time.Now(), nil)
+	_, err = te.Commit(nil)
 	return err
 }
 
@@ -1628,7 +1644,7 @@ func execTxWaitAccountCall(t *testing.T, exe *testExecutor, txEnv *txs.Envelope,
 	if err != nil {
 		return nil, err
 	}
-	_, err = exe.Commit([]byte("Blocky McHash"), time.Now(), nil)
+	_, err = exe.Commit(nil)
 	require.NoError(t, err)
 
 	for _, ev := range txe.TaggedEvents().Filter(qry) {

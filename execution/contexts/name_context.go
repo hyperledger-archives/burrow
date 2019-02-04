@@ -6,7 +6,6 @@ import (
 	"regexp"
 
 	"github.com/hyperledger/burrow/acm/acmstate"
-	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
@@ -20,7 +19,7 @@ var regexpAlphaNum = regexp.MustCompile("^[a-zA-Z0-9._/-@]*$")
 var regexpJSON = regexp.MustCompile(`^[a-zA-Z0-9_/ \-+"':,\n\t.{}()\[\]]*$`)
 
 type NameContext struct {
-	Tip         bcm.BlockchainInfo
+	Blockchain  BlockchainHeight
 	StateWriter acmstate.ReaderWriter
 	NameReg     names.ReaderWriter
 	Logger      *logging.Logger
@@ -63,7 +62,7 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 	// let's say cost of a name for one block is len(data) + 32
 	costPerBlock := names.NameCostPerBlock(names.NameBaseCost(ctx.tx.Name, ctx.tx.Data))
 	expiresIn := value / uint64(costPerBlock)
-	lastBlockHeight := ctx.Tip.LastBlockHeight()
+	lastBlockHeight := ctx.Blockchain.LastBlockHeight()
 
 	ctx.Logger.TraceMsg("New NameTx",
 		"value", value,
@@ -106,7 +105,7 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 			// and changing the data
 			if expired {
 				if expiresIn < names.MinNameRegistrationPeriod {
-					return fmt.Errorf("Names must be registered for at least %d blocks", names.MinNameRegistrationPeriod)
+					return fmt.Errorf("names must be registered for at least %d blocks", names.MinNameRegistrationPeriod)
 				}
 				entry.Expires = lastBlockHeight + expiresIn
 				entry.Owner = ctx.tx.Input.Address

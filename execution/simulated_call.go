@@ -21,7 +21,7 @@ func CallSim(reader acmstate.Reader, tip bcm.BlockchainInfo, fromAddress, addres
 	exe := contexts.CallContext{
 		RunCall:     true,
 		StateWriter: cache,
-		Tip:         tip,
+		Blockchain:  tip,
 		Logger:      logger,
 	}
 

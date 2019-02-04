@@ -39,7 +39,7 @@ var expectedTopics = []Word256{
 // Tests logs and events.
 func TestLog4(t *testing.T) {
 	st := newAppState()
-	cache := NewState(st, newBlockchainInfo())
+	cache := NewState(st, blockHashGetter)
 	// Create accounts
 	account1 := &acm.Account{
 		Address: crypto.Address{1, 3, 5, 7, 9},

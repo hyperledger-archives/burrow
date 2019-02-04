@@ -1,18 +1,20 @@
 package evm
 
 import (
+	"fmt"
 	"testing"
+
+	"github.com/hyperledger/burrow/binary"
 
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/stretchr/testify/require"
 
-	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestState_PushError(t *testing.T) {
-	st := NewState(newAppState(), newBlockchainInfo())
+	st := NewState(newAppState(), blockHashGetter)
 	// This will be a wrapped nil - it should not register as first error
 	var ex errors.CodedError = (*errors.Exception)(nil)
 	st.PushError(ex)
@@ -23,14 +25,14 @@ func TestState_PushError(t *testing.T) {
 }
 
 func TestState_CreateAccount(t *testing.T) {
-	st := NewState(newAppState(), newBlockchainInfo())
+	st := NewState(newAppState(), blockHashGetter)
 	address := newAddress("frogs")
 	st.CreateAccount(address)
 	require.Nil(t, st.Error())
 	st.CreateAccount(address)
 	assertErrorCode(t, errors.ErrorCodeDuplicateAddress, st.Error())
 
-	st = NewState(newAppState(), newBlockchainInfo())
+	st = NewState(newAppState(), blockHashGetter)
 	st.CreateAccount(address)
 	require.Nil(t, st.Error())
 	st.InitCode(address, []byte{1, 2, 3})
@@ -39,7 +41,7 @@ func TestState_CreateAccount(t *testing.T) {
 
 func TestState_Sync(t *testing.T) {
 	backend := acmstate.NewCache(newAppState())
-	st := NewState(backend, newBlockchainInfo())
+	st := NewState(backend, blockHashGetter)
 	address := newAddress("frogs")
 
 	st.CreateAccount(address)
@@ -55,7 +57,7 @@ func TestState_Sync(t *testing.T) {
 }
 
 func TestState_NewCache(t *testing.T) {
-	st := NewState(newAppState(), newBlockchainInfo())
+	st := NewState(newAppState(), blockHashGetter)
 	address := newAddress("frogs")
 
 	cache := st.NewCache()
@@ -79,6 +81,6 @@ func TestState_NewCache(t *testing.T) {
 	assertErrorCode(t, errors.ErrorCodeIllegalWrite, cache.Error())
 }
 
-func newBlockchainInfo() *bcm.Blockchain {
-	return &bcm.Blockchain{}
+func blockHashGetter(height uint64) []byte {
+	return binary.LeftPadWord256([]byte(fmt.Sprintf("block_hash_%d", height))).Bytes()
 }

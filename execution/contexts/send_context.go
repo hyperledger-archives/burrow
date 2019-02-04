@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/acm/acmstate"
-	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
@@ -13,7 +12,6 @@ import (
 )
 
 type SendContext struct {
-	Tip         bcm.BlockchainInfo
 	StateWriter acmstate.ReaderWriter
 	Logger      *logging.Logger
 	tx          *payload.SendTx

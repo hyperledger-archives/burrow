@@ -6,7 +6,6 @@ import (
 	"github.com/go-stack/stack"
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
-	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
@@ -53,7 +52,7 @@ type State struct {
 	// Where we sync
 	backend acmstate.ReaderWriter
 	// Block chain info
-	blockchainInfo bcm.BlockchainInfo
+	blockHashGetter func(height uint64) []byte
 	// Cache this State wraps
 	cache *acmstate.Cache
 	// Any error that may have occurred
@@ -62,17 +61,17 @@ type State struct {
 	cacheOptions []acmstate.CacheOption
 }
 
-func NewState(st acmstate.ReaderWriter, bci bcm.BlockchainInfo, cacheOptions ...acmstate.CacheOption) *State {
+func NewState(st acmstate.ReaderWriter, blockHashGetter func(height uint64) []byte, cacheOptions ...acmstate.CacheOption) *State {
 	return &State{
-		backend:        st,
-		blockchainInfo: bci,
-		cache:          acmstate.NewCache(st, cacheOptions...),
-		cacheOptions:   cacheOptions,
+		backend:         st,
+		blockHashGetter: blockHashGetter,
+		cache:           acmstate.NewCache(st, cacheOptions...),
+		cacheOptions:    cacheOptions,
 	}
 }
 
 func (st *State) NewCache(cacheOptions ...acmstate.CacheOption) Interface {
-	return NewState(st.cache, st.blockchainInfo, append(st.cacheOptions, cacheOptions...)...)
+	return NewState(st.cache, st.blockHashGetter, append(st.cacheOptions, cacheOptions...)...)
 }
 
 func (st *State) Sync() errors.CodedError {
@@ -270,12 +269,12 @@ func (st *State) RemoveRole(address crypto.Address, role string) bool {
 	return removed
 }
 
-func (st *State) GetBlockHash(blockNumber uint64) (binary.Word256, error) {
-	header, err := st.blockchainInfo.GetBlockHeader(blockNumber)
-	if err != nil {
-		st.PushError(err)
+func (st *State) GetBlockHash(height uint64) (binary.Word256, error) {
+	hash := st.blockHashGetter(height)
+	if len(hash) == 0 {
+		st.PushError(fmt.Errorf("got empty BlockHash from blockHashGetter"))
 	}
-	return binary.LeftPadWord256(header.Hash()), nil
+	return binary.LeftPadWord256(hash), nil
 }
 
 // Helpers

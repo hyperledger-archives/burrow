@@ -83,7 +83,8 @@ func (re *Replay) Block(height uint64) (*ReplayCapture, error) {
 	recap.AppHashBefore = binary.HexBytes(block.AppHash)
 
 	// Get our commit machinery
-	committer := execution.NewBatchCommitter(st, re.blockchain, event.NewNoOpPublisher(), re.logger)
+	committer := execution.NewBatchCommitter(st, execution.ParamsFromGenesis(re.genesisDoc), re.blockchain,
+		event.NewNoOpPublisher(), re.logger)
 
 	var txe *exec.TxExecution
 	var execErr error
@@ -102,7 +103,7 @@ func (re *Replay) Block(height uint64) (*ReplayCapture, error) {
 		return nil, execErr
 	}
 	//abciHeader := types.TM2PB.Header(&block.Header)
-	recap.AppHashAfter, err = committer.Commit(block.Hash(), block.Time, nil)
+	recap.AppHashAfter, err = committer.Commit(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +150,8 @@ func (re *Replay) Blocks(startHeight, endHeight uint64) ([]*ReplayCapture, error
 		recap.AppHashBefore = binary.HexBytes(block.AppHash)
 
 		// Get our commit machinery
-		committer := execution.NewBatchCommitter(st, re.blockchain, event.NewNoOpPublisher(), re.logger)
+		committer := execution.NewBatchCommitter(st, execution.ParamsFromGenesis(re.genesisDoc), re.blockchain,
+			event.NewNoOpPublisher(), re.logger)
 
 		var txe *exec.TxExecution
 		var execErr error
@@ -168,7 +170,7 @@ func (re *Replay) Blocks(startHeight, endHeight uint64) ([]*ReplayCapture, error
 			return nil, execErr
 		}
 		abciHeader := types.TM2PB.Header(&block.Header)
-		recap.AppHashAfter, err = committer.Commit(block.Hash(), block.Time, &abciHeader)
+		recap.AppHashAfter, err = committer.Commit(&abciHeader)
 		if err != nil {
 			return nil, err
 		}
