@@ -5,6 +5,8 @@ import (
 	"github.com/hyperledger/burrow/deploy/def/rule"
 )
 
+const DefaultOutputFile = "deploy.output.json"
+
 type DeployArgs struct {
 	Address       string   `mapstructure:"," json:"," yaml:"," toml:","`
 	BinPath       string   `mapstructure:"," json:"," yaml:"," toml:","`

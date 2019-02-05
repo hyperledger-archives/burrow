@@ -43,7 +43,9 @@ func WriteJobResultCSV(name, result string) error {
 }
 
 func WriteJobResultJSON(results map[string]interface{}, logFile string) error {
-
+	if logFile == "" {
+		return nil
+	}
 	file, err := os.Create(logFile)
 	if err != nil {
 		return err

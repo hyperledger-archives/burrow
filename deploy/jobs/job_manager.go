@@ -324,7 +324,7 @@ func postProcess(do *def.DeployArgs, deployScript *def.Playbook) error {
 	}
 
 	// if do.YAMLPath is not default and do.DefaultOutput is default, over-ride do.DefaultOutput
-	if yaml != "deploy" && do.DefaultOutput == "deploy.output.json" {
+	if yaml != "deploy" && do.DefaultOutput == def.DefaultOutputFile {
 		do.DefaultOutput = fmt.Sprintf("%s.output.json", yaml)
 	}
 
