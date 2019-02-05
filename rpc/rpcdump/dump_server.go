@@ -86,7 +86,7 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 		return err
 	}
 
-	return ds.state.IterateBlockEvents(0, height, func(ev *exec.BlockEvent) error {
+	return ds.state.IterateStreamEvents(0, height, func(ev *exec.StreamEvent) error {
 		if ev.TxExecution == nil {
 			return nil
 		}

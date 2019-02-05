@@ -57,8 +57,8 @@ func TestWriteState_AddBlock(t *testing.T) {
 	})
 	require.NoError(t, err)
 	ti := uint64(0)
-	err = s.IterateBlockEvents(height, height+1,
-		func(ev *exec.BlockEvent) error {
+	err = s.IterateStreamEvents(height, height+1,
+		func(ev *exec.StreamEvent) error {
 			if ev.TxExecution != nil {
 				for e := uint64(0); e < events; e++ {
 					require.Equal(t, mkEvent(height, ti, e).Header.TxHash.String(),
@@ -76,7 +76,7 @@ func TestWriteState_AddBlock(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	txExecutions, err := s.GetTxsAtHeight(height)
+	txExecutions, err := s.TxsAtHeight(height)
 	require.NoError(t, err)
 	require.NotNil(t, txExecutions)
 	require.Equal(t, numTxs, uint64(len(txExecutions)))

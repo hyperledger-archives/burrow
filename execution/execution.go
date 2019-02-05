@@ -292,7 +292,7 @@ func validateInputs(tx *txs.Tx, getter acmstate.AccountGetter) error {
 }
 
 // Commit the current state - optionally pass in the tendermint ABCI header for that to be included with the BeginBlock
-// BlockEvent
+// StreamEvent
 func (exe *executor) Commit(header *abciTypes.Header) (stateHash []byte, err error) {
 	// The write lock to the executor is controlled by the caller (e.g. abci.App) so we do not acquire it here to avoid
 	// deadlock

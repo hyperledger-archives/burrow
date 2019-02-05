@@ -142,7 +142,7 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 		}
 
 		// gets blocks in given range based on last processed block taken from database
-		blocks, err := cli.GetBlockEvents(context.Background(), request)
+		stream, err := cli.Stream(context.Background(), request)
 		if err != nil {
 			doneCh <- errors.Wrapf(err, "Error connecting to block stream")
 			return
@@ -152,7 +152,7 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 
 		c.Log.Debug("msg", "Waiting for blocks...")
 
-		err = rpcevents.ConsumeBlockExecutions(blocks, func(blockExecution *exec.BlockExecution) error {
+		err = rpcevents.ConsumeBlockExecutions(stream, func(blockExecution *exec.BlockExecution) error {
 
 			if c.Closing {
 				return io.EOF

@@ -39,7 +39,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetBlockEventsDB(t *testing.T) {
+func TestStreamDB(t *testing.T) {
 	request := &rpcevents.BlocksRequest{
 		BlockRange: rpcevents.NewBlockRange(rpcevents.AbsoluteBound(0), rpcevents.LatestBound()),
 	}
@@ -48,7 +48,7 @@ func TestGetBlockEventsDB(t *testing.T) {
 	numSends := 4
 	var blocks []*exec.BlockExecution
 	doSends(t, numSends, tcli)
-	stream, err := ecli.GetBlockEvents(context.Background(), request)
+	stream, err := ecli.Stream(context.Background(), request)
 	require.NoError(t, err)
 
 	err = rpcevents.ConsumeBlockExecutions(stream, func(be *exec.BlockExecution) error {
@@ -72,13 +72,13 @@ func TestGetBlockEventsDB(t *testing.T) {
 	require.NoError(t, stream.CloseSend())
 }
 
-func TestGetBlockEventsStream(t *testing.T) {
+func TestStream_streaming(t *testing.T) {
 	request := &rpcevents.BlocksRequest{
 		BlockRange: rpcevents.NewBlockRange(rpcevents.AbsoluteBound(0), rpcevents.StreamBound()),
 	}
 	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	ecli := rpctest.NewExecutionEventsClient(t, testConfig.RPC.GRPC.ListenAddress)
-	stream, err := ecli.GetBlockEvents(context.Background(), request)
+	stream, err := ecli.Stream(context.Background(), request)
 	require.NoError(t, err)
 	batches := 3
 	sendsPerBatch := 4
@@ -106,14 +106,14 @@ func TestGetBlockEventsStream(t *testing.T) {
 	<-doneCh
 }
 
-func TestGetBlockEventsContains2(t *testing.T) {
+func TestStreamContains2(t *testing.T) {
 	request := &rpcevents.BlocksRequest{
 		BlockRange: rpcevents.AbsoluteRange(0, 12),
 		Query:      "Height CONTAINS '2'",
 	}
 	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	ecli := rpctest.NewExecutionEventsClient(t, testConfig.RPC.GRPC.ListenAddress)
-	stream, err := ecli.GetBlockEvents(context.Background(), request)
+	stream, err := ecli.Stream(context.Background(), request)
 	require.NoError(t, err)
 	numSends := 4
 	var blocks []*exec.BlockExecution
@@ -195,11 +195,11 @@ func TestRevert(t *testing.T) {
 	assert.Equal(t, 0, n, "should not see reverted events")
 }
 
-func getEvents(t *testing.T, request *rpcevents.BlocksRequest) []*rpcevents.GetEventsResponse {
+func getEvents(t *testing.T, request *rpcevents.BlocksRequest) []*rpcevents.EventsResponse {
 	ecli := rpctest.NewExecutionEventsClient(t, testConfig.RPC.GRPC.ListenAddress)
-	evs, err := ecli.GetEvents(context.Background(), request)
+	evs, err := ecli.Events(context.Background(), request)
 	require.NoError(t, err)
-	var responses []*rpcevents.GetEventsResponse
+	var responses []*rpcevents.EventsResponse
 	for {
 		resp, err := evs.Recv()
 		if err != nil {
@@ -236,7 +236,7 @@ func doSends(t *testing.T, numSends int, cli rpctransact.TransactClient) {
 	require.Equal(t, numSends, <-countCh)
 }
 
-func countEventsAndCheckConsecutive(t *testing.T, responses []*rpcevents.GetEventsResponse) int {
+func countEventsAndCheckConsecutive(t *testing.T, responses []*rpcevents.EventsResponse) int {
 	i := 0
 	var height uint64
 	var index uint64

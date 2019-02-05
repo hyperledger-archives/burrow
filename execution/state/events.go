@@ -22,7 +22,7 @@ func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
 		if err != nil {
 			return err
 		}
-		// Set BlockEvent itself
+		// Set StreamEvent itself
 		tree.Set(key, bs)
 		if ev.TxExecution != nil {
 			// Set reference to TxExecution
@@ -32,7 +32,7 @@ func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
 	return nil
 }
 
-func (s *ReadState) IterateBlockEvents(startHeight, endHeight uint64, consumer func(*exec.BlockEvent) error) error {
+func (s *ReadState) IterateStreamEvents(startHeight, endHeight uint64, consumer func(*exec.StreamEvent) error) error {
 	tree, err := s.Forest.Reader(keys.Event.Prefix())
 	if err != nil {
 		return err
@@ -47,9 +47,9 @@ func (s *ReadState) IterateBlockEvents(startHeight, endHeight uint64, consumer f
 		})
 }
 
-func (s *ReadState) GetTxsAtHeight(height uint64) ([]*exec.TxExecution, error) {
+func (s *ReadState) TxsAtHeight(height uint64) ([]*exec.TxExecution, error) {
 	var txExecutions []*exec.TxExecution
-	err := s.IterateBlockEvents(height, height+1, func(ev *exec.BlockEvent) error {
+	err := s.IterateStreamEvents(height, height+1, func(ev *exec.StreamEvent) error {
 		if ev.TxExecution != nil {
 			txExecutions = append(txExecutions, ev.TxExecution)
 		}
@@ -61,7 +61,7 @@ func (s *ReadState) GetTxsAtHeight(height uint64) ([]*exec.TxExecution, error) {
 	return txExecutions, nil
 }
 
-func (s *ReadState) GetBlockEvent(height, index uint64) (*exec.BlockEvent, error) {
+func (s *ReadState) StreamEvent(height, index uint64) (*exec.StreamEvent, error) {
 	tree, err := s.Forest.Reader(keys.Event.Prefix())
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (s *ReadState) GetBlockEvent(height, index uint64) (*exec.BlockEvent, error
 	return exec.DecodeBlockEvent(bs)
 }
 
-func (s *ReadState) GetTxByHash(txHash []byte) (*exec.TxExecution, error) {
+func (s *ReadState) TxByHash(txHash []byte) (*exec.TxExecution, error) {
 	txHashKey, err := s.Forest.Reader(keys.TxHash.Prefix())
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (s *ReadState) GetTxByHash(txHash []byte) (*exec.TxExecution, error) {
 		return nil, err
 	}
 	if ev.TxExecution == nil {
-		return nil, fmt.Errorf("BlockEvent %v is not a transaction despite being indexed as such", ev)
+		return nil, fmt.Errorf("StreamEvent %v is not a transaction despite being indexed as such", ev)
 	}
 	return ev.TxExecution, nil
 }

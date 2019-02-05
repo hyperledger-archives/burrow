@@ -69,7 +69,7 @@ var keys = KeyFormatStore{
 	Proposal: storage.NewMustKeyFormat("p", sha256.Size),
 	// ValidatorAddress -> Power
 	Validator: storage.NewMustKeyFormat("v", crypto.AddressLength),
-	// Height, EventIndex -> BlockEvent
+	// Height, EventIndex -> StreamEvent
 	Event: storage.NewMustKeyFormat("t", uint64Length, uint64Length),
 	// TxHash -> TxHeight, TxIndex
 	TxHash: storage.NewMustKeyFormat("th", txs.HashLength),

@@ -16,9 +16,9 @@ const SubscribeBufferSize = 100
 
 type Provider interface {
 	// Get transactions
-	IterateBlockEvents(startHeight, endHeight uint64, consumer func(*exec.BlockEvent) error) (err error)
+	IterateStreamEvents(startHeight, endHeight uint64, consumer func(*exec.StreamEvent) error) (err error)
 	// Get a particular TxExecution by hash
-	GetTxByHash(txHash []byte) (*exec.TxExecution, error)
+	TxByHash(txHash []byte) (*exec.TxExecution, error)
 }
 
 type executionEventsServer struct {
@@ -39,8 +39,8 @@ func NewExecutionEventsServer(eventsProvider Provider, subscribable event.Subscr
 	}
 }
 
-func (ees *executionEventsServer) GetTx(ctx context.Context, request *GetTxRequest) (*exec.TxExecution, error) {
-	txe, err := ees.eventsProvider.GetTxByHash(request.TxHash)
+func (ees *executionEventsServer) Tx(ctx context.Context, request *TxRequest) (*exec.TxExecution, error) {
+	txe, err := ees.eventsProvider.TxByHash(request.TxHash)
 	if err != nil {
 		return nil, err
 	}
@@ -67,12 +67,12 @@ func (ees *executionEventsServer) GetTx(ctx context.Context, request *GetTxReque
 	return nil, fmt.Errorf("subscription waiting for tx %v ended prematurely", request.TxHash)
 }
 
-func (ees *executionEventsServer) GetBlockEvents(request *BlocksRequest, stream ExecutionEvents_GetBlockEventsServer) error {
+func (ees *executionEventsServer) Stream(request *BlocksRequest, stream ExecutionEvents_StreamServer) error {
 	qry, err := query.NewOrEmpty(request.Query)
 	if err != nil {
 		return fmt.Errorf("could not parse TxExecution query: %v", err)
 	}
-	return ees.streamBlockEvents(stream.Context(), request.BlockRange, func(ev *exec.BlockEvent) error {
+	return ees.streamBlockEvents(stream.Context(), request.BlockRange, func(ev *exec.StreamEvent) error {
 		if qry.Matches(ev.Tagged()) {
 			return stream.Send(ev)
 		}
@@ -80,16 +80,16 @@ func (ees *executionEventsServer) GetBlockEvents(request *BlocksRequest, stream 
 	})
 }
 
-func (ees *executionEventsServer) GetEvents(request *BlocksRequest, stream ExecutionEvents_GetEventsServer) error {
+func (ees *executionEventsServer) Events(request *BlocksRequest, stream ExecutionEvents_EventsServer) error {
 	qry, err := query.NewOrEmpty(request.Query)
 	if err != nil {
 		return fmt.Errorf("could not parse Event query: %v", err)
 	}
-	var response *GetEventsResponse
-	return ees.streamBlockEvents(stream.Context(), request.BlockRange, func(blockEvent *exec.BlockEvent) error {
+	var response *EventsResponse
+	return ees.streamBlockEvents(stream.Context(), request.BlockRange, func(blockEvent *exec.StreamEvent) error {
 		switch {
 		case blockEvent.BeginBlock != nil:
-			response = &GetEventsResponse{
+			response = &EventsResponse{
 				Height: blockEvent.BeginBlock.Height,
 			}
 
@@ -112,7 +112,7 @@ func (ees *executionEventsServer) GetEvents(request *BlocksRequest, stream Execu
 }
 
 func (ees *executionEventsServer) streamBlockEvents(ctx context.Context, blockRange *BlockRange,
-	consumer func(execution *exec.BlockEvent) error) error {
+	consumer func(execution *exec.StreamEvent) error) error {
 
 	// Converts the bounds to half-open interval needed
 	start, end, streaming := blockRange.Bounds(ees.tip.LastBlockHeight())
@@ -193,8 +193,8 @@ func (ees *executionEventsServer) subscribeBlockExecution(ctx context.Context, c
 	return nil
 }
 
-func (ees *executionEventsServer) iterateBlockEvents(start, end uint64, consumer func(*exec.BlockEvent) error) (lastHeightSeen uint64, err error) {
-	err = ees.eventsProvider.IterateBlockEvents(start, end, func(blockEvent *exec.BlockEvent) error {
+func (ees *executionEventsServer) iterateBlockEvents(start, end uint64, consumer func(*exec.StreamEvent) error) (lastHeightSeen uint64, err error) {
+	err = ees.eventsProvider.IterateStreamEvents(start, end, func(blockEvent *exec.StreamEvent) error {
 		if blockEvent.TxExecution == nil {
 			// nil safe
 			lastHeightSeen = blockEvent.GetEndBlock().GetHeight()

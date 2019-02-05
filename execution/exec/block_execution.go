@@ -10,8 +10,8 @@ import (
 
 func EventStringBlockExecution(height uint64) string { return fmt.Sprintf("Execution/Block/%v", height) }
 
-func DecodeBlockEvent(bs []byte) (*BlockEvent, error) {
-	be := new(BlockEvent)
+func DecodeBlockEvent(bs []byte) (*StreamEvent, error) {
+	be := new(StreamEvent)
 	err := cdc.UnmarshalBinaryBare(bs, be)
 	if err != nil {
 		return nil, err
@@ -20,9 +20,9 @@ func DecodeBlockEvent(bs []byte) (*BlockEvent, error) {
 }
 
 // Write out TxExecutions parenthetically
-func (be *BlockExecution) Events() []*BlockEvent {
-	evs := make([]*BlockEvent, len(be.TxExecutions)+2)
-	evs[0] = &BlockEvent{
+func (be *BlockExecution) Events() []*StreamEvent {
+	evs := make([]*StreamEvent, len(be.TxExecutions)+2)
+	evs[0] = &StreamEvent{
 		Index: 0,
 		BeginBlock: &BeginBlock{
 			Height: be.Height,
@@ -30,13 +30,13 @@ func (be *BlockExecution) Events() []*BlockEvent {
 		},
 	}
 	for i, txe := range be.TxExecutions {
-		evs[i+1] = &BlockEvent{
+		evs[i+1] = &StreamEvent{
 			Index:       uint64(i + 1),
 			TxExecution: txe,
 		}
 	}
 	end := len(evs) - 1
-	evs[end] = &BlockEvent{
+	evs[end] = &StreamEvent{
 		Index: uint64(end),
 		EndBlock: &EndBlock{
 			Height: be.Height,
@@ -53,7 +53,7 @@ func (be *BlockExecution) EncodeHeader() ([]byte, error) {
 	return cdc.MarshalBinaryBare(be.Header)
 }
 
-func (be *BlockEvent) Encode() ([]byte, error) {
+func (be *StreamEvent) Encode() ([]byte, error) {
 	return cdc.MarshalBinaryBare(be)
 }
 
@@ -105,10 +105,10 @@ func QueryForBlockExecution() *query.Builder {
 
 type TaggedBlockEvent struct {
 	query.Tagged
-	*BlockEvent
+	*StreamEvent
 }
 
-func (ev *BlockEvent) EventType() EventType {
+func (ev *StreamEvent) EventType() EventType {
 	switch {
 	case ev.BeginBlock != nil:
 		return TypeBeginBlock
@@ -120,7 +120,7 @@ func (ev *BlockEvent) EventType() EventType {
 	return TypeUnknown
 }
 
-func (ev *BlockEvent) Tagged() *TaggedBlockEvent {
+func (ev *StreamEvent) Tagged() *TaggedBlockEvent {
 	return &TaggedBlockEvent{
 		Tagged: query.MergeTags(
 			ev.TxExecution.Tagged(),
@@ -131,6 +131,6 @@ func (ev *BlockEvent) Tagged() *TaggedBlockEvent {
 			query.MustReflectTags(ev.BeginBlock.GetHeader()),
 			query.MustReflectTags(ev.EndBlock, "Height"),
 		),
-		BlockEvent: ev,
+		StreamEvent: ev,
 	}
 }

@@ -23,12 +23,12 @@ option (gogoproto.messagename_all) = true;
 // Execution events
 service ExecutionEvents {
     // Get StreamEvents (including transactions) for a range of block heights
-    rpc GetStream (BlocksRequest) returns (stream exec.StreamEvent);
+    rpc Stream (BlocksRequest) returns (stream exec.StreamEvent);
     // Get a particular TxExecution by hash
-    rpc GetTx (GetTxRequest) returns (exec.TxExecution);
+    rpc Tx (TxRequest) returns (exec.TxExecution);
     // GetEvents provides events streaming one block at a time - that is all events emitted in a particular block
     // are guaranteed to be delivered in each GetEventsResponse
-    rpc GetEvents (BlocksRequest) returns (stream GetEventsResponse);
+    rpc Events (BlocksRequest) returns (stream EventsResponse);
 }
 
 message GetBlockRequest {
@@ -38,7 +38,7 @@ message GetBlockRequest {
     bool Wait = 2;
 }
 
-message GetTxRequest {
+message TxRequest {
     // Height of block required
     bytes TxHash = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
     // Whether to wait for the block to become available
@@ -85,7 +85,7 @@ message BlocksRequest {
     string Query = 2;
 }
 
-message GetEventsResponse {
+message EventsResponse {
     uint64 Height = 1;
     repeated exec.Event Events = 2;
 }
