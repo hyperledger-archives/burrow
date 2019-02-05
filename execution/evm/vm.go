@@ -42,7 +42,6 @@ const (
 
 type Params struct {
 	BlockHeight              uint64
-	BlockHash                Word256
 	BlockTime                int64
 	GasLimit                 uint64
 	CallStackMaxDepth        uint64

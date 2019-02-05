@@ -43,7 +43,7 @@ func TestServer(t *testing.T) {
 
 	wg.Add(1)
 	go func() {
-		err := consumer.Run(parser, abiSpec, false)
+		err := consumer.Run(parser, abiSpec, true)
 		require.NoError(t, err)
 
 		wg.Done()

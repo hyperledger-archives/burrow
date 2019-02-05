@@ -17,8 +17,9 @@ package bcm
 import (
 	"bytes"
 	"fmt"
-	"math/big"
 	"time"
+
+	"github.com/tendermint/tendermint/types"
 
 	"sync"
 
@@ -39,8 +40,10 @@ type BlockchainInfo interface {
 	LastCommitTime() time.Time
 	LastBlockHash() []byte
 	AppHashAfterLastBlock() []byte
+	// Gets the BlockHash at a height (or nil if no BlockStore mounted or block could not be found)
+	BlockHash(height uint64) []byte
 	// GetBlockHash returns	hash of the specific block
-	GetBlockHash(blockNumber uint64) ([]byte, error)
+	GetBlockHeader(blockNumber uint64) (*types.Header, error)
 }
 
 type Blockchain struct {
@@ -114,28 +117,26 @@ func loadBlockchain(db dbm.DB) (*Blockchain, error) {
 	return bc, nil
 }
 
-func (bc *Blockchain) CommitBlock(blockTime time.Time, blockHash,
-	appHash []byte) (totalPowerChange, totalFlow *big.Int, err error) {
+func (bc *Blockchain) CommitBlock(blockTime time.Time, blockHash, appHash []byte) error {
 	return bc.CommitBlockAtHeight(blockTime, blockHash, appHash, bc.lastBlockHeight+1)
 }
 
-func (bc *Blockchain) CommitBlockAtHeight(blockTime time.Time, blockHash, appHash []byte,
-	height uint64) (totalPowerChange, totalFlow *big.Int, err error) {
+func (bc *Blockchain) CommitBlockAtHeight(blockTime time.Time, blockHash, appHash []byte, height uint64) error {
 	bc.Lock()
 	defer bc.Unlock()
 	// Checkpoint on the _previous_ block. If we die, this is where we will resume since we know all intervening state
 	// has been written successfully since we are committing the next block.
 	// If we fall over we can resume a safe committed state and Tendermint will catch us up
-	err = bc.save()
+	err := bc.save()
 	if err != nil {
-		return
+		return err
 	}
 	bc.lastBlockHeight = height
 	bc.lastBlockTime = blockTime
 	bc.lastBlockHash = blockHash
 	bc.appHashAfterLastBlock = appHash
 	bc.lastCommitTime = time.Now().UTC()
-	return
+	return nil
 }
 
 func (bc *Blockchain) save() error {
@@ -225,8 +226,15 @@ func (bc *Blockchain) SetBlockStore(bs *BlockStore) {
 	bc.blockStore = bs
 }
 
-func (bc *Blockchain) GetBlockHash(height uint64) ([]byte, error) {
-	const errHeader = "GetBlockHash():"
+func (bc *Blockchain) BlockHash(height uint64) []byte {
+	header, err := bc.GetBlockHeader(height)
+	if err != nil {
+		return nil
+	}
+	return header.Hash()
+}
+func (bc *Blockchain) GetBlockHeader(height uint64) (*types.Header, error) {
+	const errHeader = "GetBlockHeader():"
 	if bc == nil {
 		return nil, fmt.Errorf("%s could not get block hash because Blockchain has not been given access to "+
 			"tendermint BlockStore", errHeader)
@@ -235,5 +243,5 @@ func (bc *Blockchain) GetBlockHash(height uint64) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s could not get BlockMeta: %v", errHeader, err)
 	}
-	return blockMeta.Header.Hash(), nil
+	return &blockMeta.Header, nil
 }

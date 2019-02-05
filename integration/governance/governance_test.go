@@ -60,7 +60,7 @@ func TestAlterValidators(t *testing.T) {
 	assertValidatorsEqual(t, vs, vsOut)
 
 	// Now check Tendermint
-	waitNBlocks(t, ecli, 4)
+	waitNBlocks(t, ecli, 5)
 	height := int64(kernels[0].Blockchain.LastBlockHeight())
 	kernels[0].Node.ConfigureRPC()
 	tmVals, err := core.Validators(&height)
@@ -73,6 +73,12 @@ func TestAlterValidators(t *testing.T) {
 		vsOut.ChangePower(publicKey, big.NewInt(v.VotingPower))
 	}
 	assertValidatorsEqual(t, vs, vsOut)
+}
+
+func TestWaitBlocks(t *testing.T) {
+	grpcAddress := testConfigs[0].RPC.GRPC.ListenAddress
+	ecli := rpctest.NewExecutionEventsClient(t, grpcAddress)
+	waitNBlocks(t, ecli, 2)
 }
 
 func TestAlterValidatorsTooQuickly(t *testing.T) {
@@ -253,12 +259,16 @@ func localSignAndBroadcastSync(t testing.TB, tcli rpctransact.TransactClient, tx
 }
 
 func waitNBlocks(t testing.TB, ecli rpcevents.ExecutionEventsClient, n int) {
-	stream, err := ecli.GetBlocks(context.Background(), &rpcevents.BlocksRequest{
+	stream, err := ecli.Stream(context.Background(), &rpcevents.BlocksRequest{
 		BlockRange: rpcevents.NewBlockRange(rpcevents.LatestBound(), rpcevents.StreamBound()),
 	})
-	defer stream.CloseSend()
-	for i := 0; i < n; i++ {
-		require.NoError(t, err)
-		_, err = stream.Recv()
+	defer require.NoError(t, stream.CloseSend())
+	var ev *exec.StreamEvent
+	for err == nil && n > 0 {
+		ev, err = stream.Recv()
+		if err == nil && ev.EndBlock != nil {
+			n--
+		}
 	}
+	require.NoError(t, err)
 }

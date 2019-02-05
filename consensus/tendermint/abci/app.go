@@ -323,7 +323,7 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 		}
 	}()
 
-	appHash, err := app.committer.Commit(app.block.Hash, blockTime, &app.block.Header)
+	appHash, err := app.committer.Commit(&app.block.Header)
 	if err != nil {
 		panic(errors.Wrap(err, "Could not commit transactions in block to execution state"))
 	}
@@ -331,6 +331,13 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 	if err != nil {
 		panic(errors.Wrap(err, "could not reset check cache during commit"))
 	}
+	// Commit to our blockchain state which will checkpoint the previous app hash by saving it to the database
+	// (we know the previous app hash is safely committed because we are about to commit the next)
+	err = app.blockchain.CommitBlock(blockTime, app.block.Hash, appHash)
+	if err != nil {
+		panic(fmt.Errorf("could not commit block to blockchain state: %v", err))
+	}
+	app.logger.InfoMsg("Committed block")
 
 	return abciTypes.ResponseCommit{
 		Data: appHash,

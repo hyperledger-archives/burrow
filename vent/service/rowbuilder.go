@@ -82,7 +82,7 @@ func buildBlkData(tbls types.EventTables, block *exec.BlockExecution) (types.Eve
 	// block raw data
 	if tbl, ok := tbls[types.SQLBlockTableName]; ok {
 
-		blockHeader, err := json.Marshal(block.BlockHeader)
+		blockHeader, err := json.Marshal(block.Header)
 		if err != nil {
 			return types.EventDataRow{}, fmt.Errorf("Couldn't marshal BlockHeader in block %v", block)
 		}

@@ -82,7 +82,7 @@ func TestBroadcastTxLocallySigned(t *testing.T) {
 	ch := make(chan *exec.TxExecution)
 	go func() {
 		ecli := rpctest.NewExecutionEventsClient(t, testConfig.RPC.GRPC.ListenAddress)
-		txe, err := ecli.GetTx(context.Background(), &rpcevents.GetTxRequest{
+		txe, err := ecli.Tx(context.Background(), &rpcevents.TxRequest{
 			TxHash: txEnv.Tx.Hash(),
 			Wait:   true,
 		})

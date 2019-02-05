@@ -9,6 +9,7 @@ import fmt "fmt"
 import math "math"
 import _ "github.com/gogo/protobuf/gogoproto"
 import exec "github.com/hyperledger/burrow/execution/exec"
+import _ "github.com/tendermint/tendermint/abci/types"
 
 import github_com_hyperledger_burrow_binary "github.com/hyperledger/burrow/binary"
 
@@ -65,7 +66,7 @@ func (x Bound_BoundType) String() string {
 	return proto.EnumName(Bound_BoundType_name, int32(x))
 }
 func (Bound_BoundType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_rpcevents_9d7d83df46bfb95f, []int{5, 0}
+	return fileDescriptor_rpcevents_f96012d4c57089ed, []int{6, 0}
 }
 
 type GetBlockRequest struct {
@@ -82,7 +83,7 @@ func (m *GetBlockRequest) Reset()         { *m = GetBlockRequest{} }
 func (m *GetBlockRequest) String() string { return proto.CompactTextString(m) }
 func (*GetBlockRequest) ProtoMessage()    {}
 func (*GetBlockRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcevents_9d7d83df46bfb95f, []int{0}
+	return fileDescriptor_rpcevents_f96012d4c57089ed, []int{0}
 }
 func (m *GetBlockRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -129,7 +130,7 @@ func (*GetBlockRequest) XXX_MessageName() string {
 	return "rpcevents.GetBlockRequest"
 }
 
-type GetTxRequest struct {
+type TxRequest struct {
 	// Height of block required
 	TxHash github_com_hyperledger_burrow_binary.HexBytes `protobuf:"bytes,1,opt,name=TxHash,proto3,customtype=github.com/hyperledger/burrow/binary.HexBytes" json:"TxHash"`
 	// Whether to wait for the block to become available
@@ -139,18 +140,18 @@ type GetTxRequest struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *GetTxRequest) Reset()         { *m = GetTxRequest{} }
-func (m *GetTxRequest) String() string { return proto.CompactTextString(m) }
-func (*GetTxRequest) ProtoMessage()    {}
-func (*GetTxRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcevents_9d7d83df46bfb95f, []int{1}
+func (m *TxRequest) Reset()         { *m = TxRequest{} }
+func (m *TxRequest) String() string { return proto.CompactTextString(m) }
+func (*TxRequest) ProtoMessage()    {}
+func (*TxRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_rpcevents_f96012d4c57089ed, []int{1}
 }
-func (m *GetTxRequest) XXX_Unmarshal(b []byte) error {
+func (m *TxRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *GetTxRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *TxRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_GetTxRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_TxRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -160,27 +161,27 @@ func (m *GetTxRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return b[:n], nil
 	}
 }
-func (dst *GetTxRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetTxRequest.Merge(dst, src)
+func (dst *TxRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TxRequest.Merge(dst, src)
 }
-func (m *GetTxRequest) XXX_Size() int {
+func (m *TxRequest) XXX_Size() int {
 	return m.Size()
 }
-func (m *GetTxRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_GetTxRequest.DiscardUnknown(m)
+func (m *TxRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_TxRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_GetTxRequest proto.InternalMessageInfo
+var xxx_messageInfo_TxRequest proto.InternalMessageInfo
 
-func (m *GetTxRequest) GetWait() bool {
+func (m *TxRequest) GetWait() bool {
 	if m != nil {
 		return m.Wait
 	}
 	return false
 }
 
-func (*GetTxRequest) XXX_MessageName() string {
-	return "rpcevents.GetTxRequest"
+func (*TxRequest) XXX_MessageName() string {
+	return "rpcevents.TxRequest"
 }
 
 type BlocksRequest struct {
@@ -230,7 +231,7 @@ func (m *BlocksRequest) Reset()         { *m = BlocksRequest{} }
 func (m *BlocksRequest) String() string { return proto.CompactTextString(m) }
 func (*BlocksRequest) ProtoMessage()    {}
 func (*BlocksRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcevents_9d7d83df46bfb95f, []int{2}
+	return fileDescriptor_rpcevents_f96012d4c57089ed, []int{2}
 }
 func (m *BlocksRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -277,7 +278,7 @@ func (*BlocksRequest) XXX_MessageName() string {
 	return "rpcevents.BlocksRequest"
 }
 
-type GetEventsResponse struct {
+type EventsResponse struct {
 	Height               uint64        `protobuf:"varint,1,opt,name=Height,proto3" json:"Height,omitempty"`
 	Events               []*exec.Event `protobuf:"bytes,2,rep,name=Events" json:"Events,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
@@ -285,18 +286,18 @@ type GetEventsResponse struct {
 	XXX_sizecache        int32         `json:"-"`
 }
 
-func (m *GetEventsResponse) Reset()         { *m = GetEventsResponse{} }
-func (m *GetEventsResponse) String() string { return proto.CompactTextString(m) }
-func (*GetEventsResponse) ProtoMessage()    {}
-func (*GetEventsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcevents_9d7d83df46bfb95f, []int{3}
+func (m *EventsResponse) Reset()         { *m = EventsResponse{} }
+func (m *EventsResponse) String() string { return proto.CompactTextString(m) }
+func (*EventsResponse) ProtoMessage()    {}
+func (*EventsResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_rpcevents_f96012d4c57089ed, []int{3}
 }
-func (m *GetEventsResponse) XXX_Unmarshal(b []byte) error {
+func (m *EventsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *GetEventsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *EventsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_GetEventsResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_EventsResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -306,34 +307,101 @@ func (m *GetEventsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return b[:n], nil
 	}
 }
-func (dst *GetEventsResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GetEventsResponse.Merge(dst, src)
+func (dst *EventsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EventsResponse.Merge(dst, src)
 }
-func (m *GetEventsResponse) XXX_Size() int {
+func (m *EventsResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *GetEventsResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_GetEventsResponse.DiscardUnknown(m)
+func (m *EventsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_EventsResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_GetEventsResponse proto.InternalMessageInfo
+var xxx_messageInfo_EventsResponse proto.InternalMessageInfo
 
-func (m *GetEventsResponse) GetHeight() uint64 {
+func (m *EventsResponse) GetHeight() uint64 {
 	if m != nil {
 		return m.Height
 	}
 	return 0
 }
 
-func (m *GetEventsResponse) GetEvents() []*exec.Event {
+func (m *EventsResponse) GetEvents() []*exec.Event {
 	if m != nil {
 		return m.Events
 	}
 	return nil
 }
 
-func (*GetEventsResponse) XXX_MessageName() string {
-	return "rpcevents.GetEventsResponse"
+func (*EventsResponse) XXX_MessageName() string {
+	return "rpcevents.EventsResponse"
+}
+
+type GetTxsRequest struct {
+	StartHeight          uint64   `protobuf:"varint,1,opt,name=StartHeight,proto3" json:"StartHeight,omitempty"`
+	EndHeight            uint64   `protobuf:"varint,2,opt,name=EndHeight,proto3" json:"EndHeight,omitempty"`
+	Query                string   `protobuf:"bytes,3,opt,name=Query,proto3" json:"Query,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *GetTxsRequest) Reset()         { *m = GetTxsRequest{} }
+func (m *GetTxsRequest) String() string { return proto.CompactTextString(m) }
+func (*GetTxsRequest) ProtoMessage()    {}
+func (*GetTxsRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_rpcevents_f96012d4c57089ed, []int{4}
+}
+func (m *GetTxsRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetTxsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetTxsRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *GetTxsRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetTxsRequest.Merge(dst, src)
+}
+func (m *GetTxsRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetTxsRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetTxsRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetTxsRequest proto.InternalMessageInfo
+
+func (m *GetTxsRequest) GetStartHeight() uint64 {
+	if m != nil {
+		return m.StartHeight
+	}
+	return 0
+}
+
+func (m *GetTxsRequest) GetEndHeight() uint64 {
+	if m != nil {
+		return m.EndHeight
+	}
+	return 0
+}
+
+func (m *GetTxsRequest) GetQuery() string {
+	if m != nil {
+		return m.Query
+	}
+	return ""
+}
+
+func (*GetTxsRequest) XXX_MessageName() string {
+	return "rpcevents.GetTxsRequest"
 }
 
 type GetTxsResponse struct {
@@ -348,7 +416,7 @@ func (m *GetTxsResponse) Reset()         { *m = GetTxsResponse{} }
 func (m *GetTxsResponse) String() string { return proto.CompactTextString(m) }
 func (*GetTxsResponse) ProtoMessage()    {}
 func (*GetTxsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcevents_9d7d83df46bfb95f, []int{4}
+	return fileDescriptor_rpcevents_f96012d4c57089ed, []int{5}
 }
 func (m *GetTxsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -407,7 +475,7 @@ func (m *Bound) Reset()         { *m = Bound{} }
 func (m *Bound) String() string { return proto.CompactTextString(m) }
 func (*Bound) ProtoMessage()    {}
 func (*Bound) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcevents_9d7d83df46bfb95f, []int{5}
+	return fileDescriptor_rpcevents_f96012d4c57089ed, []int{6}
 }
 func (m *Bound) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -472,7 +540,7 @@ func (m *BlockRange) Reset()         { *m = BlockRange{} }
 func (m *BlockRange) String() string { return proto.CompactTextString(m) }
 func (*BlockRange) ProtoMessage()    {}
 func (*BlockRange) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpcevents_9d7d83df46bfb95f, []int{6}
+	return fileDescriptor_rpcevents_f96012d4c57089ed, []int{7}
 }
 func (m *BlockRange) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -521,12 +589,14 @@ func (*BlockRange) XXX_MessageName() string {
 func init() {
 	proto.RegisterType((*GetBlockRequest)(nil), "rpcevents.GetBlockRequest")
 	golang_proto.RegisterType((*GetBlockRequest)(nil), "rpcevents.GetBlockRequest")
-	proto.RegisterType((*GetTxRequest)(nil), "rpcevents.GetTxRequest")
-	golang_proto.RegisterType((*GetTxRequest)(nil), "rpcevents.GetTxRequest")
+	proto.RegisterType((*TxRequest)(nil), "rpcevents.TxRequest")
+	golang_proto.RegisterType((*TxRequest)(nil), "rpcevents.TxRequest")
 	proto.RegisterType((*BlocksRequest)(nil), "rpcevents.BlocksRequest")
 	golang_proto.RegisterType((*BlocksRequest)(nil), "rpcevents.BlocksRequest")
-	proto.RegisterType((*GetEventsResponse)(nil), "rpcevents.GetEventsResponse")
-	golang_proto.RegisterType((*GetEventsResponse)(nil), "rpcevents.GetEventsResponse")
+	proto.RegisterType((*EventsResponse)(nil), "rpcevents.EventsResponse")
+	golang_proto.RegisterType((*EventsResponse)(nil), "rpcevents.EventsResponse")
+	proto.RegisterType((*GetTxsRequest)(nil), "rpcevents.GetTxsRequest")
+	golang_proto.RegisterType((*GetTxsRequest)(nil), "rpcevents.GetTxsRequest")
 	proto.RegisterType((*GetTxsResponse)(nil), "rpcevents.GetTxsResponse")
 	golang_proto.RegisterType((*GetTxsResponse)(nil), "rpcevents.GetTxsResponse")
 	proto.RegisterType((*Bound)(nil), "rpcevents.Bound")
@@ -549,17 +619,13 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type ExecutionEventsClient interface {
-	// Get Blockexecution at particular height
-	GetBlock(ctx context.Context, in *GetBlockRequest, opts ...grpc.CallOption) (*exec.BlockExecution, error)
-	// Get BlockExecutions for a range of blocks
-	GetBlocks(ctx context.Context, in *BlocksRequest, opts ...grpc.CallOption) (ExecutionEvents_GetBlocksClient, error)
-	// Get a particular TxExecution
-	GetTx(ctx context.Context, in *GetTxRequest, opts ...grpc.CallOption) (*exec.TxExecution, error)
-	// Get TxExecutions for a range of block
-	GetTxs(ctx context.Context, in *BlocksRequest, opts ...grpc.CallOption) (ExecutionEvents_GetTxsClient, error)
+	// Get StreamEvents (including transactions) for a range of block heights
+	Stream(ctx context.Context, in *BlocksRequest, opts ...grpc.CallOption) (ExecutionEvents_StreamClient, error)
+	// Get a particular TxExecution by hash
+	Tx(ctx context.Context, in *TxRequest, opts ...grpc.CallOption) (*exec.TxExecution, error)
 	// GetEvents provides events streaming one block at a time - that is all events emitted in a particular block
 	// are guaranteed to be delivered in each GetEventsResponse
-	GetEvents(ctx context.Context, in *BlocksRequest, opts ...grpc.CallOption) (ExecutionEvents_GetEventsClient, error)
+	Events(ctx context.Context, in *BlocksRequest, opts ...grpc.CallOption) (ExecutionEvents_EventsClient, error)
 }
 
 type executionEventsClient struct {
@@ -570,21 +636,12 @@ func NewExecutionEventsClient(cc *grpc.ClientConn) ExecutionEventsClient {
 	return &executionEventsClient{cc}
 }
 
-func (c *executionEventsClient) GetBlock(ctx context.Context, in *GetBlockRequest, opts ...grpc.CallOption) (*exec.BlockExecution, error) {
-	out := new(exec.BlockExecution)
-	err := c.cc.Invoke(ctx, "/rpcevents.ExecutionEvents/GetBlock", in, out, opts...)
+func (c *executionEventsClient) Stream(ctx context.Context, in *BlocksRequest, opts ...grpc.CallOption) (ExecutionEvents_StreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_ExecutionEvents_serviceDesc.Streams[0], "/rpcevents.ExecutionEvents/Stream", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
-}
-
-func (c *executionEventsClient) GetBlocks(ctx context.Context, in *BlocksRequest, opts ...grpc.CallOption) (ExecutionEvents_GetBlocksClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_ExecutionEvents_serviceDesc.Streams[0], "/rpcevents.ExecutionEvents/GetBlocks", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &executionEventsGetBlocksClient{stream}
+	x := &executionEventsStreamClient{stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -594,38 +651,38 @@ func (c *executionEventsClient) GetBlocks(ctx context.Context, in *BlocksRequest
 	return x, nil
 }
 
-type ExecutionEvents_GetBlocksClient interface {
-	Recv() (*exec.BlockExecution, error)
+type ExecutionEvents_StreamClient interface {
+	Recv() (*exec.StreamEvent, error)
 	grpc.ClientStream
 }
 
-type executionEventsGetBlocksClient struct {
+type executionEventsStreamClient struct {
 	grpc.ClientStream
 }
 
-func (x *executionEventsGetBlocksClient) Recv() (*exec.BlockExecution, error) {
-	m := new(exec.BlockExecution)
+func (x *executionEventsStreamClient) Recv() (*exec.StreamEvent, error) {
+	m := new(exec.StreamEvent)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func (c *executionEventsClient) GetTx(ctx context.Context, in *GetTxRequest, opts ...grpc.CallOption) (*exec.TxExecution, error) {
+func (c *executionEventsClient) Tx(ctx context.Context, in *TxRequest, opts ...grpc.CallOption) (*exec.TxExecution, error) {
 	out := new(exec.TxExecution)
-	err := c.cc.Invoke(ctx, "/rpcevents.ExecutionEvents/GetTx", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/rpcevents.ExecutionEvents/Tx", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *executionEventsClient) GetTxs(ctx context.Context, in *BlocksRequest, opts ...grpc.CallOption) (ExecutionEvents_GetTxsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_ExecutionEvents_serviceDesc.Streams[1], "/rpcevents.ExecutionEvents/GetTxs", opts...)
+func (c *executionEventsClient) Events(ctx context.Context, in *BlocksRequest, opts ...grpc.CallOption) (ExecutionEvents_EventsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_ExecutionEvents_serviceDesc.Streams[1], "/rpcevents.ExecutionEvents/Events", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &executionEventsGetTxsClient{stream}
+	x := &executionEventsEventsClient{stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -635,49 +692,17 @@ func (c *executionEventsClient) GetTxs(ctx context.Context, in *BlocksRequest, o
 	return x, nil
 }
 
-type ExecutionEvents_GetTxsClient interface {
-	Recv() (*GetTxsResponse, error)
+type ExecutionEvents_EventsClient interface {
+	Recv() (*EventsResponse, error)
 	grpc.ClientStream
 }
 
-type executionEventsGetTxsClient struct {
+type executionEventsEventsClient struct {
 	grpc.ClientStream
 }
 
-func (x *executionEventsGetTxsClient) Recv() (*GetTxsResponse, error) {
-	m := new(GetTxsResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *executionEventsClient) GetEvents(ctx context.Context, in *BlocksRequest, opts ...grpc.CallOption) (ExecutionEvents_GetEventsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_ExecutionEvents_serviceDesc.Streams[2], "/rpcevents.ExecutionEvents/GetEvents", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &executionEventsGetEventsClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type ExecutionEvents_GetEventsClient interface {
-	Recv() (*GetEventsResponse, error)
-	grpc.ClientStream
-}
-
-type executionEventsGetEventsClient struct {
-	grpc.ClientStream
-}
-
-func (x *executionEventsGetEventsClient) Recv() (*GetEventsResponse, error) {
-	m := new(GetEventsResponse)
+func (x *executionEventsEventsClient) Recv() (*EventsResponse, error) {
+	m := new(EventsResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -686,119 +711,76 @@ func (x *executionEventsGetEventsClient) Recv() (*GetEventsResponse, error) {
 
 // ExecutionEventsServer is the server API for ExecutionEvents service.
 type ExecutionEventsServer interface {
-	// Get Blockexecution at particular height
-	GetBlock(context.Context, *GetBlockRequest) (*exec.BlockExecution, error)
-	// Get BlockExecutions for a range of blocks
-	GetBlocks(*BlocksRequest, ExecutionEvents_GetBlocksServer) error
-	// Get a particular TxExecution
-	GetTx(context.Context, *GetTxRequest) (*exec.TxExecution, error)
-	// Get TxExecutions for a range of block
-	GetTxs(*BlocksRequest, ExecutionEvents_GetTxsServer) error
+	// Get StreamEvents (including transactions) for a range of block heights
+	Stream(*BlocksRequest, ExecutionEvents_StreamServer) error
+	// Get a particular TxExecution by hash
+	Tx(context.Context, *TxRequest) (*exec.TxExecution, error)
 	// GetEvents provides events streaming one block at a time - that is all events emitted in a particular block
 	// are guaranteed to be delivered in each GetEventsResponse
-	GetEvents(*BlocksRequest, ExecutionEvents_GetEventsServer) error
+	Events(*BlocksRequest, ExecutionEvents_EventsServer) error
 }
 
 func RegisterExecutionEventsServer(s *grpc.Server, srv ExecutionEventsServer) {
 	s.RegisterService(&_ExecutionEvents_serviceDesc, srv)
 }
 
-func _ExecutionEvents_GetBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetBlockRequest)
+func _ExecutionEvents_Stream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(BlocksRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ExecutionEventsServer).Stream(m, &executionEventsStreamServer{stream})
+}
+
+type ExecutionEvents_StreamServer interface {
+	Send(*exec.StreamEvent) error
+	grpc.ServerStream
+}
+
+type executionEventsStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *executionEventsStreamServer) Send(m *exec.StreamEvent) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _ExecutionEvents_Tx_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TxRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ExecutionEventsServer).GetBlock(ctx, in)
+		return srv.(ExecutionEventsServer).Tx(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rpcevents.ExecutionEvents/GetBlock",
+		FullMethod: "/rpcevents.ExecutionEvents/Tx",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ExecutionEventsServer).GetBlock(ctx, req.(*GetBlockRequest))
+		return srv.(ExecutionEventsServer).Tx(ctx, req.(*TxRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ExecutionEvents_GetBlocks_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _ExecutionEvents_Events_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(BlocksRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(ExecutionEventsServer).GetBlocks(m, &executionEventsGetBlocksServer{stream})
+	return srv.(ExecutionEventsServer).Events(m, &executionEventsEventsServer{stream})
 }
 
-type ExecutionEvents_GetBlocksServer interface {
-	Send(*exec.BlockExecution) error
+type ExecutionEvents_EventsServer interface {
+	Send(*EventsResponse) error
 	grpc.ServerStream
 }
 
-type executionEventsGetBlocksServer struct {
+type executionEventsEventsServer struct {
 	grpc.ServerStream
 }
 
-func (x *executionEventsGetBlocksServer) Send(m *exec.BlockExecution) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func _ExecutionEvents_GetTx_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetTxRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ExecutionEventsServer).GetTx(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpcevents.ExecutionEvents/GetTx",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ExecutionEventsServer).GetTx(ctx, req.(*GetTxRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ExecutionEvents_GetTxs_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(BlocksRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(ExecutionEventsServer).GetTxs(m, &executionEventsGetTxsServer{stream})
-}
-
-type ExecutionEvents_GetTxsServer interface {
-	Send(*GetTxsResponse) error
-	grpc.ServerStream
-}
-
-type executionEventsGetTxsServer struct {
-	grpc.ServerStream
-}
-
-func (x *executionEventsGetTxsServer) Send(m *GetTxsResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func _ExecutionEvents_GetEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(BlocksRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(ExecutionEventsServer).GetEvents(m, &executionEventsGetEventsServer{stream})
-}
-
-type ExecutionEvents_GetEventsServer interface {
-	Send(*GetEventsResponse) error
-	grpc.ServerStream
-}
-
-type executionEventsGetEventsServer struct {
-	grpc.ServerStream
-}
-
-func (x *executionEventsGetEventsServer) Send(m *GetEventsResponse) error {
+func (x *executionEventsEventsServer) Send(m *EventsResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -807,28 +789,19 @@ var _ExecutionEvents_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*ExecutionEventsServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetBlock",
-			Handler:    _ExecutionEvents_GetBlock_Handler,
-		},
-		{
-			MethodName: "GetTx",
-			Handler:    _ExecutionEvents_GetTx_Handler,
+			MethodName: "Tx",
+			Handler:    _ExecutionEvents_Tx_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "GetBlocks",
-			Handler:       _ExecutionEvents_GetBlocks_Handler,
+			StreamName:    "Stream",
+			Handler:       _ExecutionEvents_Stream_Handler,
 			ServerStreams: true,
 		},
 		{
-			StreamName:    "GetTxs",
-			Handler:       _ExecutionEvents_GetTxs_Handler,
-			ServerStreams: true,
-		},
-		{
-			StreamName:    "GetEvents",
-			Handler:       _ExecutionEvents_GetEvents_Handler,
+			StreamName:    "Events",
+			Handler:       _ExecutionEvents_Events_Handler,
 			ServerStreams: true,
 		},
 	},
@@ -871,7 +844,7 @@ func (m *GetBlockRequest) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *GetTxRequest) Marshal() (dAtA []byte, err error) {
+func (m *TxRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -881,7 +854,7 @@ func (m *GetTxRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *GetTxRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *TxRequest) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -947,7 +920,7 @@ func (m *BlocksRequest) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *GetEventsResponse) Marshal() (dAtA []byte, err error) {
+func (m *EventsResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -957,7 +930,7 @@ func (m *GetEventsResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *GetEventsResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *EventsResponse) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -978,6 +951,43 @@ func (m *GetEventsResponse) MarshalTo(dAtA []byte) (int, error) {
 			}
 			i += n
 		}
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *GetTxsRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GetTxsRequest) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.StartHeight != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.StartHeight))
+	}
+	if m.EndHeight != 0 {
+		dAtA[i] = 0x10
+		i++
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.EndHeight))
+	}
+	if len(m.Query) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintRpcevents(dAtA, i, uint64(len(m.Query)))
+		i += copy(dAtA[i:], m.Query)
 	}
 	if m.XXX_unrecognized != nil {
 		i += copy(dAtA[i:], m.XXX_unrecognized)
@@ -1122,7 +1132,7 @@ func (m *GetBlockRequest) Size() (n int) {
 	return n
 }
 
-func (m *GetTxRequest) Size() (n int) {
+func (m *TxRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1159,7 +1169,7 @@ func (m *BlocksRequest) Size() (n int) {
 	return n
 }
 
-func (m *GetEventsResponse) Size() (n int) {
+func (m *EventsResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -1173,6 +1183,28 @@ func (m *GetEventsResponse) Size() (n int) {
 			l = e.Size()
 			n += 1 + l + sovRpcevents(uint64(l))
 		}
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *GetTxsRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.StartHeight != 0 {
+		n += 1 + sovRpcevents(uint64(m.StartHeight))
+	}
+	if m.EndHeight != 0 {
+		n += 1 + sovRpcevents(uint64(m.EndHeight))
+	}
+	l = len(m.Query)
+	if l > 0 {
+		n += 1 + l + sovRpcevents(uint64(l))
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -1342,7 +1374,7 @@ func (m *GetBlockRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *GetTxRequest) Unmarshal(dAtA []byte) error {
+func (m *TxRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1365,10 +1397,10 @@ func (m *GetTxRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: GetTxRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: TxRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: GetTxRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: TxRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1556,7 +1588,7 @@ func (m *BlocksRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *GetEventsResponse) Unmarshal(dAtA []byte) error {
+func (m *EventsResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -1579,10 +1611,10 @@ func (m *GetEventsResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: GetEventsResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: EventsResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: GetEventsResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: EventsResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1634,6 +1666,124 @@ func (m *GetEventsResponse) Unmarshal(dAtA []byte) error {
 			if err := m.Events[len(m.Events)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipRpcevents(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthRpcevents
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GetTxsRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowRpcevents
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GetTxsRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GetTxsRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field StartHeight", wireType)
+			}
+			m.StartHeight = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpcevents
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.StartHeight |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field EndHeight", wireType)
+			}
+			m.EndHeight = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpcevents
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.EndHeight |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Query", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRpcevents
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRpcevents
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Query = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -2069,46 +2219,47 @@ var (
 	ErrIntOverflowRpcevents   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("rpcevents.proto", fileDescriptor_rpcevents_9d7d83df46bfb95f) }
-func init() { golang_proto.RegisterFile("rpcevents.proto", fileDescriptor_rpcevents_9d7d83df46bfb95f) }
+func init() { proto.RegisterFile("rpcevents.proto", fileDescriptor_rpcevents_f96012d4c57089ed) }
+func init() { golang_proto.RegisterFile("rpcevents.proto", fileDescriptor_rpcevents_f96012d4c57089ed) }
 
-var fileDescriptor_rpcevents_9d7d83df46bfb95f = []byte{
-	// 584 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x54, 0x5f, 0x8f, 0xd2, 0x40,
-	0x10, 0xbf, 0xe5, 0x4f, 0x03, 0x03, 0x1e, 0xbd, 0xcd, 0xa9, 0x48, 0x0c, 0x47, 0x6a, 0x62, 0x48,
-	0x8c, 0x85, 0x70, 0xe1, 0xcd, 0x8b, 0xa1, 0x49, 0x05, 0x0c, 0x17, 0x75, 0xa9, 0x7f, 0x62, 0x4c,
-	0x0c, 0x94, 0xb5, 0x10, 0xcf, 0xb6, 0xd7, 0x6e, 0xb5, 0x7c, 0x14, 0xbf, 0x8d, 0x8f, 0x24, 0xbe,
-	0xf8, 0xec, 0xc3, 0xc5, 0x70, 0x5f, 0xc4, 0x74, 0x17, 0x7a, 0x05, 0xef, 0xf0, 0xa5, 0x99, 0xd9,
-	0xf9, 0xcd, 0x6f, 0x66, 0x7f, 0x33, 0x5b, 0x28, 0x79, 0xae, 0x49, 0xbf, 0x52, 0x9b, 0xf9, 0xaa,
-	0xeb, 0x39, 0xcc, 0xc1, 0xf9, 0xf8, 0xa0, 0xf2, 0xd8, 0x9a, 0xb1, 0x69, 0x30, 0x56, 0x4d, 0xe7,
-	0x4b, 0xc3, 0x72, 0x2c, 0xa7, 0xc1, 0x11, 0xe3, 0xe0, 0x13, 0xf7, 0xb8, 0xc3, 0x2d, 0x91, 0x59,
-	0x01, 0x1a, 0x52, 0x53, 0xd8, 0xca, 0x09, 0x94, 0xba, 0x94, 0x69, 0x67, 0x8e, 0xf9, 0x99, 0xd0,
-	0xf3, 0x80, 0xfa, 0x0c, 0xdf, 0x01, 0xa9, 0x47, 0x67, 0xd6, 0x94, 0x95, 0x51, 0x0d, 0xd5, 0x33,
-	0x64, 0xe5, 0x61, 0x0c, 0x99, 0xb7, 0xa3, 0x19, 0x2b, 0xa7, 0x6a, 0xa8, 0x9e, 0x23, 0xdc, 0x56,
-	0xce, 0xa1, 0xd8, 0xa5, 0xcc, 0x08, 0xd7, 0xb9, 0xa7, 0x20, 0x19, 0x61, 0x6f, 0xe4, 0x4f, 0x79,
-	0x6e, 0x51, 0x6b, 0x2f, 0x2e, 0x8e, 0xf6, 0x7e, 0x5f, 0x1c, 0x25, 0x3b, 0x9c, 0xce, 0x5d, 0xea,
-	0x9d, 0xd1, 0x89, 0x45, 0xbd, 0xc6, 0x38, 0xf0, 0x3c, 0xe7, 0x5b, 0x63, 0x3c, 0xb3, 0x47, 0xde,
-	0x5c, 0xed, 0xd1, 0x50, 0x9b, 0x33, 0xea, 0x93, 0x15, 0xc9, 0xb5, 0x25, 0x3f, 0xc0, 0x2d, 0xde,
-	0xae, 0xbf, 0xae, 0xd9, 0x06, 0x10, 0xfd, 0x8f, 0x6c, 0x8b, 0xf2, 0xba, 0x85, 0xd6, 0x6d, 0xf5,
-	0x4a, 0xae, 0xab, 0x20, 0x49, 0x00, 0xf1, 0x21, 0x64, 0x5f, 0x05, 0xd4, 0x9b, 0x73, 0xf2, 0x3c,
-	0x11, 0x8e, 0xf2, 0x12, 0x0e, 0xba, 0x94, 0xe9, 0x3c, 0x93, 0x50, 0xdf, 0x75, 0x6c, 0x9f, 0xde,
-	0xa8, 0xc8, 0x03, 0x90, 0x04, 0xb2, 0x9c, 0xaa, 0xa5, 0xeb, 0x85, 0x56, 0x41, 0xe5, 0xca, 0xf2,
-	0x33, 0xb2, 0x0a, 0x29, 0x1f, 0x61, 0x9f, 0x4b, 0xf4, 0x7f, 0xba, 0x36, 0x14, 0x8d, 0x50, 0x0f,
-	0xa9, 0x19, 0xb0, 0x99, 0x63, 0xaf, 0x49, 0x0f, 0x04, 0x69, 0x22, 0x42, 0x36, 0x60, 0xca, 0x77,
-	0x04, 0x59, 0xcd, 0x09, 0xec, 0x09, 0x56, 0x21, 0x63, 0xcc, 0x5d, 0xa1, 0xc1, 0x7e, 0xab, 0x92,
-	0xd4, 0x20, 0x8a, 0x8b, 0x6f, 0x84, 0x20, 0x1c, 0x17, 0x49, 0xd0, 0xb7, 0x27, 0x34, 0xe4, 0x12,
-	0x64, 0x88, 0x70, 0x94, 0xe7, 0x90, 0x8f, 0x81, 0xb8, 0x08, 0xb9, 0x8e, 0x36, 0x7c, 0x31, 0x78,
-	0x6d, 0xe8, 0xf2, 0x5e, 0xe4, 0x11, 0x7d, 0xd0, 0x31, 0xfa, 0x6f, 0x74, 0x19, 0xe1, 0x3c, 0x64,
-	0x9f, 0xf5, 0xc9, 0xd0, 0x90, 0x53, 0x18, 0x40, 0x1a, 0x74, 0x0c, 0x7d, 0x68, 0xc8, 0xe9, 0xc8,
-	0x1e, 0x1a, 0x44, 0xef, 0x9c, 0xca, 0x19, 0xe5, 0x5d, 0x72, 0x36, 0xf8, 0x21, 0x64, 0x87, 0x6c,
-	0xe4, 0xb1, 0xd5, 0x90, 0xe4, 0xed, 0x06, 0x89, 0x08, 0x63, 0x05, 0xd2, 0xba, 0x3d, 0xe1, 0x5d,
-	0x5d, 0x87, 0x8a, 0x82, 0xad, 0x9f, 0x29, 0x28, 0xc5, 0x22, 0x08, 0xa9, 0xf1, 0x13, 0xc8, 0xad,
-	0x97, 0x19, 0x27, 0x6f, 0xbf, 0xb5, 0xe1, 0x95, 0x43, 0x21, 0x29, 0x3f, 0x8b, 0x39, 0xf0, 0x09,
-	0xe4, 0xd7, 0x40, 0x1f, 0x97, 0xb7, 0x17, 0xc8, 0xdf, 0x99, 0xdc, 0x44, 0xf8, 0x18, 0xb2, 0x7c,
-	0xce, 0xf8, 0xee, 0x66, 0xe5, 0xf8, 0x71, 0x54, 0xfe, 0x9d, 0x24, 0x7e, 0x0a, 0x92, 0x58, 0x8e,
-	0x1d, 0x05, 0xef, 0x6d, 0xf3, 0xc5, 0x9b, 0xd4, 0x44, 0x58, 0xe7, 0x4d, 0xaf, 0xee, 0x7f, 0x33,
-	0xc7, 0xfd, 0x4d, 0x8e, 0xcd, 0xfd, 0x6e, 0x22, 0xad, 0xb3, 0x58, 0x56, 0xd1, 0xaf, 0x65, 0x15,
-	0xfd, 0x59, 0x56, 0xd1, 0x8f, 0xcb, 0x2a, 0x5a, 0x5c, 0x56, 0xd1, 0xfb, 0x47, 0xbb, 0x5f, 0xad,
-	0xe7, 0x9a, 0x8d, 0x98, 0x76, 0x2c, 0xf1, 0x1f, 0xca, 0xf1, 0xdf, 0x00, 0x00, 0x00, 0xff, 0xff,
-	0x5d, 0x9d, 0x65, 0x82, 0xa9, 0x04, 0x00, 0x00,
+var fileDescriptor_rpcevents_f96012d4c57089ed = []byte{
+	// 607 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x54, 0x4d, 0x6f, 0xd3, 0x4c,
+	0x10, 0xee, 0xe6, 0x4b, 0xcd, 0xa4, 0x1f, 0x79, 0x57, 0x7d, 0x51, 0x88, 0x50, 0x1a, 0x19, 0x09,
+	0x55, 0x42, 0x4d, 0xaa, 0xa0, 0xaa, 0x27, 0x84, 0x12, 0xc9, 0xb4, 0x45, 0xad, 0x10, 0x9b, 0xe5,
+	0x43, 0x08, 0x09, 0x39, 0xce, 0x90, 0x58, 0xb4, 0x6b, 0xb3, 0x5e, 0x83, 0xf3, 0x53, 0xf8, 0x2b,
+	0x9c, 0x38, 0xf6, 0xc8, 0x99, 0x43, 0x85, 0xda, 0x3f, 0x82, 0xb2, 0x6b, 0x3b, 0x6e, 0x29, 0xe5,
+	0x62, 0xcd, 0xec, 0xf3, 0xcc, 0xcc, 0xe3, 0x67, 0xc7, 0x86, 0x75, 0x19, 0xb8, 0xf8, 0x19, 0x85,
+	0x0a, 0x3b, 0x81, 0xf4, 0x95, 0x4f, 0xab, 0xd9, 0x41, 0x73, 0x7b, 0xe2, 0xa9, 0x69, 0x34, 0xea,
+	0xb8, 0xfe, 0x69, 0x77, 0xe2, 0x4f, 0xfc, 0xae, 0x66, 0x8c, 0xa2, 0x0f, 0x3a, 0xd3, 0x89, 0x8e,
+	0x4c, 0x65, 0x73, 0x2f, 0x47, 0x57, 0x28, 0xc6, 0x28, 0x4f, 0x3d, 0xa1, 0xf2, 0xa1, 0x33, 0x72,
+	0xbd, 0xae, 0x9a, 0x05, 0x18, 0x9a, 0x67, 0x52, 0x08, 0x18, 0xa3, 0x6b, 0x62, 0xeb, 0x31, 0xac,
+	0xef, 0xa3, 0x1a, 0x9c, 0xf8, 0xee, 0x47, 0x86, 0x9f, 0x22, 0x0c, 0x15, 0xbd, 0x03, 0x95, 0x03,
+	0xf4, 0x26, 0x53, 0xd5, 0x20, 0x6d, 0xb2, 0x55, 0x62, 0x49, 0x46, 0x29, 0x94, 0x5e, 0x3b, 0x9e,
+	0x6a, 0x14, 0xda, 0x64, 0x6b, 0x99, 0xe9, 0xd8, 0x12, 0x50, 0xe5, 0x71, 0x5a, 0x78, 0x0c, 0x15,
+	0x1e, 0x1f, 0x38, 0xe1, 0x54, 0x17, 0xae, 0x0c, 0x76, 0xcf, 0xce, 0x37, 0x97, 0x7e, 0x9e, 0x6f,
+	0xe6, 0xdf, 0x6b, 0x3a, 0x0b, 0x50, 0x9e, 0xe0, 0x78, 0x82, 0xb2, 0x3b, 0x8a, 0xa4, 0xf4, 0xbf,
+	0x74, 0x47, 0x9e, 0x70, 0xe4, 0xac, 0x73, 0x80, 0xf1, 0x60, 0xa6, 0x30, 0x64, 0x49, 0x93, 0x1b,
+	0xe7, 0xbd, 0x83, 0x55, 0xad, 0x35, 0x4c, 0x67, 0xee, 0x02, 0x18, 0xf1, 0x8e, 0x98, 0xa0, 0x9e,
+	0x5b, 0xeb, 0xfd, 0xdf, 0x59, 0x98, 0xbc, 0x00, 0x59, 0x8e, 0x48, 0x37, 0xa0, 0xfc, 0x22, 0x42,
+	0x39, 0xd3, 0xcd, 0xab, 0xcc, 0x24, 0xd6, 0x31, 0xac, 0xd9, 0xba, 0x8c, 0x61, 0x18, 0xf8, 0x22,
+	0xc4, 0xbf, 0x7a, 0x71, 0x1f, 0x2a, 0x86, 0xd9, 0x28, 0xb4, 0x8b, 0x5b, 0xb5, 0x5e, 0xad, 0xa3,
+	0x3d, 0xd5, 0x67, 0x2c, 0x81, 0x2c, 0x84, 0xd5, 0x7d, 0x54, 0x3c, 0xce, 0xc4, 0xb6, 0xa1, 0x36,
+	0x54, 0x8e, 0x54, 0x57, 0x5a, 0xe6, 0x8f, 0xe8, 0x3d, 0xa8, 0xda, 0x62, 0x9c, 0xe0, 0x05, 0x8d,
+	0x2f, 0x0e, 0x16, 0xaa, 0x8b, 0x79, 0xd5, 0xef, 0x61, 0x2d, 0x1d, 0xf3, 0x0f, 0xd5, 0xbb, 0xb0,
+	0xc2, 0x63, 0x3b, 0x46, 0x37, 0x52, 0x9e, 0x2f, 0x52, 0xed, 0xff, 0x19, 0xed, 0x39, 0x84, 0x5d,
+	0xa1, 0x59, 0x5f, 0x09, 0x94, 0x07, 0x7e, 0x24, 0xc6, 0xb4, 0x03, 0x25, 0x3e, 0x0b, 0x8c, 0xcf,
+	0x6b, 0xbd, 0x66, 0xde, 0xe7, 0x39, 0x6e, 0x9e, 0x73, 0x06, 0xd3, 0xbc, 0xb9, 0xe0, 0x43, 0x31,
+	0xc6, 0x38, 0x79, 0x15, 0x93, 0x58, 0xcf, 0xa0, 0x9a, 0x11, 0xe9, 0x0a, 0x2c, 0xf7, 0x07, 0xc3,
+	0xe7, 0x47, 0x2f, 0xb9, 0x5d, 0x5f, 0x9a, 0x67, 0xcc, 0x3e, 0xea, 0xf3, 0xc3, 0x57, 0x76, 0x9d,
+	0xd0, 0x2a, 0x94, 0x9f, 0x1e, 0xb2, 0x21, 0xaf, 0x17, 0x28, 0x40, 0xe5, 0xa8, 0xcf, 0xed, 0x21,
+	0xaf, 0x17, 0xe7, 0xf1, 0x90, 0x33, 0xbb, 0x7f, 0x5c, 0x2f, 0x59, 0x6f, 0xf2, 0xf7, 0x4f, 0x1f,
+	0x40, 0x59, 0xbb, 0x99, 0x2c, 0x42, 0xfd, 0xba, 0x40, 0x66, 0x60, 0x6a, 0x41, 0xd1, 0x16, 0x63,
+	0xad, 0xea, 0x26, 0xd6, 0x1c, 0xec, 0x7d, 0x23, 0xb0, 0x9e, 0x99, 0x60, 0x6e, 0x94, 0xee, 0x41,
+	0x65, 0xa8, 0x24, 0x3a, 0xa7, 0xb4, 0x71, 0x7d, 0xc7, 0xd2, 0x4b, 0x6e, 0x26, 0x76, 0x1a, 0x9e,
+	0xae, 0xdb, 0x21, 0x74, 0x1b, 0x0a, 0x3c, 0xa6, 0x1b, 0xb9, 0xa2, 0xec, 0xb3, 0x69, 0xfe, 0xe9,
+	0x3f, 0x7d, 0x92, 0xae, 0xd7, 0x2d, 0x73, 0xee, 0xe6, 0x90, 0xab, 0x5b, 0xbb, 0x43, 0x06, 0xfd,
+	0xb3, 0x8b, 0x16, 0xf9, 0x71, 0xd1, 0x22, 0xbf, 0x2e, 0x5a, 0xe4, 0xfb, 0x65, 0x8b, 0x9c, 0x5d,
+	0xb6, 0xc8, 0xdb, 0x87, 0xb7, 0x7f, 0x88, 0x32, 0x70, 0xbb, 0x59, 0xcf, 0x51, 0x45, 0xff, 0x20,
+	0x1e, 0xfd, 0x0e, 0x00, 0x00, 0xff, 0xff, 0xb6, 0x1d, 0xe9, 0x88, 0xb2, 0x04, 0x00, 0x00,
 }

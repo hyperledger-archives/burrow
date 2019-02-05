@@ -11,7 +11,10 @@ import (
 
 func main() {
 	// Print informational output to Stderr
-	burrow(stdOutput()).Run(os.Args)
+	err := burrow(stdOutput()).Run(os.Args)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func burrow(output commands.Output) *cli.Cli {

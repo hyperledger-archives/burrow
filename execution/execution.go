@@ -19,15 +19,14 @@ import (
 	"fmt"
 	"runtime/debug"
 	"sync"
-	"time"
 
 	"github.com/hyperledger/burrow/acm/validator"
+	"github.com/hyperledger/burrow/genesis"
 
 	"github.com/hyperledger/burrow/execution/state"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
-	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
@@ -72,55 +71,67 @@ type BatchExecutor interface {
 type BatchCommitter interface {
 	BatchExecutor
 	// Commit execution results to underlying State and provide opportunity to mutate state before it is saved
-	Commit(blockHash []byte, blockTime time.Time, header *abciTypes.Header) (stateHash []byte, err error)
+	Commit(header *abciTypes.Header) (stateHash []byte, err error)
 }
 
 type executor struct {
 	sync.RWMutex
 	runCall          bool
-	blockchain       *bcm.Blockchain
+	params           Params
 	state            ExecutorState
 	stateCache       *acmstate.Cache
 	nameRegCache     *names.Cache
 	proposalRegCache *proposal.Cache
 	validatorCache   *validator.Cache
 	publisher        event.Publisher
-	blockExecution   *exec.BlockExecution
+	block            *exec.BlockExecution
 	logger           *logging.Logger
 	vmOptions        []func(*evm.VM)
 	contexts         map[payload.Type]contexts.Context
 }
 
+type Params struct {
+	ChainID           string
+	ProposalThreshold uint64
+}
+
+func ParamsFromGenesis(genesisDoc *genesis.GenesisDoc) Params {
+	return Params{
+		ChainID:           genesisDoc.ChainID(),
+		ProposalThreshold: genesisDoc.Params.ProposalThreshold,
+	}
+}
+
 var _ BatchExecutor = (*executor)(nil)
 
 // Wraps a cache of what is variously known as the 'check cache' and 'mempool'
-func NewBatchChecker(backend ExecutorState, blockchain *bcm.Blockchain, logger *logging.Logger,
+func NewBatchChecker(backend ExecutorState, params Params, blockchain contexts.Blockchain, logger *logging.Logger,
 	options ...ExecutionOption) BatchExecutor {
 
-	return newExecutor("CheckCache", false, backend, blockchain, event.NewNoOpPublisher(),
+	return newExecutor("CheckCache", false, params, backend, blockchain, event.NewNoOpPublisher(),
 		logger.WithScope("NewBatchExecutor"), options...)
 }
 
-func NewBatchCommitter(backend ExecutorState, blockchain *bcm.Blockchain, emitter event.Publisher,
+func NewBatchCommitter(backend ExecutorState, params Params, blockchain contexts.Blockchain, emitter event.Publisher,
 	logger *logging.Logger, options ...ExecutionOption) BatchCommitter {
 
-	return newExecutor("CommitCache", true, backend, blockchain, emitter,
+	return newExecutor("CommitCache", true, params, backend, blockchain, emitter,
 		logger.WithScope("NewBatchCommitter"), options...)
 
 }
 
-func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *bcm.Blockchain, publisher event.Publisher,
+func newExecutor(name string, runCall bool, params Params, backend ExecutorState, blockchain contexts.Blockchain, publisher event.Publisher,
 	logger *logging.Logger, options ...ExecutionOption) *executor {
 	exe := &executor{
 		runCall:          runCall,
+		params:           params,
 		state:            backend,
-		blockchain:       blockchain,
 		stateCache:       acmstate.NewCache(backend, acmstate.Named(name)),
 		nameRegCache:     names.NewCache(backend),
 		proposalRegCache: proposal.NewCache(backend),
 		validatorCache:   validator.NewCache(backend),
 		publisher:        publisher,
-		blockExecution: &exec.BlockExecution{
+		block: &exec.BlockExecution{
 			Height: blockchain.LastBlockHeight() + 1,
 		},
 		logger: logger.With(structure.ComponentKey, "Executor"),
@@ -131,25 +142,23 @@ func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *b
 
 	baseContexts := map[payload.Type]contexts.Context{
 		payload.TypeSend: &contexts.SendContext{
-			Tip:         blockchain,
 			StateWriter: exe.stateCache,
 			Logger:      exe.logger,
 		},
 		payload.TypeCall: &contexts.CallContext{
-			Tip:         blockchain,
+			Blockchain:  blockchain,
 			StateWriter: exe.stateCache,
 			RunCall:     runCall,
 			VMOptions:   exe.vmOptions,
 			Logger:      exe.logger,
 		},
 		payload.TypeName: &contexts.NameContext{
-			Tip:         blockchain,
+			Blockchain:  blockchain,
 			StateWriter: exe.stateCache,
 			NameReg:     exe.nameRegCache,
 			Logger:      exe.logger,
 		},
 		payload.TypePermissions: &contexts.PermissionsContext{
-			Tip:         blockchain,
 			StateWriter: exe.stateCache,
 			Logger:      exe.logger,
 		},
@@ -162,11 +171,12 @@ func newExecutor(name string, runCall bool, backend ExecutorState, blockchain *b
 
 	exe.contexts = map[payload.Type]contexts.Context{
 		payload.TypeProposal: &contexts.ProposalContext{
-			Tip:         blockchain,
-			StateWriter: exe.stateCache,
-			ProposalReg: exe.proposalRegCache,
-			Logger:      exe.logger,
-			Contexts:    baseContexts,
+			ChainID:           params.ChainID,
+			ProposalThreshold: params.ProposalThreshold,
+			StateWriter:       exe.stateCache,
+			ProposalReg:       exe.proposalRegCache,
+			Logger:            exe.logger,
+			Contexts:          baseContexts,
 		},
 	}
 
@@ -200,7 +210,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 	logger.InfoMsg("Executing transaction", "tx", txEnv.String())
 
 	// Verify transaction signature against inputs
-	err = txEnv.Verify(exe.stateCache, exe.blockchain.ChainID())
+	err = txEnv.Verify(exe.stateCache, exe.params.ChainID)
 	if err != nil {
 		logger.InfoMsg("Transaction Verify failed", structure.ErrorKey, err)
 		return nil, err
@@ -208,7 +218,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 
 	if txExecutor, ok := exe.contexts[txEnv.Tx.Type()]; ok {
 		// Establish new TxExecution
-		txe := exe.blockExecution.Tx(txEnv)
+		txe := exe.block.Tx(txEnv)
 		defer func() {
 			if r := recover(); r != nil {
 				err = fmt.Errorf("recovered from panic in executor.Execute(%s): %v\n%s", txEnv.String(), r,
@@ -281,7 +291,9 @@ func validateInputs(tx *txs.Tx, getter acmstate.AccountGetter) error {
 	return nil
 }
 
-func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciTypes.Header) (_ []byte, err error) {
+// Commit the current state - optionally pass in the tendermint ABCI header for that to be included with the BeginBlock
+// StreamEvent
+func (exe *executor) Commit(header *abciTypes.Header) (stateHash []byte, err error) {
 	// The write lock to the executor is controlled by the caller (e.g. abci.App) so we do not acquire it here to avoid
 	// deadlock
 	defer func() {
@@ -289,7 +301,9 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 			err = fmt.Errorf("recovered from panic in executor.Commit(): %v\n%s", r, debug.Stack())
 		}
 	}()
-	exe.logger.InfoMsg("Executor committing", "height", exe.blockExecution.Height)
+	// Capture height
+	height := exe.block.Height
+	exe.logger.InfoMsg("Executor committing", "height", exe.block.Height)
 	// Form BlockExecution for this block from TxExecutions and Tendermint block header
 	blockExecution, err := exe.finaliseBlockExecution(header)
 	if err != nil {
@@ -324,17 +338,10 @@ func (exe *executor) Commit(blockHash []byte, blockTime time.Time, header *abciT
 	if err != nil {
 		return nil, err
 	}
-	// Commit to our blockchain state which will checkpoint the previous app hash by saving it to the database
-	// (we know the previous app hash is safely committed because we are about to commit the next)
-	_, _, err = exe.blockchain.CommitBlock(blockTime, blockHash, hash)
-	if err != nil {
-		panic(fmt.Errorf("could not commit block to blockchain state: %v", err))
-	}
-	exe.logger.InfoMsg("Committed block")
 	expectedHeight := HeightAtVersion(version)
-	if expectedHeight != exe.blockchain.LastBlockHeight() {
+	if expectedHeight != height {
 		return nil, fmt.Errorf("expected height at state tree version %d is %d but actual height is %d",
-			version, expectedHeight, exe.blockchain.LastBlockHeight())
+			version, expectedHeight, height)
 	}
 	// Now state is fully committed publish events (this should be the last thing we do)
 	exe.publishBlock(blockExecution)
@@ -374,17 +381,17 @@ func (exe *executor) PendingValidators() validator.IterableReader {
 }
 
 func (exe *executor) finaliseBlockExecution(header *abciTypes.Header) (*exec.BlockExecution, error) {
-	if header != nil && uint64(header.Height) != exe.blockExecution.Height {
+	if header != nil && uint64(header.Height) != exe.block.Height {
 		return nil, fmt.Errorf("trying to finalise block execution with height %v but passed Tendermint"+
-			"block header at height %v", exe.blockExecution.Height, header.Height)
+			"block header at height %v", exe.block.Height, header.Height)
 	}
 	// Capture BlockExecution to return
-	be := exe.blockExecution
+	be := exe.block
 	// Set the header when provided
-	be.BlockHeader = header
+	be.Header = header
 	// Start new execution for the next height
-	exe.blockExecution = &exec.BlockExecution{
-		Height: exe.blockExecution.Height + 1,
+	exe.block = &exec.BlockExecution{
+		Height: exe.block.Height + 1,
 	}
 	return be, nil
 }

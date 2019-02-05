@@ -25,6 +25,7 @@ func NewNodeView(tmNode *Node, txDecoder txs.Decoder, runID simpleuuid.UUID) (*N
 	if err != nil {
 		return nil, err
 	}
+	tmNode.BlockStore()
 	return &NodeView{
 		validatorPublicKey: publicKey,
 		tmNode:             tmNode,

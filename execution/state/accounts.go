@@ -3,24 +3,19 @@ package state
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/storage"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 )
 
-var accountKeyFormat = storage.NewMustKeyFormat("a", crypto.AddressLength)
-var storageKeyFormat = storage.NewMustKeyFormat("s", crypto.AddressLength, binary.Word256Length)
-
 // Returns nil if account does not exist with given address.
 func (s *ReadState) GetAccount(address crypto.Address) (*acm.Account, error) {
-	tree, err := s.Forest.Reader(accountKeyFormat.Prefix())
+	tree, err := s.Forest.Reader(keys.Account.Prefix())
 	if err != nil {
 		return nil, err
 	}
-	accBytes := tree.Get(accountKeyFormat.KeyNoPrefix(address))
+	accBytes := tree.Get(keys.Account.KeyNoPrefix(address))
 	if accBytes == nil {
 		return nil, nil
 	}
@@ -55,11 +50,11 @@ func (ws *writeState) UpdateAccount(account *acm.Account) error {
 	if err != nil {
 		return fmt.Errorf("UpdateAccount could not encode account: %v", err)
 	}
-	tree, err := ws.forest.Writer(accountKeyFormat.Prefix())
+	tree, err := ws.forest.Writer(keys.Account.Prefix())
 	if err != nil {
 		return err
 	}
-	updated := tree.Set(accountKeyFormat.KeyNoPrefix(account.Address), encodedAccount)
+	updated := tree.Set(keys.Account.KeyNoPrefix(account.Address), encodedAccount)
 	if updated {
 		ws.statsAddAccount(account)
 	}
@@ -67,11 +62,11 @@ func (ws *writeState) UpdateAccount(account *acm.Account) error {
 }
 
 func (ws *writeState) RemoveAccount(address crypto.Address) error {
-	tree, err := ws.forest.Writer(accountKeyFormat.Prefix())
+	tree, err := ws.forest.Writer(keys.Account.Prefix())
 	if err != nil {
 		return err
 	}
-	accBytes, deleted := tree.Delete(accountKeyFormat.KeyNoPrefix(address))
+	accBytes, deleted := tree.Delete(keys.Account.KeyNoPrefix(address))
 	if deleted {
 		acc, err := acm.Decode(accBytes)
 		if err != nil {
@@ -79,7 +74,7 @@ func (ws *writeState) RemoveAccount(address crypto.Address) error {
 		}
 		ws.statsRemoveAccount(acc)
 		// Delete storage associated with account too
-		_, err = ws.forest.Delete(storageKeyFormat.Key(address))
+		_, err = ws.forest.Delete(keys.Storage.Key(address))
 		if err != nil {
 			return err
 		}
@@ -88,7 +83,7 @@ func (ws *writeState) RemoveAccount(address crypto.Address) error {
 }
 
 func (s *ReadState) IterateAccounts(consumer func(*acm.Account) error) error {
-	tree, err := s.Forest.Reader(accountKeyFormat.Prefix())
+	tree, err := s.Forest.Reader(keys.Account.Prefix())
 	if err != nil {
 		return err
 	}
@@ -108,7 +103,7 @@ func (s *State) GetAccountStats() acmstate.AccountStats {
 // Storage
 
 func (s *ReadState) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
-	keyFormat := storageKeyFormat.Fix(address)
+	keyFormat := keys.Storage.Fix(address)
 	tree, err := s.Forest.Reader(keyFormat.Prefix())
 	if err != nil {
 		return binary.Zero256, err
@@ -117,7 +112,7 @@ func (s *ReadState) GetStorage(address crypto.Address, key binary.Word256) (bina
 }
 
 func (ws *writeState) SetStorage(address crypto.Address, key, value binary.Word256) error {
-	keyFormat := storageKeyFormat.Fix(address)
+	keyFormat := keys.Storage.Fix(address)
 	tree, err := ws.forest.Writer(keyFormat.Prefix())
 	if err != nil {
 		return err
@@ -131,7 +126,7 @@ func (ws *writeState) SetStorage(address crypto.Address, key, value binary.Word2
 }
 
 func (s *ReadState) IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) error) error {
-	keyFormat := storageKeyFormat.Fix(address)
+	keyFormat := keys.Storage.Fix(address)
 	tree, err := s.Forest.Reader(keyFormat.Prefix())
 	if err != nil {
 		return err

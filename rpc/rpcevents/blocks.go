@@ -1,5 +1,11 @@
 package rpcevents
 
+import (
+	"io"
+
+	"github.com/hyperledger/burrow/execution/exec"
+)
+
 // Get bounds suitable for events.Provider
 func (br *BlockRange) Bounds(latestBlockHeight uint64) (startHeight, endHeight uint64, streaming bool) {
 	// End bound is exclusive in state.GetEvents so we increment the height
@@ -59,4 +65,38 @@ func NewBlockRange(start, end *Bound) *BlockRange {
 		Start: start,
 		End:   end,
 	}
+}
+
+func AbsoluteRange(start, end uint64) *BlockRange {
+	return NewBlockRange(AbsoluteBound(start), AbsoluteBound(end))
+}
+
+func SingleBlock(height uint64) *BlockRange {
+	return AbsoluteRange(height, height+1)
+}
+
+func ConsumeBlockExecutions(stream ExecutionEvents_StreamClient, consumer func(*exec.BlockExecution) error) error {
+	var be *exec.BlockExecution
+	ev, err := stream.Recv()
+	for err == nil {
+		switch {
+		case ev.BeginBlock != nil:
+			be = &exec.BlockExecution{
+				Height: ev.BeginBlock.Height,
+				Header: ev.BeginBlock.Header,
+			}
+		case ev.TxExecution != nil:
+			be.TxExecutions = append(be.TxExecutions, ev.TxExecution)
+		case ev.EndBlock != nil:
+			err = consumer(be)
+			if err != nil {
+				return err
+			}
+		}
+		ev, err = stream.Recv()
+	}
+	if err == io.EOF {
+		return nil
+	}
+	return err
 }

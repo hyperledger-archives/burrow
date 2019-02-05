@@ -3,6 +3,7 @@ syntax = 'proto3';
 option go_package = "github.com/hyperledger/burrow/rpc/rpcevents";
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "github.com/tendermint/tendermint/abci/types/types.proto";
 import "exec.proto";
 
 package rpcevents;
@@ -21,17 +22,13 @@ option (gogoproto.messagename_all) = true;
 //--------------------------------------------------
 // Execution events
 service ExecutionEvents {
-    // Get Blockexecution at particular height
-    rpc GetBlock (GetBlockRequest) returns (exec.BlockExecution);
-    // Get BlockExecutions for a range of blocks
-    rpc GetBlocks (BlocksRequest) returns (stream exec.BlockExecution);
-    // Get a particular TxExecution
-    rpc GetTx (GetTxRequest) returns (exec.TxExecution);
-    // Get TxExecutions for a range of block
-    rpc GetTxs (BlocksRequest) returns (stream GetTxsResponse);
+    // Get StreamEvents (including transactions) for a range of block heights
+    rpc Stream (BlocksRequest) returns (stream exec.StreamEvent);
+    // Get a particular TxExecution by hash
+    rpc Tx (TxRequest) returns (exec.TxExecution);
     // GetEvents provides events streaming one block at a time - that is all events emitted in a particular block
     // are guaranteed to be delivered in each GetEventsResponse
-    rpc GetEvents (BlocksRequest) returns (stream GetEventsResponse);
+    rpc Events (BlocksRequest) returns (stream EventsResponse);
 }
 
 message GetBlockRequest {
@@ -41,7 +38,7 @@ message GetBlockRequest {
     bool Wait = 2;
 }
 
-message GetTxRequest {
+message TxRequest {
     // Height of block required
     bytes TxHash = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
     // Whether to wait for the block to become available
@@ -88,9 +85,15 @@ message BlocksRequest {
     string Query = 2;
 }
 
-message GetEventsResponse {
+message EventsResponse {
     uint64 Height = 1;
     repeated exec.Event Events = 2;
+}
+
+message GetTxsRequest {
+    uint64 StartHeight = 1;
+    uint64 EndHeight = 2;
+    string Query = 3;
 }
 
 message GetTxsResponse {

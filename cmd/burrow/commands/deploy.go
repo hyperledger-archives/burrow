@@ -27,7 +27,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 
 		pathOpt := cmd.StringOpt("i dir", "", "root directory of app (will use pwd by default)")
 
-		defaultOutputOpt := cmd.StringOpt("o output", "deploy.output.json",
+		defaultOutputOpt := cmd.StringOpt("o output", def.DefaultOutputFile,
 			"filename for jobs output file. by default, this name will reflect the name passed in on the optional [--file]")
 
 		yamlPathOpt := cmd.StringOpt("f file", "deploy.yaml",
