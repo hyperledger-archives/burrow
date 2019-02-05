@@ -128,20 +128,13 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 			return nil, fmt.Errorf("Cannot restore onto existing chain; don't give --restore-dump argument")
 		}
 	} else {
-		kern.State, err = state.MakeGenesisState(stateDB, genesisDoc)
-		if err != nil {
-			return nil, fmt.Errorf("could not build genesis state: %v", err)
+		if restore != "" && genesisDoc.AppHash == "" {
+			return nil, fmt.Errorf("AppHash is required when restoring chain")
 		}
 
-		if restore != "" {
-			if genesisDoc.AppHash == "" {
-				return nil, fmt.Errorf("AppHash is required when restoring chain")
-			}
-
-			err = kern.State.LoadDump(restore)
-			if err != nil {
-				return nil, fmt.Errorf("failed to restore from %s: %v", restore, err)
-			}
+		kern.State, err = state.MakeGenesisState(stateDB, genesisDoc, restore)
+		if err != nil {
+			return nil, fmt.Errorf("could not build genesis state: %v", err)
 		}
 	}
 
@@ -152,7 +145,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 		}
 
 		if !bytes.Equal(hash, kern.State.Hash()) {
-			return nil, fmt.Errorf("AppHash does not match, got AppHash 0x%X expected 0x%s", kern.State.Hash(), genesisDoc.AppHash)
+			return nil, fmt.Errorf("AppHash does not match, got AppHash 0x%X expected 0x%s. Is the correct --restore-dump specified?", kern.State.Hash(), genesisDoc.AppHash)
 		}
 	}
 

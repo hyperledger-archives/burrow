@@ -130,7 +130,7 @@ func NewState(db dbm.DB) *State {
 }
 
 // Make genesis state from GenesisDoc and save to DB
-func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error) {
+func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc, restore string) (*State, error) {
 	s := NewState(db)
 
 	const errHeader = "MakeGenesisState():"
@@ -169,6 +169,14 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 	if err != nil {
 		return nil, fmt.Errorf("%s %v", errHeader, err)
 	}
+
+	if restore != "" {
+		err = s.LoadDump(restore)
+		if err != nil {
+			return nil, fmt.Errorf("failed to restore from %s: %v", restore, err)
+		}
+	}
+
 	_, version, err := s.commit()
 	if err != nil {
 		return nil, fmt.Errorf("%s could not save genesis state: %v", errHeader, err)

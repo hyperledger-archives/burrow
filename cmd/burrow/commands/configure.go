@@ -220,14 +220,9 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("On restore, validators must be provided in GenesisDoc or GenesisSpec")
 				}
 
-				st, err := state.MakeGenesisState(db.NewMemDB(), conf.GenesisDoc)
+				st, err := state.MakeGenesisState(db.NewMemDB(), conf.GenesisDoc, *restoreDumpOpt)
 				if err != nil {
 					output.Fatalf("could not generate state from genesis: %v", err)
-				}
-
-				err = st.LoadDump(*restoreDumpOpt)
-				if err != nil {
-					output.Fatalf("could not load restore file: %v", err)
 				}
 
 				conf.GenesisDoc.AppHash = hex.EncodeUpperToString(st.Hash())
