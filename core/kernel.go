@@ -134,23 +134,28 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 		}
 
 		if restore != "" {
+			if genesisDoc.AppHash == "" {
+				return nil, fmt.Errorf("AppHash is required when restoring chain")
+			}
+
 			err = kern.State.LoadDump(restore)
 			if err != nil {
 				return nil, fmt.Errorf("failed to restore from %s: %v", restore, err)
 			}
 		}
+	}
 
-		if genesisDoc.AppHash != "" {
-			hash, err := hex.DecodeString(genesisDoc.AppHash)
-			if err != nil || len(hash) != sha256.Size {
-				return nil, fmt.Errorf("AppHash field is not valid hash")
-			}
+	if genesisDoc.AppHash != "" {
+		hash, err := hex.DecodeString(genesisDoc.AppHash)
+		if err != nil || len(hash) != sha256.Size {
+			return nil, fmt.Errorf("AppHash field is not valid hash")
+		}
 
-			if !bytes.Equal(hash, kern.State.Hash()) {
-				return nil, fmt.Errorf("AppHash does not match, got AppHash 0x%X expected 0x%s", kern.State.Hash(), genesisDoc.AppHash)
-			}
+		if !bytes.Equal(hash, kern.State.Hash()) {
+			return nil, fmt.Errorf("AppHash does not match, got AppHash 0x%X expected 0x%s", kern.State.Hash(), genesisDoc.AppHash)
 		}
 	}
+
 	kern.Logger.InfoMsg("State loading successful")
 
 	txCodec := txs.NewAminoCodec()
