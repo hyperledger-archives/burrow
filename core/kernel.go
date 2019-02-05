@@ -125,7 +125,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 				kern.State.Hash(), kern.Blockchain.AppHashAfterLastBlock())
 		}
 		if restore != "" {
-			return nil, fmt.Errorf("Cannot restore onto existing chain; don't give --restore argument")
+			return nil, fmt.Errorf("Cannot restore onto existing chain; don't give --restore-dump argument")
 		}
 	} else {
 		kern.State, err = state.MakeGenesisState(stateDB, genesisDoc)
