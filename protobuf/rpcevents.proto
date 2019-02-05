@@ -22,8 +22,8 @@ option (gogoproto.messagename_all) = true;
 //--------------------------------------------------
 // Execution events
 service ExecutionEvents {
-    // Get BlockEvents (including transactions) for a range of block
-    rpc GetBlockEvents (BlocksRequest) returns (stream exec.BlockEvent);
+    // Get StreamEvents (including transactions) for a range of block heights
+    rpc GetStream (BlocksRequest) returns (stream exec.StreamEvent);
     // Get a particular TxExecution by hash
     rpc GetTx (GetTxRequest) returns (exec.TxExecution);
     // GetEvents provides events streaming one block at a time - that is all events emitted in a particular block

@@ -19,8 +19,8 @@ option (gogoproto.sizer_all) = true;
 option (gogoproto.goproto_registration) = true;
 option (gogoproto.messagename_all) = true;
 
-message BlockEvent {
-    // The index of this BlockEvent amongst all block events at the same height
+message StreamEvent {
+    // The index of this StreamEvent amongst all StreamEvents at the same height
     uint64 Index = 1;
     BeginBlock BeginBlock = 2;
     TxExecution TxExecution = 3;
