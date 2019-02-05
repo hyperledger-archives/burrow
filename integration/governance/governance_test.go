@@ -60,7 +60,7 @@ func TestAlterValidators(t *testing.T) {
 	assertValidatorsEqual(t, vs, vsOut)
 
 	// Now check Tendermint
-	waitNBlocks(t, ecli, 4)
+	waitNBlocks(t, ecli, 5)
 	height := int64(kernels[0].Blockchain.LastBlockHeight())
 	kernels[0].Node.ConfigureRPC()
 	tmVals, err := core.Validators(&height)
@@ -73,6 +73,12 @@ func TestAlterValidators(t *testing.T) {
 		vsOut.ChangePower(publicKey, big.NewInt(v.VotingPower))
 	}
 	assertValidatorsEqual(t, vs, vsOut)
+}
+
+func TestWaitBlocks(t *testing.T) {
+	grpcAddress := testConfigs[0].RPC.GRPC.ListenAddress
+	ecli := rpctest.NewExecutionEventsClient(t, grpcAddress)
+	waitNBlocks(t, ecli, 2)
 }
 
 func TestAlterValidatorsTooQuickly(t *testing.T) {

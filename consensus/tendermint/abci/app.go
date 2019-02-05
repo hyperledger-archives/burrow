@@ -333,7 +333,7 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 	}
 	// Commit to our blockchain state which will checkpoint the previous app hash by saving it to the database
 	// (we know the previous app hash is safely committed because we are about to commit the next)
-	_, _, err = app.blockchain.CommitBlock(blockTime, app.block.Hash, appHash)
+	err = app.blockchain.CommitBlock(blockTime, app.block.Hash, appHash)
 	if err != nil {
 		panic(fmt.Errorf("could not commit block to blockchain state: %v", err))
 	}

@@ -1579,7 +1579,7 @@ func (te *testExecutor) Commit(header *types.Header) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, _, err = te.Blockchain.CommitBlock(time.Now(), nil, appHash)
+	err = te.Blockchain.CommitBlock(time.Now(), nil, appHash)
 	if err != nil {
 		return nil, err
 	}

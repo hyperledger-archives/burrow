@@ -17,7 +17,6 @@ package bcm
 import (
 	"bytes"
 	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/tendermint/tendermint/types"
@@ -118,28 +117,26 @@ func loadBlockchain(db dbm.DB) (*Blockchain, error) {
 	return bc, nil
 }
 
-func (bc *Blockchain) CommitBlock(blockTime time.Time, blockHash,
-	appHash []byte) (totalPowerChange, totalFlow *big.Int, err error) {
+func (bc *Blockchain) CommitBlock(blockTime time.Time, blockHash, appHash []byte) error {
 	return bc.CommitBlockAtHeight(blockTime, blockHash, appHash, bc.lastBlockHeight+1)
 }
 
-func (bc *Blockchain) CommitBlockAtHeight(blockTime time.Time, blockHash, appHash []byte,
-	height uint64) (totalPowerChange, totalFlow *big.Int, err error) {
+func (bc *Blockchain) CommitBlockAtHeight(blockTime time.Time, blockHash, appHash []byte, height uint64) error {
 	bc.Lock()
 	defer bc.Unlock()
 	// Checkpoint on the _previous_ block. If we die, this is where we will resume since we know all intervening state
 	// has been written successfully since we are committing the next block.
 	// If we fall over we can resume a safe committed state and Tendermint will catch us up
-	err = bc.save()
+	err := bc.save()
 	if err != nil {
-		return
+		return err
 	}
 	bc.lastBlockHeight = height
 	bc.lastBlockTime = blockTime
 	bc.lastBlockHash = blockHash
 	bc.appHashAfterLastBlock = appHash
 	bc.lastCommitTime = time.Now().UTC()
-	return
+	return nil
 }
 
 func (bc *Blockchain) save() error {

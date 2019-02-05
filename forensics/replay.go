@@ -61,7 +61,7 @@ func (re *Replay) Block(height uint64) (*ReplayCapture, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, _, err = re.blockchain.CommitBlockAtHeight(block.Time, block.Hash(), block.Header.AppHash, uint64(block.Height))
+	err = re.blockchain.CommitBlockAtHeight(block.Time, block.Hash(), block.Header.AppHash, uint64(block.Height))
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (re *Replay) Blocks(startHeight, endHeight uint64) ([]*ReplayCapture, error
 		if err != nil {
 			return nil, err
 		}
-		_, _, err = re.blockchain.CommitBlockAtHeight(block.Time, block.Hash(), block.Header.AppHash, uint64(block.Height))
+		err = re.blockchain.CommitBlockAtHeight(block.Time, block.Hash(), block.Header.AppHash, uint64(block.Height))
 		if err != nil {
 			return nil, err
 		}
