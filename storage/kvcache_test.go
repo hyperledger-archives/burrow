@@ -1,7 +1,10 @@
 package storage
 
 import (
+	"math/rand"
 	"testing"
+
+	"github.com/hyperledger/burrow/binary"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -28,6 +31,26 @@ func TestKVCache_SortedKeysInDomain(t *testing.T) {
 	assert.Equal(t, []string{"c", "b"}, testSortedKeysInDomain(bz("c"), bz("a"), "a", "b", "c", "d"))
 	assert.Equal(t, []string{}, testSortedKeysInDomain(bz("e"), bz("c"), "a", "b"))
 	assert.Equal(t, []string{}, testSortedKeysInDomain(bz("e"), bz("c"), "z", "f"))
+}
+
+func BenchmarkKVCache_Iterator(b *testing.B) {
+	b.StopTimer()
+	cache := NewKVCache()
+	rnd := rand.NewSource(23425)
+	keyvals := make([][]byte, b.N)
+	for i := 0; i < b.N; i++ {
+		bs := make([]byte, 8)
+		binary.PutInt64BE(bs, rnd.Int63())
+		keyvals[i] = bs
+	}
+	for i := 0; i < b.N; i++ {
+		cache.Set(keyvals[i], keyvals[i])
+	}
+	b.StartTimer()
+	it := cache.Iterator(nil, nil)
+	for it.Valid() {
+		it.Next()
+	}
 }
 
 func testSortedKeysInDomain(start, end []byte, keys ...string) []string {

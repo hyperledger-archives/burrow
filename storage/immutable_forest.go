@@ -120,6 +120,7 @@ func (imf *ImmutableForest) newTree(prefix []byte) *RWTree {
 
 func (imf *ImmutableForest) Dump() string {
 	dump := treeprint.New()
+	AddTreePrintTree("Commits", dump, imf.commitsTree)
 	imf.Iterate(nil, nil, true, func(prefix []byte, tree KVCallbackIterableReader) error {
 		AddTreePrintTree(string(prefix), dump, tree)
 		return nil

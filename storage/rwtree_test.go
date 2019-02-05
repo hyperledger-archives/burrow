@@ -97,3 +97,28 @@ func TestVersionDivergence(t *testing.T) {
 	assert.Equal(t, hash11, hash21)
 	assert.NotEqual(t, hash11, hash22)
 }
+
+func TestMutableTree_Iterate(t *testing.T) {
+	mut := NewMutableTree(dbm.NewMemDB(), 100)
+	mut.Set(bz("aa"), bz("1"))
+	mut.Set(bz("aab"), bz("2"))
+	mut.Set(bz("aac"), bz("3"))
+	mut.Set(bz("aad"), bz("4"))
+	mut.Set(bz("ab"), bz("5"))
+	_, _, err := mut.SaveVersion()
+	require.NoError(t, err)
+	mut.IterateRange(bz("aab"), bz("aad"), true, func(key []byte, value []byte) bool {
+		fmt.Printf("%q -> %q\n", key, value)
+		return false
+	})
+	fmt.Println("foo")
+	mut.IterateRange(bz("aab"), bz("aad"), false, func(key []byte, value []byte) bool {
+		fmt.Printf("%q -> %q\n", key, value)
+		return false
+	})
+	fmt.Println("foo")
+	mut.IterateRange(bz("aad"), bz("aab"), true, func(key []byte, value []byte) bool {
+		fmt.Printf("%q -> %q\n", key, value)
+		return false
+	})
+}
