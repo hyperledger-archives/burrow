@@ -161,5 +161,9 @@ func (txEnv *Envelope) Sign(signingAccounts ...acm.AddressableSigner) error {
 }
 
 func (txEnv *Envelope) Tagged() query.Tagged {
-	return query.MergeTags(query.MustReflectTags(txEnv, "Signatories"), txEnv.Tx.Tagged())
+	if txEnv != nil {
+		return query.MergeTags(query.MustReflectTags(txEnv, "Signatories"), txEnv.Tx.Tagged())
+	} else {
+		return query.TagMap{}
+	}
 }
