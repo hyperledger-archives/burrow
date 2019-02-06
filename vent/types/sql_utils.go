@@ -20,4 +20,5 @@ type SQLCleanDBQuery struct {
 	SelectDictionaryQry string
 	DeleteDictionaryQry string
 	DeleteLogQry        string
+	DeleteErrorsQry     string
 }

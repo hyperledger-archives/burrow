@@ -404,8 +404,8 @@ func (adapter *PostgresAdapter) DeleteQuery(table types.SQLTable, row types.Even
 }
 
 func (adapter *PostgresAdapter) RestoreDBQuery() string {
-	return fmt.Sprintf(`SELECT %s, %s, %s, %s FROM %s.%s 
-								WHERE to_char(%s,'YYYY-MM-DD HH24:MI:SS')<=$1 
+	return fmt.Sprintf(`SELECT %s, %s, %s, %s FROM %s.%s
+								WHERE to_char(%s,'YYYY-MM-DD HH24:MI:SS')<=$1
 								ORDER BY %s;`,
 		types.SQLColumnLabelTableName, types.SQLColumnLabelAction, types.SQLColumnLabelSqlStmt, types.SQLColumnLabelSqlValues,
 		adapter.Schema, types.SQLLogTableName,
@@ -417,10 +417,10 @@ func (adapter *PostgresAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 
 	// Chain info
 	selectChainIDQry := fmt.Sprintf(`
-		SELECT 
+		SELECT
 		COUNT(*) REGISTERS,
 		COALESCE(MAX(%s),'') CHAINID,
-		COALESCE(MAX(%s),'') BVERSION 
+		COALESCE(MAX(%s),'') BVERSION
 		FROM %s.%s;`,
 		types.SQLColumnLabelChainID, types.SQLColumnLabelBurrowVer,
 		adapter.Schema, types.SQLChainInfoTableName)
@@ -436,8 +436,8 @@ func (adapter *PostgresAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 
 	// Dictionary
 	selectDictionaryQry := fmt.Sprintf(`
-		SELECT DISTINCT %s 
-		FROM %s.%s 
+		SELECT DISTINCT %s
+		FROM %s.%s
  		WHERE %s
 		NOT IN ('%s','%s','%s');`,
 		types.SQLColumnLabelTableName,
@@ -446,8 +446,8 @@ func (adapter *PostgresAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 		types.SQLLogTableName, types.SQLDictionaryTableName, types.SQLChainInfoTableName)
 
 	deleteDictionaryQry := fmt.Sprintf(`
-		DELETE FROM %s.%s 
-		WHERE %s 
+		DELETE FROM %s.%s
+		WHERE %s
 		NOT IN ('%s','%s','%s');`,
 		adapter.Schema, types.SQLDictionaryTableName,
 		types.SQLColumnLabelTableName,
@@ -458,6 +458,11 @@ func (adapter *PostgresAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 		DELETE FROM %s.%s;`,
 		adapter.Schema, types.SQLLogTableName)
 
+	// errors table
+	deleteErrorsQry := fmt.Sprintf(`
+		DELETE FROM %s.%s;`,
+		adapter.Schema, types.SQLErrorsTableName)
+
 	return types.SQLCleanDBQuery{
 		SelectChainIDQry:    selectChainIDQry,
 		DeleteChainIDQry:    deleteChainIDQry,
@@ -465,6 +470,7 @@ func (adapter *PostgresAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 		SelectDictionaryQry: selectDictionaryQry,
 		DeleteDictionaryQry: deleteDictionaryQry,
 		DeleteLogQry:        deleteLogQry,
+		DeleteErrorsQry:     deleteErrorsQry,
 	}
 }
 

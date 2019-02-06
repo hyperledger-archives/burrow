@@ -85,6 +85,14 @@ func NewSQLDB(connection types.SQLConnection) (*SQLDB, error) {
 		}
 	}
 
+	// IMPORTANT: DO NOT CHANGE TABLE CREATION ORDER (4)
+	if err = db.createTable(sysTables[types.SQLErrorsTableName], string(types.ActionInitialize)); err != nil {
+		if !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeDuplicatedTable) {
+			db.Log.Info("msg", "Error creating errors table", "err", err)
+			return nil, err
+		}
+	}
+
 	if err = db.CleanTables(connection.ChainID, connection.BurrowVersion); err != nil {
 		db.Log.Info("msg", "Error cleaning tables", "err", err)
 		return nil, err
@@ -193,6 +201,13 @@ func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
 		query = clean(cleanQueries.DeleteLogQry)
 		if _, err = tx.Exec(query); err != nil {
 			db.Log.Info("msg", "Error deleting log", "err", err, "query", query)
+			return err
+		}
+
+		// Delete Errors
+		query = clean(cleanQueries.DeleteErrorsQry)
+		if _, err = tx.Exec(query); err != nil {
+			db.Log.Info("msg", "Error deleting errors", "err", err, "query", query)
 			return err
 		}
 

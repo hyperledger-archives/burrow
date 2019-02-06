@@ -146,6 +146,23 @@ func buildTxData(tbls types.EventTables, txe *exec.TxExecution) (types.EventData
 	return types.EventDataRow{Action: types.ActionUpsert, RowData: row}, nil
 }
 
+// buildErrorData builds error data from stream
+func buildErrorData(tbls types.EventTables, txe *exec.TxExecution, err error) (types.EventDataRow, error) {
+	// a fresh new row to store column/value data
+	row := make(map[string]interface{})
+
+	// block raw data
+	if tbl, ok := tbls[types.SQLErrorsTableName]; ok {
+		row[tbl.Columns[types.BlockHeightLabel].Name] = fmt.Sprintf("%v", txe.Height)
+		row[tbl.Columns[types.TxTxHashLabel].Name] = txe.TxHash.String()
+		row[tbl.Columns[types.TxResultLabel].Name] = err.Error()
+	} else {
+		return types.EventDataRow{}, fmt.Errorf("table: %s not found in table structure %v", types.SQLBlockTableName, tbls)
+	}
+
+	return types.EventDataRow{Action: types.ActionUpsert, RowData: row}, nil
+}
+
 func sanitiseBytesForString(bs []byte, l *logger.Logger) string {
 	str, err := UTF8StringFromBytes(bs)
 	if err != nil {

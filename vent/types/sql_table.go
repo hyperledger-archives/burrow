@@ -33,6 +33,7 @@ const (
 	SQLBlockTableName      = "_vent_block"
 	SQLTxTableName         = "_vent_tx"
 	SQLChainInfoTableName  = "_vent_chain"
+	SQLErrorsTableName     = "_vent_errors"
 )
 
 // fixed sql column names in tables
@@ -60,6 +61,11 @@ const (
 	// chain info
 	SQLColumnLabelBurrowVer = "_burrowversion"
 	SQLColumnLabelChainID   = "_chainid"
+
+	// errors table
+	SQLColumnLabelErrorsHeight  = "_height"
+	SQLColumnLabelErrorsTxHash  = "_txhash"
+	SQLColumnLabelErrorsMessage = "_result"
 
 	// context
 	SQLColumnLabelIndex       = "_index"

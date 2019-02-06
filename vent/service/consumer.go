@@ -217,11 +217,20 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 								// unpack, decode & build event data
 								eventData, err := buildEventData(spec, parser, event, abiSpec, c.Log)
 								if err != nil {
-									doneCh <- errors.Wrapf(err, "Error building event data")
+									// [csk]: until we have cleaner ability to store ABIs within burrow's
+									//   state the below signal to the done channel which falls vent over
+									//   leads to edge cases halting vent entirely.
+									// doneCh <- errors.Wrapf(err, "Error building event data")
+									errorDataRow, err := buildErrorData(tables, txe, err)
+									if err != nil {
+										doneCh <- errors.Wrapf(err, "Error logging error data")
+									}
+									// set row in structure
+									blockData.AddRow(types.SQLErrorsTableName, errorDataRow)
+								} else {
+									// set row in structure
+									blockData.AddRow(strings.ToLower(spec.TableName), eventData)
 								}
-
-								// set row in structure
-								blockData.AddRow(strings.ToLower(spec.TableName), eventData)
 							}
 						}
 					}

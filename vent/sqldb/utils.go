@@ -40,6 +40,7 @@ func (db *SQLDB) getSysTablesDefinition() types.EventTables {
 	dicCol := make(map[string]types.SQLTableColumn)
 	logCol := make(map[string]types.SQLTableColumn)
 	chainCol := make(map[string]types.SQLTableColumn)
+	errorsCol := make(map[string]types.SQLTableColumn)
 
 	// log table
 	logCol[types.SQLColumnLabelId] = types.SQLTableColumn{
@@ -194,6 +195,31 @@ func (db *SQLDB) getSysTablesDefinition() types.EventTables {
 		Order:   2,
 	}
 
+	// errors info table
+	errorsCol[types.SQLColumnLabelErrorsHeight] = types.SQLTableColumn{
+		Name:    types.SQLColumnLabelErrorsHeight,
+		Type:    types.SQLColumnTypeVarchar,
+		Length:  100,
+		Primary: false,
+		Order:   1,
+	}
+
+	errorsCol[types.SQLColumnLabelErrorsTxHash] = types.SQLTableColumn{
+		Name:    types.SQLColumnLabelErrorsTxHash,
+		Type:    types.SQLColumnTypeVarchar,
+		Length:  txs.HashLengthHex,
+		Primary: true,
+		Order:   2,
+	}
+
+	errorsCol[types.SQLColumnLabelErrorsMessage] = types.SQLTableColumn{
+		Name:    types.SQLColumnLabelErrorsMessage,
+		Type:    types.SQLColumnTypeVarchar,
+		Length:  300,
+		Primary: false,
+		Order:   3,
+	}
+
 	// add tables
 	//log
 	tables[types.SQLLogTableName] = types.SQLTable{
@@ -211,6 +237,11 @@ func (db *SQLDB) getSysTablesDefinition() types.EventTables {
 	tables[types.SQLChainInfoTableName] = types.SQLTable{
 		Name:    types.SQLChainInfoTableName,
 		Columns: chainCol,
+	}
+
+	tables[types.SQLErrorsTableName] = types.SQLTable{
+		Name:    types.SQLErrorsTableName,
+		Columns: errorsCol,
 	}
 
 	return tables
