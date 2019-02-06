@@ -6,6 +6,7 @@ option go_package = "github.com/hyperledger/burrow/execution/exec";
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "github.com/tendermint/tendermint/abci/types/types.proto";
+import "google/protobuf/timestamp.proto";
 
 import "errors.proto";
 import "names.proto";
@@ -76,6 +77,8 @@ message Origin {
     uint64 Height = 2;
     // The original index in the block
     uint64 Index = 3;
+    // The original block time for this transaction
+    google.protobuf.Timestamp Time = 4 [(gogoproto.nullable)=false, (gogoproto.stdtime)=true];
 }
 
 message Header {

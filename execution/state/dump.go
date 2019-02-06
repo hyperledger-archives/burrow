@@ -20,10 +20,9 @@ func (s *State) LoadDump(filename string) error {
 		return err
 	}
 
-	tx := exec.TxExecution{
-		TxType: payload.TypeCall,
-		TxHash: make([]byte, 32),
-	}
+	txs := make([]*exec.TxExecution, 0)
+
+	var tx *exec.TxExecution
 
 	apply := func(row dump.Dump) error {
 		if row.Account != nil {
@@ -43,16 +42,37 @@ func (s *State) LoadDump(filename string) error {
 			return s.writeState.UpdateName(row.Name)
 		}
 		if row.EVMEvent != nil {
+
+			if tx != nil && row.Height != tx.Height {
+				txs = append(txs, tx)
+				tx = nil
+			}
+			if tx == nil {
+				tx = &exec.TxExecution{
+					TxType: payload.TypeCall,
+					TxHash: make([]byte, 32),
+					Height: row.Height,
+					Origin: &exec.Origin{
+						ChainID: row.EVMEvent.ChainID,
+						Time:    row.EVMEvent.Time,
+					},
+				}
+			}
+
 			tx.Events = append(tx.Events, &exec.Event{
 				Header: &exec.Header{
 					TxType:    payload.TypeCall,
 					EventType: exec.TypeLog,
 					Height:    row.Height,
 				},
-				Log: row.EVMEvent,
+				Log: row.EVMEvent.Event,
 			})
 		}
 		return nil
+	}
+
+	if tx != nil {
+		txs = append(txs, tx)
 	}
 
 	// first try amino
@@ -91,7 +111,7 @@ func (s *State) LoadDump(filename string) error {
 
 	errAddTxs := s.writeState.AddBlock(&exec.BlockExecution{
 		Height:       0,
-		TxExecutions: []*exec.TxExecution{&tx},
+		TxExecutions: txs,
 	})
 	if errAddTxs != nil {
 		return errAddTxs
