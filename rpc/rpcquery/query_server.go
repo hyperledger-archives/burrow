@@ -4,22 +4,20 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hyperledger/burrow/execution/state"
-
-	"github.com/hyperledger/burrow/acm/validator"
-
-	"github.com/hyperledger/burrow/txs/payload"
-
-	"github.com/hyperledger/burrow/execution/proposal"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
+	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/names"
+	"github.com/hyperledger/burrow/execution/proposal"
+	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/txs/payload"
+	"github.com/tendermint/tendermint/abci/types"
+	tmtypes "github.com/tendermint/tendermint/types"
 )
 
 type queryServer struct {
@@ -82,7 +80,8 @@ func (qs *queryServer) ListAccounts(param *ListAccountsParam, stream Query_ListA
 	return streamErr
 }
 
-// Name registry
+// Names
+
 func (qs *queryServer) GetName(ctx context.Context, param *GetNameParam) (entry *names.Entry, err error) {
 	entry, err = qs.nameReg.GetName(param.Name)
 	if entry == nil && err == nil {
@@ -109,6 +108,8 @@ func (qs *queryServer) ListNames(param *ListNamesParam, stream Query_ListNamesSe
 	}
 	return streamErr
 }
+
+// Validators
 
 func (qs *queryServer) GetValidatorSet(ctx context.Context, param *GetValidatorSetParam) (*ValidatorSet, error) {
 	set := validator.Copy(qs.validators.Validators(0))
@@ -141,6 +142,8 @@ func (qs *queryServer) GetValidatorSetHistory(ctx context.Context, param *GetVal
 	return history, nil
 }
 
+// proposals
+
 func (qs *queryServer) GetProposal(ctx context.Context, param *GetProposalParam) (proposal *payload.Ballot, err error) {
 	proposal, err = qs.proposalReg.GetProposal(param.Hash)
 	if proposal == nil && err == nil {
@@ -171,4 +174,15 @@ func (qs *queryServer) GetStats(ctx context.Context, param *GetStatsParam) (*Sta
 		AccountsWithCode:    stats.AccountsWithCode,
 		AccountsWithoutCode: stats.AccountsWithoutCode,
 	}, nil
+}
+
+// Tendermint and blocks
+
+func (qs *queryServer) GetBlockHeader(ctx context.Context, param *GetBlockParam) (*types.Header, error) {
+	header, err := qs.blockchain.GetBlockHeader(param.Height)
+	if err != nil {
+		return nil, err
+	}
+	abciHeader := tmtypes.TM2PB.Header(header)
+	return &abciHeader, nil
 }

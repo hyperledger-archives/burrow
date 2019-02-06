@@ -179,7 +179,17 @@ func GetStorage(t *testing.T, client infoclient.RPCClient, addr crypto.Address, 
 	return resp
 }
 
-//--------------------------------------------------------------------------------
-// utility verification function
-
-// simple call contract calls another contract
+func WaitNBlocks(t testing.TB, ecli rpcevents.ExecutionEventsClient, n int) {
+	stream, err := ecli.Stream(context.Background(), &rpcevents.BlocksRequest{
+		BlockRange: rpcevents.NewBlockRange(rpcevents.LatestBound(), rpcevents.StreamBound()),
+	})
+	defer require.NoError(t, stream.CloseSend())
+	var ev *exec.StreamEvent
+	for err == nil && n > 0 {
+		ev, err = stream.Recv()
+		if err == nil && ev.EndBlock != nil {
+			n--
+		}
+	}
+	require.NoError(t, err)
+}
