@@ -5,6 +5,7 @@ package rpcquery;
 option go_package = "github.com/hyperledger/burrow/rpc/rpcquery";
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "github.com/tendermint/tendermint/abci/types/types.proto";
 
 import "names.proto";
 import "acm.proto";
@@ -35,6 +36,8 @@ service Query {
     rpc ListProposals(ListProposalsParam) returns (stream ProposalResult);
 
     rpc GetStats(GetStatsParam) returns (Stats);
+
+    rpc GetBlockHeader(GetBlockParam) returns (types.Header);
 }
 
 message StatusParam {
@@ -105,4 +108,8 @@ message GetStatsParam {
 message Stats {
     uint64 AccountsWithCode = 1;
     uint64 AccountsWithoutCode = 2;
+}
+
+message GetBlockParam {
+    uint64 Height = 1;
 }

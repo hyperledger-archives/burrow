@@ -8,6 +8,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/tendermint/tendermint/crypto/tmhash"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/names"
@@ -97,6 +99,18 @@ func TestListNames(t *testing.T) {
 	if assert.Len(t, entries, n/2) {
 		assert.Equal(t, dataA, entries[0].Data)
 	}
+}
+
+func TestGetBlockHeader(t *testing.T) {
+	qcli := rpctest.NewQueryClient(t, testConfig.RPC.GRPC.ListenAddress)
+	ecli := rpctest.NewExecutionEventsClient(t, testConfig.RPC.GRPC.ListenAddress)
+	height := 1
+	rpctest.WaitNBlocks(t, ecli, 1)
+	header, err := qcli.GetBlockHeader(context.Background(), &rpcquery.GetBlockParam{Height: uint64(height)})
+	require.NoError(t, err)
+	assert.Equal(t, testConfig.GenesisDoc.ChainID(), header.ChainID)
+	assert.Equal(t, int64(height), header.Height)
+	assert.Len(t, header.AppHash, tmhash.Size)
 }
 
 func receiveNames(t testing.TB, qcli rpcquery.QueryClient, query string) []*names.Entry {

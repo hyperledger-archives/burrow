@@ -120,8 +120,8 @@ func NewBatchCommitter(backend ExecutorState, params Params, blockchain contexts
 
 }
 
-func newExecutor(name string, runCall bool, params Params, backend ExecutorState, blockchain contexts.Blockchain, publisher event.Publisher,
-	logger *logging.Logger, options ...ExecutionOption) *executor {
+func newExecutor(name string, runCall bool, params Params, backend ExecutorState, blockchain contexts.Blockchain,
+	publisher event.Publisher, logger *logging.Logger, options ...ExecutionOption) *executor {
 	exe := &executor{
 		runCall:          runCall,
 		params:           params,

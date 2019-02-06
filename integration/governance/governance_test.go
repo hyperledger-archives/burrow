@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger/burrow/governance"
 	"github.com/hyperledger/burrow/integration/rpctest"
 	"github.com/hyperledger/burrow/permission"
-	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	"github.com/hyperledger/burrow/rpc/rpctransact"
 	"github.com/hyperledger/burrow/txs"
@@ -60,7 +59,7 @@ func TestAlterValidators(t *testing.T) {
 	assertValidatorsEqual(t, vs, vsOut)
 
 	// Now check Tendermint
-	waitNBlocks(t, ecli, 5)
+	rpctest.WaitNBlocks(t, ecli, 5)
 	height := int64(kernels[0].Blockchain.LastBlockHeight())
 	kernels[0].Node.ConfigureRPC()
 	tmVals, err := core.Validators(&height)
@@ -78,7 +77,7 @@ func TestAlterValidators(t *testing.T) {
 func TestWaitBlocks(t *testing.T) {
 	grpcAddress := testConfigs[0].RPC.GRPC.ListenAddress
 	ecli := rpctest.NewExecutionEventsClient(t, grpcAddress)
-	waitNBlocks(t, ecli, 2)
+	rpctest.WaitNBlocks(t, ecli, 2)
 }
 
 func TestAlterValidatorsTooQuickly(t *testing.T) {
@@ -256,19 +255,4 @@ func localSignAndBroadcastSync(t testing.TB, tcli rpctransact.TransactClient, tx
 	require.NoError(t, err)
 
 	return tcli.BroadcastTxSync(context.Background(), &rpctransact.TxEnvelopeParam{Envelope: txEnv})
-}
-
-func waitNBlocks(t testing.TB, ecli rpcevents.ExecutionEventsClient, n int) {
-	stream, err := ecli.Stream(context.Background(), &rpcevents.BlocksRequest{
-		BlockRange: rpcevents.NewBlockRange(rpcevents.LatestBound(), rpcevents.StreamBound()),
-	})
-	defer require.NoError(t, stream.CloseSend())
-	var ev *exec.StreamEvent
-	for err == nil && n > 0 {
-		ev, err = stream.Recv()
-		if err == nil && ev.EndBlock != nil {
-			n--
-		}
-	}
-	require.NoError(t, err)
 }
