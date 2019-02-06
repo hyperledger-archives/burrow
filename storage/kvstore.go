@@ -27,6 +27,8 @@ type KVIterable interface {
 
 // Provides the native iteration for IAVLTree
 type KVCallbackIterable interface {
+	// Start must be lexicographically less than end. End is exclusive unless it is nil in which case it is inclusive.
+	// ascending == false reverses order.
 	Iterate(start, end []byte, ascending bool, fn func(key []byte, value []byte) error) error
 }
 

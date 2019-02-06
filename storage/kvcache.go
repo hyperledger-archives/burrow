@@ -60,10 +60,15 @@ func (kvc *KVCache) ReverseIterator(start, end []byte) KVIterator {
 }
 
 func (kvc *KVCache) newIterator(start, end []byte) *KVCacheIterator {
+	//keys := make([][]byte, 0, len(kvc.cache))
+	//for k := range kvc.cache {
+	//	keys = append(keys, []byte(k))
+	//}
+	keys := kvc.SortedKeysInDomain(start, end)
 	kvi := &KVCacheIterator{
 		start: start,
 		end:   end,
-		keys:  kvc.SortedKeysInDomain(start, end),
+		keys:  keys,
 		cache: kvc.cache,
 	}
 	return kvi

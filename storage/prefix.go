@@ -54,6 +54,41 @@ func (p Prefix) Below() []byte {
 	return nil
 }
 
+func (p Prefix) CallbackIterable(source KVCallbackIterable) *prefixCallbackIterable {
+	return &prefixCallbackIterable{
+		prefix: p,
+		source: source,
+	}
+}
+
+type prefixCallbackIterable struct {
+	prefix Prefix
+	source KVCallbackIterable
+}
+
+func (pi *prefixCallbackIterable) Iterate(start, end []byte, ascending bool, fn func(key []byte, value []byte) error) error {
+	var pstart, pend []byte = pi.prefix.Key(start), nil
+
+	if start == nil {
+		// We may iterate on a key that does not start with prefix
+		pstart = pi.prefix.Below()
+	} else {
+		pstart = pi.prefix.Key(start)
+	}
+	if end == nil {
+		// Source is exclusive on end so we won't iterate over it
+		pend = pi.prefix.Above()
+	} else {
+		pend = pi.prefix.Key(end)
+	}
+	return pi.source.Iterate(pstart, pend, ascending, func(key []byte, value []byte) error {
+		if bytes.HasPrefix(key, pi.prefix) {
+			return fn(pi.prefix.Suffix(key), value)
+		}
+		return nil
+	})
+}
+
 func (p Prefix) Iterator(iteratorFn func(start, end []byte) dbm.Iterator, start, end []byte) KVIterator {
 	var pstart, pend []byte = p.Key(start), nil
 

@@ -28,8 +28,8 @@ func EnsureKeyFormatStore(ks interface{}) error {
 			kf := fv.Interface().(MustKeyFormat)
 			prefix := kf.Prefix().String()
 			if kfDuplicate, ok := keyFormats[prefix]; ok {
-				return fmt.Errorf("duplicate prefix '%s' between key format %v and %v",
-					stringOrHex(prefix), kfDuplicate, kf)
+				return fmt.Errorf("duplicate prefix %q between key format %v and %v",
+					prefix, kfDuplicate, kf)
 			}
 			keyFormats[prefix] = kf
 		}

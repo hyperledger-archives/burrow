@@ -62,6 +62,8 @@ type MutableForest struct {
 	*ImmutableForest
 	// Map of prefix -> tree for trees that may require a save (but only will be if they have actually been updated)
 	dirty map[string]*RWTree
+	// List of dirty prefixes in deterministic order so we may loop over them on Save() and obtain a consistent commitTree hash
+	dirtyPrefixes []string
 }
 
 func NewMutableForest(db dbm.DB, cacheSize int) (*MutableForest, error) {
@@ -85,7 +87,8 @@ func (muf *MutableForest) Load(version int64) error {
 
 func (muf *MutableForest) Save() ([]byte, int64, error) {
 	// Save each tree in forest that requires save
-	for prefix, tree := range muf.dirty {
+	for _, prefix := range muf.dirtyPrefixes {
+		tree := muf.dirty[prefix]
 		if tree.Updated() {
 			err := muf.saveTree([]byte(prefix), tree)
 			if err != nil {
@@ -95,6 +98,7 @@ func (muf *MutableForest) Save() ([]byte, int64, error) {
 	}
 	// empty dirty cache
 	muf.dirty = make(map[string]*RWTree, len(muf.dirty))
+	muf.dirtyPrefixes = muf.dirtyPrefixes[:0]
 	return muf.commitsTree.Save()
 }
 
@@ -109,8 +113,9 @@ func (muf *MutableForest) GetImmutable(version int64) (*ImmutableForest, error) 
 
 // Calls to writer should be serialised as should writes to the tree
 func (muf *MutableForest) Writer(prefix []byte) (*RWTree, error) {
-	// Try dirty cache first
-	if tree, ok := muf.dirty[string(prefix)]; ok {
+	// Try dirty cache first (if tree is new it may only be in this location)
+	prefixString := string(prefix)
+	if tree, ok := muf.dirty[prefixString]; ok {
 		return tree, nil
 	}
 	tree, err := muf.tree(prefix)
@@ -118,7 +123,8 @@ func (muf *MutableForest) Writer(prefix []byte) (*RWTree, error) {
 		return nil, err
 	}
 	// Mark tree as dirty
-	muf.dirty[string(prefix)] = tree
+	muf.dirty[prefixString] = tree
+	muf.dirtyPrefixes = append(muf.dirtyPrefixes, prefixString)
 	return tree, nil
 }
 

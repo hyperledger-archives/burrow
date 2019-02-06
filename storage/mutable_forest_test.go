@@ -2,7 +2,6 @@ package storage
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -29,7 +28,7 @@ func TestMutableForest_Genesis(t *testing.T) {
 		dump = tree.(*RWTree).Dump()
 		return nil
 	})
-	assert.Contains(t, dump, "bar -> nog")
+	assert.Contains(t, dump, "\"bar\" -> \"nog\"")
 	reader, err := rwf.Reader(prefix)
 	require.NoError(t, err)
 	require.Equal(t, val1, reader.Get(key1))
@@ -48,12 +47,13 @@ func TestMutableForest_Save(t *testing.T) {
 
 	hash1, version1, err := forest.Save()
 	require.NoError(t, err)
-
 	assertDump(t, forest, `
-        .
-        └── fooos
-            └── bar -> nog
-        `)
+        	            	.
+        	            	├── "Commits"
+        	            	│   └── "fooos" -> "\n ym.\xb8fw\xdcIK\xe8QQ\xb6\x8a\x1fT\x15\xff\x80\xd5\xd91\xf6YKf\x12wx\x16l\xf5\x10\x01"
+        	            	└── "fooos"
+        	            	    └── "bar" -> "nog"
+        	            	`)
 
 	prefix2 := bz("prefixo")
 	key2 := bz("hogs")
@@ -68,12 +68,15 @@ func TestMutableForest_Save(t *testing.T) {
 	require.Equal(t, version1+1, version2, "versions should increment")
 
 	assertDump(t, forest, `
-        .
-        ├── fooos
-        │   └── bar -> nog
-        └── prefixo
-            └── hogs -> they are dogs
-        `)
+        	            	.
+        	            	├── "Commits"
+        	            	│   ├── "fooos" -> "\n ym.\xb8fw\xdcIK\xe8QQ\xb6\x8a\x1fT\x15\xff\x80\xd5\xd91\xf6YKf\x12wx\x16l\xf5\x10\x01"
+        	            	│   └── "prefixo" -> "\n E\xb2\xa4{аA\xddf\xcc\x02ȭ\xfa\xd1\xceZ\xa0nP\xe0\xd3\\X\x9c\x16M\xc1\x88t\x15\x8c\x10\x01"
+        	            	├── "fooos"
+        	            	│   └── "bar" -> "nog"
+        	            	└── "prefixo"
+        	            	    └── "hogs" -> "they are dogs"
+        	            	`)
 }
 
 func TestMutableForest_Load(t *testing.T) {
@@ -124,23 +127,27 @@ func TestSorted(t *testing.T) {
 	setForest(t, forest, "age", "Cora", "1")
 	_, _, err = forest.Save()
 	require.NoError(t, err)
+
 	assertDump(t, forest, `
-        .
-        ├── age
-        │   ├── Cora -> 1
-        │   └── Lindsay -> 34
-        ├── balances
-        │   ├── Caitlin -> 2344
-        │   ├── Cora -> 654456
-        │   ├── Edward -> 34
-        │   └── Lindsay -> 654
-        └── names
-            ├── Caitlin -> female
-            ├── Cora -> female
-            ├── Edward -> male
-            └── Lindsay -> unisex
-        `)
-	fmt.Println(forest.Dump())
+        	            	.
+        	            	├── "Commits"
+        	            	│   ├── "age" -> "\n \x1dwd_\xbaRB\xf5\xa6\xf0\n\xab\x9aWY\xf7\t\x16t웿\xb6\x89O\n\xcf&\xf7\xe6\xcd\n\x10\x01"
+        	            	│   ├── "balances" -> "\n \x9f\xab\xd3s\x18{\xbc\xe8\x98\xdai\xf5\x9f\x16\xden\xac(\xc9ԷU\x99\x17\xda'\xfa3-\x98\xd4\xc9\x10\x02"
+        	            	│   └── "names" -> "\n \xbf\xf8\xf9vt>\xbc\x06@C\xe9I\x01C\xa3\xc3O \xbc\xaf\xbf\xb3\b\xb2UHh\xe8TM\xb3\xba\x10\x01"
+        	            	├── "age"
+        	            	│   ├── "Cora" -> "1"
+        	            	│   └── "Lindsay" -> "34"
+        	            	├── "balances"
+        	            	│   ├── "Caitlin" -> "2344"
+        	            	│   ├── "Cora" -> "654456"
+        	            	│   ├── "Edward" -> "34"
+        	            	│   └── "Lindsay" -> "654"
+        	            	└── "names"
+        	            	    ├── "Caitlin" -> "female"
+        	            	    ├── "Cora" -> "female"
+        	            	    ├── "Edward" -> "male"
+        	            	    └── "Lindsay" -> "unisex"
+        	            	`)
 }
 
 func setForest(t *testing.T, forest *MutableForest, prefix, key, value string) {
@@ -153,10 +160,9 @@ func setForest(t *testing.T, forest *MutableForest, prefix, key, value string) {
 func assertDump(t *testing.T, forest interface{ Dump() string }, expectedDump string) {
 	actual := forest.Dump()
 	expectedDump = trimMargin(expectedDump)
-	if expectedDump != actual {
-		t.Errorf("forest.Dump() did not match expected dump:\n%s\nDo you want this assertion instead:\n\n"+
+	assert.Equal(t, expectedDump, actual,
+		"forest.Dump() did not match expected dump:\n%s\nDo you want this assertion instead:\n\n"+
 			"assertDump(t, forest,`\n%s`)\n\n", expectedDump, actual)
-	}
 }
 
 func trimMargin(str string) string {

@@ -126,20 +126,21 @@ func (ws *writeState) SetStorage(address crypto.Address, key, value binary.Word2
 }
 
 func (s *ReadState) IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) error) error {
-	keyFormat := keys.Storage.Fix(address)
+	keyFormat := keys.Storage
 	tree, err := s.Forest.Reader(keyFormat.Prefix())
 	if err != nil {
 		return err
 	}
-	return tree.Iterate(nil, nil, true, func(key []byte, value []byte) error {
-		if len(key) != binary.Word256Length {
-			return fmt.Errorf("key '%X' stored for account %s is not a %v-byte word",
-				key, address, binary.Word256Length)
-		}
-		if len(value) != binary.Word256Length {
-			return fmt.Errorf("value '%X' stored for account %s is not a %v-byte word",
-				key, address, binary.Word256Length)
-		}
-		return consumer(binary.LeftPadWord256(key), binary.LeftPadWord256(value))
-	})
+	return tree.Iterate(nil, nil, true,
+		func(key []byte, value []byte) error {
+			if len(key) != binary.Word256Length {
+				return fmt.Errorf("key '%X' stored for account %s is not a %v-byte word",
+					key, address, binary.Word256Length)
+			}
+			if len(value) != binary.Word256Length {
+				return fmt.Errorf("value '%X' stored for account %s is not a %v-byte word",
+					key, address, binary.Word256Length)
+			}
+			return consumer(binary.LeftPadWord256(key), binary.LeftPadWord256(value))
+		})
 }

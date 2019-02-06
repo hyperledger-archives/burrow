@@ -105,8 +105,7 @@ type ReadState struct {
 // Writers to state are responsible for calling State.Lock() before calling
 type State struct {
 	sync.Mutex
-	db      dbm.DB
-	cacheDB *storage.CacheDB
+	db dbm.DB
 	ReadState
 	writeState writeState
 	logger     *logging.Logger
@@ -114,8 +113,7 @@ type State struct {
 
 // Create a new State object
 func NewState(db dbm.DB) *State {
-	cacheDB := storage.NewCacheDB(db)
-	forest, err := storage.NewMutableForest(storage.NewPrefixDB(cacheDB, forestPrefix), defaultCacheCapacity)
+	forest, err := storage.NewMutableForest(storage.NewPrefixDB(db, forestPrefix), defaultCacheCapacity)
 	if err != nil {
 		// This should only happen if we have negative cache capacity, which for us is a positive compile-time constant
 		panic(fmt.Errorf("could not create new state because error creating MutableForest"))
@@ -125,7 +123,6 @@ func NewState(db dbm.DB) *State {
 	ws := writeState{forest: forest, ring: ring}
 	return &State{
 		db:         db,
-		cacheDB:    cacheDB,
 		ReadState:  rs,
 		writeState: ws,
 		logger:     logging.NewNoopLogger(),
@@ -263,10 +260,6 @@ func (s *State) commit() ([]byte, int64, error) {
 		//noinspection ALL
 		s.logger.InfoMsg("validator set changes", "total_power_change", totalPowerChange, "total_flow", totalFlow)
 	}
-	// Commit the state in cacheDB atomically for this block (synchronous)
-	batch := s.db.NewBatch()
-	s.cacheDB.Commit(batch)
-	batch.WriteSync()
 	return hash, version, err
 }
 

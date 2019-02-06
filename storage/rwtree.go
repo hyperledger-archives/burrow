@@ -2,11 +2,8 @@ package storage
 
 import (
 	"fmt"
-	"unicode/utf8"
 
 	"github.com/tendermint/iavl"
-
-	hex "github.com/tmthrgd/go-hex"
 
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/xlab/treeprint"
@@ -98,16 +95,9 @@ func (rwt *RWTree) Dump() string {
 }
 
 func AddTreePrintTree(edge string, tree treeprint.Tree, rwt KVCallbackIterableReader) {
-	tree = tree.AddBranch(stringOrHex(edge))
+	tree = tree.AddBranch(fmt.Sprintf("%q", edge))
 	rwt.Iterate(nil, nil, true, func(key []byte, value []byte) error {
-		tree.AddNode(fmt.Sprintf("%s -> %s", stringOrHex(string(key)), stringOrHex(string(value))))
+		tree.AddNode(fmt.Sprintf("%q -> %q", string(key), string(value)))
 		return nil
 	})
-}
-
-func stringOrHex(str string) string {
-	if utf8.ValidString(str) {
-		return str
-	}
-	return hex.EncodeUpperToString([]byte(str))
 }
