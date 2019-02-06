@@ -461,6 +461,6 @@ func (adapter *SQLiteAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 }
 
 func (adapter *SQLiteAdapter) DropTableQuery(tableName string) string {
-	//drop tables
+	// SQLite does not support DROP TABLE CASCADE so this will fail if there are dependent objects
 	return fmt.Sprintf(`DROP TABLE %s;`, tableName)
 }

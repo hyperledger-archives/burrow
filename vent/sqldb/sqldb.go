@@ -195,17 +195,10 @@ func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
 			db.Log.Info("msg", "Error deleting log", "err", err, "query", query)
 			return err
 		}
-
-		// Commit
-		if err = tx.Commit(); err != nil {
-			db.Log.Info("msg", "Error commiting transaction", "err", err)
-			return err
-		}
-
 		// Drop database tables
 		for _, tableName = range tables {
 			query = clean(db.DBAdapter.DropTableQuery(tableName))
-			if _, err = db.DB.Exec(query); err != nil {
+			if _, err = tx.Exec(query); err != nil {
 				// if error == table does not exists, continue
 				if !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeUndefinedTable) {
 					db.Log.Info("msg", "error dropping tables", "err", err, "value", tableName, "query", query)
@@ -213,6 +206,13 @@ func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
 				}
 			}
 		}
+
+		// Commit
+		if err = tx.Commit(); err != nil {
+			db.Log.Info("msg", "Error commiting transaction", "err", err)
+			return err
+		}
+
 		return nil
 	}
 }

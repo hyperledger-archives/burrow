@@ -469,6 +469,8 @@ func (adapter *PostgresAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 }
 
 func (adapter *PostgresAdapter) DropTableQuery(tableName string) string {
-	//drop tables
-	return fmt.Sprintf(`DROP TABLE %s.%s;`, adapter.Schema, tableName)
+	// We cascade here to drop any associated views and triggers. We work under the assumption that vent
+	// owns its database and any users need to be able to recreate objects that depend on vent tables in the event of
+	// table drops
+	return fmt.Sprintf(`DROP TABLE %s.%s CASCADE;`, adapter.Schema, tableName)
 }
