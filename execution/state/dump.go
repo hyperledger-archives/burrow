@@ -13,21 +13,73 @@ import (
 	"github.com/hyperledger/burrow/txs/payload"
 )
 
-func (s *State) LoadDump(filename string) error {
-	cdc := amino.NewCodec()
+var cdc = amino.NewCodec()
+
+type DumpReader interface {
+	Next() (*dump.Dump, error)
+}
+
+type FileDumpReader struct {
+	file    *os.File
+	decoder *json.Decoder
+}
+
+func NewFileDumpReader(filename string) (DumpReader, error) {
 	f, err := os.OpenFile(filename, os.O_RDONLY, 0644)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	return &FileDumpReader{file: f}, nil
+}
+
+func (f *FileDumpReader) Next() (*dump.Dump, error) {
+	var row dump.Dump
+	var err error
+
+	if f.decoder != nil {
+		err = f.decoder.Decode(&row)
+	} else {
+		_, err = cdc.UnmarshalBinaryLengthPrefixedReader(f.file, &row, 0)
+
+		if err != nil && err != io.EOF && f.decoder == nil {
+			f.file.Seek(0, 0)
+
+			f.decoder = json.NewDecoder(f.file)
+
+			return f.Next()
+		}
+	}
+
+	if err == io.EOF {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &row, err
+}
+
+func (s *State) LoadDump(reader DumpReader) error {
 	txs := make([]*exec.TxExecution, 0)
 
 	var tx *exec.TxExecution
 
-	apply := func(row dump.Dump) error {
+	for {
+		row, err := reader.Next()
+
+		if err != nil {
+			return err
+		}
+
+		if row == nil {
+			break
+		}
+
 		if row.Account != nil {
 			if row.Account.Address != acm.GlobalPermissionsAddress {
-				return s.writeState.UpdateAccount(row.Account)
+				s.writeState.UpdateAccount(row.Account)
 			}
 		}
 		if row.AccountStorage != nil {
@@ -39,7 +91,7 @@ func (s *State) LoadDump(filename string) error {
 			}
 		}
 		if row.Name != nil {
-			return s.writeState.UpdateName(row.Name)
+			s.writeState.UpdateName(row.Name)
 		}
 		if row.EVMEvent != nil {
 
@@ -68,60 +120,16 @@ func (s *State) LoadDump(filename string) error {
 				Log: row.EVMEvent.Event,
 			})
 		}
-		return nil
 	}
 
 	if tx != nil {
 		txs = append(txs, tx)
 	}
 
-	// first try amino
-	first := true
-
-	for err == nil {
-		var row dump.Dump
-
-		_, err = cdc.UnmarshalBinaryLengthPrefixedReader(f, &row, 0)
-		if err != nil {
-			break
-		}
-
-		first = false
-		err = apply(row)
-	}
-
-	// if we failed at the first row, try json
-	if err != io.EOF && first {
-		err = nil
-		f.Seek(0, 0)
-
-		decoder := json.NewDecoder(f)
-
-		for err == nil {
-			var row dump.Dump
-
-			err = decoder.Decode(&row)
-			if err != nil {
-				break
-			}
-
-			err = apply(row)
-		}
-	}
-
-	errAddTxs := s.writeState.AddBlock(&exec.BlockExecution{
+	return s.writeState.AddBlock(&exec.BlockExecution{
 		Height:       0,
 		TxExecutions: txs,
 	})
-	if errAddTxs != nil {
-		return errAddTxs
-	}
-
-	if err == io.EOF {
-		return nil
-	}
-
-	return err
 }
 
 func (s *State) Dump() string {

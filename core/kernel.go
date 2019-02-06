@@ -128,24 +128,33 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 			return nil, fmt.Errorf("Cannot restore onto existing chain; don't give --restore-dump argument")
 		}
 	} else {
-		if restore != "" && genesisDoc.AppHash == "" {
-			return nil, fmt.Errorf("AppHash is required when restoring chain")
+		var reader state.DumpReader
+
+		if restore != "" {
+			if genesisDoc.AppHash == "" {
+				return nil, fmt.Errorf("AppHash is required when restoring chain")
+			}
+
+			reader, err = state.NewFileDumpReader(restore)
+			if err != nil {
+				return nil, err
+			}
 		}
 
-		kern.State, err = state.MakeGenesisState(stateDB, genesisDoc, restore)
+		kern.State, err = state.MakeGenesisState(stateDB, genesisDoc, reader)
 		if err != nil {
 			return nil, fmt.Errorf("could not build genesis state: %v", err)
 		}
-	}
 
-	if genesisDoc.AppHash != "" {
-		hash, err := hex.DecodeString(genesisDoc.AppHash)
-		if err != nil || len(hash) != sha256.Size {
-			return nil, fmt.Errorf("AppHash field is not valid hash")
-		}
+		if genesisDoc.AppHash != "" {
+			hash, err := hex.DecodeString(genesisDoc.AppHash)
+			if err != nil || len(hash) != sha256.Size {
+				return nil, fmt.Errorf("AppHash field is not valid hash")
+			}
 
-		if !bytes.Equal(hash, kern.State.Hash()) {
-			return nil, fmt.Errorf("AppHash does not match, got AppHash 0x%X expected 0x%s. Is the correct --restore-dump specified?", kern.State.Hash(), genesisDoc.AppHash)
+			if !bytes.Equal(hash, kern.State.Hash()) {
+				return nil, fmt.Errorf("AppHash does not match, got AppHash 0x%X expected 0x%s. Is the correct --restore-dump specified?", kern.State.Hash(), genesisDoc.AppHash)
+			}
 		}
 	}
 

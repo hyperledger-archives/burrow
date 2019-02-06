@@ -130,7 +130,7 @@ func (re *Replay) Blocks(startHeight, endHeight uint64) ([]*ReplayCapture, error
 			return nil, err
 		}
 	} else {
-		st, err = state.MakeGenesisState(re.burrowDB, re.genesisDoc)
+		st, err = state.MakeGenesisState(re.burrowDB, re.genesisDoc, nil)
 		if err != nil {
 			return nil, err
 		}
