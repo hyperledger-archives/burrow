@@ -3,6 +3,7 @@ package adapters
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/types"
@@ -92,8 +93,8 @@ func (adapter *PostgresAdapter) TypeMapping(sqlColumnType types.SQLColumnType) (
 }
 
 // SecureColumnName return columns between appropriate security containers
-func (adapter *PostgresAdapter) SecureColumnName(columnName string) string {
-	return `"` + columnName + `"`
+func (adapter *PostgresAdapter) SecureName(name string) string {
+	return secureName(name)
 }
 
 // CreateTableQuery builds query for creating a new table
@@ -104,7 +105,7 @@ func (adapter *PostgresAdapter) CreateTableQuery(tableName string, columns []typ
 	dictionaryValues := ""
 
 	for i, tableColumn := range columns {
-		secureColumn := adapter.SecureColumnName(tableColumn.Name)
+		secureColumn := adapter.SecureName(tableColumn.Name)
 		sqlType, _ := adapter.TypeMapping(tableColumn.Type)
 		pKey := 0
 
@@ -137,7 +138,9 @@ func (adapter *PostgresAdapter) CreateTableQuery(tableName string, columns []typ
 			i)
 	}
 
-	query := fmt.Sprintf("CREATE TABLE %s.%s (%s", adapter.Schema, tableName, columnsDef)
+	secureTable := adapter.SecureName(tableName)
+
+	query := fmt.Sprintf("CREATE TABLE %s.%s (%s", adapter.Schema, secureTable, columnsDef)
 	if primaryKey != "" {
 		query += "," + fmt.Sprintf("CONSTRAINT %s_pkey PRIMARY KEY (%s)", tableName, primaryKey)
 	}
@@ -210,10 +213,11 @@ func (adapter *PostgresAdapter) AlterColumnQuery(tableName, columnName string, s
 		sqlType = fmt.Sprintf("%s(%d)", sqlType, length)
 	}
 
+	secureTable := adapter.SecureName(tableName)
 	query := fmt.Sprintf("ALTER TABLE %s.%s ADD COLUMN %s %s;",
 		adapter.Schema,
-		tableName,
-		adapter.SecureColumnName(columnName),
+		secureTable,
+		adapter.SecureName(columnName),
 		sqlType)
 
 	dictionaryQuery := fmt.Sprintf(`
@@ -226,7 +230,7 @@ func (adapter *PostgresAdapter) AlterColumnQuery(tableName, columnName string, s
 		types.SQLColumnLabelColumnType, types.SQLColumnLabelColumnLength,
 		types.SQLColumnLabelPrimaryKey, types.SQLColumnLabelColumnOrder,
 
-		tableName, columnName, sqlColumnType, length, 0, order)
+		secureTable, columnName, sqlColumnType, length, 0, order)
 
 	return query, dictionaryQuery
 }
@@ -299,7 +303,7 @@ func (adapter *PostgresAdapter) UpsertQuery(table types.SQLTable, row types.Even
 
 	// for each column in table
 	for _, tableColumn := range table.Columns {
-		secureColumn := adapter.SecureColumnName(tableColumn.Name)
+		secureColumn := adapter.SecureName(tableColumn.Name)
 
 		i++
 
@@ -370,7 +374,7 @@ func (adapter *PostgresAdapter) DeleteQuery(table types.SQLTable, row types.Even
 		if tableColumn.Primary {
 			i++
 
-			secureColumn := adapter.SecureColumnName(tableColumn.Name)
+			secureColumn := adapter.SecureName(tableColumn.Name)
 
 			// WHERE ..........
 			if columns != "" {
@@ -473,4 +477,50 @@ func (adapter *PostgresAdapter) DropTableQuery(tableName string) string {
 	// owns its database and any users need to be able to recreate objects that depend on vent tables in the event of
 	// table drops
 	return fmt.Sprintf(`DROP TABLE %s.%s CASCADE;`, adapter.Schema, tableName)
+}
+
+func (adapter *PostgresAdapter) CreateNotifyFunctionQuery(function, channel string, columns ...string) string {
+	return fmt.Sprintf(`CREATE OR REPLACE FUNCTION %s.%s() RETURNS trigger AS
+		$trigger$
+		BEGIN
+			CASE TG_OP
+			WHEN 'DELETE' THEN
+				PERFORM pg_notify('%s', CAST(json_build_object('%s', TG_OP, %s) as text));
+				RETURN OLD;
+			ELSE
+				PERFORM pg_notify('%s', CAST(json_build_object('%s', TG_OP, %s) as text));
+				RETURN NEW;
+			END CASE;
+		END;
+		$trigger$
+		LANGUAGE 'plpgsql';
+		`,
+		adapter.Schema, function, // create function
+		channel, types.SQLColumnLabelAction, jsonBuildObjectArgs("OLD", columns), // case delete
+		channel, types.SQLColumnLabelAction, jsonBuildObjectArgs("NEW", columns), // case else
+	)
+}
+
+func (adapter *PostgresAdapter) CreateTriggerQuery(triggerName, tableName, functionName string) string {
+	return fmt.Sprintf(`CREATE TRIGGER %s AFTER INSERT OR UPDATE OR DELETE ON %s.%s
+		FOR EACH ROW 
+		EXECUTE FUNCTION %s.%s();
+		`,
+		triggerName,
+		adapter.Schema, tableName,
+		adapter.Schema, functionName,
+	)
+}
+
+func secureName(columnName string) string {
+	return `"` + columnName + `"`
+}
+
+func jsonBuildObjectArgs(record string, columns []string) string {
+	elements := make([]string, len(columns))
+	for i, column := range columns {
+		elements[i] = "'" + column + "', " + record + "." + secureName(column)
+	}
+
+	return strings.Join(elements, ", ")
 }

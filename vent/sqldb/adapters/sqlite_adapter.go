@@ -59,8 +59,8 @@ func (adapter *SQLiteAdapter) TypeMapping(sqlColumnType types.SQLColumnType) (st
 }
 
 // SecureColumnName return columns between appropriate security containers
-func (adapter *SQLiteAdapter) SecureColumnName(columnName string) string {
-	return fmt.Sprintf("[%s]", columnName)
+func (adapter *SQLiteAdapter) SecureName(name string) string {
+	return fmt.Sprintf("[%s]", name)
 }
 
 // CreateTableQuery builds query for creating a new table
@@ -72,7 +72,7 @@ func (adapter *SQLiteAdapter) CreateTableQuery(tableName string, columns []types
 	hasSerial := false
 
 	for i, tableColumn := range columns {
-		secureColumn := adapter.SecureColumnName(tableColumn.Name)
+		secureColumn := adapter.SecureName(tableColumn.Name)
 		sqlType, _ := adapter.TypeMapping(tableColumn.Type)
 		pKey := 0
 
@@ -189,7 +189,7 @@ func (adapter *SQLiteAdapter) AlterColumnQuery(tableName, columnName string, sql
 
 	query := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s;",
 		tableName,
-		adapter.SecureColumnName(columnName),
+		adapter.SecureName(columnName),
 		sqlType)
 
 	dictionaryQuery := fmt.Sprintf(`
@@ -276,7 +276,7 @@ func (adapter *SQLiteAdapter) UpsertQuery(table types.SQLTable, row types.EventD
 
 	// for each column in table
 	for _, tableColumn := range table.Columns {
-		secureColumn := adapter.SecureColumnName(tableColumn.Name)
+		secureColumn := adapter.SecureName(tableColumn.Name)
 
 		i++
 
@@ -357,7 +357,7 @@ func (adapter *SQLiteAdapter) DeleteQuery(table types.SQLTable, row types.EventD
 		if tableColumn.Primary {
 			i++
 
-			secureColumn := adapter.SecureColumnName(tableColumn.Name)
+			secureColumn := adapter.SecureName(tableColumn.Name)
 
 			// WHERE ..........
 			if columns != "" {

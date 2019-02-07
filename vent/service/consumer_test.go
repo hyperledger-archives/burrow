@@ -53,6 +53,7 @@ func TestConsumer(t *testing.T) {
 
 	err := runConsumer(db, cfg)
 	require.NoError(t, err)
+	time.Sleep(time.Second * 2)
 
 	// test data stored in database for two different block ids
 	eventName := "EventTest"
@@ -130,19 +131,19 @@ func runConsumer(db *sqldb.SQLDB, cfg *config.Flags) (err error) {
 	testDir := path.Join(path.Dir(testFile), "..", "test")
 
 	cfg.DBSchema = db.Schema
-	cfg.SpecFile = path.Join(testDir, "sqlsol_example.json")
-	cfg.AbiFile = path.Join(testDir, "EventsTest.abi")
+	cfg.SpecFileOrDir = path.Join(testDir, "sqlsol_example.json")
+	cfg.AbiFileOrDir = path.Join(testDir, "EventsTest.abi")
 	cfg.GRPCAddr = testConfig.RPC.GRPC.ListenAddress
 	cfg.DBBlockTx = true
 
-	log := logger.NewLogger("info")
+	log := logger.NewLogger("")
 	consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
 
-	projection, err := sqlsol.SpecLoader("", cfg.SpecFile, cfg.DBBlockTx)
+	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDir, cfg.DBBlockTx)
 	if err != nil {
 		return err
 	}
-	abiSpec, err := sqlsol.AbiLoader("", cfg.AbiFile)
+	abiSpec, err := sqlsol.AbiLoader(cfg.AbiFileOrDir)
 	if err != nil {
 		return err
 	}

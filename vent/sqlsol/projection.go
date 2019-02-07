@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/xeipuuv/gojsonschema"
+
 	"github.com/hyperledger/burrow/txs"
 
 	"github.com/hyperledger/burrow/vent/types"
@@ -23,41 +25,47 @@ type Projection struct {
 }
 
 // NewProjectionFromBytes creates a Projection from a stream of bytes
-func NewProjectionFromBytes(bytes []byte) (*Projection, error) {
+func NewProjectionFromBytes(bs []byte) (*Projection, error) {
 	eventSpec := types.EventSpec{}
 
-	if err := json.Unmarshal(bytes, &eventSpec); err != nil {
+	err := ValidateJSONEventSpec(bs)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(bs, &eventSpec)
+	if err != nil {
 		return nil, errors.Wrap(err, "Error unmarshalling eventSpec")
 	}
 
 	return NewProjectionFromEventSpec(eventSpec)
 }
 
-// NewProjectionFromFile creates a Projection from a file
-func NewProjectionFromFile(file string) (*Projection, error) {
-	bytes, err := readFile(file)
-	if err != nil {
-		return nil, errors.Wrap(err, "Error reading eventSpec file")
-	}
-
-	return NewProjectionFromBytes(bytes)
-}
-
 // NewProjectionFromFolder creates a Projection from a folder containing spec files
-func NewProjectionFromFolder(folder string) (*Projection, error) {
+func NewProjectionFromFolder(fileOrDir string) (*Projection, error) {
 	eventSpec := types.EventSpec{}
 
-	err := filepath.Walk(folder, func(path string, _ os.FileInfo, err error) error {
-		if err == nil && filepath.Ext(path) == ".json" {
-			bytes, err := readFile(path)
+	const errHeader = "NewProjectionFromFolder():"
+
+	err := filepath.Walk(fileOrDir, func(path string, _ os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("error walking event spec files location '%s': %v", fileOrDir, err)
+		}
+		if filepath.Ext(path) == ".json" {
+			bs, err := readFile(path)
 			if err != nil {
-				return errors.Wrap(err, "Error reading eventSpec file")
+				return fmt.Errorf("error reading spec file '%s': %v", path, err)
+			}
+
+			err = ValidateJSONEventSpec(bs)
+			if err != nil {
+				return fmt.Errorf("could not validate spec file '%s': %v", path, err)
 			}
 
 			fileEventSpec := types.EventSpec{}
-
-			if err := json.Unmarshal(bytes, &fileEventSpec); err != nil {
-				return errors.Wrap(err, "Error unmarshalling eventSpec")
+			err = json.Unmarshal(bs, &fileEventSpec)
+			if err != nil {
+				return fmt.Errorf("error reading spec file '%s': %v", path, err)
 			}
 
 			eventSpec = append(eventSpec, fileEventSpec...)
@@ -66,7 +74,7 @@ func NewProjectionFromFolder(folder string) (*Projection, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "Error reading eventSpec folder")
+		return nil, fmt.Errorf("%s %v", errHeader, err)
 	}
 
 	return NewProjectionFromEventSpec(eventSpec)
@@ -84,31 +92,36 @@ func NewProjectionFromEventSpec(eventSpec types.EventSpec) (*Projection, error) 
 	globalColumns := getGlobalColumns()
 	globalColumnsLength := len(globalColumns)
 
-	for _, eventDef := range eventSpec {
+	for _, eventClass := range eventSpec {
 		// validate json structure
-		if err := eventDef.Validate(); err != nil {
-			return nil, err
+		if err := eventClass.Validate(); err != nil {
+			return nil, fmt.Errorf("validation error on %v: %v", eventClass, err)
 		}
 
 		// build columns mapping
 		columns := make(map[string]types.SQLTableColumn)
+		channels := make(map[string][]string)
+
 		j := 0
-		for colName, col := range eventDef.Columns {
-			sqlType, sqlTypeLength, err := getSQLType(strings.ToLower(col.Type), false, col.BytesToString)
+		for _, eventField := range eventClass.Fields {
+			sqlType, sqlTypeLength, err := getSQLType(eventField.Type, eventField.BytesToString)
 			if err != nil {
 				return nil, err
 			}
 
 			j++
 
-			columns[colName] = types.SQLTableColumn{
-				Name:          strings.ToLower(col.Name),
-				Type:          sqlType,
-				EVMType:       col.Type,
-				Length:        sqlTypeLength,
-				Primary:       col.Primary,
-				BytesToString: col.BytesToString,
-				Order:         j + globalColumnsLength,
+			// Update channels broadcast payload subsets with this column
+			for _, channel := range eventField.Notify {
+				channels[channel] = append(channels[channel], eventField.ColumnName)
+			}
+
+			columns[eventField.ColumnName] = types.SQLTableColumn{
+				Name:    eventField.ColumnName,
+				Type:    sqlType,
+				Primary: eventField.Primary,
+				Length:  sqlTypeLength,
+				Order:   j + globalColumnsLength,
 			}
 		}
 
@@ -117,21 +130,28 @@ func NewProjectionFromEventSpec(eventSpec types.EventSpec) (*Projection, error) 
 			columns[k] = v
 		}
 
-		tables[eventDef.TableName] = types.SQLTable{
-			Name:    strings.ToLower(eventDef.TableName),
-			Filter:  eventDef.Filter,
-			Columns: columns,
+		// Allow for compatible composition of tables
+		var err error
+		tables[eventClass.TableName], err = mergeTables(tables[eventClass.TableName],
+			types.SQLTable{
+				Name:           eventClass.TableName,
+				NotifyChannels: channels,
+				Columns:        columns,
+			})
+		if err != nil {
+			return nil, err
 		}
+
 	}
 
 	// check if there are duplicated duplicated column names (for a given table)
 	colName := make(map[string]int)
 
-	for _, tbls := range tables {
-		for _, cols := range tbls.Columns {
-			colName[tbls.Name+cols.Name]++
-			if colName[tbls.Name+cols.Name] > 1 {
-				return nil, fmt.Errorf("Duplicated column name: %s in table %s", cols.Name, tbls.Name)
+	for _, table := range tables {
+		for _, column := range table.Columns {
+			colName[table.Name+column.Name]++
+			if colName[table.Name+column.Name] > 1 {
+				return nil, fmt.Errorf("duplicated column name: %s in table %s", column.Name, table.Name)
 			}
 		}
 	}
@@ -160,10 +180,28 @@ func (p *Projection) GetColumn(tableName, columnName string) (types.SQLTableColu
 		if column, ok = table.Columns[columnName]; ok {
 			return column, nil
 		}
-		return column, fmt.Errorf("GetColumn: columnName does not exists as a column in SQL table structure: %s ", columnName)
+		return column, fmt.Errorf("GetColumn: column does not exist in SQL table: %s ", columnName)
 	}
 
-	return column, fmt.Errorf("GetColumn: tableName does not exists as a table in SQL table structure: %s ", tableName)
+	return column, fmt.Errorf("GetColumn: table does not exist projection: %s ", tableName)
+}
+
+func ValidateJSONEventSpec(bs []byte) error {
+	schemaLoader := gojsonschema.NewGoLoader(types.EventSpecSchema())
+	specLoader := gojsonschema.NewBytesLoader(bs)
+	result, err := gojsonschema.Validate(schemaLoader, specLoader)
+	if err != nil {
+		return fmt.Errorf("could not validate using JSONSchema: %v", err)
+	}
+
+	if !result.Valid() {
+		errs := make([]string, len(result.Errors()))
+		for i, err := range result.Errors() {
+			errs[i] = err.String()
+		}
+		return fmt.Errorf("EventSpec failed JSONSchema validation:\n%s", strings.Join(errs, "\n"))
+	}
+	return nil
 }
 
 // readFile opens a given file and reads it contents into a stream of bytes
@@ -184,33 +222,33 @@ func readFile(file string) ([]byte, error) {
 
 // getSQLType maps event input types with corresponding SQL column types
 // takes into account related solidity types info and element indexed or hashed
-func getSQLType(evmSignature string, isArray bool, bytesToString bool) (types.SQLColumnType, int, error) {
-
+func getSQLType(evmSignature string, bytesToString bool) (types.SQLColumnType, int, error) {
+	evmSignature = strings.ToLower(evmSignature)
 	re := regexp.MustCompile("[0-9]+")
 	typeSize, _ := strconv.Atoi(re.FindString(evmSignature))
 
 	switch {
 	// solidity address => sql varchar
-	case evmSignature == types.EventInputTypeAddress:
+	case evmSignature == types.EventFieldTypeAddress:
 		return types.SQLColumnTypeVarchar, 40, nil
 		// solidity bool => sql bool
-	case evmSignature == types.EventInputTypeBool:
+	case evmSignature == types.EventFieldTypeBool:
 		return types.SQLColumnTypeBool, 0, nil
 		// solidity bytes => sql bytes
 		// bytesToString == true means there is a string in there so => sql varchar
-	case strings.HasPrefix(evmSignature, types.EventInputTypeBytes):
+	case strings.HasPrefix(evmSignature, types.EventFieldTypeBytes):
 		if bytesToString {
 			return types.SQLColumnTypeVarchar, 40, nil
 		} else {
 			return types.SQLColumnTypeByteA, 0, nil
 		}
 		// solidity string => sql text
-	case evmSignature == types.EventInputTypeString:
+	case evmSignature == types.EventFieldTypeString:
 		return types.SQLColumnTypeText, 0, nil
 		// solidity int or int256 => sql bigint
 		// solidity int <= 32 => sql int
 		// solidity int > 32 => sql numeric
-	case strings.HasPrefix(evmSignature, types.EventInputTypeInt):
+	case strings.HasPrefix(evmSignature, types.EventFieldTypeInt):
 		if typeSize == 0 || typeSize == 256 {
 			return types.SQLColumnTypeBigInt, 0, nil
 		}
@@ -222,7 +260,7 @@ func getSQLType(evmSignature string, isArray bool, bytesToString bool) (types.SQ
 		// solidity uint or uint256 => sql bigint
 		// solidity uint <= 16 => sql int
 		// solidity uint > 16 => sql numeric
-	case strings.HasPrefix(evmSignature, types.EventInputTypeUInt):
+	case strings.HasPrefix(evmSignature, types.EventFieldTypeUInt):
 		if typeSize == 0 || typeSize == 256 {
 			return types.SQLColumnTypeBigInt, 0, nil
 		}
@@ -242,36 +280,82 @@ func getGlobalColumns() map[string]types.SQLTableColumn {
 	globalColumns := make(map[string]types.SQLTableColumn)
 
 	globalColumns[types.BlockHeightLabel] = types.SQLTableColumn{
-		Name:    types.SQLColumnLabelHeight,
-		Type:    types.SQLColumnTypeVarchar,
-		Length:  100,
-		Primary: false,
-		Order:   1,
+		Name:   types.SQLColumnLabelHeight,
+		Type:   types.SQLColumnTypeVarchar,
+		Length: 100,
+		Order:  1,
 	}
 
 	globalColumns[types.TxTxHashLabel] = types.SQLTableColumn{
-		Name:    types.SQLColumnLabelTxHash,
-		Type:    types.SQLColumnTypeVarchar,
-		Length:  txs.HashLengthHex,
-		Primary: false,
-		Order:   2,
+		Name:   types.SQLColumnLabelTxHash,
+		Type:   types.SQLColumnTypeVarchar,
+		Length: txs.HashLengthHex,
+		Order:  2,
 	}
 
 	globalColumns[types.EventTypeLabel] = types.SQLTableColumn{
-		Name:    types.SQLColumnLabelEventType,
-		Type:    types.SQLColumnTypeVarchar,
-		Length:  100,
-		Primary: false,
-		Order:   3,
+		Name:   types.SQLColumnLabelEventType,
+		Type:   types.SQLColumnTypeVarchar,
+		Length: 100,
+		Order:  3,
 	}
 
 	globalColumns[types.EventNameLabel] = types.SQLTableColumn{
-		Name:    types.SQLColumnLabelEventName,
-		Type:    types.SQLColumnTypeVarchar,
-		Length:  100,
-		Primary: false,
-		Order:   4,
+		Name:   types.SQLColumnLabelEventName,
+		Type:   types.SQLColumnTypeVarchar,
+		Length: 100,
+		Order:  4,
 	}
 
 	return globalColumns
+}
+
+// Merges tables a and b provided the intersection of their columns (by name) are identical
+func mergeTables(a types.SQLTable, b types.SQLTable) (types.SQLTable, error) {
+	if a.Name == "" {
+		return b, nil
+	}
+	if b.Name == "" {
+		return a, nil
+	}
+	if a.Name != b.Name {
+		return types.SQLTable{}, fmt.Errorf("cannot merge tables with different names")
+	}
+
+	table := types.SQLTable{
+		Name:           a.Name,
+		NotifyChannels: make(map[string][]string),
+		Columns:        make(map[string]types.SQLTableColumn),
+	}
+
+	for name, columnA := range a.Columns {
+		table.Columns[name] = columnA
+		if columnB, ok := b.Columns[name]; ok {
+			columnB.Order = columnA.Order
+			if columnA != columnB {
+				return types.SQLTable{}, fmt.Errorf("cannot merge event class tables for %s because of "+
+					"conflicting columns: %v and %v", a.Name, columnA, columnB)
+			}
+		}
+	}
+	// Now we've ensured no conflicts add the columns from b
+	for name, columnB := range b.Columns {
+		columnB.Order += len(a.Columns)
+		table.Columns[name] = columnB
+	}
+
+	for channel, columns := range a.NotifyChannels {
+		colMap := make(map[string]struct{})
+		for _, column := range columns {
+			colMap[column] = struct{}{}
+		}
+		for _, column := range b.NotifyChannels[channel] {
+			colMap[column] = struct{}{}
+		}
+		for column := range colMap {
+			table.NotifyChannels[channel] = append(table.NotifyChannels[channel], column)
+		}
+	}
+
+	return table, nil
 }

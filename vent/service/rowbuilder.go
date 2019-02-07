@@ -16,7 +16,8 @@ import (
 )
 
 // buildEventData builds event data from transactions
-func buildEventData(spec types.EventDefinition, projection *sqlsol.Projection, event *exec.Event, abiSpec *abi.AbiSpec, l *logger.Logger) (types.EventDataRow, error) {
+func buildEventData(eventClass types.EventClass, projection *sqlsol.Projection, event *exec.Event, abiSpec *abi.AbiSpec,
+	l *logger.Logger) (types.EventDataRow, error) {
 
 	// a fresh new row to store column/value data
 	row := make(map[string]interface{})
@@ -31,7 +32,7 @@ func buildEventData(spec types.EventDefinition, projection *sqlsol.Projection, e
 	// decode event data using the provided abi specification
 	decodedData, err := decodeEvent(eventHeader, eventLog, abiSpec)
 	if err != nil {
-		return types.EventDataRow{}, errors.Wrapf(err, "Error decoding event (filter: %s)", spec.Filter)
+		return types.EventDataRow{}, errors.Wrapf(err, "Error decoding event (filter: %s)", eventClass.Filter)
 	}
 
 	l.Info("msg", fmt.Sprintf("Unpacked data: %v", decodedData), "eventName", decodedData[types.EventNameLabel])
@@ -41,8 +42,8 @@ func buildEventData(spec types.EventDefinition, projection *sqlsol.Projection, e
 	var deleteFilter []string
 
 	// get delete filter from spec
-	if spec.DeleteFilter != "" {
-		deleteFilter = strings.Split(replacer.Replace(spec.DeleteFilter), "=")
+	if eventClass.DeleteMarkerField != "" {
+		deleteFilter = strings.Split(replacer.Replace(eventClass.DeleteMarkerField), "=")
 	}
 	deleteFilterLength := len(deleteFilter)
 
@@ -59,8 +60,8 @@ func buildEventData(spec types.EventDefinition, projection *sqlsol.Projection, e
 				}
 			}
 		}
-		if column, err := projection.GetColumn(spec.TableName, k); err == nil {
-			if column.BytesToString {
+		if column, err := projection.GetColumn(eventClass.TableName, k); err == nil {
+			if eventClass.Fields[k].BytesToString {
 				if bs, ok := v.(*[]byte); ok {
 					str := sanitiseBytesForString(*bs, l)
 					row[column.Name] = interface{}(str)
@@ -71,7 +72,7 @@ func buildEventData(spec types.EventDefinition, projection *sqlsol.Projection, e
 		}
 	}
 
-	return types.EventDataRow{Action: rowAction, RowData: row}, nil
+	return types.EventDataRow{Action: rowAction, RowData: row, EventClass: eventClass}, nil
 }
 
 // buildBlkData builds block data from block stream

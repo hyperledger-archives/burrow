@@ -346,7 +346,7 @@ func (db *SQLDB) alterTable(newTable types.SQLTable, eventName string) error {
 						return err
 					}
 					//insert log
-					_, err = db.DB.Exec(logQuery, newTable.Name, eventName, newTable.Filter, nil, nil, types.ActionAlterTable, jsonData, query, sqlValues)
+					_, err = db.DB.Exec(logQuery, newTable.Name, eventName, "", nil, nil, types.ActionAlterTable, jsonData, query, sqlValues)
 					if err != nil {
 						db.Log.Info("msg", "Error inserting log", "err", err)
 						return err
@@ -356,26 +356,6 @@ func (db *SQLDB) alterTable(newTable types.SQLTable, eventName string) error {
 		}
 	}
 	return nil
-}
-
-// getSelectQuery builds a select query for a specific SQL table and a given block
-func (db *SQLDB) getSelectQuery(table types.SQLTable, height string) (string, error) {
-
-	fields := ""
-
-	for _, tableColumn := range table.Columns {
-		if fields != "" {
-			fields += ", "
-		}
-		fields += db.DBAdapter.SecureColumnName(tableColumn.Name)
-	}
-
-	if fields == "" {
-		return "", errors.New("error table does not contain any fields")
-	}
-
-	query := clean(db.DBAdapter.SelectRowQuery(table.Name, fields, height))
-	return query, nil
 }
 
 // createTable creates a new table
@@ -450,13 +430,37 @@ func (db *SQLDB) createTable(table types.SQLTable, eventName string) error {
 		sqlValues, _ := db.getJSON(nil)
 
 		//insert log
-		_, err = db.DB.Exec(logQuery, table.Name, eventName, table.Filter, nil, nil, types.ActionCreateTable, jsonData, query, sqlValues)
+		_, err = db.DB.Exec(logQuery, table.Name, eventName, "", nil, nil, types.ActionCreateTable, jsonData, query, sqlValues)
 		if err != nil {
 			db.Log.Info("msg", "Error inserting log", "err", err)
 			return err
 		}
 	}
 	return nil
+}
+
+func (db *SQLDB) createTableTriggers() {
+
+}
+
+// getSelectQuery builds a select query for a specific SQL table and a given block
+func (db *SQLDB) getSelectQuery(table types.SQLTable, height string) (string, error) {
+
+	fields := ""
+
+	for _, tableColumn := range table.Columns {
+		if fields != "" {
+			fields += ", "
+		}
+		fields += db.DBAdapter.SecureName(tableColumn.Name)
+	}
+
+	if fields == "" {
+		return "", errors.New("error table does not contain any fields")
+	}
+
+	query := clean(db.DBAdapter.SelectRowQuery(table.Name, fields, height))
+	return query, nil
 }
 
 // getBlockTables return all SQL tables that have been involved

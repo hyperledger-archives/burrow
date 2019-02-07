@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"math/rand"
 	"syscall"
 	"testing"
@@ -51,7 +52,7 @@ func NewTestDB(t *testing.T, cfg *config.Flags) (*sqldb.SQLDB, func()) {
 
 	db, err := sqldb.NewSQLDB(connection)
 	if err != nil {
-		t.Fatal(err.Error())
+		require.NoError(t, err)
 	}
 
 	return db, func() {

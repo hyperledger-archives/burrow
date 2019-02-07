@@ -29,4 +29,6 @@ type EventDataTable []EventDataRow
 type EventDataRow struct {
 	Action  DBAction
 	RowData map[string]interface{}
+	// The EventClass that triggered the generation of this row (if any)
+	EventClass EventClass
 }

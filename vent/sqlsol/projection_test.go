@@ -1,7 +1,7 @@
 package sqlsol_test
 
 import (
-	"strings"
+	"fmt"
 	"testing"
 
 	"github.com/hyperledger/burrow/vent/sqlsol"
@@ -35,13 +35,13 @@ func TestNewProjection(t *testing.T) {
 		require.NoError(t, err)
 
 		// columns map
-		col, err := tableStruct.GetColumn("UserAccounts", "userName")
+		col, err := tableStruct.GetColumn("UserAccounts", "username")
 		require.NoError(t, err)
 		require.Equal(t, false, col.Primary)
 		require.Equal(t, types.SQLColumnTypeText, col.Type)
 		require.Equal(t, "username", col.Name)
 
-		col, err = tableStruct.GetColumn("UserAccounts", "userAddress")
+		col, err = tableStruct.GetColumn("UserAccounts", "address")
 		require.NoError(t, err)
 		require.Equal(t, true, col.Primary)
 		require.Equal(t, types.SQLColumnTypeVarchar, col.Type)
@@ -83,31 +83,31 @@ func TestNewProjection(t *testing.T) {
 func TestGetColumn(t *testing.T) {
 	goodJSON := test.GoodJSONConfFile(t)
 
-	byteValue := []byte(goodJSON)
-	tableStruct, _ := sqlsol.NewProjectionFromBytes(byteValue)
+	projection, err := sqlsol.NewProjectionFromBytes([]byte(goodJSON))
+	require.NoError(t, err)
 
 	t.Run("successfully gets the mapping column info for a given table & column name", func(t *testing.T) {
-		column, err := tableStruct.GetColumn("TEST_TABLE", "blocknum")
+		column, err := projection.GetColumn("TEST_TABLE", "Block")
 		require.NoError(t, err)
-		require.Equal(t, strings.ToLower("Block"), column.Name)
+		require.Equal(t, "Block", column.Name)
 		require.Equal(t, types.SQLColumnTypeBigInt, column.Type)
 		require.Equal(t, false, column.Primary)
 
-		column, err = tableStruct.GetColumn("TEST_TABLE", "instance")
+		column, err = projection.GetColumn("TEST_TABLE", "Instance")
 		require.NoError(t, err)
-		require.Equal(t, strings.ToLower("Instance"), column.Name)
+		require.Equal(t, "Instance", column.Name)
 		require.Equal(t, types.SQLColumnTypeBigInt, column.Type)
 		require.Equal(t, false, column.Primary)
 
 	})
 
 	t.Run("unsuccessfully gets the mapping column info for a non existent table name", func(t *testing.T) {
-		_, err := tableStruct.GetColumn("NOT_EXISTS", "userName")
+		_, err := projection.GetColumn("NOT_EXISTS", "userName")
 		require.Error(t, err)
 	})
 
 	t.Run("unsuccessfully gets the mapping column info for a non existent column name", func(t *testing.T) {
-		_, err := tableStruct.GetColumn("UpdateUserAccount", "NOT_EXISTS")
+		_, err := projection.GetColumn("UpdateUserAccount", "NOT_EXISTS")
 		require.Error(t, err)
 	})
 }
@@ -121,8 +121,7 @@ func TestGetTables(t *testing.T) {
 	t.Run("successfully returns event tables structures", func(t *testing.T) {
 		tables := tableStruct.GetTables()
 		require.Equal(t, 2, len(tables))
-		require.Equal(t, "useraccounts", tables["UserAccounts"].Name)
-		require.Equal(t, "LOG0 = 'UserAccounts'", tables["UserAccounts"].Filter)
+		require.Equal(t, "UserAccounts", tables["UserAccounts"].Name)
 
 	})
 }
@@ -142,4 +141,68 @@ func TestGetEventSpec(t *testing.T) {
 		require.Equal(t, "Log1Text = 'EVENT_TEST'", eventSpec[1].Filter)
 		require.Equal(t, "TEST_TABLE", eventSpec[1].TableName)
 	})
+}
+
+func TestNewProjectionFromEventSpec(t *testing.T) {
+	projection, err := sqlsol.NewProjectionFromEventSpec(types.EventSpec{
+		{
+			TableName: "BurnNotices",
+			Filter:    "LOG1Text = 'CIA/burn'",
+			Fields: map[string]types.EventField{
+				"codename": {
+					ColumnName: "name",
+					Type:       types.EventFieldTypeString,
+					Notify:     []string{"burn"},
+				},
+				"burn": {
+					ColumnName: "burnt",
+					Type:       types.EventFieldTypeBool,
+					Notify:     []string{"burn"},
+				},
+				"dairy": {
+					ColumnName: "coffee_milk",
+					Type:       types.EventFieldTypeString,
+					Notify:     []string{"mrs_doyle"},
+				},
+				"datetime": {
+					ColumnName: "time_changed",
+					Type:       types.EventFieldTypeInt,
+					Notify:     []string{"last_heard", "mrs_doyle"},
+				},
+			},
+		},
+		{
+			TableName: "BurnNotices",
+			Filter:    "LOG1Text = 'MI5/burn'",
+			Fields: map[string]types.EventField{
+				"codename": {
+					ColumnName: "name",
+					Type:       types.EventFieldTypeString,
+					Notify:     []string{"burn"},
+				},
+				"unreliable": {
+					ColumnName: "burnt",
+					Type:       types.EventFieldTypeBool,
+					Notify:     []string{"burn"},
+				},
+				"sugars": {
+					ColumnName: "tea_sugars",
+					Type:       types.EventFieldTypeInt,
+					Notify:     []string{"mrs_doyle"},
+				},
+				"milk": {
+					ColumnName: "tea_milk",
+					Type:       types.EventFieldTypeBool,
+					Notify:     []string{"mrs_doyle"},
+				},
+				"datetime": {
+					ColumnName: "time_changed",
+					Type:       types.EventFieldTypeInt,
+					Notify:     []string{"last_heard", "mrs_doyle"},
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+	fmt.Println(projection)
 }

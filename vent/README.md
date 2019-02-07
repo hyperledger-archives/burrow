@@ -15,8 +15,8 @@ Given a sqlsol specification
   {
     "TableName" : "EventTest",
     "Filter" : "Log1Text = 'LOGEVENT1'",
-    "DeleteFilter": "CRUD_ACTION = 'delete'",
-    "Columns"  : {
+    "DeleteMarkerKey": "__DELETE__"
+    "Fields"  : {
       "key" : {"name" : "testname", "type": "bytes32", "primary" : true},
       "description": {"name" : "testdescription", "type": "bytes32", "primary" : false, "bytesToString": true}
     }
@@ -24,7 +24,7 @@ Given a sqlsol specification
   {
     "TableName" : "UserAccounts",
     "Filter" : "Log1Text = 'USERACCOUNTS'",
-    "Columns"  : {
+    "Fields"  : {
       "userAddress" : {"name" : "address", "type": "address", "primary" : true},
       "userName": {"name" : "username", "type": "string", "primary" : false}
     }

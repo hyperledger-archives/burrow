@@ -2,21 +2,21 @@
   {
     "TableName": "EventTest",
     "Filter": "EventType = 'LogEvent'",
-    "DeleteFilter": "CRUD_ACTION = 'delete'",
-    "Columns": {
+    "DeleteMarkerField": "__DELETE__",
+    "Fields": {
       "key": {
-        "Name": "testkey",
+        "ColumnName": "testkey",
         "Type": "bytes32",
         "Primary": true
       },
       "name": {
-        "Name": "testname",
+        "ColumnName": "testname",
         "Type": "bytes32",
         "Primary": true,
         "BytesToString": true
       },
       "description": {
-        "Name": "testdescription",
+        "ColumnName": "testdescription",
         "Type": "bytes32",
         "Primary": false
       }
@@ -25,14 +25,14 @@
   {
     "TableName": "UserAccounts",
     "Filter": "LOG1 = 'UserAccounts'",
-    "Columns": {
+    "Fields": {
       "userAddress": {
-        "Name": "address",
+        "ColumnName": "address",
         "Type": "address",
         "Primary": true
       },
       "userName": {
-        "Name": "username",
+        "ColumnName": "username",
         "Type": "string",
         "Primary": false
       }

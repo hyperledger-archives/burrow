@@ -8,33 +8,29 @@ const DefaultPostgresDBURL = "postgres://postgres@localhost:5432/postgres?sslmod
 
 // Flags is a set of configuration parameters
 type Flags struct {
-	DBAdapter string
-	DBURL     string
-	DBSchema  string
-	GRPCAddr  string
-	HTTPAddr  string
-	LogLevel  string
-	SpecFile  string
-	SpecDir   string
-	AbiFile   string
-	AbiDir    string
-	DBBlockTx bool
+	DBAdapter     string
+	DBURL         string
+	DBSchema      string
+	GRPCAddr      string
+	HTTPAddr      string
+	LogLevel      string
+	SpecFileOrDir string
+	AbiFileOrDir  string
+	DBBlockTx     bool
 }
 
 // DefaultFlags returns a configuration with default values
 func DefaultFlags() *Flags {
 	return &Flags{
-		DBAdapter: types.PostgresDB,
-		DBURL:     DefaultPostgresDBURL,
-		DBSchema:  "vent",
-		GRPCAddr:  "localhost:10997",
-		HTTPAddr:  "0.0.0.0:8080",
-		LogLevel:  "debug",
-		SpecFile:  "",
-		SpecDir:   "",
-		AbiFile:   "",
-		AbiDir:    "",
-		DBBlockTx: false,
+		DBAdapter:     types.PostgresDB,
+		DBURL:         DefaultPostgresDBURL,
+		DBSchema:      "vent",
+		GRPCAddr:      "localhost:10997",
+		HTTPAddr:      "0.0.0.0:8080",
+		LogLevel:      "debug",
+		SpecFileOrDir: "",
+		AbiFileOrDir:  "",
+		DBBlockTx:     false,
 	}
 }
 

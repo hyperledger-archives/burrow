@@ -15,7 +15,7 @@ type DBAdapter interface {
 	// ErrorEquals compares generic SQL errors to db adapter dependent errors
 	ErrorEquals(err error, sqlErrorType types.SQLErrorType) bool
 	// SecureColumnName returns columns with proper delimiters to ensure well formed column names
-	SecureColumnName(columnName string) string
+	SecureName(name string) string
 	// CreateTableQuery builds a CREATE TABLE query to create a new table
 	CreateTableQuery(tableName string, columns []types.SQLTableColumn) (string, string)
 	// LastBlockIDQuery builds a SELECT query to return the last block# from the Log table

@@ -17,7 +17,33 @@ const (
 	SQLColumnTypeBigInt
 )
 
+func (ct SQLColumnType) String() string {
+	switch ct {
+	case SQLColumnTypeBool:
+		return "bool"
+	case SQLColumnTypeByteA:
+		return "bytea"
+	case SQLColumnTypeInt:
+		return "int"
+	case SQLColumnTypeSerial:
+		return "serial"
+	case SQLColumnTypeText:
+		return "text"
+	case SQLColumnTypeVarchar:
+		return "varchar"
+	case SQLColumnTypeTimeStamp:
+		return "timestamp"
+	case SQLColumnTypeNumeric:
+		return "numeric"
+	case SQLColumnTypeJSON:
+		return "json"
+	case SQLColumnTypeBigInt:
+		return "bigint"
+	}
+	return "unknown SQL type"
+}
+
 // IsNumeric determines if an sqlColumnType is numeric
-func (sqlColumnType SQLColumnType) IsNumeric() bool {
-	return sqlColumnType == SQLColumnTypeInt || sqlColumnType == SQLColumnTypeSerial || sqlColumnType == SQLColumnTypeNumeric || sqlColumnType == SQLColumnTypeBigInt
+func (ct SQLColumnType) IsNumeric() bool {
+	return ct == SQLColumnTypeInt || ct == SQLColumnTypeSerial || ct == SQLColumnTypeNumeric || ct == SQLColumnTypeBigInt
 }

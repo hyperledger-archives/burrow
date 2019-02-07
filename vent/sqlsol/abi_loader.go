@@ -1,6 +1,7 @@
 package sqlsol
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -9,46 +10,32 @@ import (
 )
 
 // AbiLoader loads abi files and parses them
-func AbiLoader(abiDir, abiFile string) (*abi.AbiSpec, error) {
-
-	var abiSpec *abi.AbiSpec
-	var err error
-
-	if abiDir == "" && abiFile == "" {
-		return &abi.AbiSpec{}, errors.New("One of AbiDir or AbiFile must be provided")
+func AbiLoader(abiFileOrDir string) (*abi.AbiSpec, error) {
+	if abiFileOrDir == "" {
+		return &abi.AbiSpec{}, fmt.Errorf("no ABI file or directory provided")
 	}
 
-	if abiDir != "" && abiFile != "" {
-		return &abi.AbiSpec{}, errors.New("AbiDir or AbiFile must be provided, but not both")
-	}
+	specs := make([]*abi.AbiSpec, 0)
 
-	if abiDir != "" {
-		specs := make([]*abi.AbiSpec, 0)
-
-		err := filepath.Walk(abiDir, func(path string, fi os.FileInfo, err error) error {
-			ext := filepath.Ext(path)
-			if fi.IsDir() || !(ext == ".bin" || ext == ".abi") {
-				return nil
-			}
-			if err == nil {
-				abiSpc, err := abi.ReadAbiSpecFile(path)
-				if err != nil {
-					return errors.Wrap(err, "Error parsing abi file "+path)
-				}
-				specs = append(specs, abiSpc)
-			}
+	err := filepath.Walk(abiFileOrDir, func(path string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("error returned while walking abiDir '%s': %v", abiFileOrDir, err)
+		}
+		ext := filepath.Ext(path)
+		if fi.IsDir() || !(ext == ".bin" || ext == ".abi") {
 			return nil
-		})
-		if err != nil {
-			return &abi.AbiSpec{}, err
 		}
-		abiSpec = abi.MergeAbiSpec(specs)
-	} else {
-		abiSpec, err = abi.ReadAbiSpecFile(abiFile)
-		if err != nil {
-			return &abi.AbiSpec{}, errors.Wrap(err, "Error parsing abi file")
+		if err == nil {
+			abiSpc, err := abi.ReadAbiSpecFile(path)
+			if err != nil {
+				return errors.Wrap(err, "Error parsing abi file "+path)
+			}
+			specs = append(specs, abiSpc)
 		}
+		return nil
+	})
+	if err != nil {
+		return &abi.AbiSpec{}, err
 	}
-
-	return abiSpec, nil
+	return abi.MergeAbiSpec(specs), nil
 }

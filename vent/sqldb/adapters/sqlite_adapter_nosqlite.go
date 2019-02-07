@@ -33,7 +33,7 @@ func (*SQLiteAdapter) ErrorEquals(err error, sqlErrorType types.SQLErrorType) bo
 	panic("implement me")
 }
 
-func (*SQLiteAdapter) SecureColumnName(columnName string) string {
+func (*SQLiteAdapter) SecureName(name string) string {
 	panic("implement me")
 }
 

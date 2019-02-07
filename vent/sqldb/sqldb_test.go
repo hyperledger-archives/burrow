@@ -128,7 +128,7 @@ func getBlock() (types.EventTables, types.EventData) {
 
 	cols1["ColumnV"] = types.SQLTableColumn{Name: "colV", Type: types.SQLColumnTypeVarchar, Length: 400, Primary: false, Order: 6}
 	cols1["ColumnT"] = types.SQLTableColumn{Name: "colT", Type: types.SQLColumnTypeText, Length: 0, Primary: false, Order: 7}
-	table1 := types.SQLTable{Name: "test_table1", Filter: "TEST", Columns: cols1}
+	table1 := types.SQLTable{Name: "test_table1", Columns: cols1}
 
 	//table 2
 	cols2 := make(map[string]types.SQLTableColumn)
@@ -136,20 +136,20 @@ func getBlock() (types.EventTables, types.EventData) {
 	cols2["SID"] = types.SQLTableColumn{Name: "sid_id", Type: types.SQLColumnTypeInt, Primary: true, Order: 2}
 	cols2["Field 1"] = types.SQLTableColumn{Name: "field_1", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false, Order: 3}
 	cols2["Field 2"] = types.SQLTableColumn{Name: "field_2", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false, Order: 4}
-	table2 := types.SQLTable{Name: "test_table2", Filter: "TEST", Columns: cols2}
+	table2 := types.SQLTable{Name: "test_table2", Columns: cols2}
 
 	//table 3
 	cols3 := make(map[string]types.SQLTableColumn)
 	cols3["Code"] = types.SQLTableColumn{Name: "_height", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: true, Order: 1}
 	cols3["Value A"] = types.SQLTableColumn{Name: "val", Type: types.SQLColumnTypeInt, Primary: false, Order: 2}
-	table3 := types.SQLTable{Name: "test_table3", Filter: "TEST", Columns: cols3}
+	table3 := types.SQLTable{Name: "test_table3", Columns: cols3}
 
 	//table 4
 	cols4 := make(map[string]types.SQLTableColumn)
 	cols4["index"] = types.SQLTableColumn{Name: "index", Type: types.SQLColumnTypeInt, Primary: true, Order: 1}
 	cols4["time"] = types.SQLTableColumn{Name: "time", Type: types.SQLColumnTypeTimeStamp, Primary: false, Order: 2}
 	cols4["Code"] = types.SQLTableColumn{Name: "_height", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false, Order: 3}
-	table4 := types.SQLTable{Name: "test_table4", Filter: "TEST", Columns: cols4}
+	table4 := types.SQLTable{Name: "test_table4", Columns: cols4}
 
 	str := make(types.EventTables)
 	str["1"] = table1
@@ -202,7 +202,7 @@ func getAlterBlock() (types.EventTables, types.EventData) {
 	cols3["Code"] = types.SQLTableColumn{Name: "_height", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: true, Order: 1}
 	cols3["Value A"] = types.SQLTableColumn{Name: "val", Type: types.SQLColumnTypeInt, Primary: false, Order: 2}
 	cols3["Value B"] = types.SQLTableColumn{Name: "val_alter", Type: types.SQLColumnTypeInt, Primary: false, Order: 3}
-	table3 := types.SQLTable{Name: "test_table3", Filter: "TEST", Columns: cols3}
+	table3 := types.SQLTable{Name: "test_table3", Columns: cols3}
 
 	str := make(types.EventTables)
 	str["3"] = table3

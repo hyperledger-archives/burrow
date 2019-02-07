@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-	"strings"
 	"sync"
 
-	"github.com/hyperledger/burrow/execution/exec"
-
 	"github.com/hyperledger/burrow/execution/evm/abi"
+	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	"github.com/hyperledger/burrow/vent/config"
@@ -200,8 +198,8 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 						taggedEvent := event.Tagged()
 
 						// see which spec filter matches with the one in event data
-						for _, spec := range eventSpec {
-							qry, err := spec.Query()
+						for _, eventClass := range eventSpec {
+							qry, err := eventClass.Query()
 
 							if err != nil {
 								doneCh <- errors.Wrapf(err, "Error parsing query from filter string")
@@ -211,16 +209,16 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 							// there's a matching filter, add data to the rows
 							if qry.Matches(taggedEvent) {
 
-								c.Log.Info("msg", fmt.Sprintf("Matched event header: %v", event.Header), "filter", spec.Filter)
+								c.Log.Info("msg", fmt.Sprintf("Matched event header: %v", event.Header), "filter", eventClass.Filter)
 
 								// unpack, decode & build event data
-								eventData, err := buildEventData(spec, projection, event, abiSpec, c.Log)
+								eventData, err := buildEventData(eventClass, projection, event, abiSpec, c.Log)
 								if err != nil {
 									doneCh <- errors.Wrapf(err, "Error building event data")
 								}
 
 								// set row in structure
-								blockData.AddRow(strings.ToLower(spec.TableName), eventData)
+								blockData.AddRow(eventClass.TableName, eventData)
 							}
 						}
 					}

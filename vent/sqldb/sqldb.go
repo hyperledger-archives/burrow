@@ -357,8 +357,8 @@ loop:
 			}
 
 			// Insert in log
-			db.Log.Info("msg", "INSERT LOG", "query", logQuery, "value", fmt.Sprintf("tableName = %s eventName = %s filter = %s block = %s", safeTable, eventName, table.Filter, eventData.Block))
-			if _, err = logStmt.Exec(safeTable, eventName, table.Filter, eventData.Block, txHash, row.Action, jsonData, query, sqlValues); err != nil {
+			db.Log.Info("msg", "INSERT LOG", "query", logQuery, "value", fmt.Sprintf("tableName = %s eventName = %s filter = %s block = %s", safeTable, eventName, row.EventClass.Filter, eventData.Block))
+			if _, err = logStmt.Exec(safeTable, eventName, row.EventClass.Filter, eventData.Block, txHash, row.Action, jsonData, query, sqlValues); err != nil {
 				db.Log.Info("msg", "Error inserting into log", "err", err)
 				break loop // exits from all loops -> continue in close log stmt
 			}
