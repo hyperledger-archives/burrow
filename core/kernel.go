@@ -125,7 +125,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 				kern.State.Hash(), kern.Blockchain.AppHashAfterLastBlock())
 		}
 		if restore != "" {
-			return nil, fmt.Errorf("Cannot restore onto existing chain; don't give --restore argument")
+			return nil, fmt.Errorf("Cannot restore onto existing chain; don't give --restore-dump argument")
 		}
 	} else {
 		kern.State, err = state.MakeGenesisState(stateDB, genesisDoc)
@@ -134,10 +134,24 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 		}
 
 		if restore != "" {
-			err = kern.State.LoadDump(restore)
-			if err != nil {
-				return nil, fmt.Errorf("failed to restore from %s: %v", restore, err)
+			if genesisDoc.AppHash == "" {
+				return nil, fmt.Errorf("AppHash is required when restoring chain")
 			}
+
+			reader, err := state.NewFileDumpReader(restore)
+			if err != nil {
+				return nil, err
+			}
+
+			err = kern.State.LoadDump(reader)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		err = kern.State.InitialCommit()
+		if err != nil {
+			return nil, err
 		}
 
 		if genesisDoc.AppHash != "" {
@@ -147,10 +161,11 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 			}
 
 			if !bytes.Equal(hash, kern.State.Hash()) {
-				return nil, fmt.Errorf("AppHash does not match, got AppHash 0x%X expected 0x%s", kern.State.Hash(), genesisDoc.AppHash)
+				return nil, fmt.Errorf("AppHash does not match, got AppHash 0x%X expected 0x%s. Is the correct --restore-dump specified?", kern.State.Hash(), genesisDoc.AppHash)
 			}
 		}
 	}
+
 	kern.Logger.InfoMsg("State loading successful")
 
 	txCodec := txs.NewAminoCodec()

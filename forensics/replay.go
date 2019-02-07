@@ -134,6 +134,10 @@ func (re *Replay) Blocks(startHeight, endHeight uint64) ([]*ReplayCapture, error
 		if err != nil {
 			return nil, err
 		}
+		err = st.InitialCommit()
+		if err != nil {
+			return nil, err
+		}
 	}
 	recaps := make([]*ReplayCapture, 0, endHeight-startHeight+1)
 	for height := startHeight; height < endHeight; height++ {

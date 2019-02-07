@@ -3,6 +3,7 @@ syntax = 'proto3';
 option go_package = "github.com/hyperledger/burrow/dump";
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "google/protobuf/timestamp.proto";
 
 import "acm.proto";
 import "exec.proto";
@@ -31,11 +32,21 @@ message AccountStorage {
     repeated Storage Storage = 2;
 }
 
+message EVMEvent {
+    // The original ChainID from for this event
+    string ChainID = 1;
+    // The original block time for this transaction
+    google.protobuf.Timestamp Time = 2 [(gogoproto.nullable)=false, (gogoproto.stdtime)=true];
+    // The event itself
+    exec.LogEvent Event = 3; 
+
+}
+
 message Dump {
     uint64 Height = 1;
 
     acm.Account Account = 2;
     AccountStorage AccountStorage = 3;
-    exec.LogEvent EVMEvent = 4; 
+    EVMEvent EVMEvent = 4;
     names.Entry Name = 5;
 }

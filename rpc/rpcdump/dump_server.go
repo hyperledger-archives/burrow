@@ -1,6 +1,8 @@
 package rpcdump
 
 import (
+	"time"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
@@ -86,13 +88,29 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 		return err
 	}
 
+	var blockTime time.Time
+
 	return ds.state.IterateStreamEvents(0, height, func(ev *exec.StreamEvent) error {
-		if ev.TxExecution == nil {
+		if ev.BeginBlock != nil {
+			blockTime = ev.BeginBlock.Header.GetTime()
+		}
+		txe := ev.TxExecution
+		if txe == nil {
 			return nil
 		}
 		for _, event := range ev.TxExecution.Events {
 			if event.Log != nil {
-				err := stream.Send(&dump.Dump{Height: event.Header.Height, EVMEvent: event.Log})
+				evmevent := dump.EVMEvent{Event: event.Log}
+				if txe.Origin != nil {
+					// this event was already restored
+					evmevent.ChainID = txe.Origin.ChainID
+					evmevent.Time = txe.Origin.Time
+				} else {
+					// this event was generated on this chain
+					evmevent.ChainID = ds.blockchain.ChainID()
+					evmevent.Time = blockTime
+				}
+				err := stream.Send(&dump.Dump{Height: event.Header.Height, EVMEvent: &evmevent})
 				if err != nil {
 					return err
 				}
