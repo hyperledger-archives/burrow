@@ -7,9 +7,9 @@ import (
 )
 
 // SpecLoader loads spec files and parses them
-func SpecLoader(specDir, specFile string, createBlkTxTables bool) (*Parser, error) {
+func SpecLoader(specDir, specFile string, createBlkTxTables bool) (*Projection, error) {
 
-	var parser *Parser
+	var projection *Projection
 	var err error
 
 	if specDir == "" && specFile == "" {
@@ -21,12 +21,12 @@ func SpecLoader(specDir, specFile string, createBlkTxTables bool) (*Parser, erro
 	}
 
 	if specDir != "" {
-		parser, err = NewParserFromFolder(specDir)
+		projection, err = NewProjectionFromFolder(specDir)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error parsing spec config folder")
 		}
 	} else {
-		parser, err = NewParserFromFile(specFile)
+		projection, err = NewProjectionFromFile(specFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error parsing spec config file")
 		}
@@ -37,12 +37,12 @@ func SpecLoader(specDir, specFile string, createBlkTxTables bool) (*Parser, erro
 		blkTxTables := getBlockTxTablesDefinition()
 
 		for k, v := range blkTxTables {
-			parser.Tables[k] = v
+			projection.Tables[k] = v
 		}
 
 	}
 
-	return parser, nil
+	return projection, nil
 }
 
 // getBlockTxTablesDefinition returns block & transaction structures

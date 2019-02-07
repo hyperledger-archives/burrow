@@ -10,12 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewParser(t *testing.T) {
+func TestNewProjection(t *testing.T) {
 	t.Run("returns an error if the json is malformed", func(t *testing.T) {
 		badJSON := test.BadJSONConfFile(t)
 
 		byteValue := []byte(badJSON)
-		_, err := sqlsol.NewParserFromBytes(byteValue)
+		_, err := sqlsol.NewProjectionFromBytes(byteValue)
 		require.Error(t, err)
 	})
 
@@ -23,7 +23,7 @@ func TestNewParser(t *testing.T) {
 		missingFields := test.MissingFieldsJSONConfFile(t)
 
 		byteValue := []byte(missingFields)
-		_, err := sqlsol.NewParserFromBytes(byteValue)
+		_, err := sqlsol.NewProjectionFromBytes(byteValue)
 		require.Error(t, err)
 	})
 
@@ -31,7 +31,7 @@ func TestNewParser(t *testing.T) {
 		goodJSON := test.GoodJSONConfFile(t)
 
 		byteValue := []byte(goodJSON)
-		tableStruct, err := sqlsol.NewParserFromBytes(byteValue)
+		tableStruct, err := sqlsol.NewProjectionFromBytes(byteValue)
 		require.NoError(t, err)
 
 		// columns map
@@ -66,7 +66,7 @@ func TestNewParser(t *testing.T) {
 		typeUnknownJSON := test.UnknownTypeJSONConfFile(t)
 
 		byteValue := []byte(typeUnknownJSON)
-		_, err := sqlsol.NewParserFromBytes(byteValue)
+		_, err := sqlsol.NewProjectionFromBytes(byteValue)
 		require.Error(t, err)
 	})
 
@@ -74,7 +74,7 @@ func TestNewParser(t *testing.T) {
 		duplicatedColNameJSON := test.DuplicatedColNameJSONConfFile(t)
 
 		byteValue := []byte(duplicatedColNameJSON)
-		_, err := sqlsol.NewParserFromBytes(byteValue)
+		_, err := sqlsol.NewProjectionFromBytes(byteValue)
 		require.Error(t, err)
 	})
 
@@ -84,7 +84,7 @@ func TestGetColumn(t *testing.T) {
 	goodJSON := test.GoodJSONConfFile(t)
 
 	byteValue := []byte(goodJSON)
-	tableStruct, _ := sqlsol.NewParserFromBytes(byteValue)
+	tableStruct, _ := sqlsol.NewProjectionFromBytes(byteValue)
 
 	t.Run("successfully gets the mapping column info for a given table & column name", func(t *testing.T) {
 		column, err := tableStruct.GetColumn("TEST_TABLE", "blocknum")
@@ -116,7 +116,7 @@ func TestGetTables(t *testing.T) {
 	goodJSON := test.GoodJSONConfFile(t)
 
 	byteValue := []byte(goodJSON)
-	tableStruct, _ := sqlsol.NewParserFromBytes(byteValue)
+	tableStruct, _ := sqlsol.NewProjectionFromBytes(byteValue)
 
 	t.Run("successfully returns event tables structures", func(t *testing.T) {
 		tables := tableStruct.GetTables()
@@ -131,7 +131,7 @@ func TestGetEventSpec(t *testing.T) {
 	goodJSON := test.GoodJSONConfFile(t)
 
 	byteValue := []byte(goodJSON)
-	tableStruct, _ := sqlsol.NewParserFromBytes(byteValue)
+	tableStruct, _ := sqlsol.NewProjectionFromBytes(byteValue)
 
 	t.Run("successfully returns event specification structures", func(t *testing.T) {
 		eventSpec := tableStruct.GetEventSpec()

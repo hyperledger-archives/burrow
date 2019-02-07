@@ -47,8 +47,7 @@ func NewConsumer(cfg *config.Flags, log *logger.Logger, eChannel chan types.Even
 // Run connects to a grpc service and subscribes to log events,
 // then gets tables structures, maps them & parse event data.
 // Store data in SQL event tables, it runs forever
-func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool) error {
-
+func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stream bool) error {
 	var err error
 
 	c.Log.Info("msg", "Connecting to Burrow gRPC server")
@@ -67,8 +66,8 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 	}
 
 	// obtain tables structures, event & abi specifications
-	tables := parser.GetTables()
-	eventSpec := parser.GetEventSpec()
+	tables := projection.GetTables()
+	eventSpec := projection.GetEventSpec()
 
 	if len(eventSpec) == 0 {
 		c.Log.Info("msg", "No events specifications found")
@@ -92,7 +91,7 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 	}
 	defer c.DB.Close()
 
-	c.Log.Info("msg", "Synchronizing config and database parser structures")
+	c.Log.Info("msg", "Synchronizing config and database projection structures")
 
 	err = c.DB.SynchronizeDB(tables)
 	if err != nil {
@@ -215,7 +214,7 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 								c.Log.Info("msg", fmt.Sprintf("Matched event header: %v", event.Header), "filter", spec.Filter)
 
 								// unpack, decode & build event data
-								eventData, err := buildEventData(spec, parser, event, abiSpec, c.Log)
+								eventData, err := buildEventData(spec, projection, event, abiSpec, c.Log)
 								if err != nil {
 									doneCh <- errors.Wrapf(err, "Error building event data")
 								}

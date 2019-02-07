@@ -16,35 +16,35 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Parser contains EventTable, Event & Abi specifications
-type Parser struct {
+// Projection contains EventTable, Event & Abi specifications
+type Projection struct {
 	Tables    types.EventTables
 	EventSpec types.EventSpec
 }
 
-// NewParserFromBytes creates a Parser from a stream of bytes
-func NewParserFromBytes(bytes []byte) (*Parser, error) {
+// NewProjectionFromBytes creates a Projection from a stream of bytes
+func NewProjectionFromBytes(bytes []byte) (*Projection, error) {
 	eventSpec := types.EventSpec{}
 
 	if err := json.Unmarshal(bytes, &eventSpec); err != nil {
 		return nil, errors.Wrap(err, "Error unmarshalling eventSpec")
 	}
 
-	return NewParserFromEventSpec(eventSpec)
+	return NewProjectionFromEventSpec(eventSpec)
 }
 
-// NewParserFromFile creates a Parser from a file
-func NewParserFromFile(file string) (*Parser, error) {
+// NewProjectionFromFile creates a Projection from a file
+func NewProjectionFromFile(file string) (*Projection, error) {
 	bytes, err := readFile(file)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error reading eventSpec file")
 	}
 
-	return NewParserFromBytes(bytes)
+	return NewProjectionFromBytes(bytes)
 }
 
-// NewParserFromFolder creates a Parser from a folder containing spec files
-func NewParserFromFolder(folder string) (*Parser, error) {
+// NewProjectionFromFolder creates a Projection from a folder containing spec files
+func NewProjectionFromFolder(folder string) (*Projection, error) {
 	eventSpec := types.EventSpec{}
 
 	err := filepath.Walk(folder, func(path string, _ os.FileInfo, err error) error {
@@ -69,14 +69,14 @@ func NewParserFromFolder(folder string) (*Parser, error) {
 		return nil, errors.Wrap(err, "Error reading eventSpec folder")
 	}
 
-	return NewParserFromEventSpec(eventSpec)
+	return NewProjectionFromEventSpec(eventSpec)
 }
 
-// NewParserFromEventSpec receives a sqlsol event specification
-// and returns a pointer to a filled parser structure
+// NewProjectionFromEventSpec receives a sqlsol event specification
+// and returns a pointer to a filled projection structure
 // that contains event types mapped to SQL column types
 // and Event tables structures with table and columns info
-func NewParserFromEventSpec(eventSpec types.EventSpec) (*Parser, error) {
+func NewProjectionFromEventSpec(eventSpec types.EventSpec) (*Projection, error) {
 	// builds abi information from specification
 	tables := make(types.EventTables)
 
@@ -136,24 +136,24 @@ func NewParserFromEventSpec(eventSpec types.EventSpec) (*Parser, error) {
 		}
 	}
 
-	return &Parser{
+	return &Projection{
 		Tables:    tables,
 		EventSpec: eventSpec,
 	}, nil
 }
 
 // GetEventSpec returns the event specification
-func (p *Parser) GetEventSpec() types.EventSpec {
+func (p *Projection) GetEventSpec() types.EventSpec {
 	return p.EventSpec
 }
 
 // GetTables returns the event tables structures
-func (p *Parser) GetTables() types.EventTables {
+func (p *Projection) GetTables() types.EventTables {
 	return p.Tables
 }
 
 // GetColumn receives a table & column name and returns column info
-func (p *Parser) GetColumn(tableName, columnName string) (types.SQLTableColumn, error) {
+func (p *Projection) GetColumn(tableName, columnName string) (types.SQLTableColumn, error) {
 	column := types.SQLTableColumn{}
 
 	if table, ok := p.Tables[tableName]; ok {

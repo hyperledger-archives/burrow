@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// GoodJSONConfFile sets a good json file to be used in parser tests
+// GoodJSONConfFile sets a good json file to be used in projection tests
 func GoodJSONConfFile(t *testing.T) string {
 	t.Helper()
 
@@ -36,7 +36,7 @@ func GoodJSONConfFile(t *testing.T) string {
 	return goodJSONConfFile
 }
 
-// MissingFieldsJSONConfFile sets a json file with missing fields to be used in parser tests
+// MissingFieldsJSONConfFile sets a json file with missing fields to be used in projection tests
 func MissingFieldsJSONConfFile(t *testing.T) string {
 	t.Helper()
 
@@ -53,7 +53,7 @@ func MissingFieldsJSONConfFile(t *testing.T) string {
 	return missingFieldsJSONConfFile
 }
 
-// UnknownTypeJSONConfFile sets a json file with unknown column types to be used in parser tests
+// UnknownTypeJSONConfFile sets a json file with unknown column types to be used in projection tests
 func UnknownTypeJSONConfFile(t *testing.T) string {
 	t.Helper()
 
@@ -117,7 +117,7 @@ func UnknownTypeJSONConfFile(t *testing.T) string {
 	return unknownTypeJSONConfFile
 }
 
-// BadJSONConfFile sets a malformed json file to be used in parser tests
+// BadJSONConfFile sets a malformed json file to be used in projection tests
 func BadJSONConfFile(t *testing.T) string {
 	t.Helper()
 

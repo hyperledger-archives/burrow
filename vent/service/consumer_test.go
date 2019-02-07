@@ -138,7 +138,7 @@ func runConsumer(db *sqldb.SQLDB, cfg *config.Flags) (err error) {
 	log := logger.NewLogger("info")
 	consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
 
-	parser, err := sqlsol.SpecLoader("", cfg.SpecFile, cfg.DBBlockTx)
+	projection, err := sqlsol.SpecLoader("", cfg.SpecFile, cfg.DBBlockTx)
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func runConsumer(db *sqldb.SQLDB, cfg *config.Flags) (err error) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err = consumer.Run(parser, abiSpec, false)
+		err = consumer.Run(projection, abiSpec, false)
 	}()
 
 	// wait for block streams to start

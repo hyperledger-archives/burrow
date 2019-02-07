@@ -16,7 +16,7 @@ import (
 )
 
 // buildEventData builds event data from transactions
-func buildEventData(spec types.EventDefinition, parser *sqlsol.Parser, event *exec.Event, abiSpec *abi.AbiSpec, l *logger.Logger) (types.EventDataRow, error) {
+func buildEventData(spec types.EventDefinition, projection *sqlsol.Projection, event *exec.Event, abiSpec *abi.AbiSpec, l *logger.Logger) (types.EventDataRow, error) {
 
 	// a fresh new row to store column/value data
 	row := make(map[string]interface{})
@@ -59,7 +59,7 @@ func buildEventData(spec types.EventDefinition, parser *sqlsol.Parser, event *ex
 				}
 			}
 		}
-		if column, err := parser.GetColumn(spec.TableName, k); err == nil {
+		if column, err := projection.GetColumn(spec.TableName, k); err == nil {
 			if column.BytesToString {
 				if bs, ok := v.(*[]byte); ok {
 					str := sanitiseBytesForString(*bs, l)

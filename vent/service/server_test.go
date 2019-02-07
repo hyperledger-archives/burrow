@@ -36,14 +36,14 @@ func TestServer(t *testing.T) {
 	log := logger.NewLogger(cfg.LogLevel)
 	consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
 
-	parser, err := sqlsol.SpecLoader("", cfg.SpecFile, false)
+	projection, err := sqlsol.SpecLoader("", cfg.SpecFile, false)
 	abiSpec, err := sqlsol.AbiLoader("", cfg.AbiFile)
 
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
-		err := consumer.Run(parser, abiSpec, true)
+		err := consumer.Run(projection, abiSpec, true)
 		require.NoError(t, err)
 
 		wg.Done()

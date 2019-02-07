@@ -33,7 +33,7 @@ func NewTestDB(t *testing.T, cfg *config.Flags) (*sqldb.SQLDB, func()) {
 	connection := types.SQLConnection{
 		DBAdapter:     cfg.DBAdapter,
 		DBURL:         cfg.DBURL,
-		Log:           logger.NewLogger("debug"),
+		Log:           logger.NewLogger(""),
 		ChainID:       "ID 0123",
 		BurrowVersion: "Version 0.0",
 	}
@@ -61,7 +61,7 @@ func NewTestDB(t *testing.T, cfg *config.Flags) (*sqldb.SQLDB, func()) {
 			os.Remove(connection.DBURL + "-shm")
 			os.Remove(connection.DBURL + "-wal")
 		} else {
-			destroySchema(db, connection.DBSchema)
+			//destroySchema(db, connection.DBSchema)
 			db.Close()
 		}
 	}
