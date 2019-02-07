@@ -137,7 +137,9 @@ func TestSendFails(t *testing.T) {
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)
 	genDoc.Accounts[2].Permissions.Base.Set(permission.Call, true)
 	genDoc.Accounts[3].Permissions.Base.Set(permission.CreateContract, true)
-	st, err := state.MakeGenesisState(stateDB, &genDoc, nil)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
+	err = st.InitialCommit()
 	require.NoError(t, err)
 	exe := makeExecutor(st)
 
@@ -194,7 +196,9 @@ func TestName(t *testing.T) {
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Name, true)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Input, true)
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Input, true)
-	st, err := state.MakeGenesisState(stateDB, &genDoc, nil)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
+	err = st.InitialCommit()
 	require.NoError(t, err)
 	exe := makeExecutor(st)
 
@@ -226,7 +230,9 @@ func TestCallFails(t *testing.T) {
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Send, true)
 	genDoc.Accounts[2].Permissions.Base.Set(permission.Call, true)
 	genDoc.Accounts[3].Permissions.Base.Set(permission.CreateContract, true)
-	st, err := state.MakeGenesisState(stateDB, &genDoc, nil)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
+	err = st.InitialCommit()
 	require.NoError(t, err)
 	exe := makeExecutor(st)
 
@@ -280,7 +286,9 @@ func TestSendPermission(t *testing.T) {
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Send, true)  // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Input, true) // give the 0 account permission
-	st, err := state.MakeGenesisState(stateDB, &genDoc, nil)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
+	err = st.InitialCommit()
 	require.NoError(t, err)
 	exe := makeExecutor(st)
 
@@ -308,7 +316,9 @@ func TestCallPermission(t *testing.T) {
 	genDoc := newBaseGenDoc(permission.ZeroAccountPermissions, permission.ZeroAccountPermissions)
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true)  // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Input, true) // give the 0 account permission
-	st, err := state.MakeGenesisState(stateDB, &genDoc, nil)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
+	err = st.InitialCommit()
 	require.NoError(t, err)
 	exe := makeExecutor(st)
 
@@ -424,7 +434,9 @@ func TestCreatePermission(t *testing.T) {
 	genDoc.Accounts[0].Permissions.Base.Set(permission.CreateContract, true) // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Call, true)           // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Input, true)          // give the 0 account permission
-	st, err := state.MakeGenesisState(stateDB, &genDoc, nil)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
+	err = st.InitialCommit()
 	require.NoError(t, err)
 	exe := makeExecutor(st)
 
@@ -540,7 +552,9 @@ func TestCreateAccountPermission(t *testing.T) {
 	genDoc.Accounts[0].Permissions.Base.Set(permission.CreateAccount, true) // give the 0 account permission
 	genDoc.Accounts[0].Permissions.Base.Set(permission.Input, true)         // give the 0 account permission
 	genDoc.Accounts[1].Permissions.Base.Set(permission.Input, true)         // give the 0 account permission
-	st, err := state.MakeGenesisState(stateDB, &genDoc, nil)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
+	err = st.InitialCommit()
 	require.NoError(t, err)
 	exe := makeExecutor(st)
 
@@ -675,7 +689,9 @@ func TestSNativeCALL(t *testing.T) {
 	genDoc.Accounts[3].Permissions.AddRole("bumble")
 	genDoc.Accounts[3].Permissions.AddRole("bee")
 
-	st, err := state.MakeGenesisState(stateDB, &genDoc, nil)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
+	err = st.InitialCommit()
 	require.NoError(t, err)
 	exe := makeExecutor(st)
 
@@ -816,7 +832,9 @@ func TestSNativeTx(t *testing.T) {
 	genDoc.Accounts[3].Permissions.Base.Set(permission.Bond, true) // some arbitrary permission to play with
 	genDoc.Accounts[3].Permissions.AddRole("bumble")
 	genDoc.Accounts[3].Permissions.AddRole("bee")
-	st, err := state.MakeGenesisState(stateDB, &genDoc, nil)
+	st, err := state.MakeGenesisState(stateDB, &genDoc)
+	require.NoError(t, err)
+	err = st.InitialCommit()
 	require.NoError(t, err)
 	batchCommitter := makeExecutor(st)
 
@@ -923,7 +941,9 @@ func TestTxSequence(t *testing.T) {
 }
 
 func TestNameTxs(t *testing.T) {
-	st, err := state.MakeGenesisState(dbm.NewMemDB(), testGenesisDoc, nil)
+	st, err := state.MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
+	require.NoError(t, err)
+	err = st.InitialCommit()
 	require.NoError(t, err)
 
 	names.MinNameRegistrationPeriod = 5
@@ -1528,9 +1548,13 @@ func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numV
 	minBonded int64) (*state.State, []*acm.PrivateAccount) {
 	testGenesisDoc, privAccounts, _ := deterministicGenesis.GenesisDoc(numAccounts, randBalance, minBalance,
 		numValidators, randBonded, minBonded)
-	s0, err := state.MakeGenesisState(dbm.NewMemDB(), testGenesisDoc, nil)
+	s0, err := state.MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
 	if err != nil {
 		panic(fmt.Errorf("could not make genesis state: %v", err))
+	}
+	err = s0.InitialCommit()
+	if err != nil {
+		panic(fmt.Errorf("could not commit genesis state: %v", err))
 	}
 	return s0, privAccounts
 }

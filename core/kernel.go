@@ -128,22 +128,30 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 			return nil, fmt.Errorf("Cannot restore onto existing chain; don't give --restore-dump argument")
 		}
 	} else {
-		var reader state.DumpReader
+		kern.State, err = state.MakeGenesisState(stateDB, genesisDoc)
+		if err != nil {
+			return nil, fmt.Errorf("could not build genesis state: %v", err)
+		}
 
 		if restore != "" {
 			if genesisDoc.AppHash == "" {
 				return nil, fmt.Errorf("AppHash is required when restoring chain")
 			}
 
-			reader, err = state.NewFileDumpReader(restore)
+			reader, err := state.NewFileDumpReader(restore)
+			if err != nil {
+				return nil, err
+			}
+
+			err = kern.State.LoadDump(reader)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		kern.State, err = state.MakeGenesisState(stateDB, genesisDoc, reader)
+		err = kern.State.InitialCommit()
 		if err != nil {
-			return nil, fmt.Errorf("could not build genesis state: %v", err)
+			return nil, err
 		}
 
 		if genesisDoc.AppHash != "" {

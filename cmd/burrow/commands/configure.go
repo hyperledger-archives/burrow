@@ -225,9 +225,19 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("Failed to read restore dump: %v", err)
 				}
 
-				st, err := state.MakeGenesisState(db.NewMemDB(), conf.GenesisDoc, reader)
+				st, err := state.MakeGenesisState(db.NewMemDB(), conf.GenesisDoc)
 				if err != nil {
 					output.Fatalf("could not generate state from genesis: %v", err)
+				}
+
+				err = st.LoadDump(reader)
+				if err != nil {
+					output.Fatalf("could not restore dump %s: %v", *restoreDumpOpt, err)
+				}
+
+				err = st.InitialCommit()
+				if err != nil {
+					output.Fatalf("could not commit: %v", err)
 				}
 
 				conf.GenesisDoc.AppHash = hex.EncodeUpperToString(st.Hash())

@@ -130,7 +130,7 @@ func NewState(db dbm.DB) *State {
 }
 
 // Make genesis state from GenesisDoc and save to DB
-func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc, restore DumpReader) (*State, error) {
+func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error) {
 	s := NewState(db)
 
 	const errHeader = "MakeGenesisState():"
@@ -170,22 +170,19 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc, restore DumpRea
 		return nil, fmt.Errorf("%s %v", errHeader, err)
 	}
 
-	if restore != nil {
-		err = s.LoadDump(restore)
-		if err != nil {
-			return nil, fmt.Errorf("failed to restore from %s: %v", restore, err)
-		}
-	}
+	return s, nil
+}
 
+func (s *State) InitialCommit() error {
 	_, version, err := s.commit()
 	if err != nil {
-		return nil, fmt.Errorf("%s could not save genesis state: %v", errHeader, err)
+		return fmt.Errorf("could not save initial state: %v", err)
 	}
 	if version != VersionOffset {
-		return nil, fmt.Errorf("%s got version %d after committing genesis state but version offset should be %d",
-			errHeader, version, VersionOffset)
+		return fmt.Errorf("initial state got version %d after committing genesis state but version offset should be %d",
+			version, VersionOffset)
 	}
-	return s, nil
+	return nil
 }
 
 // Tries to load the execution state from DB, returns nil with no error if no state found

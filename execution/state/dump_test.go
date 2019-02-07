@@ -90,12 +90,16 @@ func (m *MockDumpReader) Next() (*dump.Dump, error) {
 func BenchmarkLoadDump(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		mock := MockDumpReader{
-			accounts: 629,
-			storage:  620,
+			accounts: 2000,
+			storage:  1000,
 			names:    100,
-			events:   9990,
+			events:   100000,
 		}
-		_, err := MakeGenesisState(dbm.NewMemDB(), &genesis.GenesisDoc{}, &mock)
+		st, err := MakeGenesisState(dbm.NewMemDB(), &genesis.GenesisDoc{})
+		require.NoError(b, err)
+		err = st.LoadDump(&mock)
+		require.NoError(b, err)
+		err = st.InitialCommit()
 		require.NoError(b, err)
 	}
 }
