@@ -10,10 +10,10 @@ type EventSpec []EventDefinition
 
 // EventDefinition struct (table name where to persist filtered events and it structure)
 type EventDefinition struct {
-	TableName    string                 `json:"TableName"`
-	Filter       string                 `json:"Filter"`
-	DeleteFilter string                 `json:"DeleteFilter"`
-	Columns      map[string]EventColumn `json:"Columns"`
+	TableName    string
+	Filter       string
+	DeleteFilter string
+	Columns      map[string]EventColumn
 	query        query.Query
 }
 
@@ -40,10 +40,10 @@ func (evDef EventDefinition) Query() (query.Query, error) {
 
 // EventColumn struct (table column definition)
 type EventColumn struct {
-	Name          string `json:"name"`
-	Type          string `json:"type"`
-	Primary       bool   `json:"primary"`
-	BytesToString bool   `json:"bytesToString"`
+	Name          string
+	Type          string
+	Primary       bool
+	BytesToString bool
 }
 
 // Validate checks the structure of an EventColumn

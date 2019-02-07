@@ -1,20 +1,41 @@
 [
   {
-    "TableName" : "EventTest",
-    "Filter" : "EventType = 'LogEvent'",
+    "TableName": "EventTest",
+    "Filter": "EventType = 'LogEvent'",
     "DeleteFilter": "CRUD_ACTION = 'delete'",
-    "Columns"  : {
-      "key" : {"name" : "testkey", "type": "bytes32", "primary" : true},
-      "name" : {"name" : "testname", "type": "bytes32", "primary" : true, "bytesToString": true},
-      "description": {"name" : "testdescription", "type": "bytes32", "primary" : false}
+    "Columns": {
+      "key": {
+        "Name": "testkey",
+        "Type": "bytes32",
+        "Primary": true
+      },
+      "name": {
+        "Name": "testname",
+        "Type": "bytes32",
+        "Primary": true,
+        "BytesToString": true
+      },
+      "description": {
+        "Name": "testdescription",
+        "Type": "bytes32",
+        "Primary": false
+      }
     }
   },
   {
-    "TableName" : "UserAccounts",
-    "Filter" : "LOG1 = 'UserAccounts'",
-    "Columns"  : {
-      "userAddress" : {"name" : "address", "type": "address", "primary" : true},
-      "userName": {"name" : "username", "type": "string", "primary" : false}
+    "TableName": "UserAccounts",
+    "Filter": "LOG1 = 'UserAccounts'",
+    "Columns": {
+      "userAddress": {
+        "Name": "address",
+        "Type": "address",
+        "Primary": true
+      },
+      "userName": {
+        "Name": "username",
+        "Type": "string",
+        "Primary": false
+      }
     }
   }
 ]
