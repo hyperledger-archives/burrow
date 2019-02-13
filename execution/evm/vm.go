@@ -880,7 +880,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 				case STATICCALL:
 					childCallState = callState.NewCache(acmstate.ReadOnly)
 					returnData, callErr = vm.delegateCall(childCallState, NewLogFreeEventSink(eventSink),
-						caller, callee, callState.GetCode(address), args, value, &gasLimit, exec.CallTypeStatic)
+						callee, address, callState.GetCode(address), args, value, &gasLimit, exec.CallTypeStatic)
 
 				default:
 					panic(fmt.Errorf("switch statement should be exhaustive so this should not have been reached"))
