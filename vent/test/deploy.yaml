@@ -1,0 +1,55 @@
+jobs:
+
+- name: deployEventsTest
+  deploy:
+      contract: EventsTest.sol
+
+- name: add
+  call:
+      destination: $deployEventsTest
+      function: addThing
+      data:
+        - foosball!
+        - "the foo"
+
+- name: getDesc
+  call:
+      destination: $deployEventsTest
+      function: description
+      data:
+        - foosball!
+
+- name: getLength
+  call:
+    destination: $deployEventsTest
+    function: count
+
+- name: assertLength
+  assert:
+    key: $getLength
+    relation: eq
+    val: 1
+
+- name: assertRetrieved
+  assert:
+    key: $getDesc
+    relation: eq
+    val: the foo
+
+- name: removeEvent
+  call:
+    destination: $deployEventsTest
+    function: removeThing
+    data:
+      - foosball!
+
+- name: getLength2
+  call:
+    destination: $deployEventsTest
+    function: count
+
+- name: assertEmpty
+  assert:
+    key: $getLength2
+    relation: eq
+    val: 0

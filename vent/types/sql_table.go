@@ -7,7 +7,7 @@ import (
 // SQLTable contains the structure of a SQL table,
 type SQLTable struct {
 	Name    string
-	Columns map[string]SQLTableColumn
+	Columns map[string]*SQLTableColumn
 	// Map of channel name -> columns to be sent as payload on that channel
 	NotifyChannels map[string][]string
 }
@@ -22,7 +22,7 @@ type SQLTableColumn struct {
 	Order   int
 }
 
-func (col SQLTableColumn) String() string {
+func (col *SQLTableColumn) String() string {
 	primaryString := ""
 	if col.Primary {
 		primaryString = " (primary)"
@@ -98,7 +98,6 @@ const (
 	// block related
 	BlockHeightLabel = "height"
 	BlockHeaderLabel = "blockHeader"
-	BlockTxExecLabel = "txExecutions"
 
 	// transaction related
 	TxTxTypeLabel    = "txType"

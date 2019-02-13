@@ -54,7 +54,7 @@ func (adapter *PostgresAdapter) Open(dbURL string) (*sql.DB, error) {
 
 		var found bool
 
-		query := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_namespace n WHERE n.nspname = '%s');`, adapter.Schema)
+		query := Cleanf(`SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_namespace n WHERE n.nspname = '%s');`, adapter.Schema)
 		adapter.Log.Info("msg", "FIND SCHEMA", "query", query)
 
 		if err := db.QueryRow(query).Scan(&found); err == nil {
@@ -63,7 +63,7 @@ func (adapter *PostgresAdapter) Open(dbURL string) (*sql.DB, error) {
 			}
 			adapter.Log.Info("msg", "Creating schema")
 
-			query = fmt.Sprintf("CREATE SCHEMA %s;", adapter.Schema)
+			query = Cleanf("CREATE SCHEMA %s;", adapter.Schema)
 			adapter.Log.Info("msg", "CREATE SCHEMA", "query", query)
 
 			if _, err = db.Exec(query); err != nil {
@@ -104,9 +104,9 @@ func (adapter *PostgresAdapter) CreateTableQuery(tableName string, columns []typ
 	primaryKey := ""
 	dictionaryValues := ""
 
-	for i, tableColumn := range columns {
-		secureColumn := adapter.SecureName(tableColumn.Name)
-		sqlType, _ := adapter.TypeMapping(tableColumn.Type)
+	for i, column := range columns {
+		secureColumn := adapter.SecureName(column.Name)
+		sqlType, _ := adapter.TypeMapping(column.Type)
 		pKey := 0
 
 		if columnsDef != "" {
@@ -114,13 +114,13 @@ func (adapter *PostgresAdapter) CreateTableQuery(tableName string, columns []typ
 			dictionaryValues += ", "
 		}
 
-		columnsDef += fmt.Sprintf("%s %s", secureColumn, sqlType)
+		columnsDef += Cleanf("%s %s", secureColumn, sqlType)
 
-		if tableColumn.Length > 0 {
-			columnsDef += fmt.Sprintf("(%v)", tableColumn.Length)
+		if column.Length > 0 {
+			columnsDef += Cleanf("(%v)", column.Length)
 		}
 
-		if tableColumn.Primary {
+		if column.Primary {
 			pKey = 1
 			columnsDef += " NOT NULL"
 			if primaryKey != "" {
@@ -129,24 +129,22 @@ func (adapter *PostgresAdapter) CreateTableQuery(tableName string, columns []typ
 			primaryKey += secureColumn
 		}
 
-		dictionaryValues += fmt.Sprintf("('%s','%s',%d,%d,%d,%d)",
+		dictionaryValues += Cleanf("('%s','%s',%d,%d,%d,%d)",
 			tableName,
-			tableColumn.Name,
-			tableColumn.Type,
-			tableColumn.Length,
+			column.Name,
+			column.Type,
+			column.Length,
 			pKey,
 			i)
 	}
 
-	secureTable := adapter.SecureName(tableName)
-
-	query := fmt.Sprintf("CREATE TABLE %s.%s (%s", adapter.Schema, secureTable, columnsDef)
+	query := Cleanf("CREATE TABLE %s.%s (%s", adapter.Schema, adapter.SecureName(tableName), columnsDef)
 	if primaryKey != "" {
-		query += "," + fmt.Sprintf("CONSTRAINT %s_pkey PRIMARY KEY (%s)", tableName, primaryKey)
+		query += "," + Cleanf("CONSTRAINT %s_pkey PRIMARY KEY (%s)", tableName, primaryKey)
 	}
 	query += ");"
 
-	dictionaryQuery := fmt.Sprintf("INSERT INTO %s.%s (%s,%s,%s,%s,%s,%s) VALUES %s;",
+	dictionaryQuery := Cleanf("INSERT INTO %s.%s (%s,%s,%s,%s,%s,%s) VALUES %s;",
 		adapter.Schema, types.SQLDictionaryTableName,
 		types.SQLColumnLabelTableName, types.SQLColumnLabelColumnName,
 		types.SQLColumnLabelColumnType, types.SQLColumnLabelColumnLength,
@@ -165,7 +163,7 @@ func (adapter *PostgresAdapter) LastBlockIDQuery() string {
 		SELECT COALESCE(%s, '0') AS %s
 			FROM ll LEFT OUTER JOIN %s.%s log ON (ll.%s = log.%s);`
 
-	return fmt.Sprintf(query,
+	return Cleanf(query,
 		types.SQLColumnLabelId,                // max
 		types.SQLColumnLabelId,                // as
 		adapter.Schema, types.SQLLogTableName, // from
@@ -180,7 +178,7 @@ func (adapter *PostgresAdapter) LastBlockIDQuery() string {
 func (adapter *PostgresAdapter) FindTableQuery() string {
 	query := "SELECT COUNT(*) found FROM %s.%s WHERE %s = $1;"
 
-	return fmt.Sprintf(query,
+	return Cleanf(query,
 		adapter.Schema, types.SQLDictionaryTableName, // from
 		types.SQLColumnLabelTableName) // where
 }
@@ -197,7 +195,7 @@ func (adapter *PostgresAdapter) TableDefinitionQuery() string {
 		ORDER BY
 			%s;`
 
-	return fmt.Sprintf(query,
+	return Cleanf(query,
 		types.SQLColumnLabelColumnName, types.SQLColumnLabelColumnType, // select
 		types.SQLColumnLabelColumnLength, types.SQLColumnLabelPrimaryKey, // select
 		adapter.Schema, types.SQLDictionaryTableName, // from
@@ -210,17 +208,16 @@ func (adapter *PostgresAdapter) TableDefinitionQuery() string {
 func (adapter *PostgresAdapter) AlterColumnQuery(tableName, columnName string, sqlColumnType types.SQLColumnType, length, order int) (string, string) {
 	sqlType, _ := adapter.TypeMapping(sqlColumnType)
 	if length > 0 {
-		sqlType = fmt.Sprintf("%s(%d)", sqlType, length)
+		sqlType = Cleanf("%s(%d)", sqlType, length)
 	}
 
-	secureTable := adapter.SecureName(tableName)
-	query := fmt.Sprintf("ALTER TABLE %s.%s ADD COLUMN %s %s;",
+	query := Cleanf("ALTER TABLE %s.%s ADD COLUMN %s %s;",
 		adapter.Schema,
-		secureTable,
+		adapter.SecureName(tableName),
 		adapter.SecureName(columnName),
 		sqlType)
 
-	dictionaryQuery := fmt.Sprintf(`
+	dictionaryQuery := Cleanf(`
 		INSERT INTO %s.%s (%s,%s,%s,%s,%s,%s)
 		VALUES ('%s','%s',%d,%d,%d,%d);`,
 
@@ -230,14 +227,18 @@ func (adapter *PostgresAdapter) AlterColumnQuery(tableName, columnName string, s
 		types.SQLColumnLabelColumnType, types.SQLColumnLabelColumnLength,
 		types.SQLColumnLabelPrimaryKey, types.SQLColumnLabelColumnOrder,
 
-		secureTable, columnName, sqlColumnType, length, 0, order)
+		tableName, columnName, sqlColumnType, length, 0, order)
 
 	return query, dictionaryQuery
 }
 
 // SelectRowQuery returns a query for selecting row values
 func (adapter *PostgresAdapter) SelectRowQuery(tableName, fields, indexValue string) string {
-	return fmt.Sprintf("SELECT %s FROM %s.%s WHERE %s = '%s';", fields, adapter.Schema, tableName, types.SQLColumnLabelHeight, indexValue)
+	return Cleanf("SELECT %s FROM %s.%s WHERE %s = '%s';",
+		fields,                                        // select
+		adapter.Schema, adapter.SecureName(tableName), // from
+		types.SQLColumnLabelHeight, indexValue, // where
+	)
 }
 
 // SelectLogQuery returns a query for selecting all tables involved in a block trn
@@ -245,7 +246,7 @@ func (adapter *PostgresAdapter) SelectLogQuery() string {
 	query := `
 		SELECT DISTINCT %s,%s FROM %s.%s l WHERE %s = $1;`
 
-	return fmt.Sprintf(query,
+	return Cleanf(query,
 		types.SQLColumnLabelTableName, types.SQLColumnLabelEventName, // select
 		adapter.Schema, types.SQLLogTableName, // from
 		types.SQLColumnLabelHeight) // where
@@ -257,7 +258,7 @@ func (adapter *PostgresAdapter) InsertLogQuery() string {
 		INSERT INTO %s.%s (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
 		VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6 ,$7, $8, $9);`
 
-	return fmt.Sprintf(query,
+	return Cleanf(query,
 		adapter.Schema, types.SQLLogTableName, // insert
 		//fields
 		types.SQLColumnLabelTimeStamp, types.SQLColumnLabelTableName, types.SQLColumnLabelEventName, types.SQLColumnLabelEventFilter,
@@ -302,8 +303,8 @@ func (adapter *PostgresAdapter) UpsertQuery(table types.SQLTable, row types.Even
 	i := 0
 
 	// for each column in table
-	for _, tableColumn := range table.Columns {
-		secureColumn := adapter.SecureName(tableColumn.Name)
+	for _, column := range table.Columns {
+		secureColumn := adapter.SecureName(column.Name)
 
 		i++
 
@@ -314,12 +315,12 @@ func (adapter *PostgresAdapter) UpsertQuery(table types.SQLTable, row types.Even
 			values += ", "
 		}
 		columns += secureColumn
-		insValues += "$" + fmt.Sprintf("%d", i)
+		insValues += "$" + Cleanf("%d", i)
 
 		//find data for column
-		if value, ok := row.RowData[tableColumn.Name]; ok {
+		if value, ok := row.RowData[column.Name]; ok {
 			//load hash value
-			if tableColumn.Name == types.SQLColumnLabelTxHash {
+			if column.Name == types.SQLColumnLabelTxHash {
 				txHash = value
 			}
 
@@ -328,16 +329,16 @@ func (adapter *PostgresAdapter) UpsertQuery(table types.SQLTable, row types.Even
 			pointers = append(pointers, &value)
 			values += fmt.Sprint(value)
 
-			if !tableColumn.Primary {
+			if !column.Primary {
 				// column is no PK
 				// add to update list
 				// INSERT........... ON CONFLICT......DO UPDATE (*updValues)
 				if updValues != "" {
 					updValues += ", "
 				}
-				updValues += secureColumn + " = $" + fmt.Sprintf("%d", i)
+				updValues += secureColumn + " = $" + Cleanf("%d", i)
 			}
-		} else if tableColumn.Primary {
+		} else if column.Primary {
 			// column NOT found (is null) and is PK
 			return types.UpsertDeleteQuery{}, nil, fmt.Errorf("error null primary key for column %s", secureColumn)
 		} else {
@@ -348,12 +349,13 @@ func (adapter *PostgresAdapter) UpsertQuery(table types.SQLTable, row types.Even
 		}
 	}
 
-	query := fmt.Sprintf("INSERT INTO %s.%s (%s) VALUES (%s) ", adapter.Schema, table.Name, columns, insValues)
+	query := Cleanf("INSERT INTO %s.%s (%s) VALUES (%s) ", adapter.Schema, adapter.SecureName(table.Name),
+		columns, insValues)
 
 	if updValues != "" {
-		query += fmt.Sprintf("ON CONFLICT ON CONSTRAINT %s_pkey DO UPDATE SET %s", table.Name, updValues)
+		query += Cleanf("ON CONFLICT ON CONSTRAINT %s_pkey DO UPDATE SET %s", table.Name, updValues)
 	} else {
-		query += fmt.Sprintf("ON CONFLICT ON CONSTRAINT %s_pkey DO NOTHING", table.Name)
+		query += Cleanf("ON CONFLICT ON CONSTRAINT %s_pkey DO NOTHING", table.Name)
 	}
 	query += ";"
 
@@ -368,13 +370,13 @@ func (adapter *PostgresAdapter) DeleteQuery(table types.SQLTable, row types.Even
 	i := 0
 
 	// for each column in table
-	for _, tableColumn := range table.Columns {
+	for _, column := range table.Columns {
 
 		//only PK for delete
-		if tableColumn.Primary {
+		if column.Primary {
 			i++
 
-			secureColumn := adapter.SecureName(tableColumn.Name)
+			secureColumn := adapter.SecureName(column.Name)
 
 			// WHERE ..........
 			if columns != "" {
@@ -382,10 +384,10 @@ func (adapter *PostgresAdapter) DeleteQuery(table types.SQLTable, row types.Even
 				values += ", "
 			}
 
-			columns += fmt.Sprintf("%s = $%d", secureColumn, i)
+			columns += Cleanf("%s = $%d", secureColumn, i)
 
 			//find data for column
-			if value, ok := row.RowData[tableColumn.Name]; ok {
+			if value, ok := row.RowData[column.Name]; ok {
 				// column found (not null)
 				// load values
 				pointers = append(pointers, &value)
@@ -402,13 +404,13 @@ func (adapter *PostgresAdapter) DeleteQuery(table types.SQLTable, row types.Even
 		return types.UpsertDeleteQuery{}, fmt.Errorf("error primary key not found for deletion")
 	}
 
-	query := fmt.Sprintf("DELETE FROM %s.%s WHERE %s;", adapter.Schema, table.Name, columns)
+	query := Cleanf("DELETE FROM %s.%s WHERE %s;", adapter.Schema, adapter.SecureName(table.Name), columns)
 
 	return types.UpsertDeleteQuery{Query: query, Values: values, Pointers: pointers}, nil
 }
 
 func (adapter *PostgresAdapter) RestoreDBQuery() string {
-	return fmt.Sprintf(`SELECT %s, %s, %s, %s FROM %s.%s 
+	return Cleanf(`SELECT %s, %s, %s, %s FROM %s.%s 
 								WHERE to_char(%s,'YYYY-MM-DD HH24:MI:SS')<=$1 
 								ORDER BY %s;`,
 		types.SQLColumnLabelTableName, types.SQLColumnLabelAction, types.SQLColumnLabelSqlStmt, types.SQLColumnLabelSqlValues,
@@ -420,7 +422,7 @@ func (adapter *PostgresAdapter) RestoreDBQuery() string {
 func (adapter *PostgresAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 
 	// Chain info
-	selectChainIDQry := fmt.Sprintf(`
+	selectChainIDQry := Cleanf(`
 		SELECT 
 		COUNT(*) REGISTERS,
 		COALESCE(MAX(%s),'') CHAINID,
@@ -429,17 +431,17 @@ func (adapter *PostgresAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 		types.SQLColumnLabelChainID, types.SQLColumnLabelBurrowVer,
 		adapter.Schema, types.SQLChainInfoTableName)
 
-	deleteChainIDQry := fmt.Sprintf(`
+	deleteChainIDQry := Cleanf(`
 		DELETE FROM %s.%s;`,
 		adapter.Schema, types.SQLChainInfoTableName)
 
-	insertChainIDQry := fmt.Sprintf(`
+	insertChainIDQry := Cleanf(`
 		INSERT INTO %s.%s (%s,%s) VALUES($1,$2)`,
 		adapter.Schema, types.SQLChainInfoTableName,
 		types.SQLColumnLabelChainID, types.SQLColumnLabelBurrowVer)
 
 	// Dictionary
-	selectDictionaryQry := fmt.Sprintf(`
+	selectDictionaryQry := Cleanf(`
 		SELECT DISTINCT %s 
 		FROM %s.%s 
  		WHERE %s
@@ -449,7 +451,7 @@ func (adapter *PostgresAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 		types.SQLColumnLabelTableName,
 		types.SQLLogTableName, types.SQLDictionaryTableName, types.SQLChainInfoTableName)
 
-	deleteDictionaryQry := fmt.Sprintf(`
+	deleteDictionaryQry := Cleanf(`
 		DELETE FROM %s.%s 
 		WHERE %s 
 		NOT IN ('%s','%s','%s');`,
@@ -458,7 +460,7 @@ func (adapter *PostgresAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 		types.SQLLogTableName, types.SQLDictionaryTableName, types.SQLChainInfoTableName)
 
 	// log
-	deleteLogQry := fmt.Sprintf(`
+	deleteLogQry := Cleanf(`
 		DELETE FROM %s.%s;`,
 		adapter.Schema, types.SQLLogTableName)
 
@@ -476,11 +478,11 @@ func (adapter *PostgresAdapter) DropTableQuery(tableName string) string {
 	// We cascade here to drop any associated views and triggers. We work under the assumption that vent
 	// owns its database and any users need to be able to recreate objects that depend on vent tables in the event of
 	// table drops
-	return fmt.Sprintf(`DROP TABLE %s.%s CASCADE;`, adapter.Schema, tableName)
+	return Cleanf(`DROP TABLE %s CASCADE;`, adapter.schemaName(tableName))
 }
 
 func (adapter *PostgresAdapter) CreateNotifyFunctionQuery(function, channel string, columns ...string) string {
-	return fmt.Sprintf(`CREATE OR REPLACE FUNCTION %s.%s() RETURNS trigger AS
+	return Cleanf(`CREATE OR REPLACE FUNCTION %s() RETURNS trigger AS
 		$trigger$
 		BEGIN
 			CASE TG_OP
@@ -495,21 +497,30 @@ func (adapter *PostgresAdapter) CreateNotifyFunctionQuery(function, channel stri
 		$trigger$
 		LANGUAGE 'plpgsql';
 		`,
-		adapter.Schema, function, // create function
+		adapter.schemaName(function),                                             // create function
 		channel, types.SQLColumnLabelAction, jsonBuildObjectArgs("OLD", columns), // case delete
 		channel, types.SQLColumnLabelAction, jsonBuildObjectArgs("NEW", columns), // case else
 	)
 }
 
 func (adapter *PostgresAdapter) CreateTriggerQuery(triggerName, tableName, functionName string) string {
-	return fmt.Sprintf(`CREATE TRIGGER %s AFTER INSERT OR UPDATE OR DELETE ON %s.%s
+	trigger := adapter.SecureName(triggerName)
+	table := adapter.schemaName(tableName)
+	return Cleanf(`DROP TRIGGER IF EXISTS %s ON %s CASCADE; 
+		CREATE TRIGGER %s AFTER INSERT OR UPDATE OR DELETE ON %s
 		FOR EACH ROW 
-		EXECUTE FUNCTION %s.%s();
+		EXECUTE FUNCTION %s();
 		`,
-		triggerName,
-		adapter.Schema, tableName,
-		adapter.Schema, functionName,
+		trigger,                          // drop
+		table,                            // on
+		trigger,                          // create
+		table,                            // on
+		adapter.schemaName(functionName), // function
 	)
+}
+
+func (adapter *PostgresAdapter) schemaName(tableName string) string {
+	return fmt.Sprintf("%s.%s", adapter.Schema, adapter.SecureName(tableName))
 }
 
 func secureName(columnName string) string {

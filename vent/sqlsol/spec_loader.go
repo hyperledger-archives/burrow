@@ -2,6 +2,7 @@ package sqlsol
 
 import (
 	"fmt"
+
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/vent/types"
 )
@@ -36,11 +37,11 @@ func SpecLoader(specFileOrDir string, createBlkTxTables bool) (*Projection, erro
 // getBlockTxTablesDefinition returns block & transaction structures
 func getBlockTxTablesDefinition() types.EventTables {
 	tables := make(types.EventTables)
-	blockCol := make(map[string]types.SQLTableColumn)
-	txCol := make(map[string]types.SQLTableColumn)
+	blockCol := make(map[string]*types.SQLTableColumn)
+	txCol := make(map[string]*types.SQLTableColumn)
 
 	// block table
-	blockCol[types.BlockHeightLabel] = types.SQLTableColumn{
+	blockCol[types.BlockHeightLabel] = &types.SQLTableColumn{
 		Name:    types.SQLColumnLabelHeight,
 		Type:    types.SQLColumnTypeVarchar,
 		Length:  100,
@@ -48,7 +49,7 @@ func getBlockTxTablesDefinition() types.EventTables {
 		Order:   1,
 	}
 
-	blockCol[types.BlockHeaderLabel] = types.SQLTableColumn{
+	blockCol[types.BlockHeaderLabel] = &types.SQLTableColumn{
 		Name:    types.SQLColumnLabelBlockHeader,
 		Type:    types.SQLColumnTypeJSON,
 		Primary: false,
@@ -56,7 +57,7 @@ func getBlockTxTablesDefinition() types.EventTables {
 	}
 
 	// transaction table
-	txCol[types.BlockHeightLabel] = types.SQLTableColumn{
+	txCol[types.BlockHeightLabel] = &types.SQLTableColumn{
 		Name:    types.SQLColumnLabelHeight,
 		Type:    types.SQLColumnTypeVarchar,
 		Length:  100,
@@ -64,7 +65,7 @@ func getBlockTxTablesDefinition() types.EventTables {
 		Order:   1,
 	}
 
-	txCol[types.TxTxHashLabel] = types.SQLTableColumn{
+	txCol[types.TxTxHashLabel] = &types.SQLTableColumn{
 		Name:    types.SQLColumnLabelTxHash,
 		Type:    types.SQLColumnTypeVarchar,
 		Length:  txs.HashLengthHex,
@@ -72,7 +73,7 @@ func getBlockTxTablesDefinition() types.EventTables {
 		Order:   2,
 	}
 
-	txCol[types.TxIndexLabel] = types.SQLTableColumn{
+	txCol[types.TxIndexLabel] = &types.SQLTableColumn{
 		Name:    types.SQLColumnLabelIndex,
 		Type:    types.SQLColumnTypeNumeric,
 		Length:  0,
@@ -80,7 +81,7 @@ func getBlockTxTablesDefinition() types.EventTables {
 		Order:   3,
 	}
 
-	txCol[types.TxTxTypeLabel] = types.SQLTableColumn{
+	txCol[types.TxTxTypeLabel] = &types.SQLTableColumn{
 		Name:    types.SQLColumnLabelTxType,
 		Type:    types.SQLColumnTypeVarchar,
 		Length:  100,
@@ -88,35 +89,35 @@ func getBlockTxTablesDefinition() types.EventTables {
 		Order:   4,
 	}
 
-	txCol[types.TxEnvelopeLabel] = types.SQLTableColumn{
+	txCol[types.TxEnvelopeLabel] = &types.SQLTableColumn{
 		Name:    types.SQLColumnLabelEnvelope,
 		Type:    types.SQLColumnTypeJSON,
 		Primary: false,
 		Order:   5,
 	}
 
-	txCol[types.TxEventsLabel] = types.SQLTableColumn{
+	txCol[types.TxEventsLabel] = &types.SQLTableColumn{
 		Name:    types.SQLColumnLabelEvents,
 		Type:    types.SQLColumnTypeJSON,
 		Primary: false,
 		Order:   6,
 	}
 
-	txCol[types.TxResultLabel] = types.SQLTableColumn{
+	txCol[types.TxResultLabel] = &types.SQLTableColumn{
 		Name:    types.SQLColumnLabelResult,
 		Type:    types.SQLColumnTypeJSON,
 		Primary: false,
 		Order:   7,
 	}
 
-	txCol[types.TxReceiptLabel] = types.SQLTableColumn{
+	txCol[types.TxReceiptLabel] = &types.SQLTableColumn{
 		Name:    types.SQLColumnLabelReceipt,
 		Type:    types.SQLColumnTypeJSON,
 		Primary: false,
 		Order:   8,
 	}
 
-	txCol[types.TxExceptionLabel] = types.SQLTableColumn{
+	txCol[types.TxExceptionLabel] = &types.SQLTableColumn{
 		Name:    types.SQLColumnLabelException,
 		Type:    types.SQLColumnTypeJSON,
 		Primary: false,

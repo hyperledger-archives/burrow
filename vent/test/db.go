@@ -2,11 +2,12 @@ package test
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"math/rand"
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"os"
 
@@ -32,22 +33,13 @@ func NewTestDB(t *testing.T, cfg *config.Flags) (*sqldb.SQLDB, func()) {
 	}
 
 	connection := types.SQLConnection{
-		DBAdapter:     cfg.DBAdapter,
-		DBURL:         cfg.DBURL,
+		DBAdapter: cfg.DBAdapter,
+		DBURL:     cfg.DBURL,
+		DBSchema:  cfg.DBSchema,
+
 		Log:           logger.NewLogger(""),
 		ChainID:       "ID 0123",
 		BurrowVersion: "Version 0.0",
-	}
-
-	switch cfg.DBAdapter {
-	case types.PostgresDB:
-		connection.DBSchema = fmt.Sprintf("test_%s", randString(10))
-
-	case types.SQLiteDB:
-		connection.DBURL = fmt.Sprintf("./test_%s.sqlite", randString(10))
-
-	default:
-		t.Fatal("invalid database adapter")
 	}
 
 	db, err := sqldb.NewSQLDB(connection)
@@ -62,20 +54,25 @@ func NewTestDB(t *testing.T, cfg *config.Flags) (*sqldb.SQLDB, func()) {
 			os.Remove(connection.DBURL + "-shm")
 			os.Remove(connection.DBURL + "-wal")
 		} else {
-			//destroySchema(db, connection.DBSchema)
+			destroySchema(db, connection.DBSchema)
 			db.Close()
 		}
 	}
 }
 
-func randString(n int) string {
-	b := make([]rune, n)
+func SqliteFlags() *config.Flags {
+	cfg := config.DefaultFlags()
+	cfg.DBURL = fmt.Sprintf("./test_%s.sqlite", randString(10))
+	cfg.DBAdapter = types.SQLiteDB
+	return cfg
+}
 
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-
-	return string(b)
+func PostgresFlags() *config.Flags {
+	cfg := config.DefaultFlags()
+	cfg.DBSchema = fmt.Sprintf("test_%s", randString(10))
+	cfg.DBAdapter = types.PostgresDB
+	cfg.DBURL = config.DefaultPostgresDBURL
+	return cfg
 }
 
 func destroySchema(db *sqldb.SQLDB, dbSchema string) error {
@@ -90,4 +87,14 @@ func destroySchema(db *sqldb.SQLDB, dbSchema string) error {
 	}
 
 	return nil
+}
+
+func randString(n int) string {
+	b := make([]rune, n)
+
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+
+	return string(b)
 }

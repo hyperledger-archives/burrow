@@ -15,7 +15,7 @@ Given a sqlsol specification
   {
     "TableName" : "EventTest",
     "Filter" : "Log1Text = 'LOGEVENT1'",
-    "DeleteMarkerKey": "__DELETE__"
+    "DeleteMarkerField": "__DELETE__",
     "Fields"  : {
       "key" : {"name" : "testname", "type": "bytes32", "primary" : true},
       "description": {"name" : "testdescription", "type": "bytes32", "primary" : false, "bytesToString": true}

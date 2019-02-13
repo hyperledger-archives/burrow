@@ -16,14 +16,11 @@ import (
 )
 
 // buildEventData builds event data from transactions
-func buildEventData(eventClass types.EventClass, projection *sqlsol.Projection, event *exec.Event, abiSpec *abi.AbiSpec,
+func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass, event *exec.Event, abiSpec *abi.AbiSpec,
 	l *logger.Logger) (types.EventDataRow, error) {
 
 	// a fresh new row to store column/value data
 	row := make(map[string]interface{})
-
-	// a replacer to get DeleteFilter parameters
-	replacer := strings.NewReplacer(" ", "", "'", "")
 
 	// get header & log data for the given event
 	eventHeader := event.GetHeader()
@@ -39,36 +36,30 @@ func buildEventData(eventClass types.EventClass, projection *sqlsol.Projection, 
 
 	rowAction := types.ActionUpsert
 
-	var deleteFilter []string
-
-	// get delete filter from spec
-	if eventClass.DeleteMarkerField != "" {
-		deleteFilter = strings.Split(replacer.Replace(eventClass.DeleteMarkerField), "=")
-	}
-	deleteFilterLength := len(deleteFilter)
-
 	// for each data element, maps to SQL columnName and gets its value
 	// if there is no matching column for the item, it doesn't need to be stored in db
-	for k, v := range decodedData {
-		if deleteFilterLength > 0 {
-			if k == deleteFilter[0] {
-				if bs, ok := v.(*[]byte); ok {
-					str := sanitiseBytesForString(*bs, l)
-					if str == deleteFilter[1] {
-						rowAction = types.ActionDelete
-					}
-				}
-			}
+	for fieldName, value := range decodedData {
+		// Can't think of case where we will get a key that is empty, but if we ever did we should not treat
+		// it as a delete marker when the delete marker field in unset
+		if eventClass.DeleteMarkerField != "" && eventClass.DeleteMarkerField == fieldName {
+			rowAction = types.ActionDelete
 		}
-		if column, err := projection.GetColumn(eventClass.TableName, k); err == nil {
-			if eventClass.Fields[k].BytesToString {
-				if bs, ok := v.(*[]byte); ok {
+		fieldMapping := eventClass.GetFieldMapping(fieldName)
+		if fieldMapping == nil {
+			continue
+		}
+		column, err := projection.GetColumn(eventClass.TableName, fieldMapping.ColumnName)
+		if err == nil {
+			if fieldMapping.BytesToString {
+				if bs, ok := value.(*[]byte); ok {
 					str := sanitiseBytesForString(*bs, l)
 					row[column.Name] = interface{}(str)
 					continue
 				}
 			}
-			row[column.Name] = v
+			row[column.Name] = value
+		} else {
+			l.Debug("msg", "could not get column", "err", err)
 		}
 	}
 
@@ -99,7 +90,6 @@ func buildBlkData(tbls types.EventTables, block *exec.BlockExecution) (types.Eve
 
 // buildTxData builds transaction data from tx stream
 func buildTxData(tbls types.EventTables, txe *exec.TxExecution) (types.EventDataRow, error) {
-
 	// a fresh new row to store column/value data
 	row := make(map[string]interface{})
 

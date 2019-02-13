@@ -2,6 +2,8 @@ package adapters
 
 import (
 	"database/sql"
+	"fmt"
+	"strings"
 
 	"github.com/hyperledger/burrow/vent/types"
 )
@@ -42,4 +44,23 @@ type DBAdapter interface {
 	CleanDBQueries() types.SQLCleanDBQuery
 	// DropTableQuery builds a DROP TABLE query to delete a table
 	DropTableQuery(tableName string) string
+}
+
+type DBNotifyTriggerAdapter interface {
+	// Create a SQL function that notifies on channel with the payload of columns - the payload containing the value
+	// of each column will be sent once whenever any of the columns changes. Expected to replace existing function.
+	CreateNotifyFunctionQuery(function, channel string, columns ...string) string
+	// Create a trigger that fires the named function after any operation on a row in table. Expected to replace existing
+	// trigger.
+	CreateTriggerQuery(triggerName, tableName, functionName string) string
+}
+
+// clean queries from tabs, spaces  and returns
+func clean(parameter string) string {
+	replacer := strings.NewReplacer("\n", " ", "\t", "")
+	return replacer.Replace(parameter)
+}
+
+func Cleanf(format string, args ...interface{}) string {
+	return clean(fmt.Sprintf(format, args...))
 }

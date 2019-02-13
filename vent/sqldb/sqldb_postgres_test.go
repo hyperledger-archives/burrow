@@ -3,8 +3,9 @@
 package sqldb_test
 
 import (
+	"encoding/json"
 	"fmt"
-	"sync"
+	"strconv"
 	"testing"
 	"time"
 
@@ -15,24 +16,22 @@ import (
 
 	"github.com/hyperledger/burrow/vent/test"
 	"github.com/stretchr/testify/require"
-
-	"github.com/hyperledger/burrow/vent/config"
 )
 
 func TestPostgresSynchronizeDB(t *testing.T) {
-	testSynchronizeDB(t, config.DefaultPostgresFlags())
+	testSynchronizeDB(t, test.PostgresFlags())
 }
 
 func TestPostgresCleanDB(t *testing.T) {
-	testCleanDB(t, config.DefaultPostgresFlags())
+	testCleanDB(t, test.PostgresFlags())
 }
 
 func TestPostgresSetBlock(t *testing.T) {
-	testSetBlock(t, config.DefaultPostgresFlags())
+	testSetBlock(t, test.PostgresFlags())
 }
 
 func TestPostgresBlockNotification(t *testing.T) {
-	cfg := config.DefaultPostgresFlags()
+	cfg := test.PostgresFlags()
 	db, closeDB := test.NewTestDB(t, cfg)
 	defer closeDB()
 
@@ -43,45 +42,58 @@ func TestPostgresBlockNotification(t *testing.T) {
 	channelName := "height_notification"
 	pad := db.DBAdapter.(*adapters.PostgresAdapter)
 
-	query := pad.CreateNotifyFunctionQuery(functionName, channelName, types.SQLColumnLabelHeight)
-	_, err := db.DB.Exec(query)
-	require.NoError(t, err)
+	for i := 0; i < 2; i++ {
+		query := pad.CreateNotifyFunctionQuery(functionName, channelName, types.SQLColumnLabelHeight)
+		_, err := db.DB.Exec(query)
+		require.NoError(t, err)
 
-	query = pad.CreateTriggerQuery("notify_height_trigger", types.SQLLogTableName, functionName)
-	_, err = db.DB.Exec(query)
-	require.NoError(t, err)
+		query = pad.CreateTriggerQuery("notify_height_trigger", types.SQLLogTableName, functionName)
+		_, err = db.DB.Exec(query)
+		require.NoError(t, err)
+	}
 
 	listener := pq.NewListener(cfg.DBURL, time.Second, time.Second*20, func(event pq.ListenerEventType, err error) {
-		fmt.Println(event, err)
+		require.NoError(t, err)
 	})
-	err = listener.Listen(channelName)
+	err := listener.Listen(channelName)
 	require.NoError(t, err)
 
-	//func(event pq.ListenerEventType, err error) {
-	//fmt.Printf("got event %v, error:  %v\n", event, err)
-	//})
+	// new block
+	str, dat := getBlock()
 
-	wg := new(sync.WaitGroup)
-	wg.Add(1)
+	errCh := make(chan error)
 	go func() {
+		type payload struct {
+			Height string `json:"_height"`
+		}
 		for n := range listener.NotificationChannel() {
-			fmt.Println(n.Extra)
-		wg.Done()
-		return
+			pl := new(payload)
+			err := json.Unmarshal([]byte(n.Extra), pl)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			if pl.Height != "" {
+				if strconv.FormatUint(dat.BlockHeight, 10) != pl.Height {
+					errCh <- fmt.Errorf("got height %s from notification but expected %d",
+						pl.Height, dat.BlockHeight)
+				}
+				errCh <- nil
+				return
+			}
 		}
 	}()
 
-	// new
-	str, dat := getBlock()
+	// Set it
 	err = db.SetBlock(str, dat)
 	require.NoError(t, err)
 
 	// read
-	_, err = db.GetLastBlockID()
+	_, err = db.GetLastBlockHeight()
 	require.NoError(t, err)
 
-	_, err = db.GetBlock(dat.Block)
+	_, err = db.GetBlock(dat.BlockHeight)
 	require.NoError(t, err)
 
-	wg.Wait()
+	require.NoError(t, <-errCh)
 }

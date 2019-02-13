@@ -12,8 +12,6 @@ import (
 
 	"github.com/xeipuuv/gojsonschema"
 
-	"github.com/hyperledger/burrow/txs"
-
 	"github.com/hyperledger/burrow/vent/types"
 	"github.com/pkg/errors"
 )
@@ -88,9 +86,8 @@ func NewProjectionFromEventSpec(eventSpec types.EventSpec) (*Projection, error) 
 	// builds abi information from specification
 	tables := make(types.EventTables)
 
-	// obtain global SQL table columns to add to columns definition map
-	globalColumns := getGlobalColumns()
-	globalColumnsLength := len(globalColumns)
+	// obtain global field mappings to add to table definitions
+	globalFieldMappings := getGlobalFieldMappings()
 
 	for _, eventClass := range eventSpec {
 		// validate json structure
@@ -99,35 +96,33 @@ func NewProjectionFromEventSpec(eventSpec types.EventSpec) (*Projection, error) 
 		}
 
 		// build columns mapping
-		columns := make(map[string]types.SQLTableColumn)
+		columns := make(map[string]*types.SQLTableColumn)
 		channels := make(map[string][]string)
 
-		j := 0
-		for _, eventField := range eventClass.Fields {
-			sqlType, sqlTypeLength, err := getSQLType(eventField.Type, eventField.BytesToString)
+		// Add the global mappings
+		eventClass.FieldMappings = append(globalFieldMappings, eventClass.FieldMappings...)
+
+		i := 0
+		for _, mapping := range eventClass.FieldMappings {
+			sqlType, sqlTypeLength, err := getSQLType(mapping.Type, mapping.BytesToString)
 			if err != nil {
 				return nil, err
 			}
 
-			j++
+			i++
 
 			// Update channels broadcast payload subsets with this column
-			for _, channel := range eventField.Notify {
-				channels[channel] = append(channels[channel], eventField.ColumnName)
+			for _, channel := range mapping.Notify {
+				channels[channel] = append(channels[channel], mapping.ColumnName)
 			}
 
-			columns[eventField.ColumnName] = types.SQLTableColumn{
-				Name:    eventField.ColumnName,
+			columns[mapping.ColumnName] = &types.SQLTableColumn{
+				Name:    mapping.ColumnName,
 				Type:    sqlType,
-				Primary: eventField.Primary,
+				Primary: mapping.Primary,
 				Length:  sqlTypeLength,
-				Order:   j + globalColumnsLength,
+				Order:   i,
 			}
-		}
-
-		// add global columns to columns definition
-		for k, v := range globalColumns {
-			columns[k] = v
 		}
 
 		// Allow for compatible composition of tables
@@ -151,7 +146,7 @@ func NewProjectionFromEventSpec(eventSpec types.EventSpec) (*Projection, error) 
 		for _, column := range table.Columns {
 			colName[table.Name+column.Name]++
 			if colName[table.Name+column.Name] > 1 {
-				return nil, fmt.Errorf("duplicated column name: %s in table %s", column.Name, table.Name)
+				return nil, fmt.Errorf("duplicated column name: '%s' in table '%s'", column.Name, table.Name)
 			}
 		}
 	}
@@ -162,28 +157,17 @@ func NewProjectionFromEventSpec(eventSpec types.EventSpec) (*Projection, error) 
 	}, nil
 }
 
-// GetEventSpec returns the event specification
-func (p *Projection) GetEventSpec() types.EventSpec {
-	return p.EventSpec
-}
-
-// GetTables returns the event tables structures
-func (p *Projection) GetTables() types.EventTables {
-	return p.Tables
-}
-
-// GetColumn receives a table & column name and returns column info
-func (p *Projection) GetColumn(tableName, columnName string) (types.SQLTableColumn, error) {
-	column := types.SQLTableColumn{}
-
+// Get the column for a particular table and column name
+func (p *Projection) GetColumn(tableName, columnName string) (*types.SQLTableColumn, error) {
 	if table, ok := p.Tables[tableName]; ok {
-		if column, ok = table.Columns[columnName]; ok {
+		if column, ok := table.Columns[columnName]; ok {
 			return column, nil
 		}
-		return column, fmt.Errorf("GetColumn: column does not exist in SQL table: %s ", columnName)
+		return nil, fmt.Errorf("GetColumn: table '%s' has no column '%s'",
+			tableName, columnName)
 	}
 
-	return column, fmt.Errorf("GetColumn: table does not exist projection: %s ", tableName)
+	return nil, fmt.Errorf("GetColumn: table does not exist projection: %s ", tableName)
 }
 
 func ValidateJSONEventSpec(bs []byte) error {
@@ -276,38 +260,29 @@ func getSQLType(evmSignature string, bytesToString bool) (types.SQLColumnType, i
 
 // getGlobalColumns returns global columns for event table structures,
 // these columns will be part of every SQL event table to relate data with source events
-func getGlobalColumns() map[string]types.SQLTableColumn {
-	globalColumns := make(map[string]types.SQLTableColumn)
-
-	globalColumns[types.BlockHeightLabel] = types.SQLTableColumn{
-		Name:   types.SQLColumnLabelHeight,
-		Type:   types.SQLColumnTypeVarchar,
-		Length: 100,
-		Order:  1,
+func getGlobalFieldMappings() []*types.EventFieldMapping {
+	return []*types.EventFieldMapping{
+		{
+			ColumnName: types.SQLColumnLabelHeight,
+			Field:      types.BlockHeightLabel,
+			Type:       types.EventFieldTypeString,
+		},
+		{
+			ColumnName: types.SQLColumnLabelTxHash,
+			Field:      types.TxTxHashLabel,
+			Type:       types.EventFieldTypeString,
+		},
+		{
+			ColumnName: types.SQLColumnLabelEventType,
+			Field:      types.EventTypeLabel,
+			Type:       types.EventFieldTypeString,
+		},
+		{
+			ColumnName: types.SQLColumnLabelEventName,
+			Field:      types.EventNameLabel,
+			Type:       types.EventFieldTypeString,
+		},
 	}
-
-	globalColumns[types.TxTxHashLabel] = types.SQLTableColumn{
-		Name:   types.SQLColumnLabelTxHash,
-		Type:   types.SQLColumnTypeVarchar,
-		Length: txs.HashLengthHex,
-		Order:  2,
-	}
-
-	globalColumns[types.EventTypeLabel] = types.SQLTableColumn{
-		Name:   types.SQLColumnLabelEventType,
-		Type:   types.SQLColumnTypeVarchar,
-		Length: 100,
-		Order:  3,
-	}
-
-	globalColumns[types.EventNameLabel] = types.SQLTableColumn{
-		Name:   types.SQLColumnLabelEventName,
-		Type:   types.SQLColumnTypeVarchar,
-		Length: 100,
-		Order:  4,
-	}
-
-	return globalColumns
 }
 
 // Merges tables a and b provided the intersection of their columns (by name) are identical
@@ -325,14 +300,14 @@ func mergeTables(a types.SQLTable, b types.SQLTable) (types.SQLTable, error) {
 	table := types.SQLTable{
 		Name:           a.Name,
 		NotifyChannels: make(map[string][]string),
-		Columns:        make(map[string]types.SQLTableColumn),
+		Columns:        make(map[string]*types.SQLTableColumn),
 	}
 
 	for name, columnA := range a.Columns {
 		table.Columns[name] = columnA
 		if columnB, ok := b.Columns[name]; ok {
 			columnB.Order = columnA.Order
-			if columnA != columnB {
+			if *columnA != *columnB {
 				return types.SQLTable{}, fmt.Errorf("cannot merge event class tables for %s because of "+
 					"conflicting columns: %v and %v", a.Name, columnA, columnB)
 			}
@@ -344,6 +319,7 @@ func mergeTables(a types.SQLTable, b types.SQLTable) (types.SQLTable, error) {
 		table.Columns[name] = columnB
 	}
 
+	// Merge notification channels requested by specs
 	for channel, columns := range a.NotifyChannels {
 		colMap := make(map[string]struct{})
 		for _, column := range columns {

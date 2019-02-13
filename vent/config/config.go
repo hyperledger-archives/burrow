@@ -33,17 +33,3 @@ func DefaultFlags() *Flags {
 		DBBlockTx:     false,
 	}
 }
-
-func DefaultSqliteFlags() *Flags {
-	cfg := DefaultFlags()
-	cfg.DBAdapter = types.SQLiteDB
-	cfg.DBURL = "./vent.sqlite"
-	return cfg
-}
-
-func DefaultPostgresFlags() *Flags {
-	cfg := DefaultFlags()
-	cfg.DBAdapter = types.PostgresDB
-	cfg.DBURL = DefaultPostgresDBURL
-	return cfg
-}

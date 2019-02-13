@@ -1,7 +1,6 @@
 package sqlsol_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/hyperledger/burrow/vent/sqlsol"
@@ -28,37 +27,33 @@ func TestNewProjection(t *testing.T) {
 	})
 
 	t.Run("successfully builds table structure based on json events config", func(t *testing.T) {
-		goodJSON := test.GoodJSONConfFile(t)
-
-		byteValue := []byte(goodJSON)
-		tableStruct, err := sqlsol.NewProjectionFromBytes(byteValue)
+		tableStruct, err := sqlsol.NewProjectionFromBytes([]byte(test.GoodJSONConfFile(t)))
 		require.NoError(t, err)
 
 		// columns map
-		col, err := tableStruct.GetColumn("UserAccounts", "username")
+		tableName := "UserAccounts"
+		col, err := tableStruct.GetColumn(tableName, "username")
 		require.NoError(t, err)
 		require.Equal(t, false, col.Primary)
 		require.Equal(t, types.SQLColumnTypeText, col.Type)
 		require.Equal(t, "username", col.Name)
 
-		col, err = tableStruct.GetColumn("UserAccounts", "address")
+		col, err = tableStruct.GetColumn(tableName, "address")
 		require.NoError(t, err)
 		require.Equal(t, true, col.Primary)
 		require.Equal(t, types.SQLColumnTypeVarchar, col.Type)
 		require.Equal(t, "address", col.Name)
 
-		col, err = tableStruct.GetColumn("UserAccounts", "txHash")
+		col, err = tableStruct.GetColumn(tableName, types.SQLColumnLabelTxHash)
 		require.NoError(t, err)
 		require.Equal(t, false, col.Primary)
-		require.Equal(t, types.SQLColumnTypeVarchar, col.Type)
-		require.Equal(t, "_txhash", col.Name)
+		require.Equal(t, types.SQLColumnTypeText, col.Type)
 		require.Equal(t, 2, col.Order)
 
-		col, err = tableStruct.GetColumn("UserAccounts", "eventName")
+		col, err = tableStruct.GetColumn(tableName, types.SQLColumnLabelEventName)
 		require.NoError(t, err)
 		require.Equal(t, false, col.Primary)
-		require.Equal(t, types.SQLColumnTypeVarchar, col.Type)
-		require.Equal(t, "_eventname", col.Name)
+		require.Equal(t, types.SQLColumnTypeText, col.Type)
 		require.Equal(t, 4, col.Order)
 	})
 
@@ -81,9 +76,7 @@ func TestNewProjection(t *testing.T) {
 }
 
 func TestGetColumn(t *testing.T) {
-	goodJSON := test.GoodJSONConfFile(t)
-
-	projection, err := sqlsol.NewProjectionFromBytes([]byte(goodJSON))
+	projection, err := sqlsol.NewProjectionFromBytes([]byte(test.GoodJSONConfFile(t)))
 	require.NoError(t, err)
 
 	t.Run("successfully gets the mapping column info for a given table & column name", func(t *testing.T) {
@@ -119,7 +112,7 @@ func TestGetTables(t *testing.T) {
 	tableStruct, _ := sqlsol.NewProjectionFromBytes(byteValue)
 
 	t.Run("successfully returns event tables structures", func(t *testing.T) {
-		tables := tableStruct.GetTables()
+		tables := tableStruct.Tables
 		require.Equal(t, 2, len(tables))
 		require.Equal(t, "UserAccounts", tables["UserAccounts"].Name)
 
@@ -133,7 +126,7 @@ func TestGetEventSpec(t *testing.T) {
 	tableStruct, _ := sqlsol.NewProjectionFromBytes(byteValue)
 
 	t.Run("successfully returns event specification structures", func(t *testing.T) {
-		eventSpec := tableStruct.GetEventSpec()
+		eventSpec := tableStruct.EventSpec
 		require.Equal(t, 2, len(eventSpec))
 		require.Equal(t, "LOG0 = 'UserAccounts'", eventSpec[0].Filter)
 		require.Equal(t, "UserAccounts", eventSpec[0].TableName)
@@ -144,65 +137,91 @@ func TestGetEventSpec(t *testing.T) {
 }
 
 func TestNewProjectionFromEventSpec(t *testing.T) {
-	projection, err := sqlsol.NewProjectionFromEventSpec(types.EventSpec{
+	tableName := "BurnNotices"
+	eventSpec := types.EventSpec{
 		{
-			TableName: "BurnNotices",
+			TableName: tableName,
 			Filter:    "LOG1Text = 'CIA/burn'",
-			Fields: map[string]types.EventField{
-				"codename": {
+			FieldMappings: []*types.EventFieldMapping{
+				{
+					Field:      "codename",
+					Type:       types.EventFieldTypeString,
 					ColumnName: "name",
-					Type:       types.EventFieldTypeString,
 					Notify:     []string{"burn"},
 				},
-				"burn": {
-					ColumnName: "burnt",
+				{
+					Field:      "burn",
 					Type:       types.EventFieldTypeBool,
+					ColumnName: "burnt",
 					Notify:     []string{"burn"},
 				},
-				"dairy": {
-					ColumnName: "coffee_milk",
+				{
+					Field:      "dairy",
 					Type:       types.EventFieldTypeString,
+					ColumnName: "coffee_milk",
 					Notify:     []string{"mrs_doyle"},
 				},
-				"datetime": {
-					ColumnName: "time_changed",
+				{
+					Field:      "datetime",
 					Type:       types.EventFieldTypeInt,
+					ColumnName: "time_changed",
 					Notify:     []string{"last_heard", "mrs_doyle"},
 				},
 			},
 		},
 		{
-			TableName: "BurnNotices",
+			TableName: tableName,
 			Filter:    "LOG1Text = 'MI5/burn'",
-			Fields: map[string]types.EventField{
-				"codename": {
-					ColumnName: "name",
+			FieldMappings: []*types.EventFieldMapping{
+				{
+					Field:      "codename",
 					Type:       types.EventFieldTypeString,
+					ColumnName: "name",
 					Notify:     []string{"burn"},
 				},
-				"unreliable": {
+				{
+					Field:      "unreliable",
+					Type:       types.EventFieldTypeBool,
 					ColumnName: "burnt",
-					Type:       types.EventFieldTypeBool,
 					Notify:     []string{"burn"},
 				},
-				"sugars": {
+				{
+					Field:      "sugars",
+					Type:       types.EventFieldTypeInt,
 					ColumnName: "tea_sugars",
-					Type:       types.EventFieldTypeInt,
 					Notify:     []string{"mrs_doyle"},
 				},
-				"milk": {
-					ColumnName: "tea_milk",
+				{
+					Field:      "milk",
 					Type:       types.EventFieldTypeBool,
+					ColumnName: "tea_milk",
 					Notify:     []string{"mrs_doyle"},
 				},
-				"datetime": {
-					ColumnName: "time_changed",
+				{
+					Field:      "datetime",
 					Type:       types.EventFieldTypeInt,
+					ColumnName: "time_changed",
 					Notify:     []string{"last_heard", "mrs_doyle"},
 				},
 			},
 		},
-	})
+	}
+	projection, err := sqlsol.NewProjectionFromEventSpec(eventSpec)
+	require.NoError(t, err, "burn and unreliable field mappings should unify to single column")
+
+	require.Equal(t, []string{"name", "burnt"}, projection.Tables[tableName].NotifyChannels["burn"])
+
+	// Notify sugars on the burn channel
+	field := eventSpec[1].GetFieldMapping("sugars")
+	field.Notify = append(field.Notify, "burn")
+
+	projection, err = sqlsol.NewProjectionFromEventSpec(eventSpec)
 	require.NoError(t, err)
-	fmt.Println(projection)
+	require.Equal(t, []string{"name", "burnt", "tea_sugars"}, projection.Tables[tableName].NotifyChannels["burn"])
+
+	// Create a column conflict between burn and unreliable fields (both map to burnt so the SQL column def must be identical)
+	field = eventSpec[1].GetFieldMapping("unreliable")
+	field.Primary = !field.Primary
+	projection, err = sqlsol.NewProjectionFromEventSpec(eventSpec)
+	require.Error(t, err)
 }

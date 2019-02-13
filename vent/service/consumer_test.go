@@ -3,11 +3,8 @@
 package service_test
 
 import (
-	"fmt"
 	"path"
 	"runtime"
-	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -22,60 +19,55 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConsumer(t *testing.T) {
+func testConsumer(t *testing.T, cfg *config.Flags) {
 	tCli := test.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	create := test.CreateContract(t, tCli, inputAccount.GetAddress())
 
 	// generate events
 	name := "TestEvent1"
 	description := "Description of TestEvent1"
-	txe := test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
+	txeA := test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
 
 	name = "TestEvent2"
 	description = "Description of TestEvent2"
-	txe = test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
+	test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
 
 	name = "TestEvent3"
 	description = "Description of TestEvent3"
-	txe = test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
+	test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
 
 	name = "TestEvent4"
 	description = "Description of TestEvent4"
-	txe = test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
+	txeB := test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
 
-	// workaround for off-by-one on latest bound fixed in burrow
-	time.Sleep(time.Second * 2)
-
-	cfg := config.DefaultFlags()
 	// create test db
 	db, closeDB := test.NewTestDB(t, cfg)
 	defer closeDB()
 
-	err := runConsumer(db, cfg)
-	require.NoError(t, err)
-	time.Sleep(time.Second * 2)
+	// Run the consumer
+	runConsumer(t, db, cfg)
 
 	// test data stored in database for two different block ids
-	eventName := "EventTest"
+	eventColumnName := "EventTest"
 
-	blockID := "2"
+	blockID := txeA.Height
 	eventData, err := db.GetBlock(blockID)
 	require.NoError(t, err)
-	require.Equal(t, "2", eventData.Block)
+	require.Equal(t, blockID, eventData.BlockHeight)
 	require.Equal(t, 3, len(eventData.Tables))
 
-	tblData := eventData.Tables[strings.ToLower(eventName)]
+	tblData := eventData.Tables[eventColumnName]
 	require.Equal(t, 1, len(tblData))
 	require.Equal(t, "LogEvent", tblData[0].RowData["_eventtype"].(string))
 	require.Equal(t, "UpdateTestEvents", tblData[0].RowData["_eventname"].(string))
 
-	blockID = "5"
+	blockID = txeB.Height
 	eventData, err = db.GetBlock(blockID)
 	require.NoError(t, err)
-	require.Equal(t, "5", eventData.Block)
+	require.Equal(t, blockID, eventData.BlockHeight)
 	require.Equal(t, 3, len(eventData.Tables))
 
-	tblData = eventData.Tables[strings.ToLower(eventName)]
+	tblData = eventData.Tables[eventColumnName]
 	require.Equal(t, 1, len(tblData))
 	require.Equal(t, "LogEvent", tblData[0].RowData["_eventtype"].(string))
 	require.Equal(t, "UpdateTestEvents", tblData[0].RowData["_eventname"].(string))
@@ -87,7 +79,7 @@ func TestConsumer(t *testing.T) {
 
 		tblData = eventData.Tables[types.SQLTxTableName]
 		require.Equal(t, 1, len(tblData))
-		require.Equal(t, txe.TxHash.String(), tblData[0].RowData["_txhash"].(string))
+		require.Equal(t, txeB.TxHash.String(), tblData[0].RowData["_txhash"].(string))
 	}
 
 	//Restore
@@ -96,7 +88,70 @@ func TestConsumer(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestInvalidUTF8(t *testing.T) {
+func testDeleteEvent(t *testing.T, cfg *config.Flags) {
+	tCli := test.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
+	create := test.CreateContract(t, tCli, inputAccount.GetAddress())
+
+	// create test db
+	db, closeDB := test.NewTestDB(t, cfg)
+	defer closeDB()
+
+	// test data stored in database for two different block ids
+	eventColumnName := "EventTest"
+
+	// Add a test event
+	name := "TestEvent1"
+	description := "Description of TestEvent1"
+	txeAdd := test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
+
+	// Spin the consumer
+	runConsumer(t, db, cfg)
+
+	// Expect block table, tx table, and EventTest table
+	blockID := txeAdd.Height
+	eventData, err := db.GetBlock(blockID)
+	require.NoError(t, err)
+	require.Equal(t, blockID, eventData.BlockHeight)
+	require.Equal(t, 3, len(eventData.Tables))
+
+	// Expect data in the EventTest table
+	tblData := eventData.Tables[eventColumnName]
+	require.Equal(t, 1, len(tblData))
+	require.Equal(t, "LogEvent", tblData[0].RowData["_eventtype"].(string))
+	require.Equal(t, "UpdateTestEvents", tblData[0].RowData["_eventname"].(string))
+
+	// Now emit a deletion event for that table
+	txeDelete := test.CallRemoveEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name)
+	runConsumer(t, db, cfg)
+
+	blockID = txeDelete.Height
+	eventData, err = db.GetBlock(blockID)
+	require.NoError(t, err)
+	require.Equal(t, blockID, eventData.BlockHeight)
+	require.Equal(t, 3, len(eventData.Tables))
+
+	tblData = eventData.Tables[eventColumnName]
+	require.Equal(t, 1, len(tblData))
+	require.Equal(t, "LogEvent", tblData[0].RowData["_eventtype"].(string))
+	require.Equal(t, "DeleteTestEvents", tblData[0].RowData["_eventname"].(string))
+}
+
+func testResume(t *testing.T, cfg *config.Flags) {
+	db, closeDB := test.NewTestDB(t, cfg)
+	defer closeDB()
+
+	numRestarts := 3
+	var height uint64
+	for i := 0; i < numRestarts; i++ {
+		time.Sleep(time.Second)
+		for _, ed := range runConsumer(t, db, cfg) {
+			height++
+			require.Equal(t, height, ed.BlockHeight, "should get monotonic sequential sequence")
+		}
+	}
+}
+
+func testInvalidUTF8(t *testing.T, cfg *config.Flags) {
 	tCli := test.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	create := test.CreateContract(t, tCli, inputAccount.GetAddress())
 
@@ -106,18 +161,15 @@ func TestInvalidUTF8(t *testing.T) {
 
 	// generate events
 	name := service.BadStringToHexFunction(goodString)
-	fmt.Println(name)
 	description := "Description of TestEvent1"
 	test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
 
-	cfg := config.DefaultFlags()
 	// create test db
 	db, closeDB := test.NewTestDB(t, cfg)
 	defer closeDB()
 
 	// Run the consumer with this event - this used to create an error on UPSERT
-	err := runConsumer(db, cfg)
-	require.NoError(t, err)
+	runConsumer(t, db, cfg)
 
 	// Error we used to get before fixing this test case:
 	//require.Error(t, err)
@@ -125,7 +177,7 @@ func TestInvalidUTF8(t *testing.T) {
 }
 
 // Run consumer to listen to events
-func runConsumer(db *sqldb.SQLDB, cfg *config.Flags) (err error) {
+func runConsumer(t *testing.T, db *sqldb.SQLDB, cfg *config.Flags) []types.EventData {
 	// Resolve relative path to test dir
 	_, testFile, _, _ := runtime.Caller(0)
 	testDir := path.Join(path.Dir(testFile), "..", "test")
@@ -137,29 +189,24 @@ func runConsumer(db *sqldb.SQLDB, cfg *config.Flags) (err error) {
 	cfg.DBBlockTx = true
 
 	log := logger.NewLogger("")
-	consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
-
-	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDir, cfg.DBBlockTx)
-	if err != nil {
-		return err
-	}
-	abiSpec, err := sqlsol.AbiLoader(cfg.AbiFileOrDir)
-	if err != nil {
-		return err
-	}
-
-	var wg sync.WaitGroup
-
-	wg.Add(1)
+	ch := make(chan types.EventData, 10)
+	var eventData []types.EventData
+	consumer := service.NewConsumer(cfg, log, ch)
 	go func() {
-		defer wg.Done()
-		err = consumer.Run(projection, abiSpec, false)
+		for ed := range ch {
+			eventData = append(eventData, ed)
+		}
 	}()
 
-	// wait for block streams to start
-	time.Sleep(time.Second * 2)
-	consumer.Shutdown()
+	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDir, cfg.DBBlockTx)
+	require.NoError(t, err)
 
-	wg.Wait()
-	return
+	abiSpec, err := sqlsol.AbiLoader(cfg.AbiFileOrDir)
+	require.NoError(t, err)
+
+	err = consumer.Run(projection, abiSpec, false)
+	require.NoError(t, err)
+
+	consumer.Shutdown()
+	return eventData
 }

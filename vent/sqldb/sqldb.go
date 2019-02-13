@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -106,7 +107,7 @@ func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
 	savedRows := 0
 
 	// Read chainID
-	query = clean(cleanQueries.SelectChainIDQry)
+	query = cleanQueries.SelectChainIDQry
 	if err := db.DB.QueryRow(query).Scan(&savedRows, &savedChainID, &savedBurrowVersion); err != nil {
 		db.Log.Info("msg", "Error selecting CHAIN ID", "err", err, "query", query)
 		return err
@@ -120,7 +121,7 @@ func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
 	// First database access
 	case savedRows == 0:
 		// Save new values and exit
-		query = clean(cleanQueries.InsertChainIDQry)
+		query = cleanQueries.InsertChainIDQry
 		if _, err := db.DB.Exec(query, chainID, burrowVersion); err != nil {
 			db.Log.Info("msg", "Error inserting CHAIN ID", "err", err, "query", query)
 			return err
@@ -146,21 +147,21 @@ func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
 		defer tx.Rollback()
 
 		// Delete chainID
-		query := clean(cleanQueries.DeleteChainIDQry)
+		query := cleanQueries.DeleteChainIDQry
 		if _, err = tx.Exec(query); err != nil {
 			db.Log.Info("msg", "Error deleting CHAIN ID", "err", err, "query", query)
 			return err
 		}
 
 		// Insert chainID
-		query = clean(cleanQueries.InsertChainIDQry)
+		query = cleanQueries.InsertChainIDQry
 		if _, err := tx.Exec(query, chainID, burrowVersion); err != nil {
 			db.Log.Info("msg", "Error inserting CHAIN ID", "err", err, "query", query)
 			return err
 		}
 
 		// Load Tables
-		query = clean(cleanQueries.SelectDictionaryQry)
+		query = cleanQueries.SelectDictionaryQry
 		rows, err := tx.Query(query)
 		if err != nil {
 			db.Log.Info("msg", "error querying dictionary", "err", err, "query", query)
@@ -183,21 +184,21 @@ func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
 		}
 
 		// Delete Dictionary
-		query = clean(cleanQueries.DeleteDictionaryQry)
+		query = cleanQueries.DeleteDictionaryQry
 		if _, err = tx.Exec(query); err != nil {
 			db.Log.Info("msg", "Error deleting dictionary", "err", err, "query", query)
 			return err
 		}
 
 		// Delete Log
-		query = clean(cleanQueries.DeleteLogQry)
+		query = cleanQueries.DeleteLogQry
 		if _, err = tx.Exec(query); err != nil {
 			db.Log.Info("msg", "Error deleting log", "err", err, "query", query)
 			return err
 		}
 		// Drop database tables
 		for _, tableName = range tables {
-			query = clean(db.DBAdapter.DropTableQuery(tableName))
+			query = db.DBAdapter.DropTableQuery(tableName)
 			if _, err = tx.Exec(query); err != nil {
 				// if error == table does not exists, continue
 				if !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeUndefinedTable) {
@@ -235,18 +236,21 @@ func (db *SQLDB) Ping() error {
 }
 
 // GetLastBlockID returns last inserted blockId from log table
-func (db *SQLDB) GetLastBlockID() (string, error) {
-	query := clean(db.DBAdapter.LastBlockIDQuery())
+func (db *SQLDB) GetLastBlockHeight() (uint64, error) {
+	query := db.DBAdapter.LastBlockIDQuery()
 	id := ""
 
 	db.Log.Info("msg", "MAX ID", "query", query)
 
 	if err := db.DB.QueryRow(query).Scan(&id); err != nil {
 		db.Log.Info("msg", "Error selecting last block id", "err", err)
-		return "", err
+		return 0, err
 	}
-
-	return id, nil
+	height, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("could not parse height from block ID: %v", err)
+	}
+	return height, nil
 }
 
 // SynchronizeDB synchronize db tables structures from given tables specifications
@@ -274,7 +278,6 @@ func (db *SQLDB) SynchronizeDB(eventTables types.EventTables) error {
 
 // SetBlock inserts or updates multiple rows and stores log info in SQL tables
 func (db *SQLDB) SetBlock(eventTables types.EventTables, eventData types.EventData) error {
-
 	db.Log.Info("msg", "Synchronize Block..........")
 
 	//Declarations
@@ -297,7 +300,7 @@ func (db *SQLDB) SetBlock(eventTables types.EventTables, eventData types.EventDa
 	defer tx.Rollback()
 
 	// Prepare log statement
-	logQuery := clean(db.DBAdapter.InsertLogQuery())
+	logQuery := db.DBAdapter.InsertLogQuery()
 	if logStmt, err = tx.Prepare(logQuery); err != nil {
 		db.Log.Info("msg", "Error preparing log stmt", "err", err)
 		return err
@@ -306,10 +309,8 @@ func (db *SQLDB) SetBlock(eventTables types.EventTables, eventData types.EventDa
 loop:
 	// for each table in the block
 	for eventName, table := range eventTables {
-
 		safeTable = safe(table.Name)
 		dataRows := eventData.Tables[table.Name]
-
 		// for Each Row
 		for _, row := range dataRows {
 
@@ -335,7 +336,7 @@ loop:
 				break loop // exits from all loops -> continue in close log stmt
 			}
 
-			query = clean(queryVal.Query)
+			query = queryVal.Query
 
 			// Perform row action
 			db.Log.Info("msg", row.Action, "query", query, "value", queryVal.Values)
@@ -357,8 +358,11 @@ loop:
 			}
 
 			// Insert in log
-			db.Log.Info("msg", "INSERT LOG", "query", logQuery, "value", fmt.Sprintf("tableName = %s eventName = %s filter = %s block = %s", safeTable, eventName, row.EventClass.Filter, eventData.Block))
-			if _, err = logStmt.Exec(safeTable, eventName, row.EventClass.Filter, eventData.Block, txHash, row.Action, jsonData, query, sqlValues); err != nil {
+			db.Log.Info("msg", "INSERT LOG", "query", logQuery, "value",
+				fmt.Sprintf("tableName = %s eventName = %s block = %d", safeTable, eventName, eventData.BlockHeight))
+
+			if _, err = logStmt.Exec(safeTable, eventName, row.EventClass.GetFilter(), eventData.BlockHeight, txHash,
+				row.Action, jsonData, query, sqlValues); err != nil {
 				db.Log.Info("msg", "Error inserting into log", "err", err)
 				break loop // exits from all loops -> continue in close log stmt
 			}
@@ -420,13 +424,13 @@ loop:
 }
 
 // GetBlock returns all tables structures and row data for given block
-func (db *SQLDB) GetBlock(block string) (types.EventData, error) {
+func (db *SQLDB) GetBlock(height uint64) (types.EventData, error) {
 	var data types.EventData
-	data.Block = block
+	data.BlockHeight = height
 	data.Tables = make(map[string]types.EventDataTable)
 
 	// get all table structures involved in the block
-	tables, err := db.getBlockTables(block)
+	tables, err := db.getBlockTables(height)
 	if err != nil {
 		return data, err
 	}
@@ -436,12 +440,12 @@ func (db *SQLDB) GetBlock(block string) (types.EventData, error) {
 	// for each table
 	for _, table := range tables {
 		// get query for table
-		query, err = db.getSelectQuery(table, block)
+		query, err = db.getSelectQuery(table, height)
 		if err != nil {
 			db.Log.Info("msg", "Error building table query", "err", err)
 			return data, err
 		}
-		query = clean(query)
+		query = query
 		db.Log.Info("msg", "Query table data", "query", query)
 		rows, err := db.DB.Query(query)
 		if err != nil {

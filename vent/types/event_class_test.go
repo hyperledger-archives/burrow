@@ -2,8 +2,9 @@ package types
 
 import (
 	"fmt"
-	"github.com/hyperledger/burrow/config/source"
 	"testing"
+
+	"github.com/hyperledger/burrow/config/source"
 )
 
 func TestEventTablesSchema(t *testing.T) {
