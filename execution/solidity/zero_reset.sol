@@ -1,4 +1,4 @@
-pragma solidity ^0.4.20;
+pragma solidity ^0.5.4;
 
 // Originally taken from: https://github.com/hyperledger/burrow/issues/847
 contract ZeroReset {
@@ -13,7 +13,7 @@ contract ZeroReset {
         storedInt = 0;
     }
 
-    function getInt() constant public returns (int retInt) {
+    function getInt() view public returns (int retInt) {
         return storedInt;
     }
 
@@ -25,7 +25,7 @@ contract ZeroReset {
         storedUint = 0;
     }
 
-    function getUint() constant public returns (uint retUint) {
+    function getUint() view public returns (uint retUint) {
         return storedUint;
     }
 }

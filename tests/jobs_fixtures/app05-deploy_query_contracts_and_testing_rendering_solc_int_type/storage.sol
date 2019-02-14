@@ -7,7 +7,7 @@ contract Storage {
     storedData = x;
   }
 
-  function get() constant public returns (int retVal) {
+  function get() view public returns (int retVal) {
     return storedData;
   }
 }

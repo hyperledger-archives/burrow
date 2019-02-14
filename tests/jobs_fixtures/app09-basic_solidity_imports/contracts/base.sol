@@ -11,7 +11,7 @@ contract base {
     storedData = x;
   }
 
-  function get() constant public returns (uint retVal) {
+  function get() view public returns (uint retVal) {
     return storedData;
   }
 }

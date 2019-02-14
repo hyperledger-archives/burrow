@@ -47,7 +47,7 @@ func TestBytecode_MarshalText(t *testing.T) {
 
 func TestBytecode_Tokens(t *testing.T) {
 	/*
-			pragma solidity ^0.4.0;
+			pragma solidity ^0.5.4;
 
 			contract SimpleStorage {
 		                function get() public constant returns (address) {

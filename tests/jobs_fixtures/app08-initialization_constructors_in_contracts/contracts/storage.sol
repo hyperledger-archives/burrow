@@ -19,7 +19,7 @@ contract SimpleConstructorBool {
 contract SimpleConstructorString {
   string public storedData;
 
-  constructor(string x, string /* y */) public {
+  constructor(string memory x, string memory /* y */) public {
     storedData = x;
   }
 }
@@ -35,11 +35,11 @@ contract SimpleConstructorBytes {
 contract SimpleConstructorArray {
   uint[3] public storedData;
 
-  constructor(uint[3] x, uint[3] /* y */) public {
+  constructor(uint[3] memory x, uint[3] memory /* y */) public {
     storedData = x;
   }
 
-  function get() public view returns (uint[3]) {
+  function get() public view returns (uint[3] memory) {
     return storedData;
   }
 }

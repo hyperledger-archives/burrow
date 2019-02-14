@@ -1,4 +1,4 @@
-pragma solidity ^0.4.20;
+pragma solidity ^0.5.4;
 
 contract storageIssueWithZero {
 
@@ -14,7 +14,7 @@ contract storageIssueWithZero {
     storedInt = 0;
   }
 
-  function getInt() constant public returns (int retInt) {
+  function getInt() view public returns (int retInt) {
     return storedInt;
   }
 
@@ -26,7 +26,7 @@ contract storageIssueWithZero {
     storedUint = 0;
   }
 
-  function getUint() constant public returns (uint retUint) {
+  function getUint() view public returns (uint retUint) {
     return storedUint;
   }
 

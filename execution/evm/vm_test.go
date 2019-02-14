@@ -976,7 +976,7 @@ func TestMsgSender(t *testing.T) {
 	var gas uint64 = 100000
 
 	/*
-			pragma solidity ^0.4.0;
+			pragma solidity ^0.5.4;
 
 			contract SimpleStorage {
 		                function get() public constant returns (address) {
@@ -1355,7 +1355,7 @@ func TestDataStackOverflow(t *testing.T) {
 	var gas uint64 = 100000
 
 	/*
-		pragma solidity ^0.4.0;
+		pragma solidity ^0.5.4;
 
 		contract SimpleStorage {
 			function get() public constant returns (address) {
@@ -1400,7 +1400,7 @@ func TestCallStackOverflow(t *testing.T) {
 	ourVm := NewVM(params, crypto.ZeroAddress, nil, logger)
 
 	/*
-		pragma solidity ^0.4.0;
+		pragma solidity ^0.5.4;
 
 		contract A {
 		   function callMeBack() public {

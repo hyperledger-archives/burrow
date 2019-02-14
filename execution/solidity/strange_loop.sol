@@ -1,4 +1,4 @@
-pragma solidity ^0.4.16;
+pragma solidity ^0.5.4;
 
 contract StrangeLoop {
     int top = 23;
@@ -31,7 +31,7 @@ contract StrangeLoop {
         } else {
             down = true;
             i = depth;
-            return;
+            return 0;
         }
     }
 }

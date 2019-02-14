@@ -17,7 +17,7 @@ contract multiReturn {
 			bytes2 elaborate,
 			uint8 funNumber
 		) {
-		myAddress = this;
+		myAddress = address(this);
 		elaborate = "is";
 		funNumber = 1;
 	}

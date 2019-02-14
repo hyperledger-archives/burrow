@@ -8,7 +8,7 @@ contract c {
 		myIntStruct = intStructs.intStruct(1, 2);
 	}
 
-	function basicFunctionReturn() public constant returns (uint x, uint y) {
+	function basicFunctionReturn() public view returns (uint x, uint y) {
 		x = basicMath.add(myIntStruct.x, myIntStruct.y);
 		y = basicMath.subtract(myIntStruct.x, myIntStruct.y);
 	}
