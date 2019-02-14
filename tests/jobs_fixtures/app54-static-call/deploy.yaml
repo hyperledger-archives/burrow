@@ -1,0 +1,35 @@
+jobs:
+
+- name: deployAdoption
+  deploy:
+    contract: Adoption.sol
+
+- name: makeSureDeployed
+  assert:
+    key: $deployAdoption
+    relation: ne
+    val: ""
+
+- name: deployTest
+  deploy:
+    contract: AdoptionTest.sol
+    instance: TestAdoption
+    data:
+    - $deployAdoption
+
+- name: makeSureTestDeployed
+  assert:
+    key: $deployTest
+    relation: ne
+    val: ""
+
+- name: petOwner
+  call:
+    destination: $deployTest
+    function: testGetAdopterAddressByPetId
+
+- name: checkPetOwner
+  assert:
+    key: $petOwner
+    relation: eq
+    val: $deployTest
