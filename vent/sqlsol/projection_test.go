@@ -209,7 +209,7 @@ func TestNewProjectionFromEventSpec(t *testing.T) {
 	projection, err := sqlsol.NewProjectionFromEventSpec(eventSpec)
 	require.NoError(t, err, "burn and unreliable field mappings should unify to single column")
 
-	require.Equal(t, []string{"name", "burnt"}, projection.Tables[tableName].NotifyChannels["burn"])
+	require.Equal(t, []string{"burnt", "name"}, projection.Tables[tableName].NotifyChannels["burn"])
 
 	// Notify sugars on the burn channel
 	field := eventSpec[1].GetFieldMapping("sugars")
@@ -217,7 +217,7 @@ func TestNewProjectionFromEventSpec(t *testing.T) {
 
 	projection, err = sqlsol.NewProjectionFromEventSpec(eventSpec)
 	require.NoError(t, err)
-	require.Equal(t, []string{"name", "burnt", "tea_sugars"}, projection.Tables[tableName].NotifyChannels["burn"])
+	require.Equal(t, []string{"burnt", "name", "tea_sugars"}, projection.Tables[tableName].NotifyChannels["burn"])
 
 	// Create a column conflict between burn and unreliable fields (both map to burnt so the SQL column def must be identical)
 	field = eventSpec[1].GetFieldMapping("unreliable")

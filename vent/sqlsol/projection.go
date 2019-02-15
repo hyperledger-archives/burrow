@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -331,6 +332,7 @@ func mergeTables(a types.SQLTable, b types.SQLTable) (types.SQLTable, error) {
 		for column := range colMap {
 			table.NotifyChannels[channel] = append(table.NotifyChannels[channel], column)
 		}
+		sort.Strings(table.NotifyChannels[channel])
 	}
 
 	return table, nil
