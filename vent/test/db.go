@@ -27,9 +27,11 @@ func init() {
 func NewTestDB(t *testing.T, cfg *config.Flags) (*sqldb.SQLDB, func()) {
 	t.Helper()
 
-	if dbURL, ok := syscall.Getenv("DB_URL"); ok {
-		t.Logf("Using DB_URL '%s'", dbURL)
-		cfg.DBURL = dbURL
+	if cfg.DBAdapter != types.SQLiteDB {
+		if dbURL, ok := syscall.Getenv("DB_URL"); ok {
+			t.Logf("Using DB_URL '%s'", dbURL)
+			cfg.DBURL = dbURL
+		}
 	}
 
 	connection := types.SQLConnection{
