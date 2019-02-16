@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testConsumer(t *testing.T, cfg *config.Flags) {
+func testConsumer(t *testing.T, cfg *config.VentConfig) {
 	tCli := test.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	create := test.CreateContract(t, tCli, inputAccount.GetAddress())
 
@@ -88,7 +88,7 @@ func testConsumer(t *testing.T, cfg *config.Flags) {
 	require.NoError(t, err)
 }
 
-func testDeleteEvent(t *testing.T, cfg *config.Flags) {
+func testDeleteEvent(t *testing.T, cfg *config.VentConfig) {
 	tCli := test.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	create := test.CreateContract(t, tCli, inputAccount.GetAddress())
 
@@ -136,7 +136,7 @@ func testDeleteEvent(t *testing.T, cfg *config.Flags) {
 	require.Equal(t, "DeleteTestEvents", tblData[0].RowData["_eventname"].(string))
 }
 
-func testResume(t *testing.T, cfg *config.Flags) {
+func testResume(t *testing.T, cfg *config.VentConfig) {
 	db, closeDB := test.NewTestDB(t, cfg)
 	defer closeDB()
 
@@ -151,7 +151,7 @@ func testResume(t *testing.T, cfg *config.Flags) {
 	}
 }
 
-func testInvalidUTF8(t *testing.T, cfg *config.Flags) {
+func testInvalidUTF8(t *testing.T, cfg *config.VentConfig) {
 	tCli := test.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
 	create := test.CreateContract(t, tCli, inputAccount.GetAddress())
 
@@ -177,7 +177,7 @@ func testInvalidUTF8(t *testing.T, cfg *config.Flags) {
 }
 
 // Run consumer to listen to events
-func runConsumer(t *testing.T, db *sqldb.SQLDB, cfg *config.Flags) []types.EventData {
+func runConsumer(t *testing.T, db *sqldb.SQLDB, cfg *config.VentConfig) []types.EventData {
 	// Resolve relative path to test dir
 	_, testFile, _, _ := runtime.Caller(0)
 	testDir := path.Join(path.Dir(testFile), "..", "test")

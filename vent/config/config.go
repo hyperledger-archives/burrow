@@ -6,8 +6,8 @@ import (
 
 const DefaultPostgresDBURL = "postgres://postgres@localhost:5432/postgres?sslmode=disable"
 
-// Flags is a set of configuration parameters
-type Flags struct {
+// VentConfig is a set of configuration parameters
+type VentConfig struct {
 	DBAdapter     string
 	DBURL         string
 	DBSchema      string
@@ -20,8 +20,8 @@ type Flags struct {
 }
 
 // DefaultFlags returns a configuration with default values
-func DefaultFlags() *Flags {
-	return &Flags{
+func DefaultVentConfig() *VentConfig {
+	return &VentConfig{
 		DBAdapter:     types.PostgresDB,
 		DBURL:         DefaultPostgresDBURL,
 		DBSchema:      "vent",

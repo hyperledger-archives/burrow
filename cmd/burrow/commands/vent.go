@@ -19,7 +19,7 @@ import (
 func Vent(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 
-		cfg := config.DefaultFlags()
+		cfg := config.DefaultVentConfig()
 
 		dbAdapterOpt := cmd.StringOpt("db-adapter", cfg.DBAdapter, "Database adapter, 'postgres' or 'sqlite' (if built with the sqlite tag) are supported")
 		dbURLOpt := cmd.StringOpt("db-url", cfg.DBURL, "PostgreSQL database URL or SQLite db file path")

@@ -18,19 +18,19 @@ import (
 )
 
 func TestPostgresConsumer(t *testing.T) {
-	testConsumer(t, test.PostgresFlags())
+	testConsumer(t, test.PostgresVentConfig())
 }
 
 func TestPostgresInvalidUTF8(t *testing.T) {
-	testInvalidUTF8(t, test.PostgresFlags())
+	testInvalidUTF8(t, test.PostgresVentConfig())
 }
 
 func TestPostgresDeleteEvent(t *testing.T) {
-	testDeleteEvent(t, test.PostgresFlags())
+	testDeleteEvent(t, test.PostgresVentConfig())
 }
 
 func TestPostgresResume(t *testing.T) {
-	testResume(t, test.PostgresFlags())
+	testResume(t, test.PostgresVentConfig())
 }
 
 func TestPostgresTriggers(t *testing.T) {
@@ -42,7 +42,7 @@ func TestPostgresTriggers(t *testing.T) {
 	description := "Trigger it!"
 	txe := test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
 
-	cfg := test.PostgresFlags()
+	cfg := test.PostgresVentConfig()
 	// create test db
 	db, closeDB := test.NewTestDB(t, cfg)
 	defer closeDB()

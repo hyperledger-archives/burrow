@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testSynchronizeDB(t *testing.T, cfg *config.Flags) {
+func testSynchronizeDB(t *testing.T, cfg *config.VentConfig) {
 	t.Run(fmt.Sprintf("%s: successfully creates database tables and synchronizes db", cfg.DBAdapter),
 		func(t *testing.T) {
 			goodJSON := test.GoodJSONConfFile(t)
@@ -35,7 +35,7 @@ func testSynchronizeDB(t *testing.T, cfg *config.Flags) {
 		})
 }
 
-func testCleanDB(t *testing.T, cfg *config.Flags) {
+func testCleanDB(t *testing.T, cfg *config.VentConfig) {
 	t.Run(fmt.Sprintf("%s: successfully creates tables, updates chainID and drops all tables", cfg.DBAdapter),
 		func(t *testing.T) {
 			byteValue := []byte(test.GoodJSONConfFile(t))
@@ -56,7 +56,7 @@ func testCleanDB(t *testing.T, cfg *config.Flags) {
 		})
 }
 
-func testSetBlock(t *testing.T, cfg *config.Flags) {
+func testSetBlock(t *testing.T, cfg *config.VentConfig) {
 	t.Run(fmt.Sprintf("%s: successfully inserts a block", cfg.DBAdapter),
 		func(t *testing.T) {
 			db, closeDB := test.NewTestDB(t, cfg)

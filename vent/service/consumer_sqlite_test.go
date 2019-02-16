@@ -9,17 +9,17 @@ import (
 )
 
 func TestSqliteConsumer(t *testing.T) {
-	testConsumer(t, test.SqliteFlags())
+	testConsumer(t, test.SqliteVentConfig())
 }
 
 func TestSqliteInvalidUTF8(t *testing.T) {
-	testInvalidUTF8(t, test.SqliteFlags())
+	testInvalidUTF8(t, test.SqliteVentConfig())
 }
 
 func TestSqliteDeleteEvent(t *testing.T) {
-	testDeleteEvent(t, test.SqliteFlags())
+	testDeleteEvent(t, test.SqliteVentConfig())
 }
 
 func TestSqliteResume(t *testing.T) {
-	testResume(t, test.SqliteFlags())
+	testResume(t, test.SqliteVentConfig())
 }

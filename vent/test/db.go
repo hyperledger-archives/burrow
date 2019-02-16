@@ -24,7 +24,7 @@ func init() {
 }
 
 // NewTestDB creates a database connection for testing
-func NewTestDB(t *testing.T, cfg *config.Flags) (*sqldb.SQLDB, func()) {
+func NewTestDB(t *testing.T, cfg *config.VentConfig) (*sqldb.SQLDB, func()) {
 	t.Helper()
 
 	if cfg.DBAdapter != types.SQLiteDB {
@@ -62,15 +62,15 @@ func NewTestDB(t *testing.T, cfg *config.Flags) (*sqldb.SQLDB, func()) {
 	}
 }
 
-func SqliteFlags() *config.Flags {
-	cfg := config.DefaultFlags()
+func SqliteVentConfig() *config.VentConfig {
+	cfg := config.DefaultVentConfig()
 	cfg.DBURL = fmt.Sprintf("./test_%s.sqlite", randString(10))
 	cfg.DBAdapter = types.SQLiteDB
 	return cfg
 }
 
-func PostgresFlags() *config.Flags {
-	cfg := config.DefaultFlags()
+func PostgresVentConfig() *config.VentConfig {
+	cfg := config.DefaultVentConfig()
 	cfg.DBSchema = fmt.Sprintf("test_%s", randString(10))
 	cfg.DBAdapter = types.PostgresDB
 	cfg.DBURL = config.DefaultPostgresDBURL

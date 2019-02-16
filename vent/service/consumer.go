@@ -22,7 +22,7 @@ import (
 
 // Consumer contains basic configuration for consumer to run
 type Consumer struct {
-	Config         *config.Flags
+	Config         *config.VentConfig
 	Log            *logger.Logger
 	Closing        bool
 	DB             *sqldb.SQLDB
@@ -34,7 +34,7 @@ type Consumer struct {
 // NewConsumer constructs a new consumer configuration.
 // The event channel will be passed a collection of rows generated from all of the events in a single block
 // It will be closed by the consumer when it is finished
-func NewConsumer(cfg *config.Flags, log *logger.Logger, eventChannel chan types.EventData) *Consumer {
+func NewConsumer(cfg *config.VentConfig, log *logger.Logger, eventChannel chan types.EventData) *Consumer {
 	return &Consumer{
 		Config:        cfg,
 		Log:           log,

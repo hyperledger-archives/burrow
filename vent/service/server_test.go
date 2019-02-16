@@ -22,7 +22,7 @@ import (
 
 func TestServer(t *testing.T) {
 	// run consumer to listen to events
-	cfg := config.DefaultFlags()
+	cfg := config.DefaultVentConfig()
 
 	// create test db
 	db, closeDB := test.NewTestDB(t, cfg)
