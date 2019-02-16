@@ -100,18 +100,17 @@ func testDeleteEvent(t *testing.T, cfg *config.VentConfig) {
 	eventColumnName := "EventTest"
 
 	// Add a test event
-	name := "TestEvent1"
-	description := "Description of TestEvent1"
+	name := "TestEventForDeletion"
+	description := "to be deleted"
 	txeAdd := test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
 
 	// Spin the consumer
 	runConsumer(t, db, cfg)
 
 	// Expect block table, tx table, and EventTest table
-	blockID := txeAdd.Height
-	eventData, err := db.GetBlock(blockID)
+	eventData, err := db.GetBlock(txeAdd.Height)
 	require.NoError(t, err)
-	require.Equal(t, blockID, eventData.BlockHeight)
+	require.Equal(t, txeAdd.Height, eventData.BlockHeight)
 	require.Equal(t, 3, len(eventData.Tables))
 
 	// Expect data in the EventTest table
@@ -121,19 +120,17 @@ func testDeleteEvent(t *testing.T, cfg *config.VentConfig) {
 	require.Equal(t, "UpdateTestEvents", tblData[0].RowData["_eventname"].(string))
 
 	// Now emit a deletion event for that table
-	txeDelete := test.CallRemoveEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name)
+	test.CallRemoveEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name)
 	runConsumer(t, db, cfg)
 
-	blockID = txeDelete.Height
-	eventData, err = db.GetBlock(blockID)
+	eventData, err = db.GetBlock(txeAdd.Height)
 	require.NoError(t, err)
-	require.Equal(t, blockID, eventData.BlockHeight)
+	require.Equal(t, txeAdd.Height, eventData.BlockHeight)
 	require.Equal(t, 3, len(eventData.Tables))
 
+	// Check the row was deleted
 	tblData = eventData.Tables[eventColumnName]
-	require.Equal(t, 1, len(tblData))
-	require.Equal(t, "LogEvent", tblData[0].RowData["_eventtype"].(string))
-	require.Equal(t, "DeleteTestEvents", tblData[0].RowData["_eventname"].(string))
+	require.Equal(t, 0, len(tblData))
 }
 
 func testResume(t *testing.T, cfg *config.VentConfig) {

@@ -98,7 +98,7 @@ func (adapter *PostgresAdapter) SecureName(name string) string {
 }
 
 // CreateTableQuery builds query for creating a new table
-func (adapter *PostgresAdapter) CreateTableQuery(tableName string, columns []types.SQLTableColumn) (string, string) {
+func (adapter *PostgresAdapter) CreateTableQuery(tableName string, columns []*types.SQLTableColumn) (string, string) {
 	// build query
 	columnsDef := ""
 	primaryKey := ""
@@ -290,7 +290,7 @@ func (adapter *PostgresAdapter) ErrorEquals(err error, sqlErrorType types.SQLErr
 	return false
 }
 
-func (adapter *PostgresAdapter) UpsertQuery(table types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, interface{}, error) {
+func (adapter *PostgresAdapter) UpsertQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, interface{}, error) {
 
 	pointers := make([]interface{}, 0)
 
@@ -362,7 +362,7 @@ func (adapter *PostgresAdapter) UpsertQuery(table types.SQLTable, row types.Even
 	return types.UpsertDeleteQuery{Query: query, Values: values, Pointers: pointers}, txHash, nil
 }
 
-func (adapter *PostgresAdapter) DeleteQuery(table types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, error) {
+func (adapter *PostgresAdapter) DeleteQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, error) {
 
 	pointers := make([]interface{}, 0)
 	columns := ""
@@ -380,7 +380,7 @@ func (adapter *PostgresAdapter) DeleteQuery(table types.SQLTable, row types.Even
 
 			// WHERE ..........
 			if columns != "" {
-				columns += "AND "
+				columns += " AND "
 				values += ", "
 			}
 

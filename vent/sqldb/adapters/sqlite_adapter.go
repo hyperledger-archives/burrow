@@ -64,7 +64,7 @@ func (adapter *SQLiteAdapter) SecureName(name string) string {
 }
 
 // CreateTableQuery builds query for creating a new table
-func (adapter *SQLiteAdapter) CreateTableQuery(tableName string, columns []types.SQLTableColumn) (string, string) {
+func (adapter *SQLiteAdapter) CreateTableQuery(tableName string, columns []*types.SQLTableColumn) (string, string) {
 	// build query
 	columnsDef := ""
 	primaryKey := ""
@@ -262,8 +262,7 @@ func (adapter *SQLiteAdapter) ErrorEquals(err error, sqlErrorType types.SQLError
 	return false
 }
 
-func (adapter *SQLiteAdapter) UpsertQuery(table types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, interface{}, error) {
-
+func (adapter *SQLiteAdapter) UpsertQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, interface{}, error) {
 	pointers := make([]interface{}, 0)
 	columns := ""
 	insValues := ""
@@ -343,7 +342,7 @@ func (adapter *SQLiteAdapter) UpsertQuery(table types.SQLTable, row types.EventD
 	return types.UpsertDeleteQuery{Query: query, Values: values, Pointers: pointers}, txHash, nil
 }
 
-func (adapter *SQLiteAdapter) DeleteQuery(table types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, error) {
+func (adapter *SQLiteAdapter) DeleteQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, error) {
 
 	pointers := make([]interface{}, 0)
 	columns := ""
@@ -361,7 +360,7 @@ func (adapter *SQLiteAdapter) DeleteQuery(table types.SQLTable, row types.EventD
 
 			// WHERE ..........
 			if columns != "" {
-				columns += "AND "
+				columns += " AND "
 				values += ", "
 			}
 

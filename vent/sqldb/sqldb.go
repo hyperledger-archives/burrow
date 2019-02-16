@@ -445,7 +445,6 @@ func (db *SQLDB) GetBlock(height uint64) (types.EventData, error) {
 			db.Log.Info("msg", "Error building table query", "err", err)
 			return data, err
 		}
-		query = query
 		db.Log.Info("msg", "Query table data", "query", query)
 		rows, err := db.DB.Query(query)
 		if err != nil {

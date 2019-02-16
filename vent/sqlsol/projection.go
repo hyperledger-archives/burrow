@@ -97,7 +97,7 @@ func NewProjectionFromEventSpec(eventSpec types.EventSpec) (*Projection, error) 
 		}
 
 		// build columns mapping
-		columns := make(map[string]*types.SQLTableColumn)
+		var columns []*types.SQLTableColumn
 		channels := make(map[string][]string)
 
 		// Add the global mappings
@@ -117,19 +117,18 @@ func NewProjectionFromEventSpec(eventSpec types.EventSpec) (*Projection, error) 
 				channels[channel] = append(channels[channel], mapping.ColumnName)
 			}
 
-			columns[mapping.ColumnName] = &types.SQLTableColumn{
+			columns = append(columns, &types.SQLTableColumn{
 				Name:    mapping.ColumnName,
 				Type:    sqlType,
 				Primary: mapping.Primary,
 				Length:  sqlTypeLength,
-				Order:   i,
-			}
+			})
 		}
 
 		// Allow for compatible composition of tables
 		var err error
 		tables[eventClass.TableName], err = mergeTables(tables[eventClass.TableName],
-			types.SQLTable{
+			&types.SQLTable{
 				Name:           eventClass.TableName,
 				NotifyChannels: channels,
 				Columns:        columns,
@@ -161,11 +160,12 @@ func NewProjectionFromEventSpec(eventSpec types.EventSpec) (*Projection, error) 
 // Get the column for a particular table and column name
 func (p *Projection) GetColumn(tableName, columnName string) (*types.SQLTableColumn, error) {
 	if table, ok := p.Tables[tableName]; ok {
-		if column, ok := table.Columns[columnName]; ok {
-			return column, nil
+		column := table.GetColumn(columnName)
+		if column == nil {
+			return nil, fmt.Errorf("GetColumn: table '%s' has no column '%s'",
+				tableName, columnName)
 		}
-		return nil, fmt.Errorf("GetColumn: table '%s' has no column '%s'",
-			tableName, columnName)
+		return column, nil
 	}
 
 	return nil, fmt.Errorf("GetColumn: table does not exist projection: %s ", tableName)
@@ -287,50 +287,45 @@ func getGlobalFieldMappings() []*types.EventFieldMapping {
 }
 
 // Merges tables a and b provided the intersection of their columns (by name) are identical
-func mergeTables(a types.SQLTable, b types.SQLTable) (types.SQLTable, error) {
-	if a.Name == "" {
-		return b, nil
-	}
-	if b.Name == "" {
-		return a, nil
-	}
-	if a.Name != b.Name {
-		return types.SQLTable{}, fmt.Errorf("cannot merge tables with different names")
-	}
-
-	table := types.SQLTable{
-		Name:           a.Name,
+func mergeTables(tables ...*types.SQLTable) (*types.SQLTable, error) {
+	table := &types.SQLTable{
 		NotifyChannels: make(map[string][]string),
-		Columns:        make(map[string]*types.SQLTableColumn),
 	}
 
-	for name, columnA := range a.Columns {
-		table.Columns[name] = columnA
-		if columnB, ok := b.Columns[name]; ok {
-			columnB.Order = columnA.Order
-			if *columnA != *columnB {
-				return types.SQLTable{}, fmt.Errorf("cannot merge event class tables for %s because of "+
-					"conflicting columns: %v and %v", a.Name, columnA, columnB)
+	columns := make(map[string]*types.SQLTableColumn)
+	notifications := make(map[string]map[string]struct{})
+
+	for _, t := range tables {
+		if t != nil {
+			table.Name = t.Name
+			for _, columnB := range t.Columns {
+				if columnA, ok := columns[columnB.Name]; ok {
+					if !columnA.Equals(columnB) {
+						return nil, fmt.Errorf("cannot merge event class tables for %s because of "+
+							"conflicting columns: %v and %v", t.Name, columnB, columnB)
+					}
+					// Just keep existing column from A - they match
+				} else {
+					// Add as new column
+					table.Columns = append(table.Columns, columnB)
+					columns[columnB.Name] = columnB
+				}
+			}
+			for channel, columnNames := range t.NotifyChannels {
+				for _, columnName := range columnNames {
+					if notifications[channel] == nil {
+						notifications[channel] = make(map[string]struct{})
+					}
+					notifications[channel][columnName] = struct{}{}
+				}
 			}
 		}
 	}
-	// Now we've ensured no conflicts add the columns from b
-	for name, columnB := range b.Columns {
-		columnB.Order += len(a.Columns)
-		table.Columns[name] = columnB
-	}
 
 	// Merge notification channels requested by specs
-	for channel, columns := range a.NotifyChannels {
-		colMap := make(map[string]struct{})
-		for _, column := range columns {
-			colMap[column] = struct{}{}
-		}
-		for _, column := range b.NotifyChannels[channel] {
-			colMap[column] = struct{}{}
-		}
-		for column := range colMap {
-			table.NotifyChannels[channel] = append(table.NotifyChannels[channel], column)
+	for channel, colMap := range notifications {
+		for columnName := range colMap {
+			table.NotifyChannels[channel] = append(table.NotifyChannels[channel], columnName)
 		}
 		sort.Strings(table.NotifyChannels[channel])
 	}

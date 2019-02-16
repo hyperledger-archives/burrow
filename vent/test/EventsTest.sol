@@ -10,7 +10,7 @@ contract EventsTest {
     event DeleteTestEvents(
         bytes32 indexed name,
         bytes32 indexed key,
-        int __DELETED__);
+        int __DELETE__);
 
     bytes32 constant TABLE_EVENTS_TEST = "TEST_EVENTS";
 

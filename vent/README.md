@@ -1,14 +1,13 @@
 # Vent Component
 
-Vent reads sqlsol specification & abi files, parses their contents and maps column types to corresponding sql types to create or alter database structures.
+Vent reads sqlsol specification & abi files, parses their contents, and maps column types to corresponding sql types to create or alter database structures. It listens for a stream of block events from Burrow's GRPC service then parses, unpacks, decodes event data, and builds rows to be upserted in matching event tables, rows are upserted atomically in a single database transaction per block.
 
-Then listens to burrow gRPC server and get flowing events based on block range.
+Block height and context info are stored in Log tables in order to resume getting pending blocks or rewind to a previous state.
 
-Parses, unpacks, decodes data and builds rows to be upserted in matching event tables, rows are upserted in blocks where each block is one commit.
+## SQLSol specification
+SQLSol is the name (derived from it being an object relational mapping between Solidity events and SQL tables) given to the configuration files that Vent uses to interpret EVM events as updates or deletion from SQL tables
 
-Block id and context info are stored in Log tables in order to resume getting pending blocks.
-
-Given a sqlsol specification 
+Given a sqlsol specification, like the following:
 
 ```json
 [
@@ -16,18 +15,18 @@ Given a sqlsol specification
     "TableName" : "EventTest",
     "Filter" : "Log1Text = 'LOGEVENT1'",
     "DeleteMarkerField": "__DELETE__",
-    "Fields"  : {
-      "key" : {"name" : "testname", "type": "bytes32", "primary" : true},
-      "description": {"name" : "testdescription", "type": "bytes32", "primary" : false, "bytesToString": true}
-    }
+    "FieldMappings"  : [
+      {"Field": "key", "Name" : "testname", "Type": "bytes32", "Primary" : true},
+      {"Field": "description", "Name" : "testdescription", "Type": "bytes32", "Primary" : false, "BytesToString": true}
+    ]
   },
   {
     "TableName" : "UserAccounts",
     "Filter" : "Log1Text = 'USERACCOUNTS'",
-    "Fields"  : {
-      "userAddress" : {"name" : "address", "type": "address", "primary" : true},
-      "userName": {"name" : "username", "type": "string", "primary" : false}
-    }
+    "FieldMappings"  : [
+      {"Field": "userAddress", "Name" : "address", "Type": "address", "Primary" : true},
+      {"Field": "userName", "Name" : "username", "Type": "string", "Primary" : false}
+    ]
   }
 ]
 

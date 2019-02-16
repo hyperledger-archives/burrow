@@ -44,61 +44,62 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 			cfg.DBBlockTx = *dbBlockTxOpt
 		}
 
-		cmd.Spec = "--spec=<spec file or dir> --abi=<abi file or dir> [--db-adapter] [--db-url] [--db-schema] " +
-			"[--db-block] [--grpc-addr] [--http-addr] [--log-level]"
+		cmd.Command("start", "Start the Vent consumer service",
+			func(cmd *cli.Cmd) {
+				cmd.Spec = "(--spec=<spec file or dir> --abi=<abi file or dir> [--db-adapter] [--db-url] [--db-schema] " +
+					"[--db-block] [--grpc-addr] [--http-addr] [--log-level])"
 
-		cmd.Action = func() {
-			log := logger.NewLogger(cfg.LogLevel)
-			consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
-			server := service.NewServer(cfg, log, consumer)
+				log := logger.NewLogger(cfg.LogLevel)
+				consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
+				server := service.NewServer(cfg, log, consumer)
 
-			projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDir, cfg.DBBlockTx)
-			if err != nil {
-				output.Fatalf("Spec loader error: %v", err)
-			}
-			abiSpec, err := sqlsol.AbiLoader(cfg.AbiFileOrDir)
-			if err != nil {
-				output.Fatalf("ABI loader error: %v", err)
-			}
-
-			var wg sync.WaitGroup
-
-			// setup channel for termination signals
-			ch := make(chan os.Signal)
-
-			signal.Notify(ch, syscall.SIGTERM)
-			signal.Notify(ch, syscall.SIGINT)
-
-			// start the events consumer
-			wg.Add(1)
-
-			go func() {
-				if err := consumer.Run(projection, abiSpec, true); err != nil {
-					output.Fatalf("Consumer execution error: %v", err)
+				projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDir, cfg.DBBlockTx)
+				if err != nil {
+					output.Fatalf("Spec loader error: %v", err)
+				}
+				abiSpec, err := sqlsol.AbiLoader(cfg.AbiFileOrDir)
+				if err != nil {
+					output.Fatalf("ABI loader error: %v", err)
 				}
 
-				wg.Done()
-			}()
+				var wg sync.WaitGroup
 
-			// start the http server
-			wg.Add(1)
+				// setup channel for termination signals
+				ch := make(chan os.Signal)
 
-			go func() {
-				server.Run()
-				wg.Done()
-			}()
+				signal.Notify(ch, syscall.SIGTERM)
+				signal.Notify(ch, syscall.SIGINT)
 
-			// wait for a termination signal from the OS and
-			// gracefully shutdown the events consumer and the http server
-			go func() {
-				<-ch
-				consumer.Shutdown()
-				server.Shutdown()
-			}()
+				// start the events consumer
+				wg.Add(1)
 
-			// wait until the events consumer and the http server are done
-			wg.Wait()
-		}
+				go func() {
+					if err := consumer.Run(projection, abiSpec, true); err != nil {
+						output.Fatalf("Consumer execution error: %v", err)
+					}
+
+					wg.Done()
+				}()
+
+				// start the http server
+				wg.Add(1)
+
+				go func() {
+					server.Run()
+					wg.Done()
+				}()
+
+				// wait for a termination signal from the OS and
+				// gracefully shutdown the events consumer and the http server
+				go func() {
+					<-ch
+					consumer.Shutdown()
+					server.Shutdown()
+				}()
+
+				// wait until the events consumer and the http server are done
+				wg.Wait()
+			})
 
 		cmd.Command("schema", "Print JSONSchema for spec file format to validate table specs",
 			func(cmd *cli.Cmd) {

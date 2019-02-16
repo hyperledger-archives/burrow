@@ -17,9 +17,15 @@ func TestSpecLoader(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, 4, len(projection.Tables))
+
 		require.Equal(t, types.SQLBlockTableName, projection.Tables[types.SQLBlockTableName].Name)
-		require.Equal(t, "_height", projection.Tables[types.SQLBlockTableName].Columns["height"].Name)
+
+		require.Equal(t, types.SQLColumnLabelHeight,
+			projection.Tables[types.SQLBlockTableName].GetColumn(types.SQLColumnLabelHeight).Name)
+
 		require.Equal(t, types.SQLTxTableName, projection.Tables[types.SQLTxTableName].Name)
-		require.Equal(t, "_txhash", projection.Tables[types.SQLTxTableName].Columns["txHash"].Name)
+
+		require.Equal(t, types.SQLColumnLabelTxHash,
+			projection.Tables[types.SQLTxTableName].GetColumn(types.SQLColumnLabelTxHash).Name)
 	})
 }

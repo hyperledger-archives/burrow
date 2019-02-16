@@ -1,4 +1,11 @@
 jobs:
+- name: name
+  set:
+    val: melons
+
+- name: desc
+  set:
+    val: "the fooss"
 
 - name: deployEventsTest
   deploy:
@@ -9,8 +16,8 @@ jobs:
       destination: $deployEventsTest
       function: addThing
       data:
-        - foosball!
-        - "the foo"
+        - $name
+        - $desc
 
 - name: getDesc
   call:
@@ -34,14 +41,14 @@ jobs:
   assert:
     key: $getDesc
     relation: eq
-    val: the foo
+    val: $desc
 
 - name: removeEvent
   call:
     destination: $deployEventsTest
     function: removeThing
     data:
-      - foosball!
+      - $name
 
 - name: getLength2
   call:

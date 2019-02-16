@@ -91,8 +91,9 @@ func TestPostgresTriggers(t *testing.T) {
 	// Give events a chance
 	time.Sleep(time.Second)
 	// Assert we get expected returns
+	t.Logf("latest height: %d, txe height: %d", height, txe.Height)
 	assert.True(t, height >= txe.Height)
-	assert.Equal(t, `{"_action" : "INSERT", "testname" : "TestTriggerEvent", "testdescription" : "\\x5472696767657220697421000000000100000000000000000000000000000000"}`, notifications["meta"])
-	assert.Equal(t, `{"_action" : "INSERT", "testkey" : "\\x544553545f4556454e5453000000000000000000000000000000000000000000", "testname" : "TestTriggerEvent", "testdescription" : "\\x5472696767657220697421000000000100000000000000000000000000000000"}`,
+	assert.Equal(t, `{"_action" : "INSERT", "testdescription" : "\\x5472696767657220697421000000000100000000000000000000000000000000", "testname" : "TestTriggerEvent"}`, notifications["meta"])
+	assert.Equal(t, `{"_action" : "INSERT", "testdescription" : "\\x5472696767657220697421000000000100000000000000000000000000000000", "testkey" : "\\x544553545f4556454e5453000000000000000000000000000000000000000000", "testname" : "TestTriggerEvent"}`,
 		notifications["keyed_meta"])
 }

@@ -48,13 +48,11 @@ func TestNewProjection(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, false, col.Primary)
 		require.Equal(t, types.SQLColumnTypeText, col.Type)
-		require.Equal(t, 2, col.Order)
 
 		col, err = tableStruct.GetColumn(tableName, types.SQLColumnLabelEventName)
 		require.NoError(t, err)
 		require.Equal(t, false, col.Primary)
 		require.Equal(t, types.SQLColumnTypeText, col.Type)
-		require.Equal(t, 4, col.Order)
 	})
 
 	t.Run("returns an error if the event type of a given column is unknown", func(t *testing.T) {

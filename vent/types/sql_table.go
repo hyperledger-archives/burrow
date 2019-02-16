@@ -7,9 +7,20 @@ import (
 // SQLTable contains the structure of a SQL table,
 type SQLTable struct {
 	Name    string
-	Columns map[string]*SQLTableColumn
+	Columns []*SQLTableColumn
 	// Map of channel name -> columns to be sent as payload on that channel
 	NotifyChannels map[string][]string
+	columns        map[string]*SQLTableColumn
+}
+
+func (table *SQLTable) GetColumn(columnName string) *SQLTableColumn {
+	if table.columns == nil {
+		table.columns = make(map[string]*SQLTableColumn, len(table.Columns))
+		for _, column := range table.Columns {
+			table.columns[column.Name] = column
+		}
+	}
+	return table.columns[columnName]
 }
 
 // SQLTableColumn contains the definition of a SQL table column,
@@ -19,7 +30,6 @@ type SQLTableColumn struct {
 	Type    SQLColumnType
 	Primary bool
 	Length  int
-	Order   int
 }
 
 func (col *SQLTableColumn) String() string {
@@ -31,8 +41,14 @@ func (col *SQLTableColumn) String() string {
 	if col.Length != 0 {
 		lengthString = fmt.Sprintf(" (length %d)", col.Length)
 	}
-	return fmt.Sprintf("SQLTableColumn{%02d-%s%s: %v%s}",
-		col.Order, col.Name, primaryString, col.Type, lengthString)
+	return fmt.Sprintf("SQLTableColumn{%s%s: %v%s}",
+		col.Name, primaryString, col.Type, lengthString)
+}
+
+func (col *SQLTableColumn) Equals(otherCol *SQLTableColumn) bool {
+	columnA := *col
+	columnB := *otherCol
+	return columnA == columnB
 }
 
 // UpsertDeleteQuery contains query and values to upsert or delete row data

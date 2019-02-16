@@ -97,17 +97,20 @@ func testSetBlock(t *testing.T, cfg *config.VentConfig) {
 		require.NoError(t, errp)
 
 		//table 1
-		cols1 := make(map[string]*types.SQLTableColumn)
-		cols1["ID"] = &types.SQLTableColumn{Name: "test_id", Type: types.SQLColumnTypeSerial, Primary: true, Order: 1}
-		cols1["Column1"] = &types.SQLTableColumn{Name: "col1", Type: types.SQLColumnTypeBool, Primary: false, Order: 2}
-		cols1["Column2"] = &types.SQLTableColumn{Name: "col2", Type: types.SQLColumnTypeByteA, Primary: false, Order: 3}
-		cols1["Column3"] = &types.SQLTableColumn{Name: "col3", Type: types.SQLColumnTypeInt, Primary: false, Order: 4}
-		cols1["Column4"] = &types.SQLTableColumn{Name: "col4", Type: types.SQLColumnTypeText, Primary: false, Order: 5}
-		cols1["Column5"] = &types.SQLTableColumn{Name: "col5", Type: types.SQLColumnTypeTimeStamp, Primary: false, Order: 6}
-		cols1["Column6"] = &types.SQLTableColumn{Name: "col6", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false, Order: 7}
-		table1 := types.SQLTable{Name: "AllDataTypesTable", Columns: cols1}
-		tables := make(map[string]types.SQLTable)
-		tables["AllDataTypesTable"] = table1
+		tables := map[string]*types.SQLTable{
+			"AllDataTypesTable": {
+				Name: "AllDataTypesTable",
+				Columns: []*types.SQLTableColumn{
+					{Name: "test_id", Type: types.SQLColumnTypeSerial, Primary: true},
+					{Name: "col1", Type: types.SQLColumnTypeBool, Primary: false},
+					{Name: "col2", Type: types.SQLColumnTypeByteA, Primary: false},
+					{Name: "col3", Type: types.SQLColumnTypeInt, Primary: false},
+					{Name: "col4", Type: types.SQLColumnTypeText, Primary: false},
+					{Name: "col5", Type: types.SQLColumnTypeTimeStamp, Primary: false},
+					{Name: "col6", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false},
+				},
+			},
+		}
 
 		err := db.SynchronizeDB(tables)
 		require.NoError(t, err)
@@ -119,37 +122,48 @@ func getBlock() (types.EventTables, types.EventData) {
 	longtext = fmt.Sprintf("%s %s %s %s %s", longtext, longtext, longtext, longtext, longtext)
 
 	//table 1
-	cols1 := make(map[string]*types.SQLTableColumn)
-	cols1["ID"] = &types.SQLTableColumn{Name: "test_id", Type: types.SQLColumnTypeInt, Primary: true, Order: 1}
-	cols1["Column1"] = &types.SQLTableColumn{Name: "col1", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false, Order: 2}
-	cols1["Column2"] = &types.SQLTableColumn{Name: "col2", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false, Order: 3}
-	cols1["Column3"] = &types.SQLTableColumn{Name: "_height", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false, Order: 4}
-	cols1["Column4"] = &types.SQLTableColumn{Name: "col4", Type: types.SQLColumnTypeText, Primary: false, Order: 5}
-
-	cols1["ColumnV"] = &types.SQLTableColumn{Name: "colV", Type: types.SQLColumnTypeVarchar, Length: 400, Primary: false, Order: 6}
-	cols1["ColumnT"] = &types.SQLTableColumn{Name: "colT", Type: types.SQLColumnTypeText, Length: 0, Primary: false, Order: 7}
-	table1 := types.SQLTable{Name: "test_table1", Columns: cols1}
+	table1 := &types.SQLTable{
+		Name: "test_table1",
+		Columns: []*types.SQLTableColumn{
+			{Name: "test_id", Type: types.SQLColumnTypeInt, Primary: true},
+			{Name: "col1", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false},
+			{Name: "col2", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false},
+			{Name: "_height", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false},
+			{Name: "col4", Type: types.SQLColumnTypeText, Primary: false},
+			{Name: "colV", Type: types.SQLColumnTypeVarchar, Length: 400, Primary: false},
+			{Name: "colT", Type: types.SQLColumnTypeText, Length: 0, Primary: false},
+		},
+	}
 
 	//table 2
-	cols2 := make(map[string]*types.SQLTableColumn)
-	cols2["ID"] = &types.SQLTableColumn{Name: "_height", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: true, Order: 1}
-	cols2["SID"] = &types.SQLTableColumn{Name: "sid_id", Type: types.SQLColumnTypeInt, Primary: true, Order: 2}
-	cols2["Field 1"] = &types.SQLTableColumn{Name: "field_1", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false, Order: 3}
-	cols2["Field 2"] = &types.SQLTableColumn{Name: "field_2", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false, Order: 4}
-	table2 := types.SQLTable{Name: "test_table2", Columns: cols2}
+	table2 := &types.SQLTable{
+		Name: "test_table2",
+		Columns: []*types.SQLTableColumn{
+			{Name: "_height", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: true},
+			{Name: "sid_id", Type: types.SQLColumnTypeInt, Primary: true},
+			{Name: "field_1", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false},
+			{Name: "field_2", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false},
+		},
+	}
 
 	//table 3
-	cols3 := make(map[string]*types.SQLTableColumn)
-	cols3["Code"] = &types.SQLTableColumn{Name: "_height", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: true, Order: 1}
-	cols3["Value A"] = &types.SQLTableColumn{Name: "val", Type: types.SQLColumnTypeInt, Primary: false, Order: 2}
-	table3 := types.SQLTable{Name: "test_table3", Columns: cols3}
+	table3 := &types.SQLTable{
+		Name: "test_table3",
+		Columns: []*types.SQLTableColumn{
+			{Name: "_height", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: true},
+			{Name: "val", Type: types.SQLColumnTypeInt, Primary: false},
+		},
+	}
 
 	//table 4
-	cols4 := make(map[string]*types.SQLTableColumn)
-	cols4["index"] = &types.SQLTableColumn{Name: "index", Type: types.SQLColumnTypeInt, Primary: true, Order: 1}
-	cols4["time"] = &types.SQLTableColumn{Name: "time", Type: types.SQLColumnTypeTimeStamp, Primary: false, Order: 2}
-	cols4["Code"] = &types.SQLTableColumn{Name: "_height", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false, Order: 3}
-	table4 := types.SQLTable{Name: "test_table4", Columns: cols4}
+	table4 := &types.SQLTable{
+		Name: "test_table4",
+		Columns: []*types.SQLTableColumn{
+			{Name: "index", Type: types.SQLColumnTypeInt, Primary: true},
+			{Name: "time", Type: types.SQLColumnTypeTimeStamp, Primary: false},
+			{Name: "_height", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: false},
+		},
+	}
 
 	str := make(types.EventTables)
 	str["1"] = table1
@@ -198,11 +212,14 @@ func getBlock() (types.EventTables, types.EventData) {
 
 func getAlterBlock() (types.EventTables, types.EventData) {
 	//table 3
-	cols3 := make(map[string]*types.SQLTableColumn)
-	cols3["Code"] = &types.SQLTableColumn{Name: "_height", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: true, Order: 1}
-	cols3["Value A"] = &types.SQLTableColumn{Name: "val", Type: types.SQLColumnTypeInt, Primary: false, Order: 2}
-	cols3["Value B"] = &types.SQLTableColumn{Name: "val_alter", Type: types.SQLColumnTypeInt, Primary: false, Order: 3}
-	table3 := types.SQLTable{Name: "test_table3", Columns: cols3}
+	table3 := &types.SQLTable{
+		Name: "test_table3",
+		Columns: []*types.SQLTableColumn{
+			{Name: "_height", Type: types.SQLColumnTypeVarchar, Length: 100, Primary: true},
+			{Name: "val", Type: types.SQLColumnTypeInt, Primary: false},
+			{Name: "val_alter", Type: types.SQLColumnTypeInt, Primary: false},
+		},
+	}
 
 	str := make(types.EventTables)
 	str["3"] = table3

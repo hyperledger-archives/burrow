@@ -178,7 +178,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 				c.Log.Debug("msg", "Getting transaction", "TxHash", txe.TxHash, "num_events", len(txe.Events))
 
 				if c.Config.DBBlockTx {
-					txRawData, err := buildTxData(projection.Tables, txe)
+					txRawData, err := buildTxData(txe)
 					if err != nil {
 						doneCh <- errors.Wrapf(err, "Error building tx raw data")
 					}
@@ -268,7 +268,7 @@ loop:
 		case blk := <-eventCh:
 			// upsert rows in specific SQL event tables and update block number
 			if err := c.DB.SetBlock(projection.Tables, blk); err != nil {
-				return errors.Wrap(err, "Error upserting rows in SQL event tables")
+				return fmt.Errorf("error upserting rows in database: %v", err)
 			}
 
 			// send to the external events channel in a non-blocking manner

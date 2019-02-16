@@ -19,7 +19,7 @@ type DBAdapter interface {
 	// SecureColumnName returns columns with proper delimiters to ensure well formed column names
 	SecureName(name string) string
 	// CreateTableQuery builds a CREATE TABLE query to create a new table
-	CreateTableQuery(tableName string, columns []types.SQLTableColumn) (string, string)
+	CreateTableQuery(tableName string, columns []*types.SQLTableColumn) (string, string)
 	// LastBlockIDQuery builds a SELECT query to return the last block# from the Log table
 	LastBlockIDQuery() string
 	// FindTableQuery builds a SELECT query to check if a table exists
@@ -35,9 +35,9 @@ type DBAdapter interface {
 	// InsertLogQuery builds an INSERT query to store data in Log table
 	InsertLogQuery() string
 	// UpsertQuery builds an INSERT... ON CONFLICT (or similar) query to upsert data in event tables based on PK
-	UpsertQuery(table types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, interface{}, error)
+	UpsertQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, interface{}, error)
 	// DeleteQuery builds a DELETE FROM event tables query based on PK
-	DeleteQuery(table types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, error)
+	DeleteQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, error)
 	// RestoreDBQuery builds a list of sql clauses needed to restore the db to a point in time
 	RestoreDBQuery() string
 	// CleanDBQueries returns necessary queries to clean the database
