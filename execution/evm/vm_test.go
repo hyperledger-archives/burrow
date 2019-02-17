@@ -1449,6 +1449,35 @@ func TestCallStackOverflow(t *testing.T) {
 	assert.Equal(t, account1, deepestErr.Caller)
 }
 
+func TestExtCodeHash(t *testing.T) {
+	cache := NewState(newAppState(), blockHashGetter)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+	account1 := newAccount(cache, "1")
+	account2 := newAccount(cache, "101")
+
+	var gas uint64 = 100000
+
+	// 1. The EXTCODEHASH of the account without code is c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
+	//    what is the keccack256 hash of empty data.
+	bytecode := MustSplice(PUSH20, account1, EXTCODEHASH, return1())
+	output, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
+	assert.NoError(t, err)
+	assert.Equal(t, hex.MustDecodeString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"), output)
+
+	// 2. The EXTCODEHASH of non-existent account is 0.
+	bytecode = MustSplice(PUSH1, 0x03, EXTCODEHASH, return1())
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
+	assert.NoError(t, err)
+	assert.Equal(t, LeftPadBytes([]uint8([]byte{0x00}), 32), output)
+
+	// 3. EXTCODEHASH is the hash of an account code
+	acc := makeAccountWithCode(cache, "trustedCode", MustSplice(BLOCKHASH, return1()))
+	bytecode = MustSplice(PUSH20, acc, EXTCODEHASH, return1())
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
+	assert.NoError(t, err)
+	assert.Equal(t, hex.MustDecodeString("010da270094b5199d3e54f89afe4c66cdd658dd8111a41998714227e14e171bd"), output)
+}
+
 func BasePermissionsFromStrings(t *testing.T, perms, setBit string) permission.BasePermissions {
 	return permission.BasePermissions{
 		Perms:  PermFlagFromString(t, perms),

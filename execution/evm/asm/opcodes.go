@@ -73,6 +73,7 @@ const (
 	EXTCODECOPY
 	RETURNDATASIZE
 	RETURNDATACOPY
+	EXTCODEHASH // https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1052.md
 )
 
 const (
