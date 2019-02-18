@@ -43,13 +43,25 @@ func CreateContract(t testing.TB, cli rpctransact.TransactClient, inputAddress c
 	return txe
 }
 
-func CallAddEvent(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address, name, description string) *exec.TxExecution {
+func CallRemoveEvent(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address,
+	name string) *exec.TxExecution {
+	return Call(t, cli, inputAddress, contractAddress, "removeThing", name)
+
+}
+
+func CallAddEvent(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address,
+	name, description string) *exec.TxExecution {
+	return Call(t, cli, inputAddress, contractAddress, "addThing", name, description)
+}
+
+func Call(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address,
+	functionName string, args ...interface{}) *exec.TxExecution {
 	t.Helper()
 
 	spec, err := abi.ReadAbiSpec(Abi_EventsTest)
 	require.NoError(t, err)
 
-	data, err := spec.Pack("addEvent", name, description)
+	data, err := spec.Pack(functionName, args...)
 	require.NoError(t, err)
 
 	txe, err := cli.CallTxSync(context.Background(), &payload.CallTx{

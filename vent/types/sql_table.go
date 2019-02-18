@@ -1,22 +1,54 @@
 package types
 
+import (
+	"fmt"
+)
+
 // SQLTable contains the structure of a SQL table,
 type SQLTable struct {
 	Name    string
-	Filter  string
-	Columns map[string]SQLTableColumn
+	Columns []*SQLTableColumn
+	// Map of channel name -> columns to be sent as payload on that channel
+	NotifyChannels map[string][]string
+	columns        map[string]*SQLTableColumn
+}
+
+func (table *SQLTable) GetColumn(columnName string) *SQLTableColumn {
+	if table.columns == nil {
+		table.columns = make(map[string]*SQLTableColumn, len(table.Columns))
+		for _, column := range table.Columns {
+			table.columns[column.Name] = column
+		}
+	}
+	return table.columns[columnName]
 }
 
 // SQLTableColumn contains the definition of a SQL table column,
 // the Order is given to be able to sort the columns to be created
 type SQLTableColumn struct {
-	Name          string
-	Type          SQLColumnType
-	EVMType       string
-	Length        int
-	Primary       bool
-	BytesToString bool
-	Order         int
+	Name    string
+	Type    SQLColumnType
+	Primary bool
+	Length  int
+}
+
+func (col *SQLTableColumn) String() string {
+	primaryString := ""
+	if col.Primary {
+		primaryString = " (primary)"
+	}
+	lengthString := ""
+	if col.Length != 0 {
+		lengthString = fmt.Sprintf(" (length %d)", col.Length)
+	}
+	return fmt.Sprintf("SQLTableColumn{%s%s: %v%s}",
+		col.Name, primaryString, col.Type, lengthString)
+}
+
+func (col *SQLTableColumn) Equals(otherCol *SQLTableColumn) bool {
+	columnA := *col
+	columnB := *otherCol
+	return columnA == columnB
 }
 
 // UpsertDeleteQuery contains query and values to upsert or delete row data
@@ -82,7 +114,6 @@ const (
 	// block related
 	BlockHeightLabel = "height"
 	BlockHeaderLabel = "blockHeader"
-	BlockTxExecLabel = "txExecutions"
 
 	// transaction related
 	TxTxTypeLabel    = "txType"

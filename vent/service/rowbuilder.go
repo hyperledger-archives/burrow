@@ -16,13 +16,11 @@ import (
 )
 
 // buildEventData builds event data from transactions
-func buildEventData(spec types.EventDefinition, parser *sqlsol.Parser, event *exec.Event, abiSpec *abi.AbiSpec, l *logger.Logger) (types.EventDataRow, error) {
+func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass, event *exec.Event, abiSpec *abi.AbiSpec,
+	l *logger.Logger) (types.EventDataRow, error) {
 
 	// a fresh new row to store column/value data
 	row := make(map[string]interface{})
-
-	// a replacer to get DeleteFilter parameters
-	replacer := strings.NewReplacer(" ", "", "'", "")
 
 	// get header & log data for the given event
 	eventHeader := event.GetHeader()
@@ -31,47 +29,41 @@ func buildEventData(spec types.EventDefinition, parser *sqlsol.Parser, event *ex
 	// decode event data using the provided abi specification
 	decodedData, err := decodeEvent(eventHeader, eventLog, abiSpec)
 	if err != nil {
-		return types.EventDataRow{}, errors.Wrapf(err, "Error decoding event (filter: %s)", spec.Filter)
+		return types.EventDataRow{}, errors.Wrapf(err, "Error decoding event (filter: %s)", eventClass.Filter)
 	}
 
 	l.Info("msg", fmt.Sprintf("Unpacked data: %v", decodedData), "eventName", decodedData[types.EventNameLabel])
 
 	rowAction := types.ActionUpsert
 
-	var deleteFilter []string
-
-	// get delete filter from spec
-	if spec.DeleteFilter != "" {
-		deleteFilter = strings.Split(replacer.Replace(spec.DeleteFilter), "=")
-	}
-	deleteFilterLength := len(deleteFilter)
-
 	// for each data element, maps to SQL columnName and gets its value
 	// if there is no matching column for the item, it doesn't need to be stored in db
-	for k, v := range decodedData {
-		if deleteFilterLength > 0 {
-			if k == deleteFilter[0] {
-				if bs, ok := v.(*[]byte); ok {
-					str := sanitiseBytesForString(*bs, l)
-					if str == deleteFilter[1] {
-						rowAction = types.ActionDelete
-					}
-				}
-			}
+	for fieldName, value := range decodedData {
+		// Can't think of case where we will get a key that is empty, but if we ever did we should not treat
+		// it as a delete marker when the delete marker field in unset
+		if eventClass.DeleteMarkerField != "" && eventClass.DeleteMarkerField == fieldName {
+			rowAction = types.ActionDelete
 		}
-		if column, err := parser.GetColumn(spec.TableName, k); err == nil {
-			if column.BytesToString {
-				if bs, ok := v.(*[]byte); ok {
+		fieldMapping := eventClass.GetFieldMapping(fieldName)
+		if fieldMapping == nil {
+			continue
+		}
+		column, err := projection.GetColumn(eventClass.TableName, fieldMapping.ColumnName)
+		if err == nil {
+			if fieldMapping.BytesToString {
+				if bs, ok := value.(*[]byte); ok {
 					str := sanitiseBytesForString(*bs, l)
 					row[column.Name] = interface{}(str)
 					continue
 				}
 			}
-			row[column.Name] = v
+			row[column.Name] = value
+		} else {
+			l.Debug("msg", "could not get column", "err", err)
 		}
 	}
 
-	return types.EventDataRow{Action: rowAction, RowData: row}, nil
+	return types.EventDataRow{Action: rowAction, RowData: row, EventClass: eventClass}, nil
 }
 
 // buildBlkData builds block data from block stream
@@ -80,15 +72,14 @@ func buildBlkData(tbls types.EventTables, block *exec.BlockExecution) (types.Eve
 	row := make(map[string]interface{})
 
 	// block raw data
-	if tbl, ok := tbls[types.SQLBlockTableName]; ok {
-
+	if _, ok := tbls[types.SQLBlockTableName]; ok {
 		blockHeader, err := json.Marshal(block.Header)
 		if err != nil {
 			return types.EventDataRow{}, fmt.Errorf("Couldn't marshal BlockHeader in block %v", block)
 		}
 
-		row[tbl.Columns[types.BlockHeightLabel].Name] = fmt.Sprintf("%v", block.Height)
-		row[tbl.Columns[types.BlockHeaderLabel].Name] = string(blockHeader)
+		row[types.SQLColumnLabelHeight] = fmt.Sprintf("%v", block.Height)
+		row[types.SQLColumnLabelBlockHeader] = string(blockHeader)
 	} else {
 		return types.EventDataRow{}, fmt.Errorf("table: %s not found in table structure %v", types.SQLBlockTableName, tbls)
 	}
@@ -97,53 +88,46 @@ func buildBlkData(tbls types.EventTables, block *exec.BlockExecution) (types.Eve
 }
 
 // buildTxData builds transaction data from tx stream
-func buildTxData(tbls types.EventTables, txe *exec.TxExecution) (types.EventDataRow, error) {
-
-	// a fresh new row to store column/value data
-	row := make(map[string]interface{})
-
+func buildTxData(txe *exec.TxExecution) (types.EventDataRow, error) {
 	// transaction raw data
-	if tbl, ok := tbls[types.SQLTxTableName]; ok {
-
-		envelope, err := json.Marshal(txe.Envelope)
-		if err != nil {
-			return types.EventDataRow{}, fmt.Errorf("Couldn't marshal envelope in tx %v", txe)
-		}
-
-		events, err := json.Marshal(txe.Events)
-		if err != nil {
-			return types.EventDataRow{}, fmt.Errorf("Couldn't marshal events in tx %v", txe)
-		}
-
-		result, err := json.Marshal(txe.Result)
-		if err != nil {
-			return types.EventDataRow{}, fmt.Errorf("Couldn't marshal result in tx %v", txe)
-		}
-
-		receipt, err := json.Marshal(txe.Receipt)
-		if err != nil {
-			return types.EventDataRow{}, fmt.Errorf("Couldn't marshal receipt in tx %v", txe)
-		}
-
-		exception, err := json.Marshal(txe.Exception)
-		if err != nil {
-			return types.EventDataRow{}, fmt.Errorf("Couldn't marshal exception in tx %v", txe)
-		}
-
-		row[tbl.Columns[types.BlockHeightLabel].Name] = fmt.Sprintf("%v", txe.Height)
-		row[tbl.Columns[types.TxTxHashLabel].Name] = txe.TxHash.String()
-		row[tbl.Columns[types.TxIndexLabel].Name] = txe.Index
-		row[tbl.Columns[types.TxTxTypeLabel].Name] = txe.TxType.String()
-		row[tbl.Columns[types.TxEnvelopeLabel].Name] = string(envelope)
-		row[tbl.Columns[types.TxEventsLabel].Name] = string(events)
-		row[tbl.Columns[types.TxResultLabel].Name] = string(result)
-		row[tbl.Columns[types.TxReceiptLabel].Name] = string(receipt)
-		row[tbl.Columns[types.TxExceptionLabel].Name] = string(exception)
-	} else {
-		return types.EventDataRow{}, fmt.Errorf("Table: %s not found in table structure %v", types.SQLTxTableName, tbls)
+	envelope, err := json.Marshal(txe.Envelope)
+	if err != nil {
+		return types.EventDataRow{}, fmt.Errorf("couldn't marshal envelope in tx %v", txe)
 	}
 
-	return types.EventDataRow{Action: types.ActionUpsert, RowData: row}, nil
+	events, err := json.Marshal(txe.Events)
+	if err != nil {
+		return types.EventDataRow{}, fmt.Errorf("couldn't marshal events in tx %v", txe)
+	}
+
+	result, err := json.Marshal(txe.Result)
+	if err != nil {
+		return types.EventDataRow{}, fmt.Errorf("couldn't marshal result in tx %v", txe)
+	}
+
+	receipt, err := json.Marshal(txe.Receipt)
+	if err != nil {
+		return types.EventDataRow{}, fmt.Errorf("couldn't marshal receipt in tx %v", txe)
+	}
+
+	exception, err := json.Marshal(txe.Exception)
+	if err != nil {
+		return types.EventDataRow{}, fmt.Errorf("couldn't marshal exception in tx %v", txe)
+	}
+	return types.EventDataRow{
+		Action: types.ActionUpsert,
+		RowData: map[string]interface{}{
+			types.SQLColumnLabelHeight:    txe.Height,
+			types.SQLColumnLabelTxHash:    txe.TxHash.String(),
+			types.SQLColumnLabelIndex:     txe.Index,
+			types.SQLColumnLabelTxType:    txe.TxType.String(),
+			types.SQLColumnLabelEnvelope:  string(envelope),
+			types.SQLColumnLabelEvents:    string(events),
+			types.SQLColumnLabelResult:    string(result),
+			types.SQLColumnLabelReceipt:   string(receipt),
+			types.SQLColumnLabelException: string(exception),
+		},
+	}, nil
 }
 
 func sanitiseBytesForString(bs []byte, l *logger.Logger) string {

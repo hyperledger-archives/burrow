@@ -10,7 +10,7 @@ import (
 
 // Server exposes HTTP endpoints for the service
 type Server struct {
-	Config   *config.Flags
+	Config   *config.VentConfig
 	Log      *logger.Logger
 	Consumer *Consumer
 	mux      *http.ServeMux
@@ -18,7 +18,7 @@ type Server struct {
 }
 
 // NewServer returns a new HTTP server
-func NewServer(cfg *config.Flags, log *logger.Logger, consumer *Consumer) *Server {
+func NewServer(cfg *config.VentConfig, log *logger.Logger, consumer *Consumer) *Server {
 	// setup handlers
 	mux := http.NewServeMux()
 

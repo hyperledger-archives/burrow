@@ -22,28 +22,27 @@ import (
 
 func TestServer(t *testing.T) {
 	// run consumer to listen to events
-	cfg := config.DefaultFlags()
+	cfg := config.DefaultVentConfig()
 
 	// create test db
-	db, closeDB := test.NewTestDB(t, cfg)
+	_, closeDB := test.NewTestDB(t, cfg)
 	defer closeDB()
 
-	cfg.DBSchema = db.Schema
-	cfg.SpecFile = os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_example.json"
-	cfg.AbiFile = os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/EventsTest.abi"
+	cfg.SpecFileOrDir = os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_example.json"
+	cfg.AbiFileOrDir = os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/EventsTest.abi"
 	cfg.GRPCAddr = testConfig.RPC.GRPC.ListenAddress
 
 	log := logger.NewLogger(cfg.LogLevel)
 	consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
 
-	parser, err := sqlsol.SpecLoader("", cfg.SpecFile, false)
-	abiSpec, err := sqlsol.AbiLoader("", cfg.AbiFile)
+	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDir, false)
+	abiSpec, err := sqlsol.AbiLoader(cfg.AbiFileOrDir)
 
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
-		err := consumer.Run(parser, abiSpec, true)
+		err := consumer.Run(projection, abiSpec, true)
 		require.NoError(t, err)
 
 		wg.Done()

@@ -2,7 +2,6 @@ package sqlsol
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/hyperledger/burrow/vent/types"
 )
@@ -13,30 +12,15 @@ type BlockData struct {
 }
 
 // NewBlockData returns a pointer to an empty BlockData structure
-func NewBlockData() *BlockData {
+func NewBlockData(height uint64) *BlockData {
 	data := types.EventData{
-		Block:  "",
-		Tables: make(map[string]types.EventDataTable),
+		Tables:      make(map[string]types.EventDataTable),
+		BlockHeight: height,
 	}
 
 	return &BlockData{
 		Data: data,
 	}
-}
-
-// GetBlockData returns the data structure
-func (b *BlockData) GetBlockData() types.EventData {
-	return b.Data
-}
-
-// GetBlockID gets block identification from structure
-func (b *BlockData) GetBlockID() string {
-	return b.Data.Block
-}
-
-// SetBlockID updates block identification in structure
-func (b *BlockData) SetBlockID(blockID string) {
-	b.Data.Block = blockID
 }
 
 // AddRow appends a row to a specific table name in structure
@@ -56,9 +40,10 @@ func (b *BlockData) GetRows(tableName string) (types.EventDataTable, error) {
 }
 
 // PendingRows returns true if the given block has at least one pending row to upsert
-func (b *BlockData) PendingRows(blockID string) bool {
+func (b *BlockData) PendingRows(height uint64) bool {
 	hasRows := false
-	if strings.TrimSpace(b.Data.Block) == strings.TrimSpace(blockID) && len(b.Data.Tables) > 0 {
+	// TODO: understand why the guard on height is needed - what does it prevent?
+	if b.Data.BlockHeight == height && len(b.Data.Tables) > 0 {
 		hasRows = true
 	}
 	return hasRows

@@ -243,7 +243,7 @@ func TOMLString(conf interface{}) string {
 }
 
 func JSONString(conf interface{}) string {
-	bs, err := json.MarshalIndent(conf, "", "\t")
+	bs, err := json.MarshalIndent(conf, "", "  ")
 	if err != nil {
 		return fmt.Sprintf("<Could not serialise config: %v>", err)
 	}

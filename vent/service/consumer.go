@@ -4,13 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strconv"
-	"strings"
 	"sync"
 
-	"github.com/hyperledger/burrow/execution/exec"
-
 	"github.com/hyperledger/burrow/execution/evm/abi"
+	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	"github.com/hyperledger/burrow/vent/config"
@@ -25,7 +22,7 @@ import (
 
 // Consumer contains basic configuration for consumer to run
 type Consumer struct {
-	Config         *config.Flags
+	Config         *config.VentConfig
 	Log            *logger.Logger
 	Closing        bool
 	DB             *sqldb.SQLDB
@@ -34,21 +31,22 @@ type Consumer struct {
 	EventsChannel chan types.EventData
 }
 
-// NewConsumer constructs a new consumer configuration
-func NewConsumer(cfg *config.Flags, log *logger.Logger, eChannel chan types.EventData) *Consumer {
+// NewConsumer constructs a new consumer configuration.
+// The event channel will be passed a collection of rows generated from all of the events in a single block
+// It will be closed by the consumer when it is finished
+func NewConsumer(cfg *config.VentConfig, log *logger.Logger, eventChannel chan types.EventData) *Consumer {
 	return &Consumer{
 		Config:        cfg,
 		Log:           log,
 		Closing:       false,
-		EventsChannel: eChannel,
+		EventsChannel: eventChannel,
 	}
 }
 
 // Run connects to a grpc service and subscribes to log events,
 // then gets tables structures, maps them & parse event data.
 // Store data in SQL event tables, it runs forever
-func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool) error {
-
+func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stream bool) error {
 	var err error
 
 	c.Log.Info("msg", "Connecting to Burrow gRPC server")
@@ -66,11 +64,7 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 		return errors.Wrapf(err, "Error getting chain status")
 	}
 
-	// obtain tables structures, event & abi specifications
-	tables := parser.GetTables()
-	eventSpec := parser.GetEventSpec()
-
-	if len(eventSpec) == 0 {
+	if len(projection.EventSpec) == 0 {
 		c.Log.Info("msg", "No events specifications found")
 		return nil
 	}
@@ -88,13 +82,13 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 
 	c.DB, err = sqldb.NewSQLDB(connection)
 	if err != nil {
-		return errors.Wrap(err, "Error connecting to SQL")
+		return fmt.Errorf("error connecting to SQL database: %v", err)
 	}
 	defer c.DB.Close()
 
-	c.Log.Info("msg", "Synchronizing config and database parser structures")
+	c.Log.Info("msg", "Synchronizing config and database projection structures")
 
-	err = c.DB.SynchronizeDB(tables)
+	err = c.DB.SynchronizeDB(projection.Tables)
 	if err != nil {
 		return errors.Wrap(err, "Error trying to synchronize database")
 	}
@@ -112,20 +106,27 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 
 		c.Log.Info("msg", "Getting last processed block number from SQL log table")
 
+		// NOTE [Silas]: I am preserving the comment below that dates from the early days of Vent. I have looked at the
+		// bosmarmot git history and I cannot see why the original author thought that it was the case that there was
+		// no way of knowing if the last block of events was committed since the block and its associated log is
+		// committed atomically in a transaction and this is a core part of he design of Vent - in order that it does not
+		// repeat
+
+		// [ORIGINAL COMMENT]
 		// right now there is no way to know if the last block of events was completely read
 		// so we have to begin processing from the last block number stored in database
 		// and update event data if already present
-		fromBlock, err := c.DB.GetLastBlockID()
+		fromBlock, err := c.DB.GetLastBlockHeight()
 		if err != nil {
 			doneCh <- errors.Wrapf(err, "Error trying to get last processed block number from SQL log table")
 			return
 		}
 
-		// string to uint64 from event filtering
-		startingBlock, err := strconv.ParseUint(fromBlock, 10, 64)
-		if err != nil {
-			doneCh <- errors.Wrapf(err, "Error trying to convert fromBlock from string to uint64")
-			return
+		startingBlock := fromBlock
+		// Start the block after the last one successfully committed - apart from if this is the first block
+		// We include block 0 because it is where we currently place dump/restored transactions
+		if startingBlock > 0 {
+			startingBlock++
 		}
 
 		// setup block range to get needed blocks server side
@@ -153,23 +154,19 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 		c.Log.Debug("msg", "Waiting for blocks...")
 
 		err = rpcevents.ConsumeBlockExecutions(stream, func(blockExecution *exec.BlockExecution) error {
-
 			if c.Closing {
 				return io.EOF
 			}
 			c.Log.Debug("msg", "Block received", "height", blockExecution.Height, "num_txs", len(blockExecution.TxExecutions))
 
 			// set new block number
-			fromBlock = fmt.Sprintf("%v", blockExecution.Height)
+			fromBlock = blockExecution.Height
 
-			// create a fresh new structure to store block data
-			blockData := sqlsol.NewBlockData()
-
-			// update block info in structure
-			blockData.SetBlockID(fromBlock)
+			// create a fresh new structure to store block data at this height
+			blockData := sqlsol.NewBlockData(fromBlock)
 
 			if c.Config.DBBlockTx {
-				blkRawData, err := buildBlkData(tables, blockExecution)
+				blkRawData, err := buildBlkData(projection.Tables, blockExecution)
 				if err != nil {
 					doneCh <- errors.Wrapf(err, "Error building block raw data")
 				}
@@ -179,11 +176,10 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 
 			// get transactions for a given block
 			for _, txe := range blockExecution.TxExecutions {
-
 				c.Log.Debug("msg", "Getting transaction", "TxHash", txe.TxHash, "num_events", len(txe.Events))
 
 				if c.Config.DBBlockTx {
-					txRawData, err := buildTxData(tables, txe)
+					txRawData, err := buildTxData(txe)
 					if err != nil {
 						doneCh <- errors.Wrapf(err, "Error building tx raw data")
 					}
@@ -201,8 +197,8 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 						taggedEvent := event.Tagged()
 
 						// see which spec filter matches with the one in event data
-						for _, spec := range eventSpec {
-							qry, err := spec.Query()
+						for _, eventClass := range projection.EventSpec {
+							qry, err := eventClass.Query()
 
 							if err != nil {
 								doneCh <- errors.Wrapf(err, "Error parsing query from filter string")
@@ -212,16 +208,17 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 							// there's a matching filter, add data to the rows
 							if qry.Matches(taggedEvent) {
 
-								c.Log.Info("msg", fmt.Sprintf("Matched event header: %v", event.Header), "filter", spec.Filter)
+								c.Log.Info("msg", fmt.Sprintf("Matched event header: %v", event.Header),
+									"filter", eventClass.Filter)
 
 								// unpack, decode & build event data
-								eventData, err := buildEventData(spec, parser, event, abiSpec, c.Log)
+								eventData, err := buildEventData(projection, eventClass, event, abiSpec, c.Log)
 								if err != nil {
 									doneCh <- errors.Wrapf(err, "Error building event data")
 								}
 
 								// set row in structure
-								blockData.AddRow(strings.ToLower(spec.TableName), eventData)
+								blockData.AddRow(eventClass.TableName, eventData)
 							}
 						}
 					}
@@ -231,9 +228,8 @@ func (c *Consumer) Run(parser *sqlsol.Parser, abiSpec *abi.AbiSpec, stream bool)
 			// upsert rows in specific SQL event tables and update block number
 			// store block data in SQL tables (if any)
 			if blockData.PendingRows(fromBlock) {
-
 				// gets block data to upsert
-				blk := blockData.GetBlockData()
+				blk := blockData.Data
 
 				c.Log.Info("msg", fmt.Sprintf("Upserting rows in SQL tables %v", blk), "block", fromBlock)
 
@@ -272,8 +268,8 @@ loop:
 			break loop
 		case blk := <-eventCh:
 			// upsert rows in specific SQL event tables and update block number
-			if err := c.DB.SetBlock(tables, blk); err != nil {
-				return errors.Wrap(err, "Error upserting rows in SQL event tables")
+			if err := c.DB.SetBlock(projection.Tables, blk); err != nil {
+				return fmt.Errorf("error upserting rows in database: %v", err)
 			}
 
 			// send to the external events channel in a non-blocking manner
@@ -284,6 +280,7 @@ loop:
 		}
 	}
 
+	close(c.EventsChannel)
 	c.Log.Info("msg", "Done!")
 	return nil
 }

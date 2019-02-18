@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"os"
 
 	"github.com/hyperledger/burrow/vent/config"
@@ -22,36 +24,29 @@ func init() {
 }
 
 // NewTestDB creates a database connection for testing
-func NewTestDB(t *testing.T, cfg *config.Flags) (*sqldb.SQLDB, func()) {
+func NewTestDB(t *testing.T, cfg *config.VentConfig) (*sqldb.SQLDB, func()) {
 	t.Helper()
 
-	if dbURL, ok := syscall.Getenv("DB_URL"); ok {
-		t.Logf("Using DB_URL '%s'", dbURL)
-		cfg.DBURL = dbURL
+	if cfg.DBAdapter != types.SQLiteDB {
+		if dbURL, ok := syscall.Getenv("DB_URL"); ok {
+			t.Logf("Using DB_URL '%s'", dbURL)
+			cfg.DBURL = dbURL
+		}
 	}
 
 	connection := types.SQLConnection{
-		DBAdapter:     cfg.DBAdapter,
-		DBURL:         cfg.DBURL,
-		Log:           logger.NewLogger("debug"),
+		DBAdapter: cfg.DBAdapter,
+		DBURL:     cfg.DBURL,
+		DBSchema:  cfg.DBSchema,
+
+		Log:           logger.NewLogger(""),
 		ChainID:       "ID 0123",
 		BurrowVersion: "Version 0.0",
 	}
 
-	switch cfg.DBAdapter {
-	case types.PostgresDB:
-		connection.DBSchema = fmt.Sprintf("test_%s", randString(10))
-
-	case types.SQLiteDB:
-		connection.DBURL = fmt.Sprintf("./test_%s.sqlite", randString(10))
-
-	default:
-		t.Fatal("invalid database adapter")
-	}
-
 	db, err := sqldb.NewSQLDB(connection)
 	if err != nil {
-		t.Fatal(err.Error())
+		require.NoError(t, err)
 	}
 
 	return db, func() {
@@ -67,14 +62,19 @@ func NewTestDB(t *testing.T, cfg *config.Flags) (*sqldb.SQLDB, func()) {
 	}
 }
 
-func randString(n int) string {
-	b := make([]rune, n)
+func SqliteVentConfig() *config.VentConfig {
+	cfg := config.DefaultVentConfig()
+	cfg.DBURL = fmt.Sprintf("./test_%s.sqlite", randString(10))
+	cfg.DBAdapter = types.SQLiteDB
+	return cfg
+}
 
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-
-	return string(b)
+func PostgresVentConfig() *config.VentConfig {
+	cfg := config.DefaultVentConfig()
+	cfg.DBSchema = fmt.Sprintf("test_%s", randString(10))
+	cfg.DBAdapter = types.PostgresDB
+	cfg.DBURL = config.DefaultPostgresDBURL
+	return cfg
 }
 
 func destroySchema(db *sqldb.SQLDB, dbSchema string) error {
@@ -89,4 +89,14 @@ func destroySchema(db *sqldb.SQLDB, dbSchema string) error {
 	}
 
 	return nil
+}
+
+func randString(n int) string {
+	b := make([]rune, n)
+
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+
+	return string(b)
 }
