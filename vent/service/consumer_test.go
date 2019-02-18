@@ -3,6 +3,7 @@
 package service_test
 
 import (
+	"math/rand"
 	"path"
 	"runtime"
 	"testing"
@@ -11,7 +12,6 @@ import (
 	"github.com/hyperledger/burrow/vent/config"
 	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/service"
-	"github.com/hyperledger/burrow/vent/sqldb"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/test"
 	"github.com/hyperledger/burrow/vent/types"
@@ -45,7 +45,7 @@ func testConsumer(t *testing.T, cfg *config.VentConfig) {
 	defer closeDB()
 
 	// Run the consumer
-	runConsumer(t, db, cfg)
+	runConsumer(t, cfg)
 
 	// test data stored in database for two different block ids
 	eventColumnName := "EventTest"
@@ -105,7 +105,7 @@ func testDeleteEvent(t *testing.T, cfg *config.VentConfig) {
 	txeAdd := test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
 
 	// Spin the consumer
-	runConsumer(t, db, cfg)
+	runConsumer(t, cfg)
 
 	// Expect block table, tx table, and EventTest table
 	eventData, err := db.GetBlock(txeAdd.Height)
@@ -121,7 +121,7 @@ func testDeleteEvent(t *testing.T, cfg *config.VentConfig) {
 
 	// Now emit a deletion event for that table
 	test.CallRemoveEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name)
-	runConsumer(t, db, cfg)
+	runConsumer(t, cfg)
 
 	eventData, err = db.GetBlock(txeAdd.Height)
 	require.NoError(t, err)
@@ -134,16 +134,21 @@ func testDeleteEvent(t *testing.T, cfg *config.VentConfig) {
 }
 
 func testResume(t *testing.T, cfg *config.VentConfig) {
-	db, closeDB := test.NewTestDB(t, cfg)
+	_, closeDB := test.NewTestDB(t, cfg)
 	defer closeDB()
 
-	numRestarts := 3
-	var height uint64
+	numRestarts := 6
+	// Add some pseudo-random timings
+	rnd := rand.New(rand.NewSource(4634653))
+	time.Sleep(time.Second)
+	var expectedHeight uint64
 	for i := 0; i < numRestarts; i++ {
-		time.Sleep(time.Second)
-		for _, ed := range runConsumer(t, db, cfg) {
-			height++
-			require.Equal(t, height, ed.BlockHeight, "should get monotonic sequential sequence")
+		// wait up to a second
+		time.Sleep(time.Millisecond * time.Duration(rnd.Int63n(1000)))
+		for ed := range runConsumer(t, cfg) {
+			expectedHeight++
+			t.Logf("expecting block: %d, got block: %d", expectedHeight, ed.BlockHeight)
+			require.Equal(t, expectedHeight, ed.BlockHeight, "should get monotonic sequential sequence")
 		}
 	}
 }
@@ -162,11 +167,11 @@ func testInvalidUTF8(t *testing.T, cfg *config.VentConfig) {
 	test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
 
 	// create test db
-	db, closeDB := test.NewTestDB(t, cfg)
+	_, closeDB := test.NewTestDB(t, cfg)
 	defer closeDB()
 
 	// Run the consumer with this event - this used to create an error on UPSERT
-	runConsumer(t, db, cfg)
+	runConsumer(t, cfg)
 
 	// Error we used to get before fixing this test case:
 	//require.Error(t, err)
@@ -174,26 +179,19 @@ func testInvalidUTF8(t *testing.T, cfg *config.VentConfig) {
 }
 
 // Run consumer to listen to events
-func runConsumer(t *testing.T, db *sqldb.SQLDB, cfg *config.VentConfig) []types.EventData {
+func runConsumer(t *testing.T, cfg *config.VentConfig) chan types.EventData {
 	// Resolve relative path to test dir
 	_, testFile, _, _ := runtime.Caller(0)
 	testDir := path.Join(path.Dir(testFile), "..", "test")
 
-	cfg.DBSchema = db.Schema
 	cfg.SpecFileOrDir = path.Join(testDir, "sqlsol_example.json")
 	cfg.AbiFileOrDir = path.Join(testDir, "EventsTest.abi")
 	cfg.GRPCAddr = testConfig.RPC.GRPC.ListenAddress
 	cfg.DBBlockTx = true
 
 	log := logger.NewLogger("")
-	ch := make(chan types.EventData, 10)
-	var eventData []types.EventData
+	ch := make(chan types.EventData, 100)
 	consumer := service.NewConsumer(cfg, log, ch)
-	go func() {
-		for ed := range ch {
-			eventData = append(eventData, ed)
-		}
-	}()
 
 	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDir, cfg.DBBlockTx)
 	require.NoError(t, err)
@@ -204,6 +202,5 @@ func runConsumer(t *testing.T, db *sqldb.SQLDB, cfg *config.VentConfig) []types.
 	err = consumer.Run(projection, abiSpec, false)
 	require.NoError(t, err)
 
-	consumer.Shutdown()
-	return eventData
+	return ch
 }

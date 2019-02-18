@@ -193,14 +193,17 @@ func (ees *executionEventsServer) subscribeBlockExecution(ctx context.Context, c
 	return nil
 }
 
-func (ees *executionEventsServer) iterateBlockEvents(start, end uint64, consumer func(*exec.StreamEvent) error) (lastHeightSeen uint64, err error) {
-	err = ees.eventsProvider.IterateStreamEvents(start, end, func(blockEvent *exec.StreamEvent) error {
-		if blockEvent.TxExecution == nil {
-			// nil safe
-			lastHeightSeen = blockEvent.GetEndBlock().GetHeight()
+func (ees *executionEventsServer) iterateBlockEvents(start, end uint64, consumer func(*exec.StreamEvent) error) (uint64, error) {
+	// Assume that we have seen the previous block before start to have ended up here
+	// NOTE: this will underflow when start is 0 (as it often will be - and needs to be for restored chains)
+	// however we at most underflow by 1 and we always add 1 back on when returning so we get away with this.
+	lastHeightSeen := start - 1
+	err := ees.eventsProvider.IterateStreamEvents(start, end, func(blockEvent *exec.StreamEvent) error {
+		if blockEvent.EndBlock != nil {
+			lastHeightSeen = blockEvent.EndBlock.GetHeight()
 		}
 		return consumer(blockEvent)
 	})
-	// Returns the appropriate starting block for the next stream
+	// Returns the appropriate _next_ starting block - the one after the one we have seen - from which to stream next
 	return lastHeightSeen + 1, err
 }

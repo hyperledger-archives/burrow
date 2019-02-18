@@ -44,7 +44,7 @@ func TestPostgresTriggers(t *testing.T) {
 
 	cfg := test.PostgresVentConfig()
 	// create test db
-	db, closeDB := test.NewTestDB(t, cfg)
+	_, closeDB := test.NewTestDB(t, cfg)
 	defer closeDB()
 
 	// Create a postgres notification listener
@@ -86,7 +86,7 @@ func TestPostgresTriggers(t *testing.T) {
 			}
 		}
 	}()
-	runConsumer(t, db, cfg)
+	runConsumer(t, cfg)
 
 	// Give events a chance
 	time.Sleep(time.Second)

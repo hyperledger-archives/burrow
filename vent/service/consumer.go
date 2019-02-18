@@ -112,6 +112,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 		// committed atomically in a transaction and this is a core part of he design of Vent - in order that it does not
 		// repeat
 
+		// [ORIGINAL COMMENT]
 		// right now there is no way to know if the last block of events was completely read
 		// so we have to begin processing from the last block number stored in database
 		// and update event data if already present

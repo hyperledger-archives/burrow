@@ -25,10 +25,9 @@ func TestServer(t *testing.T) {
 	cfg := config.DefaultVentConfig()
 
 	// create test db
-	db, closeDB := test.NewTestDB(t, cfg)
+	_, closeDB := test.NewTestDB(t, cfg)
 	defer closeDB()
 
-	cfg.DBSchema = db.Schema
 	cfg.SpecFileOrDir = os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_example.json"
 	cfg.AbiFileOrDir = os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/EventsTest.abi"
 	cfg.GRPCAddr = testConfig.RPC.GRPC.ListenAddress

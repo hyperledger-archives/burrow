@@ -11,10 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/xeipuuv/gojsonschema"
-
 	"github.com/hyperledger/burrow/vent/types"
 	"github.com/pkg/errors"
+	"github.com/xeipuuv/gojsonschema"
 )
 
 // Projection contains EventTable, Event & Abi specifications
