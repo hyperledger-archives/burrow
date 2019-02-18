@@ -5,7 +5,7 @@ Vent reads sqlsol specification & abi files, parses their contents, and maps col
 Block height and context info are stored in Log tables in order to resume getting pending blocks or rewind to a previous state.
 
 ## SQLSol specification
-SQLSol is the name (derived from it being an object relational mapping between Solidity events and SQL tables) given to the configuration files that Vent uses to interpret EVM events as updates or deletion from SQL tables
+SQLSol is the name (object relational mapping between Solidity events and SQL tables) given to the configuration files that Vent uses to interpret EVM events as updates or deletion from SQL tables
 
 Given a sqlsol specification, like the following:
 
@@ -16,21 +16,44 @@ Given a sqlsol specification, like the following:
     "Filter" : "Log1Text = 'LOGEVENT1'",
     "DeleteMarkerField": "__DELETE__",
     "FieldMappings"  : [
-      {"Field": "key", "Name" : "testname", "Type": "bytes32", "Primary" : true},
-      {"Field": "description", "Name" : "testdescription", "Type": "bytes32", "Primary" : false, "BytesToString": true}
+      {"Field": "key", "ColumnName" : "testname", "Type": "bytes32", "Primary" : true},
+      {"Field": "description", "ColumnName" : "testdescription", "Type": "bytes32", "Primary" : false, "BytesToString": true}
     ]
   },
   {
     "TableName" : "UserAccounts",
     "Filter" : "Log1Text = 'USERACCOUNTS'",
     "FieldMappings"  : [
-      {"Field": "userAddress", "Name" : "address", "Type": "address", "Primary" : true},
-      {"Field": "userName", "Name" : "username", "Type": "string", "Primary" : false}
+      {"Field": "userAddress", "ColumnName" : "address", "Type": "address", "Primary" : true},
+      {"Field": "userName", "ColumnName" : "username", "Type": "string", "Primary" : false}
     ]
   }
 ]
 
 ```
+
+Burrow can emit a JSONSchema for the sqlsol file format with `burrow vent schema`. You can use this to validate your sqlsol files using any of the [JSONSchema](https://json-schema.org/) tooling.
+
+### SQLSol specification
+A sqlsol file is defined as a JSON array of `EventClass` objections. Each `EventClass` specifies a class of events that should be consumed (specified via a filter) in order to generate a SQL table. An `EventClass` holds `FieldMappings` that specify how to map the event fields of a matched EVM event to a destination column (identified by `ColumnName`) of the destination table (indentified by `TableName`)
+
+#### EventClass
+| Field | Type | Required? | Description |
+|-------|------|-----------|-------------|
+| `TableName` | String | Required | The case-sensitive name of the destination SQL table for the `EventClass`|
+| `Filter` | String | Required | A filter to be applied to EVM Log events using the [available tags](../protobuf/rpcevents.proto) written according to the event [query.peg](../event/query/query.peg) grammar |
+| `FieldMappings` | array of `FieldMapping` | Required | Mappings between EVM event fields and columns see table below |
+| `DeleteMarkerField` | String | Optional | Field name of an event field that when present in a matched event indicates the event should result on a deletion of a row (matched on the primary keys of that row) rather than the default upsert action |
+
+#### FieldMapping
+| Field | Type | Required? | Description |
+|-------|------|-----------|-------------|
+| `Field` | String | Required | EVM field name to match exactly when creating a SQL upsert/delete |
+| `Type` | String | Required | EVM type of the field (which also dictates the SQL type that will be used for table definition) |
+| `ColumnName` | String | Required | The destination SQL column for the mapped value |
+| `Primary` | Boolean | Optional | Whether this SQL column should be part of the primary key |
+| `BytesToString` | Boolean | Optional | When type is `bytes<N>` (for some N) indicates that the value should be interpreted as (converted to) a string  |
+| `Notify` | array of String | Optional | A list of notification channels on which a payload should be sent containing the value of this column when it is updated or deleted. The payload on a particular channel will be the JSON object containing all column/value pairs for which the notification channel is a member of this notify array (see [triggers](#triggers) below) |
 
 Vent builds dictionary, log and event database tables for the defined tables & columns and maps input types to proper sql types.
 
@@ -48,6 +71,26 @@ cat *.bin | jq '.Abi[] | select(.type == "event")' > events.abi
 Adapters are database implementations, Vent can store data in different rdbms.
 
 In `sqldb/adapters` there's a list of supported adapters (there is also a README.md file in that folder that helps to understand how to implement a new one).
+
+### <a name="triggers"></a>Notification Triggers
+Notification triggers are configured with the `Notify` array of a `FieldMapping`. In a supported database (currently only postrges) they allow you to specify a set of channels on which to notify when a column changes. By including a channel in the `Notify` the column is added to the set of columns for which that channel should receive a notification payload. For example if we have the following spec:
+
+```json
+[  
+  {
+    "TableName" : "UserAccounts",
+    "Filter" : "Log1Text = 'USERACCOUNTS'",
+    "FieldMappings"  : [
+      {"Field": "userAddress", "ColumnName" : "address", "Type": "address", "Notify": ["user", "address"]},
+      {"Field": "userName", "ColumnName" : "username", "Type": "string", "Notify":  ["user"]}
+    ]
+  }
+ ]
+```
+
+Then Vent will record a mapping `user -> username, address` and `address -> address` where the left hand side is the notification channel and the right hand side the columns included in the payload on that channel.
+
+For each of these mappings a notification trigger function is defined and attached as a trigger for the table to run after an insert, update, or delete. This function calls `pg_notify` (in the case of postgres, the only database for which we support notifications - this is non-standard and we may use a different mechanism in other databases if present). These notification can be consumed by any client connected to the postgres database with `LISTEN <channel>;`, see [Postgres NOTIFY documentation](https://www.postgresql.org/docs/11/sql-notify.html).
 
 ## Setup PostgreSQL Database with Docker:
 

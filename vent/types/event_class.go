@@ -69,10 +69,11 @@ func (ec *EventClass) GetFilter() string {
 
 // EventFieldMapping struct (table column definition)
 type EventFieldMapping struct {
+	// EVM event field name to process
 	Field string
 	// EVM type of this field - used to derive SQL type
 	Type string
-	// SQL column name to which to map this event field
+	// Destination SQL column name to which to map this event field
 	ColumnName string
 	// Whether this event field should map to a primary key
 	Primary bool `json:",omitempty"`
