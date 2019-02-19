@@ -186,7 +186,7 @@ contract SimpleStorage {
     storedBool = x;
   }
 
-  function getBool() constant public returns (bool retBool) {
+  function getBool() view public returns (bool retBool) {
     return storedBool;
   }
 
@@ -194,7 +194,7 @@ contract SimpleStorage {
     storedBool2 = x;
   }
 
-  function getBool2() constant public returns (bool retBool) {
+  function getBool2() view public returns (bool retBool) {
     return storedBool2;
   }
 
@@ -202,7 +202,7 @@ contract SimpleStorage {
     storedInt = x;
   }
 
-  function getInt() constant public returns (int retInt) {
+  function getInt() view public returns (int retInt) {
     return storedInt;
   }
 
@@ -210,7 +210,7 @@ contract SimpleStorage {
     storedUint = x;
   }
 
-  function getUint() constant public returns (uint retUint) {
+  function getUint() view public returns (uint retUint) {
     return storedUint;
   }
 
@@ -218,7 +218,7 @@ contract SimpleStorage {
     storedAddress = x;
   }
 
-  function getAddress() constant public returns (address retAddress) {
+  function getAddress() view public returns (address retAddress) {
     return storedAddress;
   }
 
@@ -226,15 +226,15 @@ contract SimpleStorage {
     storedBytes = x;
   }
 
-  function getBytes() constant public returns (bytes32 retBytes) {
+  function getBytes() view public returns (bytes32 retBytes) {
     return storedBytes;
   }
 
-  function setString(string x) public {
+  function setString(string memory x) public {
     storedString = x;
   }
 
-  function getString() constant public returns (string retString) {
+  function getString() view public returns (string memory retString) {
     return storedString;
   }
 }
