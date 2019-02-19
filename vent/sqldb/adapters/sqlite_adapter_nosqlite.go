@@ -33,11 +33,11 @@ func (*SQLiteAdapter) ErrorEquals(err error, sqlErrorType types.SQLErrorType) bo
 	panic("implement me")
 }
 
-func (*SQLiteAdapter) SecureColumnName(columnName string) string {
+func (*SQLiteAdapter) SecureName(name string) string {
 	panic("implement me")
 }
 
-func (*SQLiteAdapter) CreateTableQuery(tableName string, columns []types.SQLTableColumn) (string, string) {
+func (*SQLiteAdapter) CreateTableQuery(tableName string, columns []*types.SQLTableColumn) (string, string) {
 	panic("implement me")
 }
 
@@ -69,11 +69,11 @@ func (*SQLiteAdapter) InsertLogQuery() string {
 	panic("implement me")
 }
 
-func (*SQLiteAdapter) UpsertQuery(table types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, interface{}, error) {
+func (*SQLiteAdapter) UpsertQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, interface{}, error) {
 	panic("implement me")
 }
 
-func (*SQLiteAdapter) DeleteQuery(table types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, error) {
+func (*SQLiteAdapter) DeleteQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, error) {
 	panic("implement me")
 }
 

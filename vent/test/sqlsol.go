@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// GoodJSONConfFile sets a good json file to be used in parser tests
+// GoodJSONConfFile sets a good json file to be used in projection tests
 func GoodJSONConfFile(t *testing.T) string {
 	t.Helper()
 
@@ -12,40 +12,40 @@ func GoodJSONConfFile(t *testing.T) string {
 		{
 			"TableName" : "UserAccounts",
 			"Filter" : "LOG0 = 'UserAccounts'",
-			"DeleteFilter": "CRUD_ACTION = 'delete'",
-			"Columns"  : {
-				"userAddress" : {"name" : "address", "type": "address", "primary" : true},
-				"userName": {"name" : "username", "type": "string", "primary" : false},
-				"userId": {"name" : "userid", "type": "uint256", "primary" : false},
-				"userBool": {"name" : "userbool", "type": "bool", "primary" : false}
-			}
+			"DeleteMarkerField": "__DELETE__",
+			"FieldMappings"  : [
+				{"Field": "userAddress" , "ColumnName" : "address", "Type": "address", "Primary" : true},
+				{"Field": "userName", "ColumnName" : "username", "Type": "string", "Primary" : false},
+				{"Field": "userId", "ColumnName" : "userid", "Type": "uint256", "Primary" : false},
+				{"Field": "userBool", "ColumnName" : "userbool", "Type": "bool", "Primary" : false}
+			]
 		},
 		{
 		"TableName" : "TEST_TABLE",
 		"Filter" : "Log1Text = 'EVENT_TEST'",
-		"DeleteFilter": "CRUD_ACTION = 'delete'",
-		"Columns"  : {
-			"key"		: {"name" : "Index",    "type": "uint256", "primary" : true},
-			"blocknum"  : {"name" : "Block",    "type": "uint256", "primary" : false},
-			"somestr"	: {"name" : "String",   "type": "string", "primary" : false},
-			"instance" 	: {"name" : "Instance", "type": "uint", "primary" : false}
-		}
+		"DeleteMarkerField": "__DELETE__",
+		"FieldMappings"  : [
+			{"Field": "key", "ColumnName": "Index",    "Type": "uint256", "Primary" : true},
+			{"Field": "blocknum", "ColumnName": "Block",    "Type": "uint256", "Primary" : false},
+			{"Field": "somestr", "ColumnName": "String",   "Type": "string", "Primary" : false},
+			{"Field": "instance", "ColumnName": "Instance", "Type": "uint", "Primary" : false}
+		]
 	}
 	]`
 
 	return goodJSONConfFile
 }
 
-// MissingFieldsJSONConfFile sets a json file with missing fields to be used in parser tests
+// MissingFieldsJSONConfFile sets a json file with missing fields to be used in projection tests
 func MissingFieldsJSONConfFile(t *testing.T) string {
 	t.Helper()
 
 	missingFieldsJSONConfFile := `[
 		{
 			"TableName" : "UserAccounts",
-			"Columns"  : {
-				"userAddress" : {"name" : "address", "primary" : true},
-				"userName": {"name" : "username", "primary" : false}
+			"Fields"  , 
+				"userAddress" , "ColumnName" : "address", "Primary" : true},
+				"userName", "ColumnName" : "username", "Primary" : false}
 			}
 		}
 	]`
@@ -53,7 +53,7 @@ func MissingFieldsJSONConfFile(t *testing.T) string {
 	return missingFieldsJSONConfFile
 }
 
-// UnknownTypeJSONConfFile sets a json file with unknown column types to be used in parser tests
+// UnknownTypeJSONConfFile sets a json file with unknown column types to be used in projection tests
 func UnknownTypeJSONConfFile(t *testing.T) string {
 	t.Helper()
 
@@ -61,55 +61,55 @@ func UnknownTypeJSONConfFile(t *testing.T) string {
 		{
 			"TableName" : "UserAccounts",
 			"Filter" : "LOG0 = 'UserAccounts'",
-			"DeleteFilter": "CRUD_ACTION = 'delete'",
-			"Event"  : {
+			"DeleteMarkerField": "__DELETE__",
+			"Event"  , 
 				"anonymous": false,
 				"inputs": [{
 					"indexed": false,
-					"name": "userName",
-					"type": "typeunknown"
+					"ColumnName": "userName",
+					"Type": "typeunknown"
 				}, {
 					"indexed": false,
-					"name": "userAddress",
-					"type": "address"
+					"ColumnName": "userAddress",
+					"Type": "address"
 				}, {
 					"indexed": false,
-					"name": "UnimportantInfo",
-					"type": "uint"
+					"ColumnName": "UnimportantInfo",
+					"Type": "uint"
 				}],
-				"name": "UpdateUserAccount",
-				"type": "event"
+				"ColumnName": "UpdateUserAccount",
+				"Type": "event"
 			},
-			"Columns"  : {
-				"userAddress" : {"name" : "address", "primary" : true},
-				"userName": {"name" : "username", "primary" : false}
+			"Fields"  , 
+				"userAddress" , "ColumnName" : "address", "Primary" : true},
+				"userName", "ColumnName" : "username", "Primary" : false}
 			}
 		},
 		{
 			"TableName" : "EventTest",
 			"Filter" : "LOG0 = 'EventTest'",
-			"DeleteFilter": "CRUD_ACTION = 'delete'",
-			"Event"  : {
+			"DeleteMarkerField": "__DELETE__",
+			"Event"  , 
 				"anonymous": false,
 				"inputs": [{
 					"indexed": false,
-					"name": "name",
-					"type": "typeunknown"
+					"ColumnName": "ColumnName",
+					"Type": "typeunknown"
 				}, {
 					"indexed": false,
-					"name": "description",
-					"type": "string"
+					"ColumnName": "description",
+					"Type": "string"
 				}, {
 					"indexed": false,
-					"name": "UnimportantInfo",
-					"type": "uint"
+					"ColumnName": "UnimportantInfo",
+					"Type": "uint"
 				}],
-				"name": "TEST_EVENTS",
-				"type": "event"
+				"ColumnName": "TEST_EVENTS",
+				"Type": "event"
 			},
-			"Columns"  : {
-				"name" : {"name" : "testname", "primary" : true},
-				"description": {"name" : "testdescription", "primary" : false}
+			"Fields"  , 
+				"ColumnName" , "ColumnName" : "testname", "Primary" : true},
+				"description", "ColumnName" : "testdescription", "Primary" : false}
 			}
 		}
 	]`
@@ -117,33 +117,33 @@ func UnknownTypeJSONConfFile(t *testing.T) string {
 	return unknownTypeJSONConfFile
 }
 
-// BadJSONConfFile sets a malformed json file to be used in parser tests
+// BadJSONConfFile sets a malformed json file to be used in projection tests
 func BadJSONConfFile(t *testing.T) string {
 	t.Helper()
 
 	badJSONConfFile := `[
 		{
 			"TableName" : "UserAccounts",
-			"Event"  : {
+			"Event"  , 
 				"anonymous": false,
 				"inputs": [{
 					"indexed": false,
-					"name": "userName",
-					"type": "string"
+					"ColumnName": "userName",
+					"Type": "string"
 				}, {
 					"indexed": false,
-					"name": "userAddress",
-					"type": "address"
+					"ColumnName": "userAddress",
+					"Type": "address"
 				}, {
 					"indexed": false,
-					"name": "UnimportantInfo",
-					"type": "uint"
+					"ColumnName": "UnimportantInfo",
+					"Type": "uint"
 				}],
-				"name": "UpdateUserAccount",
+				"ColumnName": "UpdateUserAccount",
 			},
-			"Columns"  : {
-				"userAddress" : {"name" : "address", "primary" : true},
-				"userName": {"name" : "username", "primary" : false}
+			"Fields"  , 
+				"userAddress" , "ColumnName" : "address", "Primary" : true},
+				"userName", "ColumnName" : "username", "Primary" : false}
 	]`
 
 	return badJSONConfFile
@@ -157,12 +157,12 @@ func DuplicatedColNameJSONConfFile(t *testing.T) string {
 		{
 			"TableName" : "DUPLICATED_COLUMN",
 			"Filter" : "LOG0 = 'UserAccounts'",
-			"DeleteFilter": "CRUD_ACTION = 'delete'",
-			"Columns"  : {
-				"userAddress" : {"name" : "address", "primary" : true},
-				"userName": {"name" : "duplicated", "primary" : false},
-				"userId": {"name" : "userid", "primary" : false},
-				"userBool": {"name" : "duplicated", "primary" : false}
+			"DeleteMarkerField": "__DELETE__",
+			"Fields"  , 
+				"userAddress" , "ColumnName" : "address", "Primary" : true},
+				"userName", "ColumnName" : "duplicated", "Primary" : false},
+				"userId", "ColumnName" : "userid", "Primary" : false},
+				"userBool", "ColumnName" : "duplicated", "Primary" : false}
 			}
 	}
 	]`

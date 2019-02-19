@@ -59,21 +59,21 @@ func (adapter *SQLiteAdapter) TypeMapping(sqlColumnType types.SQLColumnType) (st
 }
 
 // SecureColumnName return columns between appropriate security containers
-func (adapter *SQLiteAdapter) SecureColumnName(columnName string) string {
-	return fmt.Sprintf("[%s]", columnName)
+func (adapter *SQLiteAdapter) SecureName(name string) string {
+	return Cleanf("[%s]", name)
 }
 
 // CreateTableQuery builds query for creating a new table
-func (adapter *SQLiteAdapter) CreateTableQuery(tableName string, columns []types.SQLTableColumn) (string, string) {
+func (adapter *SQLiteAdapter) CreateTableQuery(tableName string, columns []*types.SQLTableColumn) (string, string) {
 	// build query
 	columnsDef := ""
 	primaryKey := ""
 	dictionaryValues := ""
 	hasSerial := false
 
-	for i, tableColumn := range columns {
-		secureColumn := adapter.SecureColumnName(tableColumn.Name)
-		sqlType, _ := adapter.TypeMapping(tableColumn.Type)
+	for i, column := range columns {
+		secureColumn := adapter.SecureName(column.Name)
+		sqlType, _ := adapter.TypeMapping(column.Type)
 		pKey := 0
 
 		if columnsDef != "" {
@@ -81,19 +81,19 @@ func (adapter *SQLiteAdapter) CreateTableQuery(tableName string, columns []types
 			dictionaryValues += ", "
 		}
 
-		if tableColumn.Type == types.SQLColumnTypeSerial {
+		if column.Type == types.SQLColumnTypeSerial {
 			// SQLITE AUTOINCREMENT LIMITATION
-			columnsDef += fmt.Sprintf("%s %s", secureColumn, "INTEGER PRIMARY KEY AUTOINCREMENT")
+			columnsDef += Cleanf("%s %s", secureColumn, "INTEGER PRIMARY KEY AUTOINCREMENT")
 			hasSerial = true
 		} else {
-			columnsDef += fmt.Sprintf("%s %s", secureColumn, sqlType)
+			columnsDef += Cleanf("%s %s", secureColumn, sqlType)
 		}
 
-		if tableColumn.Length > 0 {
-			columnsDef += fmt.Sprintf("(%v)", tableColumn.Length)
+		if column.Length > 0 {
+			columnsDef += Cleanf("(%v)", column.Length)
 		}
 
-		if tableColumn.Primary {
+		if column.Primary {
 			pKey = 1
 			columnsDef += " NOT NULL"
 			if primaryKey != "" {
@@ -102,27 +102,27 @@ func (adapter *SQLiteAdapter) CreateTableQuery(tableName string, columns []types
 			primaryKey += secureColumn
 		}
 
-		dictionaryValues += fmt.Sprintf("('%s','%s',%d,%d,%d,%d)",
+		dictionaryValues += Cleanf("('%s','%s',%d,%d,%d,%d)",
 			tableName,
-			tableColumn.Name,
-			tableColumn.Type,
-			tableColumn.Length,
+			column.Name,
+			column.Type,
+			column.Length,
 			pKey,
 			i)
 	}
 
-	query := fmt.Sprintf("CREATE TABLE %s (%s", tableName, columnsDef)
+	query := Cleanf("CREATE TABLE %s (%s", adapter.SecureName(tableName), columnsDef)
 	if primaryKey != "" {
 		if hasSerial {
 			// SQLITE AUTOINCREMENT LIMITATION
-			query += "," + fmt.Sprintf("UNIQUE (%s)", primaryKey)
+			query += "," + Cleanf("UNIQUE (%s)", primaryKey)
 		} else {
-			query += "," + fmt.Sprintf("CONSTRAINT %s_pkey PRIMARY KEY (%s)", tableName, primaryKey)
+			query += "," + Cleanf("CONSTRAINT %s_pkey PRIMARY KEY (%s)", tableName, primaryKey)
 		}
 	}
 	query += ");"
 
-	dictionaryQuery := fmt.Sprintf("INSERT INTO %s (%s,%s,%s,%s,%s,%s) VALUES %s;",
+	dictionaryQuery := Cleanf("INSERT INTO %s (%s,%s,%s,%s,%s,%s) VALUES %s;",
 		types.SQLDictionaryTableName,
 		types.SQLColumnLabelTableName, types.SQLColumnLabelColumnName,
 		types.SQLColumnLabelColumnType, types.SQLColumnLabelColumnLength,
@@ -141,7 +141,7 @@ func (adapter *SQLiteAdapter) LastBlockIDQuery() string {
 		SELECT COALESCE(%s, '0') AS %s
 			FROM ll LEFT OUTER JOIN %s log ON (ll.%s = log.%s);`
 
-	return fmt.Sprintf(query,
+	return Cleanf(query,
 		types.SQLColumnLabelId,                         // max
 		types.SQLColumnLabelId,                         // as
 		types.SQLLogTableName,                          // from
@@ -155,7 +155,7 @@ func (adapter *SQLiteAdapter) LastBlockIDQuery() string {
 func (adapter *SQLiteAdapter) FindTableQuery() string {
 	query := "SELECT COUNT(*) found FROM %s WHERE %s = $1;"
 
-	return fmt.Sprintf(query,
+	return Cleanf(query,
 		types.SQLDictionaryTableName,  // from
 		types.SQLColumnLabelTableName) // where
 }
@@ -172,7 +172,7 @@ func (adapter *SQLiteAdapter) TableDefinitionQuery() string {
 		ORDER BY
 			%s;`
 
-	return fmt.Sprintf(query,
+	return Cleanf(query,
 		types.SQLColumnLabelColumnName, types.SQLColumnLabelColumnType, // select
 		types.SQLColumnLabelColumnLength, types.SQLColumnLabelPrimaryKey, // select
 		types.SQLDictionaryTableName,    // from
@@ -184,15 +184,15 @@ func (adapter *SQLiteAdapter) TableDefinitionQuery() string {
 func (adapter *SQLiteAdapter) AlterColumnQuery(tableName, columnName string, sqlColumnType types.SQLColumnType, length, order int) (string, string) {
 	sqlType, _ := adapter.TypeMapping(sqlColumnType)
 	if length > 0 {
-		sqlType = fmt.Sprintf("%s(%d)", sqlType, length)
+		sqlType = Cleanf("%s(%d)", sqlType, length)
 	}
 
-	query := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s;",
-		tableName,
-		adapter.SecureColumnName(columnName),
+	query := Cleanf("ALTER TABLE %s ADD COLUMN %s %s;",
+		adapter.SecureName(tableName),
+		adapter.SecureName(columnName),
 		sqlType)
 
-	dictionaryQuery := fmt.Sprintf(`
+	dictionaryQuery := Cleanf(`
 		INSERT INTO %s (%s,%s,%s,%s,%s,%s)
 		VALUES ('%s','%s',%d,%d,%d,%d);`,
 
@@ -209,7 +209,7 @@ func (adapter *SQLiteAdapter) AlterColumnQuery(tableName, columnName string, sql
 
 // SelectRowQuery returns a query for selecting row values
 func (adapter *SQLiteAdapter) SelectRowQuery(tableName, fields, indexValue string) string {
-	return fmt.Sprintf("SELECT %s FROM %s WHERE %s = '%s';", fields, tableName, types.SQLColumnLabelHeight, indexValue)
+	return Cleanf("SELECT %s FROM %s WHERE %s = '%s';", fields, adapter.SecureName(tableName), types.SQLColumnLabelHeight, indexValue)
 }
 
 // SelectLogQuery returns a query for selecting all tables involved in a block trn
@@ -217,7 +217,7 @@ func (adapter *SQLiteAdapter) SelectLogQuery() string {
 	query := `
 		SELECT DISTINCT %s,%s FROM %s l WHERE %s = $1;`
 
-	return fmt.Sprintf(query,
+	return Cleanf(query,
 		types.SQLColumnLabelTableName, types.SQLColumnLabelEventName, // select
 		types.SQLLogTableName,      // from
 		types.SQLColumnLabelHeight) // where
@@ -229,7 +229,7 @@ func (adapter *SQLiteAdapter) InsertLogQuery() string {
 		INSERT INTO %s (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
 		VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6 ,$7, $8, $9);`
 
-	return fmt.Sprintf(query,
+	return Cleanf(query,
 		types.SQLLogTableName, // insert
 		//fields
 		types.SQLColumnLabelTimeStamp, types.SQLColumnLabelTableName, types.SQLColumnLabelEventName, types.SQLColumnLabelEventFilter,
@@ -262,8 +262,7 @@ func (adapter *SQLiteAdapter) ErrorEquals(err error, sqlErrorType types.SQLError
 	return false
 }
 
-func (adapter *SQLiteAdapter) UpsertQuery(table types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, interface{}, error) {
-
+func (adapter *SQLiteAdapter) UpsertQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, interface{}, error) {
 	pointers := make([]interface{}, 0)
 	columns := ""
 	insValues := ""
@@ -275,8 +274,8 @@ func (adapter *SQLiteAdapter) UpsertQuery(table types.SQLTable, row types.EventD
 	i := 0
 
 	// for each column in table
-	for _, tableColumn := range table.Columns {
-		secureColumn := adapter.SecureColumnName(tableColumn.Name)
+	for _, column := range table.Columns {
+		secureColumn := adapter.SecureName(column.Name)
 
 		i++
 
@@ -287,12 +286,12 @@ func (adapter *SQLiteAdapter) UpsertQuery(table types.SQLTable, row types.EventD
 			values += ", "
 		}
 		columns += secureColumn
-		insValues += "$" + fmt.Sprintf("%d", i)
+		insValues += "$" + Cleanf("%d", i)
 
 		//find data for column
-		if value, ok := row.RowData[tableColumn.Name]; ok {
+		if value, ok := row.RowData[column.Name]; ok {
 			//load hash value
-			if tableColumn.Name == types.SQLColumnLabelTxHash {
+			if column.Name == types.SQLColumnLabelTxHash {
 				txHash = value
 			}
 
@@ -301,16 +300,16 @@ func (adapter *SQLiteAdapter) UpsertQuery(table types.SQLTable, row types.EventD
 			pointers = append(pointers, &value)
 			values += fmt.Sprint(value)
 
-			if !tableColumn.Primary {
+			if !column.Primary {
 				// column is no PK
 				// add to update list
 				// INSERT........... ON CONFLICT......DO UPDATE (*updValues)
 				if updValues != "" {
 					updValues += ", "
 				}
-				updValues += secureColumn + " = $" + fmt.Sprintf("%d", i)
+				updValues += secureColumn + " = $" + Cleanf("%d", i)
 			}
-		} else if tableColumn.Primary {
+		} else if column.Primary {
 			// column NOT found (is null) and is PK
 			return types.UpsertDeleteQuery{}, nil, fmt.Errorf("error null primary key for column %s", secureColumn)
 		} else {
@@ -319,7 +318,7 @@ func (adapter *SQLiteAdapter) UpsertQuery(table types.SQLTable, row types.EventD
 			values += "null"
 		}
 
-		if tableColumn.Primary {
+		if column.Primary {
 			// ON CONFLICT (....values....)
 			if pkColumns != "" {
 				pkColumns += ", "
@@ -329,13 +328,13 @@ func (adapter *SQLiteAdapter) UpsertQuery(table types.SQLTable, row types.EventD
 
 	}
 
-	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) ", table.Name, columns, insValues)
+	query := Cleanf("INSERT INTO %s (%s) VALUES (%s) ", adapter.SecureName(table.Name), columns, insValues)
 
 	if pkColumns != "" {
 		if updValues != "" {
-			query += fmt.Sprintf("ON CONFLICT (%s) DO UPDATE SET %s", pkColumns, updValues)
+			query += Cleanf("ON CONFLICT (%s) DO UPDATE SET %s", pkColumns, updValues)
 		} else {
-			query += fmt.Sprintf("ON CONFLICT (%s) DO NOTHING", pkColumns)
+			query += Cleanf("ON CONFLICT (%s) DO NOTHING", pkColumns)
 		}
 	}
 	query += ";"
@@ -343,7 +342,7 @@ func (adapter *SQLiteAdapter) UpsertQuery(table types.SQLTable, row types.EventD
 	return types.UpsertDeleteQuery{Query: query, Values: values, Pointers: pointers}, txHash, nil
 }
 
-func (adapter *SQLiteAdapter) DeleteQuery(table types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, error) {
+func (adapter *SQLiteAdapter) DeleteQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, error) {
 
 	pointers := make([]interface{}, 0)
 	columns := ""
@@ -351,24 +350,24 @@ func (adapter *SQLiteAdapter) DeleteQuery(table types.SQLTable, row types.EventD
 	i := 0
 
 	// for each column in table
-	for _, tableColumn := range table.Columns {
+	for _, column := range table.Columns {
 
 		//only PK for delete
-		if tableColumn.Primary {
+		if column.Primary {
 			i++
 
-			secureColumn := adapter.SecureColumnName(tableColumn.Name)
+			secureColumn := adapter.SecureName(column.Name)
 
 			// WHERE ..........
 			if columns != "" {
-				columns += "AND "
+				columns += " AND "
 				values += ", "
 			}
 
-			columns += fmt.Sprintf("%s = $%d", secureColumn, i)
+			columns += Cleanf("%s = $%d", secureColumn, i)
 
 			//find data for column
-			if value, ok := row.RowData[tableColumn.Name]; ok {
+			if value, ok := row.RowData[column.Name]; ok {
 				// column found (not null)
 				// load values
 				pointers = append(pointers, &value)
@@ -385,20 +384,20 @@ func (adapter *SQLiteAdapter) DeleteQuery(table types.SQLTable, row types.EventD
 		return types.UpsertDeleteQuery{}, fmt.Errorf("error primary key not found for deletion")
 	}
 
-	query := fmt.Sprintf("DELETE FROM %s WHERE %s;", table.Name, columns)
+	query := Cleanf("DELETE FROM %s WHERE %s;", adapter.SecureName(table.Name), columns)
 
 	return types.UpsertDeleteQuery{Query: query, Values: values, Pointers: pointers}, nil
 }
 
 func (adapter *SQLiteAdapter) RestoreDBQuery() string {
 
-	query := fmt.Sprintf("SELECT %s, %s, %s, %s FROM %s",
+	query := Cleanf("SELECT %s, %s, %s, %s FROM %s",
 		types.SQLColumnLabelTableName, types.SQLColumnLabelAction, types.SQLColumnLabelSqlStmt, types.SQLColumnLabelSqlValues,
 		types.SQLLogTableName)
 
 	query += " WHERE strftime('%Y-%m-%d %H:%M:%S',"
 
-	query += fmt.Sprintf("%s)<=$1 ORDER BY %s;",
+	query += Cleanf("%s)<=$1 ORDER BY %s;",
 		types.SQLColumnLabelTimeStamp, types.SQLColumnLabelId)
 
 	return query
@@ -406,9 +405,8 @@ func (adapter *SQLiteAdapter) RestoreDBQuery() string {
 }
 
 func (adapter *SQLiteAdapter) CleanDBQueries() types.SQLCleanDBQuery {
-
 	// Chain info
-	selectChainIDQry := fmt.Sprintf(`
+	selectChainIDQry := Cleanf(`
 		SELECT 
 		COUNT(*) REGISTERS,
 		COALESCE(MAX(%s),'') CHAINID,
@@ -417,17 +415,17 @@ func (adapter *SQLiteAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 		types.SQLColumnLabelChainID, types.SQLColumnLabelBurrowVer,
 		types.SQLChainInfoTableName)
 
-	deleteChainIDQry := fmt.Sprintf(`
+	deleteChainIDQry := Cleanf(`
 		DELETE FROM %s;`,
 		types.SQLChainInfoTableName)
 
-	insertChainIDQry := fmt.Sprintf(`
+	insertChainIDQry := Cleanf(`
 		INSERT INTO %s (%s,%s) VALUES($1,$2)`,
 		types.SQLChainInfoTableName,
 		types.SQLColumnLabelChainID, types.SQLColumnLabelBurrowVer)
 
 	// Dictionary
-	selectDictionaryQry := fmt.Sprintf(`
+	selectDictionaryQry := Cleanf(`
 		SELECT DISTINCT %s 
 		FROM %s 
  		WHERE %s
@@ -437,7 +435,7 @@ func (adapter *SQLiteAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 		types.SQLColumnLabelTableName,
 		types.SQLLogTableName, types.SQLDictionaryTableName, types.SQLChainInfoTableName)
 
-	deleteDictionaryQry := fmt.Sprintf(`
+	deleteDictionaryQry := Cleanf(`
 		DELETE FROM %s 
 		WHERE %s 
 		NOT IN ('%s','%s','%s');`,
@@ -446,7 +444,7 @@ func (adapter *SQLiteAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 		types.SQLLogTableName, types.SQLDictionaryTableName, types.SQLChainInfoTableName)
 
 	// log
-	deleteLogQry := fmt.Sprintf(`
+	deleteLogQry := Cleanf(`
 		DELETE FROM %s;`,
 		types.SQLLogTableName)
 
@@ -461,6 +459,6 @@ func (adapter *SQLiteAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 }
 
 func (adapter *SQLiteAdapter) DropTableQuery(tableName string) string {
-	//drop tables
-	return fmt.Sprintf(`DROP TABLE %s;`, tableName)
+	// SQLite does not support DROP TABLE CASCADE so this will fail if there are dependent objects
+	return Cleanf(`DROP TABLE %s;`, adapter.SecureName(tableName))
 }

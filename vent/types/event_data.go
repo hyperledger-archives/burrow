@@ -16,8 +16,8 @@ const (
 // already mapped to SQL columns & tables
 // Tables map key is the table name
 type EventData struct {
-	Block  string
-	Tables map[string]EventDataTable
+	BlockHeight uint64
+	Tables      map[string]EventDataTable
 }
 
 // EventDataTable is an array of rows
@@ -29,4 +29,6 @@ type EventDataTable []EventDataRow
 type EventDataRow struct {
 	Action  DBAction
 	RowData map[string]interface{}
+	// The EventClass that caused this row to be emitted (if it was caused by an specific event)
+	EventClass *EventClass
 }

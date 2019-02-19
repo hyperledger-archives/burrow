@@ -1,5 +1,5 @@
 ---
-bip: 2
+adr: 2
 title: Identify Transaction
 author: Casey Kuhlman (@compleatang), Silas Davis (@silasdavis), Pierrick Hymbert (@phymbert)
 discussions-to: https://chat.hyperledger.org/channel/burrow-contributors
@@ -10,7 +10,7 @@ created: 2018-09-10
 ---
 
 ## Node keys and validators registry
-This BIP introduces Identify Transaction to register and track node key related to their validator key.
+This ADR introduces Identify Transaction to register and track node key related to their validator key.
 
 ## Motivation
 

@@ -18,6 +18,14 @@
   version = "v1.2.2"
 
 [[projects]]
+  branch = "master"
+  digest = "1:2caa05ca997989079689d13beb3c2f0540809f0696add8e5a1cbd1d9d9b8875b"
+  name = "github.com/alecthomas/jsonschema"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "a6952de1bbe6e1c7ef118614925fe4b02847383a"
+
+[[projects]]
   digest = "1:5a23cd3a5496a0b2da7e3b348d14e77b11a210738c398200d7d6f04ea8cf3bd8"
   name = "github.com/asaskevich/govalidator"
   packages = ["."]
@@ -602,6 +610,30 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:f15121220068fb01e71ad08b0fdbd1bfaa926be774e7634e8e332c82134079b0"
+  name = "github.com/xeipuuv/gojsonpointer"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "4e3ac2762d5f479393488629ee9370b50873b3a6"
+
+[[projects]]
+  branch = "master"
+  digest = "1:131db546a264d76defd7a4ce233796316b2ab856991cb4b7d6ced2a3c7294ad3"
+  name = "github.com/xeipuuv/gojsonreference"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "bd5ef7bd5415a7ac448318e64f11a24cd21e594b"
+
+[[projects]]
+  digest = "1:5185937abbca299da07bcbeb4e38dfa186c09fbf60042c3d07e0073a0634a78f"
+  name = "github.com/xeipuuv/gojsonschema"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "f971f3cd73b2899de6923801c147f075263e0c50"
+  version = "v1.1.0"
+
+[[projects]]
+  branch = "master"
   digest = "1:52514b8139bc98de95c107b35d339a229c9233e2ca6893c78c8480d800139c2c"
   name = "github.com/xlab/treeprint"
   packages = ["."]
@@ -739,6 +771,7 @@
   input-imports = [
     "github.com/BurntSushi/toml",
     "github.com/OneOfOne/xxhash",
+    "github.com/alecthomas/jsonschema",
     "github.com/btcsuite/btcd/btcec",
     "github.com/cep21/xdgbasedir",
     "github.com/eapache/channels",
@@ -796,6 +829,7 @@
     "github.com/tendermint/tendermint/types",
     "github.com/tendermint/tendermint/types/time",
     "github.com/tmthrgd/go-hex",
+    "github.com/xeipuuv/gojsonschema",
     "github.com/xlab/treeprint",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/ripemd160",
