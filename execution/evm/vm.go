@@ -611,6 +611,28 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			memory.Write(memOff, returnData)
 			vm.Debugf(" => [%v, %v, %v] %X\n", memOff, outputOff, length, returnData)
 
+		case EXTCODEHASH: // 0x3F
+			address := stack.PopAddress()
+
+			if !callState.Exists(address) {
+				// In case the account does not exist 0 is pushed to the stack.
+				stack.PushU64(0)
+			} else {
+				code := callState.GetCode(address)
+				if code == nil {
+					// In case the account does not have code the keccak256 hash of empty data
+					code = acm.Bytecode{}
+				}
+
+				// keccak256 hash of a contract's code
+				var extcodehash Word256
+				hash := sha3.NewKeccak256()
+				hash.Write(code)
+				copy(extcodehash[:], hash.Sum(nil))
+
+				stack.Push(extcodehash)
+			}
+
 		case BLOCKHASH: // 0x40
 			blockNumber := stack.PopU64()
 
