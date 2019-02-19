@@ -6,9 +6,10 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/hyperledger/burrow/vent/config"
+
 	"github.com/hyperledger/burrow/config/source"
 
-	"github.com/hyperledger/burrow/vent/config"
 	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/service"
 	"github.com/hyperledger/burrow/vent/sqlsol"
@@ -19,86 +20,88 @@ import (
 func Vent(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 
-		cfg := config.DefaultVentConfig()
-
-		dbAdapterOpt := cmd.StringOpt("db-adapter", cfg.DBAdapter, "Database adapter, 'postgres' or 'sqlite' (if built with the sqlite tag) are supported")
-		dbURLOpt := cmd.StringOpt("db-url", cfg.DBURL, "PostgreSQL database URL or SQLite db file path")
-		dbSchemaOpt := cmd.StringOpt("db-schema", cfg.DBSchema, "PostgreSQL database schema (empty for SQLite)")
-		grpcAddrOpt := cmd.StringOpt("grpc-addr", cfg.GRPCAddr, "Address to connect to the Hyperledger Burrow gRPC server")
-		httpAddrOpt := cmd.StringOpt("http-addr", cfg.HTTPAddr, "Address to bind the HTTP server")
-		logLevelOpt := cmd.StringOpt("log-level", cfg.LogLevel, "Logging level (error, warn, info, debug)")
-		abiFileOpt := cmd.StringOpt("abi", cfg.AbiFileOrDir, "EVM Contract ABI file or folder")
-		specFileOrDirOpt := cmd.StringOpt("spec", cfg.SpecFileOrDir, "SQLSol specification file or folder")
-		dbBlockTxOpt := cmd.BoolOpt("db-block", cfg.DBBlockTx, "Create block & transaction tables and persist related data (true/false)")
-
-		cmd.Before = func() {
-			// Rather annoying boilerplate here... but there is no way to pass mow.cli a pointer for it to fill you value
-			cfg.DBAdapter = *dbAdapterOpt
-			cfg.DBURL = *dbURLOpt
-			cfg.DBSchema = *dbSchemaOpt
-			cfg.GRPCAddr = *grpcAddrOpt
-			cfg.HTTPAddr = *httpAddrOpt
-			cfg.LogLevel = *logLevelOpt
-			cfg.AbiFileOrDir = *abiFileOpt
-			cfg.SpecFileOrDir = *specFileOrDirOpt
-			cfg.DBBlockTx = *dbBlockTxOpt
-		}
-
 		cmd.Command("start", "Start the Vent consumer service",
 			func(cmd *cli.Cmd) {
-				cmd.Spec = "(--spec=<spec file or dir> --abi=<abi file or dir> [--db-adapter] [--db-url] [--db-schema] " +
-					"[--db-block] [--grpc-addr] [--http-addr] [--log-level])"
+				cfg := config.DefaultVentConfig()
 
-				log := logger.NewLogger(cfg.LogLevel)
-				consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
-				server := service.NewServer(cfg, log, consumer)
+				dbAdapterOpt := cmd.StringOpt("db-adapter", cfg.DBAdapter, "Database adapter, 'postgres' or 'sqlite' (if built with the sqlite tag) are supported")
+				dbURLOpt := cmd.StringOpt("db-url", cfg.DBURL, "PostgreSQL database URL or SQLite db file path")
+				dbSchemaOpt := cmd.StringOpt("db-schema", cfg.DBSchema, "PostgreSQL database schema (empty for SQLite)")
+				grpcAddrOpt := cmd.StringOpt("grpc-addr", cfg.GRPCAddr, "Address to connect to the Hyperledger Burrow gRPC server")
+				httpAddrOpt := cmd.StringOpt("http-addr", cfg.HTTPAddr, "Address to bind the HTTP server")
+				logLevelOpt := cmd.StringOpt("log-level", cfg.LogLevel, "Logging level (error, warn, info, debug)")
+				abiFileOpt := cmd.StringOpt("abi", cfg.AbiFileOrDir, "EVM Contract ABI file or folder")
+				specFileOrDirOpt := cmd.StringOpt("spec", cfg.SpecFileOrDir, "SQLSol specification file or folder")
+				dbBlockTxOpt := cmd.BoolOpt("db-block", cfg.DBBlockTx, "Create block & transaction tables and persist related data (true/false)")
 
-				projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDir, cfg.DBBlockTx)
-				if err != nil {
-					output.Fatalf("Spec loader error: %v", err)
+				cmd.Before = func() {
+					// Rather annoying boilerplate here... but there is no way to pass mow.cli a pointer for it to fill you value
+					cfg.DBAdapter = *dbAdapterOpt
+					cfg.DBURL = *dbURLOpt
+					cfg.DBSchema = *dbSchemaOpt
+					cfg.GRPCAddr = *grpcAddrOpt
+					cfg.HTTPAddr = *httpAddrOpt
+					cfg.LogLevel = *logLevelOpt
+					cfg.AbiFileOrDir = *abiFileOpt
+					cfg.SpecFileOrDir = *specFileOrDirOpt
+					cfg.DBBlockTx = *dbBlockTxOpt
 				}
-				abiSpec, err := sqlsol.AbiLoader(cfg.AbiFileOrDir)
-				if err != nil {
-					output.Fatalf("ABI loader error: %v", err)
-				}
 
-				var wg sync.WaitGroup
+				cmd.Spec = "--spec=<spec file or dir> --abi=<abi file or dir> [--db-adapter] [--db-url] [--db-schema] " +
+					"[--db-block] [--grpc-addr] [--http-addr] [--log-level]"
 
-				// setup channel for termination signals
-				ch := make(chan os.Signal)
+				cmd.Action = func() {
+					log := logger.NewLogger(cfg.LogLevel)
+					consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
+					server := service.NewServer(cfg, log, consumer)
 
-				signal.Notify(ch, syscall.SIGTERM)
-				signal.Notify(ch, syscall.SIGINT)
-
-				// start the events consumer
-				wg.Add(1)
-
-				go func() {
-					if err := consumer.Run(projection, abiSpec, true); err != nil {
-						output.Fatalf("Consumer execution error: %v", err)
+					projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDir, cfg.DBBlockTx)
+					if err != nil {
+						output.Fatalf("Spec loader error: %v", err)
+					}
+					abiSpec, err := sqlsol.AbiLoader(cfg.AbiFileOrDir)
+					if err != nil {
+						output.Fatalf("ABI loader error: %v", err)
 					}
 
-					wg.Done()
-				}()
+					var wg sync.WaitGroup
 
-				// start the http server
-				wg.Add(1)
+					// setup channel for termination signals
+					ch := make(chan os.Signal)
 
-				go func() {
-					server.Run()
-					wg.Done()
-				}()
+					signal.Notify(ch, syscall.SIGTERM)
+					signal.Notify(ch, syscall.SIGINT)
 
-				// wait for a termination signal from the OS and
-				// gracefully shutdown the events consumer and the http server
-				go func() {
-					<-ch
-					consumer.Shutdown()
-					server.Shutdown()
-				}()
+					// start the events consumer
+					wg.Add(1)
 
-				// wait until the events consumer and the http server are done
-				wg.Wait()
+					go func() {
+						if err := consumer.Run(projection, abiSpec, true); err != nil {
+							output.Fatalf("Consumer execution error: %v", err)
+						}
+
+						wg.Done()
+					}()
+
+					// start the http server
+					wg.Add(1)
+
+					go func() {
+						server.Run()
+						wg.Done()
+					}()
+
+					// wait for a termination signal from the OS and
+					// gracefully shutdown the events consumer and the http server
+					go func() {
+						<-ch
+						consumer.Shutdown()
+						server.Shutdown()
+					}()
+
+					// wait until the events consumer and the http server are done
+					wg.Wait()
+				}
 			})
 
 		cmd.Command("schema", "Print JSONSchema for spec file format to validate table specs",
