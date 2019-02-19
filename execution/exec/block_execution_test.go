@@ -4,18 +4,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tendermint/tendermint/abci/types"
 )
 
 func TestBlockExecution_Marshal(t *testing.T) {
 	be := &BlockExecution{
-		// TODO: reenable when tendermint Header works GRPC
-		//BlockHeader: &abciTypes.Header{
-		//	Height:  3,
-		//	AppHash: []byte{2},
-		//	Proposer: abciTypes.Validator{
-		//		Power: 34,
-		//	},
-		//},
+		Header: &types.Header{
+			Height:          3,
+			AppHash:         []byte{2},
+			ProposerAddress: []byte{1, 2, 33},
+		},
 	}
 	bs, err := be.Marshal()
 	require.NoError(t, err)

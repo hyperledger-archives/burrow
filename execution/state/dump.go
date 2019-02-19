@@ -101,12 +101,14 @@ func (s *State) LoadDump(reader DumpReader) error {
 			}
 			if tx == nil {
 				tx = &exec.TxExecution{
-					TxType: payload.TypeCall,
-					TxHash: make([]byte, 32),
-					Height: row.Height,
-					Origin: &exec.Origin{
-						ChainID: row.EVMEvent.ChainID,
-						Time:    row.EVMEvent.Time,
+					TxHeader: &exec.TxHeader{
+						TxType: payload.TypeCall,
+						TxHash: make([]byte, 32),
+						Height: row.Height,
+						Origin: &exec.Origin{
+							ChainID: row.EVMEvent.ChainID,
+							Time:    row.EVMEvent.Time,
+						},
 					},
 				}
 			}

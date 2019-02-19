@@ -3,6 +3,7 @@ package query
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 type ReflectTagged struct {
@@ -38,6 +39,11 @@ func ReflectTags(value interface{}, fieldNames ...string) (*ReflectTagged, error
 			rv.Interface())
 	}
 	ty := rv.Elem().Type()
+	// Try our global cache on types
+	if rt, ok := cacheGet(ty, fieldNames); ok {
+		rt.rv = rv
+		return rt, nil
+	}
 
 	numField := ty.NumField()
 	if len(fieldNames) > 0 {
@@ -70,6 +76,8 @@ func ReflectTags(value interface{}, fieldNames ...string) (*ReflectTagged, error
 			rt.registerField(ty.Field(i))
 		}
 	}
+	// Cache the registration
+	cachePut(ty, rt, fieldNames)
 	return rt, nil
 }
 
@@ -96,4 +104,25 @@ func (rt *ReflectTagged) Get(key string) (value string, ok bool) {
 
 func (rt *ReflectTagged) Len() int {
 	return len(rt.keys)
+}
+
+// Avoid the need to iterate over reflected type each time we need a reflect tagged
+var reflectTaggedCache = make(map[reflect.Type]map[string]ReflectTagged)
+
+func cacheGet(ty reflect.Type, keys []string) (*ReflectTagged, bool) {
+	if _, ok := reflectTaggedCache[ty]; ok {
+		key := strings.Join(keys, ",")
+		if rt, ok := reflectTaggedCache[ty][key]; ok {
+			return &rt, true
+		}
+	}
+	return nil, false
+}
+
+func cachePut(ty reflect.Type, rt *ReflectTagged, fieldNames []string) {
+	if _, ok := reflectTaggedCache[ty]; !ok {
+		reflectTaggedCache[ty] = make(map[string]ReflectTagged)
+	}
+	key := strings.Join(fieldNames, ",")
+	reflectTaggedCache[ty][key] = *rt
 }

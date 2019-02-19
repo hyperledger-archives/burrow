@@ -10,7 +10,7 @@ import (
 
 func EventStringBlockExecution(height uint64) string { return fmt.Sprintf("Execution/Block/%v", height) }
 
-func DecodeBlockEvent(bs []byte) (*StreamEvent, error) {
+func DecodeStreamEvent(bs []byte) (*StreamEvent, error) {
 	be := new(StreamEvent)
 	err := cdc.UnmarshalBinaryBare(bs, be)
 	if err != nil {
@@ -20,29 +20,22 @@ func DecodeBlockEvent(bs []byte) (*StreamEvent, error) {
 }
 
 // Write out TxExecutions parenthetically
-func (be *BlockExecution) Events() []*StreamEvent {
-	evs := make([]*StreamEvent, len(be.TxExecutions)+2)
-	evs[0] = &StreamEvent{
-		Index: 0,
+func (be *BlockExecution) StreamEvents() StreamEvents {
+	var ses StreamEvents
+	ses = append(ses, &StreamEvent{
 		BeginBlock: &BeginBlock{
 			Height: be.Height,
 			Header: be.Header,
 		},
+	})
+	for _, txe := range be.TxExecutions {
+		ses = append(ses, txe.StreamEvents()...)
 	}
-	for i, txe := range be.TxExecutions {
-		evs[i+1] = &StreamEvent{
-			Index:       uint64(i + 1),
-			TxExecution: txe,
-		}
-	}
-	end := len(evs) - 1
-	evs[end] = &StreamEvent{
-		Index: uint64(end),
+	return append(ses, &StreamEvent{
 		EndBlock: &EndBlock{
 			Height: be.Height,
 		},
-	}
-	return evs
+	})
 }
 
 func (be *BlockExecution) Encode() ([]byte, error) {
@@ -63,11 +56,11 @@ func (*BlockExecution) EventType() EventType {
 
 func (be *BlockExecution) Tx(txEnv *txs.Envelope) *TxExecution {
 	txe := NewTxExecution(txEnv)
-	be.Append(txe)
+	be.AppendTxs(txe)
 	return txe
 }
 
-func (be *BlockExecution) Append(tail ...*TxExecution) {
+func (be *BlockExecution) AppendTxs(tail ...*TxExecution) {
 	for i, txe := range tail {
 		txe.Index = uint64(len(be.TxExecutions) + i)
 		txe.Height = be.Height
@@ -112,8 +105,14 @@ func (ev *StreamEvent) EventType() EventType {
 	switch {
 	case ev.BeginBlock != nil:
 		return TypeBeginBlock
-	case ev.TxExecution != nil:
-		return TypeTxExecution
+	case ev.BeginTx != nil:
+		return TypeBeginTx
+	case ev.Envelope != nil:
+		return TypeEnvelope
+	case ev.Event != nil:
+		return ev.Event.EventType()
+	case ev.EndTx != nil:
+		return TypeEndTx
 	case ev.EndBlock != nil:
 		return TypeEndBlock
 	}
@@ -123,12 +122,16 @@ func (ev *StreamEvent) EventType() EventType {
 func (ev *StreamEvent) Tagged() *TaggedBlockEvent {
 	return &TaggedBlockEvent{
 		Tagged: query.MergeTags(
-			ev.TxExecution.Tagged(),
 			query.TagMap{
 				event.EventTypeKey: ev.EventType(),
 			},
 			query.MustReflectTags(ev.BeginBlock, "Height"),
 			query.MustReflectTags(ev.BeginBlock.GetHeader()),
+			query.MustReflectTags(ev.BeginTx),
+			query.MustReflectTags(ev.BeginTx.GetTxHeader()),
+			ev.Envelope.Tagged(),
+			ev.Event.Tagged(),
+			query.MustReflectTags(ev.EndTx),
 			query.MustReflectTags(ev.EndBlock, "Height"),
 		),
 		StreamEvent: ev,

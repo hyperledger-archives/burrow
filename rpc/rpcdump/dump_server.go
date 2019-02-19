@@ -89,33 +89,33 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 	}
 
 	var blockTime time.Time
+	var origin *exec.Origin
 
-	return ds.state.IterateStreamEvents(0, height, func(ev *exec.StreamEvent) error {
-		if ev.BeginBlock != nil {
-			blockTime = ev.BeginBlock.Header.GetTime()
-		}
-		txe := ev.TxExecution
-		if txe == nil {
-			return nil
-		}
-		for _, event := range ev.TxExecution.Events {
-			if event.Log != nil {
-				evmevent := dump.EVMEvent{Event: event.Log}
-				if txe.Origin != nil {
+	return ds.state.IterateStreamEvents(exec.StreamKey{}, exec.StreamKey{Height: height},
+		func(ev *exec.StreamEvent) error {
+			switch {
+			case ev.BeginBlock != nil:
+				blockTime = ev.BeginBlock.Header.GetTime()
+			case ev.BeginTx != nil:
+				origin = ev.BeginTx.TxHeader.Origin
+			case ev.Event != nil && ev.Event.Log != nil:
+				evmevent := dump.EVMEvent{Event: ev.Event.Log}
+				if origin != nil {
 					// this event was already restored
-					evmevent.ChainID = txe.Origin.ChainID
-					evmevent.Time = txe.Origin.Time
+					evmevent.ChainID = origin.ChainID
+					evmevent.Time = origin.Time
 				} else {
 					// this event was generated on this chain
 					evmevent.ChainID = ds.blockchain.ChainID()
 					evmevent.Time = blockTime
 				}
-				err := stream.Send(&dump.Dump{Height: event.Header.Height, EVMEvent: &evmevent})
+				err := stream.Send(&dump.Dump{Height: ev.Event.Header.Height, EVMEvent: &evmevent})
 				if err != nil {
 					return err
 				}
+			case ev.EndTx != nil:
+				origin = nil
 			}
-		}
-		return nil
-	})
+			return nil
+		})
 }
