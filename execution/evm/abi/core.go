@@ -27,10 +27,10 @@ func init() {
 
 var RevertAbi *AbiSpec
 
-func ReadAbiFormulateCallFile(abiLocation, binPath, funcName string, args []string) ([]byte, error) {
+func ReadAbiFormulateCallFile(abiLocation, binPath, funcName string, args []string) ([]byte, bool, error) {
 	abiSpecBytes, err := readAbi(binPath, abiLocation)
 	if err != nil {
-		return []byte{}, err
+		return []byte{}, false, err
 	}
 	log.WithField("=>", string(abiSpecBytes)).Debug("ABI Specification (Formulate)")
 	log.WithFields(log.Fields{
@@ -41,7 +41,7 @@ func ReadAbiFormulateCallFile(abiLocation, binPath, funcName string, args []stri
 	return Packer(abiSpecBytes, funcName, args...)
 }
 
-func ReadAbiFormulateCall(abiSpecBytes []byte, funcName string, args []string) ([]byte, error) {
+func ReadAbiFormulateCall(abiSpecBytes []byte, funcName string, args []string) ([]byte, bool, error) {
 	log.WithField("=>", string(abiSpecBytes)).Debug("ABI Specification (Formulate)")
 	log.WithFields(log.Fields{
 		"function":  funcName,
@@ -63,30 +63,30 @@ func ReadAndDecodeContractReturn(abiLocation, binPath, funcName string, resultRa
 }
 
 //Convenience Packing Functions
-func Packer(abiData, funcName string, args ...string) ([]byte, error) {
+func Packer(abiData, funcName string, args ...string) ([]byte, bool, error) {
 	abiSpec, err := ReadAbiSpec([]byte(abiData))
 	if err != nil {
 		log.WithFields(log.Fields{
 			"abi":   abiData,
 			"error": err.Error(),
 		}).Error("Failed to decode abi spec")
-		return nil, err
+		return nil, false, err
 	}
 
 	iArgs := make([]interface{}, len(args))
 	for i, s := range args {
 		iArgs[i] = interface{}(s)
 	}
-	packedBytes, err := abiSpec.Pack(funcName, iArgs...)
+	packedBytes, constant, err := abiSpec.Pack(funcName, iArgs...)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"abi":   abiData,
 			"error": err.Error(),
 		}).Error("Failed to encode abi spec")
-		return nil, err
+		return nil, false, err
 	}
 
-	return packedBytes, nil
+	return packedBytes, constant, nil
 }
 
 func Unpacker(abiData, name string, data []byte) ([]*Variable, error) {

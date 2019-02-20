@@ -23,11 +23,11 @@ func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, script *def.
 	var data string
 	var packedBytes []byte
 	if query.Bin != "" {
-		packedBytes, err = abi.ReadAbiFormulateCallFile(query.Bin, do.BinPath, query.Function, queryDataArray)
+		packedBytes, _, err = abi.ReadAbiFormulateCallFile(query.Bin, do.BinPath, query.Function, queryDataArray)
 		data = hex.EncodeToString(packedBytes)
 	}
 	if query.Bin == "" || err != nil {
-		packedBytes, err = abi.ReadAbiFormulateCallFile(query.Destination, do.BinPath, query.Function, queryDataArray)
+		packedBytes, _, err = abi.ReadAbiFormulateCallFile(query.Destination, do.BinPath, query.Function, queryDataArray)
 		data = hex.EncodeToString(packedBytes)
 	}
 	if err != nil {

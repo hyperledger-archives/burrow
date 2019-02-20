@@ -61,7 +61,7 @@ func Call(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAd
 	spec, err := abi.ReadAbiSpec(Abi_EventsTest)
 	require.NoError(t, err)
 
-	data, err := spec.Pack(functionName, args...)
+	data, _, err := spec.Pack(functionName, args...)
 	require.NoError(t, err)
 
 	txe, err := cli.CallTxSync(context.Background(), &payload.CallTx{

@@ -141,7 +141,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 			if err != nil {
 				return nil, nil, err
 			}
-			packedBytes, err := abi.ReadAbiFormulateCall(contract.Abi, "", callDataArray)
+			packedBytes, _, err := abi.ReadAbiFormulateCall(contract.Abi, "", callDataArray)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -338,7 +338,7 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 		if err != nil {
 			return nil, err
 		}
-		packedBytes, err := abi.ReadAbiFormulateCall(compilersResponse.Contract.Abi, "", callDataArray)
+		packedBytes, _, err := abi.ReadAbiFormulateCall(compilersResponse.Contract.Abi, "", callDataArray)
 		if err != nil {
 			return nil, err
 		}
@@ -387,12 +387,13 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 
 	// formulate call
 	var packedBytes []byte
+	var constant bool
 	if call.Bin != "" {
-		packedBytes, err = abi.ReadAbiFormulateCallFile(call.Bin, do.BinPath, call.Function, callDataArray)
+		packedBytes, constant, err = abi.ReadAbiFormulateCallFile(call.Bin, do.BinPath, call.Function, callDataArray)
 		callData = hex.EncodeToString(packedBytes)
 	}
 	if call.Bin == "" || err != nil {
-		packedBytes, err = abi.ReadAbiFormulateCallFile(call.Destination, do.BinPath, call.Function, callDataArray)
+		packedBytes, constant, err = abi.ReadAbiFormulateCallFile(call.Destination, do.BinPath, call.Function, callDataArray)
 		callData = hex.EncodeToString(packedBytes)
 	}
 	if err != nil {
@@ -402,6 +403,10 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 			err = util.ABIErrorHandler(err, call, nil)
 			return
 		}
+	}
+
+	if constant {
+		log.Warn("Function call to constant function, query-contract type job will be faster than call")
 	}
 
 	log.WithFields(log.Fields{
