@@ -2,27 +2,27 @@ pragma solidity >=0.0.0;
 
 contract c {
 
-	function intCallWithArray(uint8[4] someUintz) public pure returns (uint){
+	function intCallWithArray(uint8[4] memory someUintz) public pure returns (uint){
         return someUintz[3];
 	}
 	
-	function bytesCallWithArray(bytes32[4] someBytez) public pure returns (bytes32) {
+	function bytesCallWithArray(bytes32[4] memory someBytez) public pure returns (bytes32) {
 		return someBytez[3];
 	}
 	
-	function boolCallWithArray(bool[4] someBoolz) public pure returns (bool){
+	function boolCallWithArray(bool[4] memory someBoolz) public pure returns (bool){
         return someBoolz[3];
 	}
 
-	function addressCallWithArray(address[3] someAddressz) public pure returns (address){
+	function addressCallWithArray(address[3] memory someAddressz) public pure returns (address){
         return someAddressz[2];
 	}
 
-	function intMemoryArray() public pure returns (uint8[4]) {
+	function intMemoryArray() public pure returns (uint8[4] memory) {
 		return [1, 2, 3, 4];
 	}
 
-	function bytesMemoryArray() public pure returns (bytes32[5]){
+	function bytesMemoryArray() public pure returns (bytes32[5] memory){
 		bytes32[5] memory b;
 		b[0] = "hello";
 		b[1] = "marmots";
@@ -32,7 +32,7 @@ contract c {
 		return b;
 	}
 
-	function boolMemoryArray() public pure returns (bool[3]) {
+	function boolMemoryArray() public pure returns (bool[3] memory) {
 		return [true, false, true];
 	}
 }

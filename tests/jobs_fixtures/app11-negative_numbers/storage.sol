@@ -13,7 +13,7 @@ contract testNegatives {
 		negativeArray[0] = a;
 		negativeArray[1] = b;
 	}
-	function getNegativeArray() public view returns (int[2]) {
+	function getNegativeArray() public view returns (int[2] memory) {
 		return negativeArray;
 	}
 }

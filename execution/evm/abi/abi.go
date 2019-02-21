@@ -26,7 +26,7 @@ type EVMType interface {
 	getGoType() interface{}
 	pack(v interface{}) ([]byte, error)
 	unpack(data []byte, offset int, v interface{}) (int, error)
-	isDynamic() bool
+	Dynamic() bool
 }
 
 var _ EVMType = (*EVMBool)(nil)
@@ -108,7 +108,7 @@ func (e EVMBool) unpack(data []byte, offset int, v interface{}) (int, error) {
 	return 32, nil
 }
 
-func (e EVMBool) isDynamic() bool {
+func (e EVMBool) Dynamic() bool {
 	return false
 }
 
@@ -268,7 +268,7 @@ func (e EVMUint) unpack(data []byte, offset int, v interface{}) (int, error) {
 	return 32, nil
 }
 
-func (e EVMUint) isDynamic() bool {
+func (e EVMUint) Dynamic() bool {
 	return false
 }
 
@@ -455,7 +455,7 @@ func (e EVMInt) fixedSize() int {
 	return ElementSize
 }
 
-func (e EVMInt) isDynamic() bool {
+func (e EVMInt) Dynamic() bool {
 	return false
 }
 
@@ -517,7 +517,7 @@ func (e EVMAddress) unpack(data []byte, offset int, v interface{}) (int, error) 
 	return ElementSize, nil
 }
 
-func (e EVMAddress) isDynamic() bool {
+func (e EVMAddress) Dynamic() bool {
 	return false
 }
 
@@ -601,7 +601,7 @@ func (e EVMBytes) fixedSize() int {
 	return ElementSize
 }
 
-func (e EVMBytes) isDynamic() bool {
+func (e EVMBytes) Dynamic() bool {
 	return e.M == 0
 }
 
@@ -653,7 +653,7 @@ func (e EVMString) unpack(data []byte, offset int, v interface{}) (int, error) {
 	return ElementSize, nil
 }
 
-func (e EVMString) isDynamic() bool {
+func (e EVMString) Dynamic() bool {
 	return true
 }
 
@@ -693,7 +693,7 @@ func (e EVMFixed) fixedSize() int {
 	return ElementSize
 }
 
-func (e EVMFixed) isDynamic() bool {
+func (e EVMFixed) Dynamic() bool {
 	return false
 }
 
@@ -895,7 +895,7 @@ func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
 			// Get signature before we deal with hashed types
 			sig := Signature(s.Name, inputs)
 			for i := range inputs {
-				if inputs[i].Indexed && inputs[i].EVM.isDynamic() {
+				if inputs[i].Indexed && inputs[i].EVM.Dynamic() {
 					// For Dynamic types, the hash is stored in stead
 					inputs[i].EVM = EVMBytes{M: 32}
 					inputs[i].Hashed = true
@@ -1254,7 +1254,7 @@ func pack(argSpec []Argument, getArg func(int) interface{}) ([]byte, error) {
 	addArg := func(v interface{}, a Argument) error {
 		var b []byte
 		var err error
-		if a.EVM.isDynamic() {
+		if a.EVM.Dynamic() {
 			offset := EVMUint{M: 256}
 			b, _ = offset.pack(fixedSize)
 			d, err := a.EVM.pack(v)
@@ -1359,7 +1359,7 @@ func unpack(argSpec []Argument, data []byte, getArg func(int) interface{}) error
 	offType := EVMInt{M: 64}
 
 	getPrimitive := func(e interface{}, a Argument) error {
-		if a.EVM.isDynamic() {
+		if a.EVM.Dynamic() {
 			var o int64
 			l, err := offType.unpack(data, offset, &o)
 			if err != nil {

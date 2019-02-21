@@ -1,4 +1,4 @@
-pragma solidity ^0.4.16;
+pragma solidity ^0.5.4;
 
 contract Revert {
     event NotReverting(uint32 indexed i);
