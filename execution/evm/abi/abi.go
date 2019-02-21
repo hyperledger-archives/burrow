@@ -1166,6 +1166,12 @@ func (abiSpec *AbiSpec) UnpackWithID(data []byte, args ...interface{}) error {
 	})
 }
 
+// Pack ABI encodes a function call. The fname specifies which function should called, if
+// it doesn't exist exist the fallback function will be called. If fname is the empty
+// string, the constructor is called. The arguments must be specified in args. The count
+// must match the function being called.
+// Returns the ABI encoded function call, whether the function is constant according
+// to the ABI (which means it does not modified contract state)
 func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, bool, error) {
 	var funcSpec FunctionSpec
 	var argSpec []Argument
@@ -1182,6 +1188,10 @@ func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, bool, e
 	argSpec = funcSpec.Inputs
 
 	if argSpec == nil {
+		if fname == "" {
+			return nil, false, fmt.Errorf("Contract does not have a constructor")
+		}
+
 		return nil, false, fmt.Errorf("Unknown function %s", fname)
 	}
 
