@@ -1,0 +1,12 @@
+jobs:
+
+- name: bar 
+  deploy:
+    contract: codehash.sol
+    instance: bar
+
+- name: testCodeHash
+  call:
+    destination: $bar
+    function: bar2
+

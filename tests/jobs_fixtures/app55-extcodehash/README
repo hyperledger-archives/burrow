@@ -1,0 +1,2 @@
+Test case for EXTCODEHASH and to check different constructors params have
+the same hash.
