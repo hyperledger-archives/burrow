@@ -108,7 +108,7 @@ func TestCallTxSync(t *testing.T) {
 	numRuns := 5
 	spec, err := abi.ReadAbiSpec(solidity.Abi_StrangeLoop)
 	require.NoError(t, err)
-	data, err := spec.Pack("UpsieDownsie")
+	data, _, err := spec.Pack("UpsieDownsie")
 	require.NoError(t, err)
 	countCh := rpctest.CommittedTxCount(t, kern.Emitter)
 	for i := 0; i < numGoroutines; i++ {
@@ -260,7 +260,7 @@ func TestCallEvents(t *testing.T) {
 	address := lastCall(createTxe.Events).CallData.Callee
 	spec, err := abi.ReadAbiSpec(solidity.Abi_StrangeLoop)
 	require.NoError(t, err)
-	data, err := spec.Pack("UpsieDownsie")
+	data, _, err := spec.Pack("UpsieDownsie")
 	require.NoError(t, err)
 	callTxe := rpctest.CallContract(t, cli, inputAddress, address, data)
 	callEvents := filterCalls(callTxe.Events)
@@ -276,7 +276,7 @@ func TestLogEvents(t *testing.T) {
 	address := lastCall(createTxe.Events).CallData.Callee
 	spec, err := abi.ReadAbiSpec(solidity.Abi_StrangeLoop)
 	require.NoError(t, err)
-	data, err := spec.Pack("UpsieDownsie")
+	data, _, err := spec.Pack("UpsieDownsie")
 	require.NoError(t, err)
 	callTxe := rpctest.CallContract(t, cli, inputAddress, address, data)
 	evs := filterLogs(callTxe.Events)
@@ -298,7 +298,7 @@ func TestEventEmitter(t *testing.T) {
 	address := lastCall(createTxe.Events).CallData.Callee
 	spec, err := abi.ReadAbiSpec(solidity.Abi_EventEmitter)
 	require.NoError(t, err)
-	calldata, err := spec.Pack("EmitOne")
+	calldata, _, err := spec.Pack("EmitOne")
 	require.NoError(t, err)
 	callTxe := rpctest.CallContract(t, cli, inputAddress, address, calldata)
 	evs := filterLogs(callTxe.Events)
@@ -334,7 +334,7 @@ func TestEventEmitterBytes32isString(t *testing.T) {
 	address := lastCall(createTxe.Events).CallData.Callee
 	spec, err := abi.ReadAbiSpec(solidity.Abi_EventEmitter)
 	require.NoError(t, err)
-	calldata, err := spec.Pack("EmitOne")
+	calldata, _, err := spec.Pack("EmitOne")
 	require.NoError(t, err)
 	callTxe := rpctest.CallContract(t, cli, inputAddress, address, calldata)
 	evs := filterLogs(callTxe.Events)
@@ -366,7 +366,7 @@ func TestRevert(t *testing.T) {
 	txe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_Revert)
 	spec, err := abi.ReadAbiSpec(solidity.Abi_Revert)
 	require.NoError(t, err)
-	data, err := spec.Pack("RevertAt", 4)
+	data, _, err := spec.Pack("RevertAt", 4)
 	require.NoError(t, err)
 	txe = rpctest.CallContract(t, cli, inputAddress, txe.Receipt.ContractAddress, data)
 	assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
@@ -380,7 +380,7 @@ func TestRevertWithoutReason(t *testing.T) {
 	txe := rpctest.CreateContract(t, cli, inputAddress, solidity.Bytecode_Revert)
 	spec, err := abi.ReadAbiSpec(solidity.Abi_Revert)
 	require.NoError(t, err)
-	data, err := spec.Pack("RevertNoReason")
+	data, _, err := spec.Pack("RevertNoReason")
 	require.NoError(t, err)
 	txe = rpctest.CallContract(t, cli, inputAddress, txe.Receipt.ContractAddress, data)
 	assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
