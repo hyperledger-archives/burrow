@@ -45,7 +45,7 @@ contract C {
         // specific instance of the library, since the
         // "instance" will be the current contract.
         if (!Set.insert(knownValues, value))
-            throw;
+            revert();
     }
     // In this contract, we can also directly access knownValues.flags, if we want.
 }

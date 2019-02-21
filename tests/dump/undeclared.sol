@@ -1,4 +1,4 @@
-pragma solidity ^0.4.25;
+pragma solidity ^0.5.4;
 
 contract test {
 	event Bar(string a, int b);
@@ -8,7 +8,7 @@ contract test {
 	}
 
 	function foo() public returns (int) {
-		int a = b + 3;
+		int a = 3;
 		int b = a + 7;
 
 		int c = a * b;

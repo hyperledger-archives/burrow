@@ -1,5 +1,4 @@
-pragma solidity ^0.4.23;
-
+pragma solidity >=0.0.0;
 /**
  * @title DefaultUserAccount
  * @dev The default implementation of a UserAccount
@@ -16,9 +15,9 @@ contract DefaultUserAccount {
      * REVERTS if:
      * - the target address is empty (0x0)
      */
-    function forwardCall(address _target, bytes _payload)
+    function forwardCall(address _target, bytes calldata _payload)
         external
-        returns (bool success, bytes returnData)
+        returns (bool success, bytes memory returnData)
     {
         require(_target != address(0), "Empty target not allowed");
         bytes memory data = _payload;

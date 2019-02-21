@@ -11,7 +11,7 @@ contract Structs9 {
 
     Thing[] things;
 
-    function addThing(bytes32 description, string url, bytes32 filehash, string filename) public returns (uint) {
+    function addThing(bytes32 description, string memory  url, bytes32 filehash, string memory filename) public returns (uint) {
         things.push(Thing(msg.sender, description, url, filehash, filename));
         return 10;
     }

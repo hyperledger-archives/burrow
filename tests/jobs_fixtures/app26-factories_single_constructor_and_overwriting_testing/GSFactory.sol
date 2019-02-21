@@ -5,7 +5,7 @@ import "./GSContract.sol";
 contract GSFactory {
     address lastCreated;
     function create(uint initialValue) public returns (address GSAddr) {
-        lastCreated = new GSContract(initialValue);
+        lastCreated = address(new GSContract(initialValue));
         return lastCreated;
     }
 

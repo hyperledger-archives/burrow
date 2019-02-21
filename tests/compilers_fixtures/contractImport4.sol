@@ -1,4 +1,4 @@
-pragma solidity ^0.4.0;
+pragma solidity ^0.5.4;
 
 contract bar {
 	struct Mod {
@@ -9,7 +9,7 @@ contract bar {
 
 	Mod mul;
 
-	function getVariables() returns (uint, uint) {
+	function getVariables() public returns (uint, uint) {
 		mul = Mod(1, 2, 3);
 		return (mul.x, mul.k);
 	}

@@ -31,7 +31,7 @@ const contractTemplateText = `pragma solidity [[.SolidityPragmaVersion]];
 * @dev These functions can be accessed as if this contract were deployed at a special address ([[.Address]]).
 * @dev This special address is defined as the last 20 bytes of the sha3 hash of the the contract name.
 * @dev To instantiate the contract use:
-* @dev [[.Name]] [[.InstanceName]] = [[.Name]](address(keccak256("[[.Name]]")));
+* @dev [[.Name]] [[.InstanceName]] = [[.Name]](address(uint256(keccak256("[[.Name]]"))));
 */
 contract [[.Name]] {[[range .Functions]]
 [[.SolidityIndent 1]]
@@ -40,7 +40,7 @@ contract [[.Name]] {[[range .Functions]]
 const functionTemplateText = `/**
 [[.Comment]]
 */
-function [[.Name]]([[.ArgList]]) public constant returns ([[.RetList]]);`
+function [[.Name]]([[.ArgList]]) public view returns ([[.RetList]]);`
 
 // Solidity style guide recommends 4 spaces per indentation level
 // (see: http://solidity.readthedocs.io/en/develop/style-guide.html)
@@ -137,7 +137,11 @@ func NewSolidityFunction(function *evm.SNativeFunctionDescription) *solidityFunc
 func (function *solidityFunction) ArgList() string {
 	argList := make([]string, len(function.Abi.Inputs))
 	for i, arg := range function.Abi.Inputs {
-		argList[i] = fmt.Sprintf("%s %s", arg.EVM.GetSignature(), param(arg.Name))
+		storage := ""
+		if arg.EVM.Dynamic() {
+			storage = " memory"
+		}
+		argList[i] = fmt.Sprintf("%s%s %s", arg.EVM.GetSignature(), storage, param(arg.Name))
 	}
 	return strings.Join(argList, ", ")
 }

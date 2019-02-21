@@ -3,11 +3,11 @@ pragma solidity >=0.0.0;
 contract SimpleStorage {
   bytes storedString;
 
-  function setString(bytes x) public {
+  function setString(bytes memory x) public {
     storedString = x;
   }
 
-  function getString() public constant returns (bytes retString) {
+  function getString() public view returns (bytes memory retString) {
     return storedString;
   }
 }

@@ -179,7 +179,7 @@ func TestRevert(t *testing.T) {
 	txe := rpctest.CreateContract(t, tcli, inputAddress, solidity.Bytecode_Revert)
 	spec, err := abi.ReadAbiSpec(solidity.Abi_Revert)
 	require.NoError(t, err)
-	data, err := spec.Pack("RevertAt", 4)
+	data, _, err := spec.Pack("RevertAt", 4)
 	require.NoError(t, err)
 	contractAddress := txe.Receipt.ContractAddress
 	txe = rpctest.CallContract(t, tcli, inputAddress, contractAddress, data)

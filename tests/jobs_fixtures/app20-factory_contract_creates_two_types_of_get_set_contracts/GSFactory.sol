@@ -7,7 +7,7 @@ contract GSContract {
     storedData = x;
   }
 
-  function get() public constant returns (uint retVal) {
+  function get() public view returns (uint retVal) {
     return storedData;
   }
 }
@@ -19,7 +19,7 @@ contract GSContract2 {
     storedData = x;
   }
 
-  function get2() public constant returns (uint retVal) {
+  function get2() public view returns (uint retVal) {
     return storedData;
   }
 }
@@ -28,16 +28,16 @@ contract GSContract2 {
 contract GSFactory {
 	address lastCreated;
 	function create() public returns (address GSAddr) {
-		lastCreated = new GSContract();
+		lastCreated = address(new GSContract());
 		return lastCreated;
 	}
 
 	function create2() public returns (address GSAddr) {
-		lastCreated = new GSContract2();
+		lastCreated = address(new GSContract2());
 		return lastCreated;
 	}
 
-	function getLast() public constant returns (address GSAddr) {
+	function getLast() public view returns (address GSAddr) {
 		return lastCreated;
 	}
 }
