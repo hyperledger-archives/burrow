@@ -50,7 +50,7 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 				Address:   validator.GetAddress(),
 				PublicKey: validator.GetPublicKey(),
 				// Avoid max validator cap
-				Amount:    uint64(dg.random.Int63()/16 + 1),
+				Amount: uint64(dg.random.Int63()/16 + 1),
 			},
 			UnbondTo: []BasicAccount{
 				{

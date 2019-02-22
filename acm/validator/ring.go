@@ -63,7 +63,7 @@ func (vc *Ring) Power(id crypto.Address) (*big.Int, error) {
 }
 
 func (vc *Ring) GetPower(id crypto.Address) *big.Int {
-	return vc.Head().Cum.GetPower(id)
+	return vc.Head().Previous.GetPower(id)
 }
 
 // Updates the current head bucket (accumulator) whilst
@@ -98,12 +98,12 @@ func (vc *Ring) Rotate() (totalPowerChange *big.Int, totalFlow *big.Int, err err
 	}
 	// Advance the ring buffer
 	vc.head = vc.index(1)
-	// Overwrite new head bucket (previous tail) with a fresh bucket with delta applied to cum
-	vc.buckets[vc.head] = NewBucket(prevHead.Cum, prevHead.Delta)
+	// Overwrite new head bucket (previous tail) with a fresh bucket with Previous_i+1 = Next_i = Previous_i + Delta_i
+	vc.buckets[vc.head] = NewBucket(prevHead.Next)
 	// Capture flow before we wipe it
 	totalFlow = prevHead.Flow.totalPower
 	// Subtract the previous bucket total power so we can add on the current buckets power after this
-	totalPowerChange = new(big.Int).Sub(vc.Head().Cum.TotalPower(), prevHead.Cum.TotalPower())
+	totalPowerChange = new(big.Int).Sub(vc.Head().Previous.TotalPower(), prevHead.Previous.TotalPower())
 	// Record how many of our buckets we have cycled over
 	if vc.populated < vc.size {
 		vc.populated++
@@ -121,7 +121,7 @@ func (vc *Ring) ReIndex(newHead int) {
 }
 
 func (vc *Ring) CurrentSet() *Set {
-	return vc.Head().Cum
+	return vc.Head().Previous
 }
 
 // Get the current accumulator bucket
@@ -142,7 +142,7 @@ func (vc *Ring) PreviousSet(delay int) *Set {
 	if delay >= vc.populated {
 		delay = vc.populated - 1
 	}
-	return vc.buckets[vc.index(-delay)].Cum
+	return vc.buckets[vc.index(-delay)].Previous
 }
 
 func (vc *Ring) PreviousDelta(delay int) *Set {

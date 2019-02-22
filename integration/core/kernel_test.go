@@ -47,7 +47,6 @@ func TestBootThenShutdown(t *testing.T) {
 	defer cleanup()
 	//logger, _ := lifecycle.NewStdErrLogger()
 	logger := logging.NewNoopLogger()
-	fmt.Println(genesisDoc.Validators[0].Amount)
 	privValidator := tendermint.NewPrivValidatorMemory(privateValidators[0], privateValidators[0])
 	assert.NoError(t, bootWaitBlocksShutdown(t, privValidator, integration.NewTestConfig(genesisDoc), logger, nil))
 }
