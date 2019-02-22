@@ -10,11 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var pubA = pubKey(1)
-var pubB = pubKey(2)
-var pubC = pubKey(3)
-
-func TestValidatorsWindow_AlterPower(t *testing.T) {
+func TestValidatorsRing_AlterPower(t *testing.T) {
 	vsBase := NewSet()
 	powAInitial := int64(10000)
 	vsBase.ChangePower(pubA, big.NewInt(powAInitial))
@@ -123,7 +119,6 @@ func printBuckets(ring *Ring) string {
 }
 
 func alterPowers(t testing.TB, vw *Ring, powA, powB, powC int64) (powerChange, totalFlow *big.Int, err error) {
-	fmt.Println(vw)
 	_, err = vw.AlterPower(pubA, big.NewInt(powA))
 	if err != nil {
 		return nil, nil, err
@@ -136,7 +131,7 @@ func alterPowers(t testing.TB, vw *Ring, powA, powB, powC int64) (powerChange, t
 	if err != nil {
 		return nil, nil, err
 	}
-	maxFlow := vw.Head().Cum.MaxFlow()
+	maxFlow := vw.Head().Previous.MaxFlow()
 	powerChange, totalFlow, err = vw.Rotate()
 	require.NoError(t, err)
 	// totalFlow > maxFlow

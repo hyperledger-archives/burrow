@@ -34,7 +34,7 @@ func main() {
 		}
 
 		f.WriteString(fmt.Sprintf("package %s\n\n", path.Base(path.Dir(solfile))))
-		f.WriteString("import \"github.com/tmthrgd/go-hex\"\n\n")
+		f.WriteString("import hex \"github.com/tmthrgd/go-hex\"\n\n")
 
 		for _, c := range resp.Objects {
 			f.WriteString(fmt.Sprintf("var Bytecode_%s = hex.MustDecodeString(\"%s\")\n",

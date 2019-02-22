@@ -44,7 +44,7 @@ func TestResultGetBlock(t *testing.T) {
 	res := &ResultBlock{
 		Block: &Block{&tmTypes.Block{
 			LastCommit: &tmTypes.Commit{
-				Precommits: []*tmTypes.Vote{
+				Precommits: []*tmTypes.CommitSig{
 					{
 						Signature: []byte{1, 2, 3},
 					},

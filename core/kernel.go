@@ -176,7 +176,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	kern.Emitter = event.NewEmitter(kern.Logger)
 	committer := execution.NewBatchCommitter(kern.State, params, kern.Blockchain, kern.Emitter, kern.Logger, exeOptions...)
 
-	kern.nodeInfo = fmt.Sprintf("Burrow_%s_ValidatorID:%X", genesisDoc.ChainID(), privValidator.GetAddress())
+	kern.nodeInfo = fmt.Sprintf("Burrow_%s_ValidatorID:%X", genesisDoc.ChainID(), privValidator.GetPubKey().Address())
 	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, kern.State, checker, committer, txCodec, authorizedPeersProvider,
 		kern.Panic, logger)
 	// We could use this to provide/register our own metrics (though this will register them with us). Unfortunately
@@ -190,8 +190,9 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 		return nil, err
 	}
 
-	kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter, execution.NewAccounts(checker, keyClient, AccountsRingMutexCount),
-		kern.Node.MempoolReactor().BroadcastTx, txCodec, kern.Logger)
+	kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter,
+		execution.NewAccounts(checker, keyClient, AccountsRingMutexCount),
+		kern.Node.MempoolReactor().Mempool.CheckTx, txCodec, kern.Logger)
 
 	nameRegState := kern.State
 	proposalRegState := kern.State

@@ -63,6 +63,8 @@ func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
 		conf.P2P.ListenAddress = btc.ListenAddress
 		conf.P2P.ExternalAddress = btc.ExternalAddress
 		conf.P2P.AddrBookStrict = btc.AddrBookStrict
+		// We use this in tests and I am not aware of a strong reason to reject nodes on the same IP with different ports
+		conf.P2P.AllowDuplicateIP = true
 		conf.Moniker = btc.Moniker
 		// Unfortunately this stops metrics from being used at all
 		conf.Instrumentation.Prometheus = false

@@ -25,7 +25,7 @@ echo "------------------------------------"
 echo "Creating new chain..."
 echo "------------------------------------"
 
-$burrow_bin spec -n "Fresh Chain" -v1 | $burrow_bin configure -s- -w genesis.json > burrow.toml
+$burrow_bin spec -n "Fresh Chain" -v1 | $burrow_bin configure -m BurrowTestDumpNode -s- -w genesis.json > burrow.toml
 
 $burrow_bin start 2>> burrow.log &
 burrow_pid=$!
@@ -63,7 +63,7 @@ echo "------------------------------------"
 echo "Create new chain based of dump with new name..."
 echo "------------------------------------"
 
-$burrow_bin configure -n "Restored Chain" -g genesis-original.json -w genesis.json --restore-dump dump.json > burrow.toml
+$burrow_bin configure -m BurrowTestRestoreNode -n "Restored Chain" -g genesis-original.json -w genesis.json --restore-dump dump.json > burrow.toml
 
 $burrow_bin start --restore-dump dump.json 2>> burrow.log &
 burrow_pid=$!

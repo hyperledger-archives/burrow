@@ -19,6 +19,7 @@ package governance
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -28,6 +29,7 @@ import (
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/permission"
+	"github.com/tendermint/tendermint/p2p"
 )
 
 var privateAccounts = integration.MakePrivateAccounts(10) // make keys
@@ -51,6 +53,9 @@ func TestMain(m *testing.M) {
 				"total_validator")).SetOutput(logconfig.StdoutOutput())
 		})
 		//logconf = logconfig.New()
+		//logconf := logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
+		//	return sink.SetOutput(logconfig.FileOutput(fmt.Sprintf("burrow_%d.log", i)))
+		//})
 		kernels[i] = integration.TestKernel(acc, privateAccounts, testConfigs[i],
 			logconf)
 		err := kernels[i].Boot()
@@ -64,18 +69,24 @@ func TestMain(m *testing.M) {
 	}
 	time.Sleep(1 * time.Second)
 	for i := 0; i < len(kernels); i++ {
-		for j := i; j < len(kernels); j++ {
-			if i != j {
-				connectKernels(kernels[i], kernels[j])
-			}
+		for j := i + 1; j < len(kernels); j++ {
+			connectKernels(kernels[i], kernels[j])
 		}
 	}
 	os.Exit(m.Run())
 }
 
 func connectKernels(k1, k2 *core.Kernel) {
-	err := k1.Node.Switch().DialPeerWithAddress(k2.Node.NodeInfo().NetAddress(), false)
+	k1Address := k1.Node.NodeInfo().NetAddress()
+	k2Address := k2.Node.NodeInfo().NetAddress()
+	fmt.Printf("Connecting %v -> %v\n", k1Address, k2Address)
+	err := k1.Node.Switch().DialPeerWithAddress(k2Address, false)
 	if err != nil {
-		panic(err)
+		switch e := err.(type) {
+		case p2p.ErrRejected:
+			panic(fmt.Errorf("connection between test kernels was rejected: %v", e))
+		default:
+			panic(fmt.Errorf("could not connect test kernels: %v", err))
+		}
 	}
 }

@@ -100,6 +100,8 @@ func EnterTestDirectory() (cleanup func()) {
 	if err != nil {
 		panic(fmt.Errorf("couldnot make temp dir for integration tests: %v", err))
 	}
+	// If you need to expect dirs
+	//testDir := scratchDir
 	os.RemoveAll(testDir)
 	os.MkdirAll(testDir, 0777)
 	os.Chdir(testDir)
