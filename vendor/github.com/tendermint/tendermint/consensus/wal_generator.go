@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
+	"testing"
 	"time"
 
 	"github.com/pkg/errors"
@@ -28,8 +28,9 @@ import (
 // stripped down version of node (proxy app, event bus, consensus state) with a
 // persistent kvstore application and special consensus wal instance
 // (byteBufferWAL) and waits until numBlocks are created. If the node fails to produce given numBlocks, it returns an error.
-func WALGenerateNBlocks(wr io.Writer, numBlocks int) (err error) {
-	config := getConfig()
+func WALGenerateNBlocks(t *testing.T, wr io.Writer, numBlocks int) (err error) {
+	config := getConfig(t)
+	defer os.RemoveAll(config.RootDir)
 
 	app := kvstore.NewPersistentKVStoreApplication(filepath.Join(config.DBDir(), "wal_generator"))
 
@@ -40,8 +41,9 @@ func WALGenerateNBlocks(wr io.Writer, numBlocks int) (err error) {
 	// COPY PASTE FROM node.go WITH A FEW MODIFICATIONS
 	// NOTE: we can't import node package because of circular dependency.
 	// NOTE: we don't do handshake so need to set state.Version.Consensus.App directly.
-	privValidatorFile := config.PrivValidatorFile()
-	privValidator := privval.LoadOrGenFilePV(privValidatorFile)
+	privValidatorKeyFile := config.PrivValidatorKeyFile()
+	privValidatorStateFile := config.PrivValidatorStateFile()
+	privValidator := privval.LoadOrGenFilePV(privValidatorKeyFile, privValidatorStateFile)
 	genDoc, err := types.GenesisDocFromFile(config.GenesisFile())
 	if err != nil {
 		return errors.Wrap(err, "failed to read genesis file")
@@ -101,28 +103,16 @@ func WALGenerateNBlocks(wr io.Writer, numBlocks int) (err error) {
 }
 
 //WALWithNBlocks returns a WAL content with numBlocks.
-func WALWithNBlocks(numBlocks int) (data []byte, err error) {
+func WALWithNBlocks(t *testing.T, numBlocks int) (data []byte, err error) {
 	var b bytes.Buffer
 	wr := bufio.NewWriter(&b)
 
-	if err := WALGenerateNBlocks(wr, numBlocks); err != nil {
+	if err := WALGenerateNBlocks(t, wr, numBlocks); err != nil {
 		return []byte{}, err
 	}
 
 	wr.Flush()
 	return b.Bytes(), nil
-}
-
-// f**ing long, but unique for each test
-func makePathname() string {
-	// get path
-	p, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	// fmt.Println(p)
-	sep := string(filepath.Separator)
-	return strings.Replace(p, sep, "_", -1)
 }
 
 func randPort() int {
@@ -139,9 +129,8 @@ func makeAddrs() (string, string, string) {
 }
 
 // getConfig returns a config for test cases
-func getConfig() *cfg.Config {
-	pathname := makePathname()
-	c := cfg.ResetTestRoot(fmt.Sprintf("%s_%d", pathname, cmn.RandInt()))
+func getConfig(t *testing.T) *cfg.Config {
+	c := cfg.ResetTestRoot(t.Name())
 
 	// and we use random ports to run in parallel
 	tm, rpc, grpc := makeAddrs()
