@@ -33,7 +33,7 @@ Project information generally updated on a quarterly basis can be found on the [
 
 Requirement|Notes
 ---|---
-Go version | Go1.10 or higher
+Go version | Go1.11 or higher
 
 ## Installation
 

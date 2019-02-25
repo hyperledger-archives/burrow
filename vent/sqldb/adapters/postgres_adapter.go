@@ -509,7 +509,7 @@ func (adapter *PostgresAdapter) CreateTriggerQuery(triggerName, tableName, funct
 	return Cleanf(`DROP TRIGGER IF EXISTS %s ON %s CASCADE; 
 		CREATE TRIGGER %s AFTER INSERT OR UPDATE OR DELETE ON %s
 		FOR EACH ROW 
-		EXECUTE FUNCTION %s();
+		EXECUTE PROCEDURE %s();
 		`,
 		trigger,                          // drop
 		table,                            // on
