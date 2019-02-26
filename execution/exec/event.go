@@ -24,6 +24,9 @@ const (
 	TypeBlockExecution
 	TypeGovernAccount
 	TypeBeginBlock
+	TypeBeginTx
+	TypeEnvelope
+	TypeEndTx
 	TypeEndBlock
 )
 
@@ -104,6 +107,11 @@ type TaggedEvent struct {
 type TaggedEvents []*TaggedEvent
 
 func (ev *Event) Tagged() *TaggedEvent {
+	if ev == nil {
+		return &TaggedEvent{
+			Tagged: query.TagMap{},
+		}
+	}
 	return &TaggedEvent{
 		Tagged: query.MergeTags(
 			query.MustReflectTags(ev.Header),

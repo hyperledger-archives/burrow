@@ -1,8 +1,6 @@
 package rpcevents
 
 import (
-	"io"
-
 	"github.com/hyperledger/burrow/execution/exec"
 )
 
@@ -76,27 +74,11 @@ func SingleBlock(height uint64) *BlockRange {
 }
 
 func ConsumeBlockExecutions(stream ExecutionEvents_StreamClient, consumer func(*exec.BlockExecution) error) error {
-	var be *exec.BlockExecution
-	ev, err := stream.Recv()
-	for err == nil {
-		switch {
-		case ev.BeginBlock != nil:
-			be = &exec.BlockExecution{
-				Height: ev.BeginBlock.Height,
-				Header: ev.BeginBlock.Header,
-			}
-		case ev.TxExecution != nil:
-			be.TxExecutions = append(be.TxExecutions, ev.TxExecution)
-		case ev.EndBlock != nil:
-			err = consumer(be)
-			if err != nil {
-				return err
-			}
+	for be, err := exec.ConsumeBlockExecution(stream); err == nil; be, err = exec.ConsumeBlockExecution(stream) {
+		err = consumer(be)
+		if err != nil {
+			return err
 		}
-		ev, err = stream.Recv()
 	}
-	if err == io.EOF {
-		return nil
-	}
-	return err
+	return nil
 }

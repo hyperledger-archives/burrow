@@ -16,7 +16,7 @@ const SubscribeBufferSize = 100
 
 type Provider interface {
 	// Get transactions
-	IterateStreamEvents(startHeight, endHeight uint64, consumer func(*exec.StreamEvent) error) (err error)
+	IterateStreamEvents(start, end exec.StreamKey, consumer func(*exec.StreamEvent) error) (err error)
 	// Get a particular TxExecution by hash
 	TxByHash(txHash []byte) (*exec.TxExecution, error)
 }
@@ -72,7 +72,7 @@ func (ees *executionEventsServer) Stream(request *BlocksRequest, stream Executio
 	if err != nil {
 		return fmt.Errorf("could not parse TxExecution query: %v", err)
 	}
-	return ees.streamBlockEvents(stream.Context(), request.BlockRange, func(ev *exec.StreamEvent) error {
+	return ees.streamEvents(stream.Context(), request.BlockRange, func(ev *exec.StreamEvent) error {
 		if qry.Matches(ev.Tagged()) {
 			return stream.Send(ev)
 		}
@@ -86,32 +86,34 @@ func (ees *executionEventsServer) Events(request *BlocksRequest, stream Executio
 		return fmt.Errorf("could not parse Event query: %v", err)
 	}
 	var response *EventsResponse
-	return ees.streamBlockEvents(stream.Context(), request.BlockRange, func(blockEvent *exec.StreamEvent) error {
+	var stack exec.TxStack
+	return ees.streamEvents(stream.Context(), request.BlockRange, func(sev *exec.StreamEvent) error {
 		switch {
-		case blockEvent.BeginBlock != nil:
+		case sev.BeginBlock != nil:
 			response = &EventsResponse{
-				Height: blockEvent.BeginBlock.Height,
+				Height: sev.BeginBlock.Height,
 			}
 
-		case blockEvent.TxExecution != nil:
-			// We exclude exceptional transactions - in particular we exclude reverted transactions
-			if blockEvent.TxExecution.Exception == nil {
-				for _, ev := range blockEvent.TxExecution.Events {
+		case sev.EndBlock != nil && len(response.Events) > 0:
+			return stream.Send(response)
+
+		default:
+			// We need to consume transaction to exclude events belong to an exceptional transaction
+			txe := stack.Consume(sev)
+			if txe != nil && txe.Exception == nil {
+				for _, ev := range txe.Events {
 					if qry.Matches(ev.Tagged()) {
 						response.Events = append(response.Events, ev)
 					}
 				}
 			}
-
-		case blockEvent.EndBlock != nil && len(response.Events) > 0:
-			return stream.Send(response)
 		}
 
 		return nil
 	})
 }
 
-func (ees *executionEventsServer) streamBlockEvents(ctx context.Context, blockRange *BlockRange,
+func (ees *executionEventsServer) streamEvents(ctx context.Context, blockRange *BlockRange,
 	consumer func(execution *exec.StreamEvent) error) error {
 
 	// Converts the bounds to half-open interval needed
@@ -120,7 +122,7 @@ func (ees *executionEventsServer) streamBlockEvents(ctx context.Context, blockRa
 
 	// Pull blocks from state and receive the upper bound (exclusive) on the what we were able to send
 	// Set this to start since it will be the start of next streaming batch (if needed)
-	start, err := ees.iterateBlockEvents(start, end, consumer)
+	start, err := ees.iterateStreamEvents(start, end, consumer)
 
 	// If we are not streaming and all blocks requested were retrieved from state then we are done
 	if !streaming && start >= end {
@@ -144,7 +146,7 @@ func (ees *executionEventsServer) streamBlockEvents(ctx context.Context, blockRa
 			// we have not emitted so we will pull them from state. This can occur if a block is emitted during/after
 			// the initial streaming but before we have subscribed to block events or if we spill BlockExecutions
 			// when streaming them and need to catch up
-			_, err := ees.iterateBlockEvents(start, streamEnd, consumer)
+			_, err := ees.iterateStreamEvents(start, streamEnd, consumer)
 			if err != nil {
 				return err
 			}
@@ -152,7 +154,7 @@ func (ees *executionEventsServer) streamBlockEvents(ctx context.Context, blockRa
 		if finished {
 			return io.EOF
 		}
-		for _, ev := range block.Events() {
+		for _, ev := range block.StreamEvents() {
 			err = consumer(ev)
 			if err != nil {
 				return err
@@ -164,7 +166,8 @@ func (ees *executionEventsServer) streamBlockEvents(ctx context.Context, blockRa
 	})
 }
 
-func (ees *executionEventsServer) subscribeBlockExecution(ctx context.Context, consumer func(*exec.BlockExecution) error) (err error) {
+func (ees *executionEventsServer) subscribeBlockExecution(ctx context.Context,
+	consumer func(*exec.BlockExecution) error) (err error) {
 	// Otherwise we need to begin streaming blocks as they are produced
 	subID := event.GenSubID()
 	// Subscribe to BlockExecution events
@@ -193,17 +196,19 @@ func (ees *executionEventsServer) subscribeBlockExecution(ctx context.Context, c
 	return nil
 }
 
-func (ees *executionEventsServer) iterateBlockEvents(start, end uint64, consumer func(*exec.StreamEvent) error) (uint64, error) {
+func (ees *executionEventsServer) iterateStreamEvents(startHeight, endHeight uint64,
+	consumer func(*exec.StreamEvent) error) (uint64, error) {
 	// Assume that we have seen the previous block before start to have ended up here
 	// NOTE: this will underflow when start is 0 (as it often will be - and needs to be for restored chains)
 	// however we at most underflow by 1 and we always add 1 back on when returning so we get away with this.
-	lastHeightSeen := start - 1
-	err := ees.eventsProvider.IterateStreamEvents(start, end, func(blockEvent *exec.StreamEvent) error {
-		if blockEvent.EndBlock != nil {
-			lastHeightSeen = blockEvent.EndBlock.GetHeight()
-		}
-		return consumer(blockEvent)
-	})
+	lastHeightSeen := startHeight - 1
+	err := ees.eventsProvider.IterateStreamEvents(exec.StreamKey{Height: startHeight}, exec.StreamKey{Height: endHeight},
+		func(blockEvent *exec.StreamEvent) error {
+			if blockEvent.EndBlock != nil {
+				lastHeightSeen = blockEvent.EndBlock.GetHeight()
+			}
+			return consumer(blockEvent)
+		})
 	// Returns the appropriate _next_ starting block - the one after the one we have seen - from which to stream next
 	return lastHeightSeen + 1, err
 }

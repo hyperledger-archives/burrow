@@ -145,7 +145,15 @@ func (kf *KeyFormat) Prefix() Prefix {
 	return kf.prefix
 }
 
-// Like Prefix but removes the prefix string
+// Like Scan but adds expects a key with the KeyFormat's prefix trimmed
+func (kf *KeyFormat) ScanNoPrefix(key []byte, args ...interface{}) error {
+	// Just pad by the length of the prefix
+	paddedKey := make([]byte, len(kf.prefix)+len(key))
+	copy(paddedKey[len(kf.prefix):], key)
+	return kf.Scan(paddedKey, args...)
+}
+
+// Like Key but removes the prefix string
 func (kf *KeyFormat) KeyNoPrefix(args ...interface{}) (Prefix, error) {
 	key, err := kf.Key(args...)
 	if err != nil {
@@ -286,13 +294,6 @@ func (kf *MustKeyFormat) Key(args ...interface{}) []byte {
 		panic(err)
 	}
 	return key
-}
-
-func (kf *MustKeyFormat) Scan(key []byte, args ...interface{}) {
-	err := kf.KeyFormat.Scan(key, args...)
-	if err != nil {
-		panic(err)
-	}
 }
 
 func (kf *MustKeyFormat) Unprefixed() *MustKeyFormat {
