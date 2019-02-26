@@ -3,6 +3,12 @@ jobs:
    deploy:
      contract: undeclared.sol
 
+ - name: setFoobar
+   call:
+     destination: $undeclared
+     function: setFoobar
+     data: [ 102 ]
+
  - name: foo
    call:
      destination: $undeclared

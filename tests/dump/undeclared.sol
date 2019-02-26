@@ -7,6 +7,16 @@ contract test {
 		emit Bar("constructor", 0);
 	}
 
+	int foobar;
+
+	function setFoobar(int n) public {
+		foobar = n;
+	}
+
+	function getFoobar() view public {
+		foobar;
+	}
+
 	function foo() public returns (int) {
 		int a = 3;
 		int b = a + 7;
