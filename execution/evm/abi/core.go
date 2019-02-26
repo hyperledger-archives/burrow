@@ -2,7 +2,6 @@ package abi
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -166,12 +165,18 @@ func readAbi(root, contract string) (string, error) {
 	return string(sol.Abi), nil
 }
 
-// FindEventSpec helps when you have an event but you do not know what contract
-// it came from. Events can be emitted from contracts called from other contracts,
-// so you are not likely to know what abi to use. Therefore, this will go through
-// all the files in the directory and see if a matching event spec can be found.
-func FindEventSpec(abiDir string, eventID EventID) (evAbi *EventSpec, err error) {
-	err = filepath.Walk(abiDir, func(path string, fi os.FileInfo, err error) error {
+// LoadPath loads one abi file or finds all files in a directory
+func LoadPath(abiFileOrDir string) (*AbiSpec, error) {
+	if abiFileOrDir == "" {
+		return &AbiSpec{}, fmt.Errorf("no ABI file or directory provided")
+	}
+
+	specs := make([]*AbiSpec, 0)
+
+	err := filepath.Walk(abiFileOrDir, func(path string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("error returned while walking abiDir '%s': %v", abiFileOrDir, err)
+		}
 		ext := filepath.Ext(path)
 		if fi.IsDir() || !(ext == ".bin" || ext == ".abi") {
 			return nil
@@ -181,21 +186,14 @@ func FindEventSpec(abiDir string, eventID EventID) (evAbi *EventSpec, err error)
 			if err != nil {
 				return errors.Wrap(err, "Error parsing abi file "+path)
 			}
-
-			a, ok := abiSpc.EventsById[eventID]
-			if ok {
-				evAbi = &a
-				return io.EOF
-			}
+			specs = append(specs, abiSpc)
 		}
 		return nil
 	})
-
-	if err == io.EOF {
-		err = nil
+	if err != nil {
+		return &AbiSpec{}, err
 	}
-
-	return
+	return MergeAbiSpec(specs), nil
 }
 
 func stripHex(s string) string {

@@ -136,6 +136,8 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 		}
 		contractCode := contract.Evm.Bytecode.Object
 
+		mergeAbiSpecBytes(do, contract.Abi)
+
 		if deploy.Data != nil {
 			_, callDataArray, err := util.PreProcessInputData("", deploy.Data, do, deployScript, client, true)
 			if err != nil {
@@ -184,6 +186,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 			if response.Contract.Evm.Bytecode.Object == "" {
 				return nil, nil, errCodeMissing
 			}
+			mergeAbiSpecBytes(do, response.Contract.Abi)
 
 			tx, err := deployContract(deploy, do, deployScript, client, response, libs)
 			if err != nil {
@@ -201,6 +204,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 				if response.Contract.Evm.Bytecode.Object == "" {
 					continue
 				}
+				mergeAbiSpecBytes(do, response.Contract.Abi)
 				tx, err := deployContract(deploy, do, deployScript, client, response, libs)
 				if err != nil {
 					return nil, nil, err
@@ -514,6 +518,10 @@ func deployFinalize(do *def.DeployArgs, deployScript *def.Playbook, client *def.
 }
 
 func logEvents(txe *exec.TxExecution, do *def.DeployArgs) {
+	if do.AllSpecs == nil {
+		return
+	}
+
 	for _, event := range txe.Events {
 		eventLog := event.GetLog()
 
@@ -524,8 +532,8 @@ func logEvents(txe *exec.TxExecution, do *def.DeployArgs) {
 		var eventID abi.EventID
 		copy(eventID[:], eventLog.GetTopic(0).Bytes())
 
-		evAbi, err := abi.FindEventSpec(do.BinPath, eventID)
-		if err != nil || evAbi == nil {
+		evAbi, ok := do.AllSpecs.EventsById[eventID]
+		if !ok {
 			log.Errorf("Could not find ABI for Event with ID %x\n", eventID)
 			continue
 		}
@@ -535,7 +543,7 @@ func logEvents(txe *exec.TxExecution, do *def.DeployArgs) {
 			vals[i] = new(string)
 		}
 
-		if err = abi.UnpackEvent(evAbi, eventLog.Topics, eventLog.Data, vals...); err == nil {
+		if err := abi.UnpackEvent(&evAbi, eventLog.Topics, eventLog.Data, vals...); err == nil {
 			fields := log.Fields{}
 			for i := range vals {
 				val := vals[i].(*string)
@@ -543,5 +551,12 @@ func logEvents(txe *exec.TxExecution, do *def.DeployArgs) {
 			}
 			log.WithFields(fields).Info("Event " + evAbi.Name)
 		}
+	}
+}
+
+func mergeAbiSpecBytes(do *def.DeployArgs, bs []byte) {
+	spec, err := abi.ReadAbiSpec(bs)
+	if err == nil {
+		do.AllSpecs = abi.MergeAbiSpec([]*abi.AbiSpec{do.AllSpecs, spec})
 	}
 }

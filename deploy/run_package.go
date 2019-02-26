@@ -8,6 +8,7 @@ import (
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/jobs"
 	"github.com/hyperledger/burrow/deploy/loader"
+	"github.com/hyperledger/burrow/execution/evm/abi"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -50,6 +51,11 @@ func RunPackage(do *def.DeployArgs, script *def.Playbook, client *def.Client) er
 	//   stated defaults of do.Path plus bin|abi
 	if do.BinPath == "[dir]/bin" {
 		do.BinPath = filepath.Join(do.Path, "bin")
+	}
+
+	do.AllSpecs, err = abi.LoadPath(do.BinPath)
+	if err != nil {
+		log.Errorf("failed to load ABIs for Event parsing from %s: %v", do.BinPath, err)
 	}
 
 	// useful for debugging

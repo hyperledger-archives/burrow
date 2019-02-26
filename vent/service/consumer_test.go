@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/vent/config"
 	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/service"
@@ -196,7 +197,7 @@ func runConsumer(t *testing.T, cfg *config.VentConfig) chan types.EventData {
 	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDir, cfg.DBBlockTx)
 	require.NoError(t, err)
 
-	abiSpec, err := sqlsol.AbiLoader(cfg.AbiFileOrDir)
+	abiSpec, err := abi.LoadPath(cfg.AbiFileOrDir)
 	require.NoError(t, err)
 
 	err = consumer.Run(projection, abiSpec, false)
