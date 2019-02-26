@@ -74,7 +74,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 		cmd.Spec = "[--keys-url=<keys URL> | --keysdir=<keys directory>] " +
 			"[--config-template-in=<text template> --config-out=<output file>]... " +
 			"[--genesis-spec=<GenesisSpec file> | --genesis-doc=<GenesisDoc file>] " +
-			"[--separate-genesis-doc=<genesis JSON file>] [--chain-name] [--json] " +
+			"[--separate-genesis-doc=<genesis JSON file>] [--chain-name=<chain name>] [--json] " +
 			"[--generate-node-keys] [--restore-dump=<dump file>] " +
 			"[--logging=<logging program>] [--describe-logging] [--debug]"
 

@@ -42,10 +42,6 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 		return err
 	}
 
-	if err != nil {
-		return err
-	}
-
 	err = st.IterateAccounts(func(acc *acm.Account) error {
 		err = stream.Send(&dump.Dump{Height: height, Account: acc})
 		if err != nil {
@@ -57,7 +53,7 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 			Storage: make([]*dump.Storage, 0),
 		}
 
-		err = ds.state.IterateStorage(acc.Address, func(key, value binary.Word256) error {
+		err = st.IterateStorage(acc.Address, func(key, value binary.Word256) error {
 			storage.Storage = append(storage.Storage, &dump.Storage{Key: key, Value: value})
 			return nil
 		})

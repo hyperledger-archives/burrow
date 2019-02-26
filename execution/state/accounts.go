@@ -126,7 +126,7 @@ func (ws *writeState) SetStorage(address crypto.Address, key, value binary.Word2
 }
 
 func (s *ReadState) IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) error) error {
-	keyFormat := keys.Storage
+	keyFormat := keys.Storage.Fix(address)
 	tree, err := s.Forest.Reader(keyFormat.Prefix())
 	if err != nil {
 		return err
