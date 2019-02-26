@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/vent/config"
 	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/service"
@@ -36,7 +37,7 @@ func TestServer(t *testing.T) {
 	consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
 
 	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDir, false)
-	abiSpec, err := sqlsol.AbiLoader(cfg.AbiFileOrDir)
+	abiSpec, err := abi.LoadPath(cfg.AbiFileOrDir)
 
 	var wg sync.WaitGroup
 

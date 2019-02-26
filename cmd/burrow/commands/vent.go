@@ -6,6 +6,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/vent/config"
 
 	"github.com/hyperledger/burrow/config/source"
@@ -59,7 +60,7 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					if err != nil {
 						output.Fatalf("Spec loader error: %v", err)
 					}
-					abiSpec, err := sqlsol.AbiLoader(cfg.AbiFileOrDir)
+					abiSpec, err := abi.LoadPath(cfg.AbiFileOrDir)
 					if err != nil {
 						output.Fatalf("ABI loader error: %v", err)
 					}
