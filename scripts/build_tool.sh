@@ -38,13 +38,12 @@ if [[ "$1" ]] ; then
     version="$1"
 fi
 
-# Gives RFC 3339 with T instead of space
-date=$(date -Iseconds)
+docker build \
+  --label org.label-schema.version=${version}\
+  --label org.label-schema.vcs-ref=${commit}\
+  --label org.label-schema.build-date=${date}\
+  -t ${DOCKER_REPO}:${version} ${REPO}
 
-docker build --build-arg VERSION=${version}\
- --build-arg VCS_REF=${commit}\
- --build-arg BUILD_DATE=${date}\
- -t ${DOCKER_REPO}:${version} ${REPO}
 # Quick smoke test
 echo "Emitting version from docker image as smoke test..."
 docker run ${DOCKER_REPO}:${version} -v

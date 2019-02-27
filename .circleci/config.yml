@@ -20,6 +20,7 @@ jobs:
     <<: *defaults
     steps:
       - run: echo $CIRCLE_PULL_REQUESTS
+      - run: echo $CIRCLE_BRANCH
       - checkout
       - run: make test
       # In case we miss compile errors not pulled into test paths

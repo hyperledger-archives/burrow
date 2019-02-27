@@ -10,7 +10,11 @@ import (
 	"github.com/spf13/viper"
 )
 
-func LoadPlaybook(fileName string, args *def.DeployArgs, parent *def.Playbook) (*def.Playbook, error) {
+func LoadPlaybook(fileName string, args *def.DeployArgs) (*def.Playbook, error) {
+	return loadPlaybook(fileName, args, nil)
+}
+
+func loadPlaybook(fileName string, args *def.DeployArgs, parent *def.Playbook) (*def.Playbook, error) {
 	log.Info("Loading monax Jobs Definition File.")
 	playbook := new(def.Playbook)
 	deployJobs := viper.New()
@@ -70,7 +74,7 @@ func LoadPlaybook(fileName string, args *def.DeployArgs, parent *def.Playbook) (
 
 	for _, job := range playbook.Jobs {
 		if job.Meta != nil {
-			metaPlaybook, err := LoadPlaybook(job.Meta.File, args, playbook)
+			metaPlaybook, err := loadPlaybook(job.Meta.File, args, playbook)
 			if err != nil {
 				return nil, err
 			}
@@ -90,7 +94,7 @@ func LoadPlaybook(fileName string, args *def.DeployArgs, parent *def.Playbook) (
 		if job.Proposal != nil {
 			for _, job := range job.Proposal.Jobs {
 				if job.Meta != nil {
-					metaPlaybook, err := LoadPlaybook(job.Meta.File, args, playbook)
+					metaPlaybook, err := loadPlaybook(job.Meta.File, args, playbook)
 					if err != nil {
 						return nil, err
 					}

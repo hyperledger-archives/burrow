@@ -254,7 +254,7 @@ func DeployJob(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook, cli
 
 	for i, tx := range txs {
 		// Sign, broadcast, display
-		contractAddress, err := deployFinalize(do, script, client, tx)
+		contractAddress, err := deployFinalize(do, client, tx)
 		if err != nil {
 			return "", fmt.Errorf("Error finalizing contract deploy %s: %v", deploy.Contract, err)
 		}
@@ -359,7 +359,7 @@ func deployTx(client *def.Client, deploy *def.Deploy, contractName, contractCode
 
 func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Playbook, client *def.Client) (tx *payload.CallTx, err error) {
 	var callData string
-	var callDataArray []string
+	var callDataArray []interface{}
 	//todo: find a way to call the fallback function here
 	call.Function, callDataArray, err = util.PreProcessInputData(call.Function, call.Data, do, deployScript, client, false)
 	if err != nil {
@@ -373,13 +373,13 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 
 	// formulate call
 	var packedBytes []byte
-	var constant bool
+	var funcSpec *abi.FunctionSpec
 	if call.Bin != "" {
-		packedBytes, constant, err = abi.EncodeFunctionCallFromFile(call.Bin, do.BinPath, call.Function, callDataArray)
+		packedBytes, funcSpec, err = abi.EncodeFunctionCallFromFile(call.Bin, do.BinPath, call.Function, callDataArray...)
 		callData = hex.EncodeToString(packedBytes)
 	}
 	if call.Bin == "" || err != nil {
-		packedBytes, constant, err = abi.EncodeFunctionCallFromFile(call.Destination, do.BinPath, call.Function, callDataArray)
+		packedBytes, funcSpec, err = abi.EncodeFunctionCallFromFile(call.Destination, do.BinPath, call.Function, callDataArray...)
 		callData = hex.EncodeToString(packedBytes)
 	}
 	if err != nil {
@@ -391,7 +391,7 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 		}
 	}
 
-	if constant {
+	if funcSpec.Constant {
 		log.Warn("Function call to constant function, query-contract type job will be faster than call")
 	}
 
@@ -412,13 +412,13 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 	})
 }
 
-func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, deployScript *def.Playbook, client *def.Client) (string, []*abi.Variable, error) {
+func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, client *def.Client) (string, []*abi.Variable, error) {
 	var err error
 
 	// Sign, broadcast, display
 	txe, err := client.SignAndBroadcast(tx)
 	if err != nil {
-		var err = util.ChainErrorHandler(deployScript.Account, err)
+		var err = util.ChainErrorHandler(payload.InputsString(tx.GetInputs()), err)
 		return "", nil, err
 	}
 
@@ -479,10 +479,10 @@ func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, deployScrip
 	return result, call.Variables, nil
 }
 
-func deployFinalize(do *def.DeployArgs, deployScript *def.Playbook, client *def.Client, tx payload.Payload) (*crypto.Address, error) {
+func deployFinalize(do *def.DeployArgs, client *def.Client, tx payload.Payload) (*crypto.Address, error) {
 	txe, err := client.SignAndBroadcast(tx)
 	if err != nil {
-		return nil, util.ChainErrorHandler(deployScript.Account, err)
+		return nil, util.ChainErrorHandler(payload.InputsString(tx.GetInputs()), err)
 	}
 
 	if err := util.ReadTxSignAndBroadcast(txe, err); err != nil {

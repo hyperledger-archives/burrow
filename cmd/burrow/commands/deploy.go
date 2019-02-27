@@ -113,7 +113,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 				}
 				proposals.ListProposals(client, state)
 			} else {
-				util.IfExit(pkgs.RunPackage(do, nil, client))
+				util.IfExit(pkgs.RunPackage(do, client))
 			}
 		}
 	}
