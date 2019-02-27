@@ -48,11 +48,6 @@ func BuildJob(build *def.Build, binPath string, resp *compilers.Response) (resul
 	if binP == "" {
 		binP = binPath
 	}
-	if _, err := os.Stat(binP); os.IsNotExist(err) {
-		if err := os.Mkdir(binP, 0775); err != nil {
-			return "", err
-		}
-	}
 
 	for _, res := range resp.Objects {
 		switch build.Instance {
@@ -257,14 +252,6 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 }
 
 func DeployJob(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook, client *def.Client, txs []*payload.CallTx, contracts []*compilers.ResponseItem) (result string, err error) {
-
-	// Save
-	if _, err := os.Stat(do.BinPath); os.IsNotExist(err) {
-		if err := os.Mkdir(do.BinPath, 0775); err != nil {
-			return "", err
-		}
-	}
-
 	// saving contract
 	// additional data may be sent along with the contract
 	// these are naively added to the end of the contract code using standard
@@ -284,12 +271,6 @@ func DeployJob(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook, cli
 			addressBin := filepath.Join(do.BinPath, contractAddress.String())
 			log.WithField("=>", addressBin).Debug("Saving Binary")
 			err = contract.Save(addressBin)
-			if err != nil {
-				return "", err
-			}
-			contractName := filepath.Join(do.BinPath, fmt.Sprintf("%s.bin", contracts[i].Objectname))
-			log.WithField("=>", contractName).Warn("Saving Binary")
-			err = contract.Save(contractName)
 			if err != nil {
 				return "", err
 			}
@@ -331,7 +312,14 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 	log.WithField("=>", string(compilersResponse.Contract.Abi)).Debug("Specification (From Compilers)")
 
 	contract := compilersResponse.Contract
-	err := contract.Link(libs)
+	contractName := filepath.Join(do.BinPath, fmt.Sprintf("%s.bin", compilersResponse.Objectname))
+	log.WithField("=>", contractName).Warn("Saving Binary")
+	err := contract.Save(contractName)
+	if err != nil {
+		return nil, err
+	}
+
+	err = contract.Link(libs)
 	if err != nil {
 		return nil, err
 	}
