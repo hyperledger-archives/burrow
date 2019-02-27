@@ -15,7 +15,7 @@ contract Zero {
   }
 
   function zeroAddress() public pure returns (address /* zeroAddress */) {
-    return 0x0;
+    return address(0x0);
   }
 
   function zeroBool() public pure returns (bool /* zeroBool */) {

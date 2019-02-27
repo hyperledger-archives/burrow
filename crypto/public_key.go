@@ -12,6 +12,11 @@ import (
 	"golang.org/x/crypto/ripemd160"
 )
 
+const (
+	MaxPublicKeyLength                = btcec.PubKeyBytesLenCompressed
+	PublicKeyFixedWidthEncodingLength = MaxPublicKeyLength + 1
+)
+
 type PublicKeyJSON struct {
 	CurveType string
 	PublicKey string
@@ -75,7 +80,7 @@ func (p PublicKey) IsValid() bool {
 	return publicKeyLength != 0 && publicKeyLength == len(p.PublicKey)
 }
 
-func (p PublicKey) Verify(msg []byte, signature Signature) error {
+func (p PublicKey) Verify(msg []byte, signature *Signature) error {
 	switch p.CurveType {
 	case CurveTypeUnset:
 		return fmt.Errorf("public key is unset")
@@ -137,9 +142,19 @@ func (p PublicKey) String() string {
 
 // Produces a binary encoding of the CurveType byte plus
 // the public key for padded to a fixed width on the right
-func (p PublicKey) Encode() []byte {
-	encoded := make([]byte, PublicKeyLength(p.CurveType)+1)
+func (p PublicKey) EncodeFixedWidth() []byte {
+	encoded := make([]byte, PublicKeyFixedWidthEncodingLength)
 	encoded[0] = p.CurveType.Byte()
 	copy(encoded[1:], p.PublicKey)
 	return encoded
+}
+
+func DecodePublicKeyFixedWidth(bs []byte) (PublicKey, error) {
+	const errHeader = "DecodePublicKeyFixedWidth():"
+	if len(bs) != PublicKeyFixedWidthEncodingLength {
+		return PublicKey{}, fmt.Errorf("%s expected exactly %d bytes but got %d bytes",
+			errHeader, PublicKeyFixedWidthEncodingLength, len(bs))
+	}
+	curveType := CurveType(bs[0])
+	return PublicKeyFromBytes(bs[1:PublicKeyLength(curveType)+1], curveType)
 }

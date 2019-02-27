@@ -128,9 +128,11 @@ func (k *KeyStore) Sign(ctx context.Context, in *SignRequest) (*SignResponse, er
 		return nil, err
 	}
 
-	sig, err := key.Sign(in.GetMessage())
-
-	return &SignResponse{Signature: sig, CurveType: key.CurveType.String()}, nil
+	sig, err := key.PrivateKey.Sign(in.GetMessage())
+	if err != nil {
+		return nil, err
+	}
+	return &SignResponse{Signature: sig}, err
 }
 
 func (k *KeyStore) Verify(ctx context.Context, in *VerifyRequest) (*VerifyResponse, error) {
@@ -144,15 +146,8 @@ func (k *KeyStore) Verify(ctx context.Context, in *VerifyRequest) (*VerifyRespon
 		return nil, fmt.Errorf("must provide a signature")
 	}
 
-	curveT, err := crypto.CurveTypeFromString(in.GetCurveType())
-	if err != nil {
-		return nil, err
-	}
-	sig, err := crypto.SignatureFromBytes(in.GetSignature(), curveT)
-	if err != nil {
-		return nil, err
-	}
-	pubkey, err := crypto.PublicKeyFromBytes(in.GetPublicKey(), curveT)
+	sig := in.GetSignature()
+	pubkey, err := crypto.PublicKeyFromBytes(in.GetPublicKey(), sig.GetCurveType())
 	if err != nil {
 		return nil, err
 	}
@@ -255,18 +250,55 @@ func (k *KeyStore) Import(ctx context.Context, in *ImportRequest) (*ImportRespon
 }
 
 func (k *KeyStore) List(ctx context.Context, in *ListRequest) (*ListResponse, error) {
-	names, err := coreNameList(k.keysDirPath)
+	byname, err := coreNameList(k.keysDirPath)
 	if err != nil {
 		return nil, err
 	}
 
 	var list []*KeyID
 
-	for name, addr := range names {
-		list = append(list, &KeyID{KeyName: name, Address: addr})
+	if in.KeyName != "" {
+		if addr, ok := byname[in.KeyName]; ok {
+			list = append(list, &KeyID{KeyName: getAddressNames(addr, byname), Address: addr})
+		} else {
+			if addr, err := crypto.AddressFromHexString(in.KeyName); err == nil {
+				_, err := k.GetKey("", addr[:])
+				if err == nil {
+					address := addr.String()
+					list = append(list, &KeyID{Address: address, KeyName: getAddressNames(address, byname)})
+				}
+			}
+		}
+	} else {
+		// list all address
+
+		datadir, err := returnDataDir(k.keysDirPath)
+		if err != nil {
+			return nil, err
+		}
+		addrs, err := GetAllAddresses(datadir)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, addr := range addrs {
+			list = append(list, &KeyID{KeyName: getAddressNames(addr, byname), Address: addr})
+		}
 	}
 
 	return &ListResponse{Key: list}, nil
+}
+
+func getAddressNames(address string, byname map[string]string) []string {
+	names := make([]string, 0)
+
+	for name, addr := range byname {
+		if address == addr {
+			names = append(names, name)
+		}
+	}
+
+	return names
 }
 
 func (k *KeyStore) RemoveName(ctx context.Context, in *RemoveNameRequest) (*RemoveNameResponse, error) {

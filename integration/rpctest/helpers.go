@@ -64,7 +64,7 @@ func CommittedTxCount(t *testing.T, em event.Emitter) chan int {
 		defer em.UnsubscribeAll(context.Background(), subID)
 		for msg := range ch {
 			be := msg.(*exec.BlockExecution)
-			if be.BlockHeader.NumTxs == 0 {
+			if be.Header.NumTxs == 0 {
 				emptyBlocks++
 			} else {
 				emptyBlocks = 0
@@ -72,8 +72,8 @@ func CommittedTxCount(t *testing.T, em event.Emitter) chan int {
 			if emptyBlocks > maxEmptyBlocks {
 				break
 			}
-			numTxs += be.BlockHeader.NumTxs
-			fmt.Printf("Total TXs committed at block %v: %v (+%v)\n", be.Height, numTxs, be.BlockHeader.NumTxs)
+			numTxs += be.Header.NumTxs
+			fmt.Printf("Total TXs committed at block %v: %v (+%v)\n", be.Height, numTxs, be.Header.NumTxs)
 		}
 		outCh <- int(numTxs)
 	}()
@@ -92,6 +92,7 @@ func CreateContract(t testing.TB, cli rpctransact.TransactClient, inputAddress c
 		GasLimit: 10000,
 	})
 	require.NoError(t, err)
+	require.NotNil(t, txe.TxHeader)
 	return txe
 }
 
@@ -108,6 +109,7 @@ func CallContract(t testing.TB, cli rpctransact.TransactClient, inputAddress, co
 		GasLimit: 1000000,
 	})
 	require.NoError(t, err)
+	require.NotNil(t, txe.TxHeader)
 	return txe
 }
 
@@ -179,7 +181,17 @@ func GetStorage(t *testing.T, client infoclient.RPCClient, addr crypto.Address, 
 	return resp
 }
 
-//--------------------------------------------------------------------------------
-// utility verification function
-
-// simple call contract calls another contract
+func WaitNBlocks(t testing.TB, ecli rpcevents.ExecutionEventsClient, n int) {
+	stream, err := ecli.Stream(context.Background(), &rpcevents.BlocksRequest{
+		BlockRange: rpcevents.NewBlockRange(rpcevents.LatestBound(), rpcevents.StreamBound()),
+	})
+	defer require.NoError(t, stream.CloseSend())
+	var ev *exec.StreamEvent
+	for err == nil && n > 0 {
+		ev, err = stream.Recv()
+		if err == nil && ev.EndBlock != nil {
+			n--
+		}
+	}
+	require.NoError(t, err)
+}

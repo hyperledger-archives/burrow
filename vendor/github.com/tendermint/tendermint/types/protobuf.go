@@ -24,6 +24,12 @@ const (
 	ABCIPubKeyTypeSecp256k1 = "secp256k1"
 )
 
+// TODO: Make non-global by allowing for registration of more pubkey types
+var ABCIPubKeyTypesToAminoNames = map[string]string{
+	ABCIPubKeyTypeEd25519:   ed25519.PubKeyAminoName,
+	ABCIPubKeyTypeSecp256k1: secp256k1.PubKeyAminoName,
+}
+
 //-------------------------------------------------------
 
 // TM2PB is used for converting Tendermint ABCI to protobuf ABCI.
@@ -34,6 +40,10 @@ type tm2pb struct{}
 
 func (tm2pb) Header(header *Header) abci.Header {
 	return abci.Header{
+		Version: abci.Version{
+			Block: header.Version.Block.Uint64(),
+			App:   header.Version.App.Uint64(),
+		},
 		ChainID:  header.ChainID,
 		Height:   header.Height,
 		Time:     header.Time,
@@ -45,10 +55,11 @@ func (tm2pb) Header(header *Header) abci.Header {
 		LastCommitHash: header.LastCommitHash,
 		DataHash:       header.DataHash,
 
-		ValidatorsHash:  header.ValidatorsHash,
-		ConsensusHash:   header.ConsensusHash,
-		AppHash:         header.AppHash,
-		LastResultsHash: header.LastResultsHash,
+		ValidatorsHash:     header.ValidatorsHash,
+		NextValidatorsHash: header.NextValidatorsHash,
+		ConsensusHash:      header.ConsensusHash,
+		AppHash:            header.AppHash,
+		LastResultsHash:    header.LastResultsHash,
 
 		EvidenceHash:    header.EvidenceHash,
 		ProposerAddress: header.ProposerAddress,
@@ -114,16 +125,15 @@ func (tm2pb) ValidatorUpdates(vals *ValidatorSet) []abci.ValidatorUpdate {
 
 func (tm2pb) ConsensusParams(params *ConsensusParams) *abci.ConsensusParams {
 	return &abci.ConsensusParams{
-		BlockSize: &abci.BlockSize{
-			MaxBytes:        int32(params.BlockSize.MaxBytes),
-			MaxGas:          params.BlockSize.MaxGas,
+		BlockSize: &abci.BlockSizeParams{
+			MaxBytes: params.BlockSize.MaxBytes,
+			MaxGas:   params.BlockSize.MaxGas,
 		},
-		TxSize: &abci.TxSize{
-			MaxBytes: int32(params.TxSize.MaxBytes),
-			MaxGas:   params.TxSize.MaxGas,
+		Evidence: &abci.EvidenceParams{
+			MaxAge: params.Evidence.MaxAge,
 		},
-		BlockGossip: &abci.BlockGossip{
-			BlockPartSizeBytes: int32(params.BlockGossip.BlockPartSizeBytes),
+		Validator: &abci.ValidatorParams{
+			PubKeyTypes: params.Validator.PubKeyTypes,
 		},
 	}
 }
@@ -177,20 +187,19 @@ var PB2TM = pb2tm{}
 type pb2tm struct{}
 
 func (pb2tm) PubKey(pubKey abci.PubKey) (crypto.PubKey, error) {
-	// TODO: define these in crypto and use them
-	sizeEd := 32
-	sizeSecp := 33
 	switch pubKey.Type {
 	case ABCIPubKeyTypeEd25519:
-		if len(pubKey.Data) != sizeEd {
-			return nil, fmt.Errorf("Invalid size for PubKeyEd25519. Got %d, expected %d", len(pubKey.Data), sizeEd)
+		if len(pubKey.Data) != ed25519.PubKeyEd25519Size {
+			return nil, fmt.Errorf("Invalid size for PubKeyEd25519. Got %d, expected %d",
+				len(pubKey.Data), ed25519.PubKeyEd25519Size)
 		}
 		var pk ed25519.PubKeyEd25519
 		copy(pk[:], pubKey.Data)
 		return pk, nil
 	case ABCIPubKeyTypeSecp256k1:
-		if len(pubKey.Data) != sizeSecp {
-			return nil, fmt.Errorf("Invalid size for PubKeyEd25519. Got %d, expected %d", len(pubKey.Data), sizeSecp)
+		if len(pubKey.Data) != secp256k1.PubKeySecp256k1Size {
+			return nil, fmt.Errorf("Invalid size for PubKeySecp256k1. Got %d, expected %d",
+				len(pubKey.Data), secp256k1.PubKeySecp256k1Size)
 		}
 		var pk secp256k1.PubKeySecp256k1
 		copy(pk[:], pubKey.Data)
@@ -214,19 +223,15 @@ func (pb2tm) ValidatorUpdates(vals []abci.ValidatorUpdate) ([]*Validator, error)
 
 func (pb2tm) ConsensusParams(csp *abci.ConsensusParams) ConsensusParams {
 	return ConsensusParams{
-		BlockSize: BlockSize{
-			MaxBytes:        int(csp.BlockSize.MaxBytes), // XXX
-			MaxGas:          csp.BlockSize.MaxGas,
+		BlockSize: BlockSizeParams{
+			MaxBytes: csp.BlockSize.MaxBytes,
+			MaxGas:   csp.BlockSize.MaxGas,
 		},
-		TxSize: TxSize{
-			MaxBytes: int(csp.TxSize.MaxBytes), // XXX
-			MaxGas:   csp.TxSize.MaxGas,
+		Evidence: EvidenceParams{
+			MaxAge: csp.Evidence.MaxAge,
 		},
-		BlockGossip: BlockGossip{
-			BlockPartSizeBytes: int(csp.BlockGossip.BlockPartSizeBytes), // XXX
+		Validator: ValidatorParams{
+			PubKeyTypes: csp.Validator.PubKeyTypes,
 		},
-		// TODO: EvidenceParams: EvidenceParams{
-		// MaxAge: int(csp.Evidence.MaxAge), // XXX
-		// },
 	}
 }

@@ -39,5 +39,5 @@ func TestJob_Validate(t *testing.T) {
 
 	job.Account.Address = "blah"
 	err = job.Validate()
-	require.Error(t, err)
+	require.NoError(t, err)
 }

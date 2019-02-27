@@ -2,8 +2,8 @@
 # ----------------------------------------------------------
 # PURPOSE
 
-# This is the test runner for bosmarmot. It is responsible for starting up a single node burrow test chain and tearing
-# it down afterwards
+# This is the test runner for burrow integration tests.
+# It is responsible for starting up a single node burrow test chain and tearing it down afterwards.
 
 # ----------------------------------------------------------
 # REQUIREMENTS
@@ -86,6 +86,8 @@ test_setup(){
 
   export key1_addr=$(address_of "Full_0")
   export key2_addr=$(address_of "Participant_0")
+  export key1=Full_0
+  export key2=Participant_0
   export key2_pub=$(pubkey_of "Participant_0")
 
   echo -e "Default Key =>\t\t\t\t$key1_addr"

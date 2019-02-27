@@ -1,14 +1,14 @@
-pragma solidity ^0.4.0;
+pragma solidity ^0.5.4;
 import "contractImport3.sol" as moarPoop;
 
 contract importedContract {
 	function add(int a, int b) public returns (int) {
 		return a + b;
 	}
-	function subtract(int a, int b) returns (int) {
+	function subtract(int a, int b) public returns (int) {
 		return a - b;
 	}
-	function addFromMapping(uint a, uint b) returns (uint) {
+	function addFromMapping(uint a, uint b) public returns (uint) {
 		moarPoop.map map;
 		return map.getMappingElement(a) + b;
 	}

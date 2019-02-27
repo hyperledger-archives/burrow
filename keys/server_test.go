@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/execution/evm/sha3"
+	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -113,7 +113,7 @@ func testServerSignAndVerify(t *testing.T, typ string) {
 		Signature: sig.GetSignature(),
 		PublicKey: resp.GetPublicKey(),
 		Message:   hash,
-		CurveType: typ})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

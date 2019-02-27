@@ -50,7 +50,3 @@ func (pvm *privValidatorMemory) SignVote(chainID string, vote *tmTypes.Vote) err
 func (pvm *privValidatorMemory) SignProposal(chainID string, proposal *tmTypes.Proposal) error {
 	return pvm.lastSignedInfo.SignProposal(pvm.signer, chainID, proposal)
 }
-
-func (pvm *privValidatorMemory) SignHeartbeat(chainID string, heartbeat *tmTypes.Heartbeat) error {
-	return pvm.lastSignedInfo.SignHeartbeat(pvm.signer, chainID, heartbeat)
-}

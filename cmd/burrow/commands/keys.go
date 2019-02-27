@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -269,12 +270,12 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 				if err != nil {
 					output.Fatalf("failed to get public key: %v", err)
 				}
-				fmt.Printf("%X\n", resp.GetSignature())
+				fmt.Printf("%X\n", resp.GetSignature().Signature)
 			}
 		})
 
 		cmd.Command("verify", "verify <some data> <sig> <pubkey>", func(cmd *cli.Cmd) {
-			curveType := cmd.StringOpt("t curvetype", "ed25519", "specify the curve type of key to create. Supports 'secp256k1' (ethereum),  'ed25519' (tendermint)")
+			curveTypeOpt := cmd.StringOpt("t curvetype", "ed25519", "specify the curve type of key to create. Supports 'secp256k1' (ethereum),  'ed25519' (tendermint)")
 
 			msg := cmd.StringArg("MSG", "", "hash/message to check")
 			sig := cmd.StringArg("SIG", "", "signature")
@@ -285,10 +286,19 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 				if err != nil {
 					output.Fatalf("failed to hex decode message: %v", err)
 				}
+				curveType, err := crypto.CurveTypeFromString(*curveTypeOpt)
+				if err != nil {
+					output.Fatalf("invalid curve type: %v", err)
+				}
 
-				signature, err := hex.DecodeString(*sig)
+				signatureBytes, err := hex.DecodeString(*sig)
 				if err != nil {
 					output.Fatalf("failed to hex decode signature: %v", err)
+				}
+
+				signature, err := crypto.SignatureFromBytes(signatureBytes, curveType)
+				if err != nil {
+					output.Fatalf("could not form signature: %v", err)
 				}
 
 				publickey, err := hex.DecodeString(*pub)
@@ -300,9 +310,10 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				_, err = c.Verify(ctx, &keys.VerifyRequest{
-					CurveType: *curveType,
 					PublicKey: publickey,
-					Signature: signature, Message: message})
+					Signature: signature,
+					Message:   message,
+				})
 				if err != nil {
 					output.Fatalf("failed to verify: %v", err)
 				}
@@ -325,28 +336,26 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 			}
 		})
 
-		cmd.Command("list", "list key names", func(cmd *cli.Cmd) {
-			name := cmd.StringOpt("name", "", "name of key to use")
+		cmd.Command("list", "list keys", func(cmd *cli.Cmd) {
+			name := cmd.StringOpt("name", "", "name or address of key to use")
 
 			cmd.Action = func() {
 				c := grpcKeysClient(output)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				resp, err := c.List(ctx, &keys.ListRequest{})
+				resp, err := c.List(ctx, &keys.ListRequest{KeyName: *name})
 				if err != nil {
-					output.Fatalf("failed to list key names: %v", err)
+					output.Fatalf("failed to list key: %v", err)
 				}
-				if *name != "" {
-					for _, k := range resp.Key {
-						if k.KeyName == *name {
-							output.Printf("%s\n", k.Address)
-						}
-					}
-				} else {
-					for _, k := range resp.Key {
-						fmt.Printf("%v\n", k)
-					}
+				printKeys := resp.Key
+				if printKeys == nil {
+					printKeys = make([]*keys.KeyID, 0)
 				}
+				bs, err := json.MarshalIndent(printKeys, "", "    ")
+				if err != nil {
+					output.Fatalf("failed to json encode keys: %v", err)
+				}
+				fmt.Printf("%s\n", string(bs))
 			}
 		})
 

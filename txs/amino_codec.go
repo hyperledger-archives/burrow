@@ -26,12 +26,12 @@ func NewAminoCodec() *aminoCodec {
 }
 
 func (gwc *aminoCodec) EncodeTx(env *Envelope) ([]byte, error) {
-	return gwc.MarshalBinary(env)
+	return gwc.MarshalBinaryBare(env)
 }
 
 func (gwc *aminoCodec) DecodeTx(txBytes []byte) (*Envelope, error) {
 	env := new(Envelope)
-	err := gwc.UnmarshalBinary(txBytes, env)
+	err := gwc.UnmarshalBinaryBare(txBytes, env)
 	if err != nil {
 		return nil, err
 	}

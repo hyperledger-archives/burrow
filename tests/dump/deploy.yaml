@@ -1,0 +1,22 @@
+jobs:
+ - name: undeclared
+   deploy:
+     contract: undeclared.sol
+
+ - name: setFoobar
+   call:
+     destination: $undeclared
+     function: setFoobar
+     data: [ 102 ]
+
+ - name: foo
+   call:
+     destination: $undeclared
+     function: foo
+
+ - name: register-bar
+   register:
+     name: bar
+     data: foobaz
+     amount: 5000
+     fee: 1234

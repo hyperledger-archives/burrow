@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	compilers "github.com/hyperledger/burrow/deploy/compile"
+	pbpayload "github.com/hyperledger/burrow/txs/payload"
+
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
 	log "github.com/sirupsen/logrus"
@@ -56,6 +58,13 @@ func queueCompilerWork(job *def.Job, jobs chan *intermediateJob) error {
 				return err
 			}
 		}
+	case *def.Meta:
+		for _, job := range job.Meta.Playbook.Jobs {
+			err = queueCompilerWork(job, jobs)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -71,42 +80,14 @@ func getCompilerWork(intermediate interface{}) (*compilers.Response, error) {
 	return nil, fmt.Errorf("internal error: no compiler work queued")
 }
 
-func DoJobs(do *def.DeployArgs, client *def.Client) error {
-	// ADD DefaultAddr and DefaultSet to jobs array....
-	// These work in reverse order and the addendums to the
-	// the ordering from the loading process is lifo
-	if len(do.DefaultSets) >= 1 {
-		defaultSetJobs(do)
-	}
-
-	if do.Address != "" {
-		defaultAddrJob(do)
-	}
-
-	err := do.Validate()
-	if err != nil {
-		return fmt.Errorf("error validating Burrow deploy file at %s: %v", do.YAMLPath, err)
-	}
-
-	// Ensure we have a queue large enough so that we don't have to wait for more work to be queued
-	jobs := make(chan *intermediateJob, do.Jobs*2)
-	defer close(jobs)
-
-	for i := 0; i < do.Jobs; i++ {
-		go intermediateJobRunner(jobs)
-	}
-
-	for _, job := range do.Package.Jobs {
-		queueCompilerWork(job, jobs)
-	}
-
-	for _, job := range do.Package.Jobs {
+func doJobs(script *def.Playbook, args *def.DeployArgs, client *def.Client) error {
+	for _, job := range script.Jobs {
 		payload, err := job.Payload()
 		if err != nil {
 			return fmt.Errorf("could not get Job payload: %v", payload)
 		}
 
-		err = util.PreProcessFields(payload, do, client)
+		err = util.PreProcessFields(payload, args, script, client)
 		if err != nil {
 			return err
 		}
@@ -119,49 +100,74 @@ func DoJobs(do *def.DeployArgs, client *def.Client) error {
 		switch payload.(type) {
 		case *def.Proposal:
 			announce(job.Name, "Proposal")
-			job.Result, err = ProposalJob(job.Proposal, do, client)
+			job.Result, err = ProposalJob(job.Proposal, args, script, client)
 
 		// Meta Job
 		case *def.Meta:
 			announce(job.Name, "Meta")
-			do.CurrentOutput = fmt.Sprintf("%s.output.json", job.Name)
-			job.Result, err = MetaJob(job.Meta, do, client)
+			metaPlaybook := job.Meta.Playbook
+			if metaPlaybook.Account == "" {
+				metaPlaybook.Account = script.Account
+			}
+			err = doJobs(metaPlaybook, args, client)
 
 		// Governance
 		case *def.UpdateAccount:
 			announce(job.Name, "UpdateAccount")
-			job.Result, job.Variables, err = UpdateAccountJob(job.UpdateAccount, do.Package.Account, client)
+			var tx *pbpayload.GovTx
+			tx, job.Variables, err = FormulateUpdateAccountJob(job.UpdateAccount, script.Account, client)
+			if err != nil {
+				return err
+			}
+			err = UpdateAccountJob(job.UpdateAccount, script.Account, tx, client)
 
 		// Util jobs
 		case *def.Account:
 			announce(job.Name, "Account")
-			job.Result, err = SetAccountJob(job.Account, do)
+			job.Result, err = SetAccountJob(job.Account, args, script)
 		case *def.Set:
 			announce(job.Name, "Set")
-			job.Result, err = SetValJob(job.Set, do)
+			job.Result, err = SetValJob(job.Set, args)
 
 		// Transaction jobs
 		case *def.Send:
-			announce(job.Name, "Sent")
-			job.Result, err = SendJob(job.Send, do.Package.Account, client)
+			announce(job.Name, "Send")
+			tx, err := FormulateSendJob(job.Send, script.Account, client)
+			if err != nil {
+				return err
+			}
+			job.Result, err = SendJob(job.Send, tx, script.Account, client)
 		case *def.RegisterName:
 			announce(job.Name, "RegisterName")
-			job.Result, err = RegisterNameJob(job.RegisterName, do, client)
+			txs, err := FormulateRegisterNameJob(job.RegisterName, args, script.Account, client)
+			if err != nil {
+				return err
+			}
+			job.Result, err = RegisterNameJob(job.RegisterName, args, script, txs, client)
 		case *def.Permission:
 			announce(job.Name, "Permission")
-			job.Result, err = PermissionJob(job.Permission, do.Package.Account, client)
+			tx, err := FormulatePermissionJob(job.Permission, script.Account, client)
+			if err != nil {
+				return err
+			}
+			job.Result, err = PermissionJob(job.Permission, script.Account, tx, client)
 
 		// Contracts jobs
 		case *def.Deploy:
 			announce(job.Name, "Deploy")
-			job.Result, err = DeployJob(job.Deploy, do, client, job.Intermediate)
-		case *def.Call:
-			announce(job.Name, "Call")
-			CallTx, ferr := FormulateCallJob(job.Call, do, client)
+			txs, contracts, ferr := FormulateDeployJob(job.Deploy, args, script, client, job.Intermediate)
 			if ferr != nil {
 				return ferr
 			}
-			job.Result, job.Variables, err = CallJob(job.Call, CallTx, do, client)
+			job.Result, err = DeployJob(job.Deploy, args, script, client, txs, contracts)
+
+		case *def.Call:
+			announce(job.Name, "Call")
+			CallTx, ferr := FormulateCallJob(job.Call, args, script, client)
+			if ferr != nil {
+				return ferr
+			}
+			job.Result, job.Variables, err = CallJob(job.Call, CallTx, args, script, client)
 		case *def.Build:
 			announce(job.Name, "Build")
 			var resp *compilers.Response
@@ -169,7 +175,7 @@ func DoJobs(do *def.DeployArgs, client *def.Client) error {
 			if err != nil {
 				return err
 			}
-			job.Result, err = BuildJob(job.Build, do.BinPath, resp)
+			job.Result, err = BuildJob(job.Build, args.BinPath, resp)
 
 		// State jobs
 		case *def.RestoreState:
@@ -185,7 +191,7 @@ func DoJobs(do *def.DeployArgs, client *def.Client) error {
 			job.Result, err = QueryAccountJob(job.QueryAccount, client)
 		case *def.QueryContract:
 			announce(job.Name, "QueryContract")
-			job.Result, job.Variables, err = QueryContractJob(job.QueryContract, do, client)
+			job.Result, job.Variables, err = QueryContractJob(job.QueryContract, args, script, client)
 		case *def.QueryName:
 			announce(job.Name, "QueryName")
 			job.Result, err = QueryNameJob(job.QueryName, client)
@@ -212,7 +218,45 @@ func DoJobs(do *def.DeployArgs, client *def.Client) error {
 			return err
 		}
 	}
-	postProcess(do)
+
+	return nil
+}
+
+func ExecutePlaybook(args *def.DeployArgs, script *def.Playbook, client *def.Client) error {
+	// ADD DefaultAddr and DefaultSet to jobs array....
+	// These work in reverse order and the addendums to the
+	// the ordering from the loading process is lifo
+	if len(args.DefaultSets) >= 1 {
+		defaultSetJobs(args, script)
+	}
+
+	if args.Address != "" {
+		defaultAddrJob(args, script)
+	}
+
+	err := args.Validate()
+	if err != nil {
+		return fmt.Errorf("error validating Burrow deploy file at %s: %v", args.YAMLPath, err)
+	}
+
+	// Ensure we have a queue large enough so that we don't have to wait for more work to be queued
+	jobs := make(chan *intermediateJob, args.Jobs*2)
+	defer close(jobs)
+
+	for i := 0; i < args.Jobs; i++ {
+		go intermediateJobRunner(jobs)
+	}
+
+	for _, job := range script.Jobs {
+		queueCompilerWork(job, jobs)
+	}
+
+	err = doJobs(script, args, client)
+	if err != nil {
+		return err
+	}
+
+	postProcess(args, script)
 	return nil
 }
 
@@ -230,8 +274,8 @@ func announceProposalJob(job, typ string) {
 	log.Warn("\n")
 }
 
-func defaultAddrJob(do *def.DeployArgs) {
-	oldJobs := do.Package.Jobs
+func defaultAddrJob(do *def.DeployArgs, deployScript *def.Playbook) {
+	oldJobs := deployScript.Jobs
 
 	newJob := &def.Job{
 		Name: "defaultAddr",
@@ -240,17 +284,17 @@ func defaultAddrJob(do *def.DeployArgs) {
 		},
 	}
 
-	do.Package.Jobs = append([]*def.Job{newJob}, oldJobs...)
+	deployScript.Jobs = append([]*def.Job{newJob}, oldJobs...)
 }
 
-func defaultSetJobs(do *def.DeployArgs) {
-	oldJobs := do.Package.Jobs
+func defaultSetJobs(do *def.DeployArgs, deployScript *def.Playbook) {
+	oldJobs := deployScript.Jobs
 
 	newJobs := []*def.Job{}
 
 	for _, setr := range do.DefaultSets {
 		blowdUp := strings.Split(setr, "=")
-		if blowdUp[0] != "" {
+		if len(blowdUp) == 2 && blowdUp[0] != "" {
 			newJobs = append(newJobs, &def.Job{
 				Name: blowdUp[0],
 				Set: &def.Set{
@@ -260,13 +304,13 @@ func defaultSetJobs(do *def.DeployArgs) {
 		}
 	}
 
-	do.Package.Jobs = append(newJobs, oldJobs...)
+	deployScript.Jobs = append(newJobs, oldJobs...)
 }
 
-func postProcess(do *def.DeployArgs) error {
+func postProcess(do *def.DeployArgs, deployScript *def.Playbook) error {
 	// Formulate the results map
 	results := make(map[string]interface{})
-	for _, job := range do.Package.Jobs {
+	for _, job := range deployScript.Jobs {
 		results[job.Name] = job.Result
 	}
 
@@ -280,7 +324,7 @@ func postProcess(do *def.DeployArgs) error {
 	}
 
 	// if do.YAMLPath is not default and do.DefaultOutput is default, over-ride do.DefaultOutput
-	if yaml != "deploy" && do.DefaultOutput == "deploy.output.json" {
+	if yaml != "deploy" && do.DefaultOutput == def.DefaultOutputFile {
 		do.DefaultOutput = fmt.Sprintf("%s.output.json", yaml)
 	}
 

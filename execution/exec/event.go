@@ -15,17 +15,23 @@ type EventType uint32
 
 // Execution event types
 const (
-	TypeCall           = EventType(0x00)
-	TypeLog            = EventType(0x01)
-	TypeAccountInput   = EventType(0x02)
-	TypeAccountOutput  = EventType(0x03)
-	TypeTxExecution    = EventType(0x04)
-	TypeBlockExecution = EventType(0x05)
-	TypeGovernAccount  = EventType(0x06)
-	TypePayload        = EventType(0x07)
+	TypeUnknown EventType = iota
+	TypeCall
+	TypeLog
+	TypeAccountInput
+	TypeAccountOutput
+	TypeTxExecution
+	TypeBlockExecution
+	TypeGovernAccount
+	TypeBeginBlock
+	TypeBeginTx
+	TypeEnvelope
+	TypeEndTx
+	TypeEndBlock
 )
 
 var nameFromType = map[EventType]string{
+	TypeUnknown:        "UnknownEvent",
 	TypeCall:           "CallEvent",
 	TypeLog:            "LogEvent",
 	TypeAccountInput:   "AccountInputEvent",
@@ -33,7 +39,8 @@ var nameFromType = map[EventType]string{
 	TypeTxExecution:    "TxExecutionEvent",
 	TypeBlockExecution: "BlockExecutionEvent",
 	TypeGovernAccount:  "GovernAccountEvent",
-	TypePayload:        "PayloadEvent",
+	TypeBeginBlock:     "BeginBlockEvent",
+	TypeEndBlock:       "EndBlockEvent",
 }
 
 var typeFromName = make(map[string]EventType)
@@ -100,6 +107,11 @@ type TaggedEvent struct {
 type TaggedEvents []*TaggedEvent
 
 func (ev *Event) Tagged() *TaggedEvent {
+	if ev == nil {
+		return &TaggedEvent{
+			Tagged: query.TagMap{},
+		}
+	}
 	return &TaggedEvent{
 		Tagged: query.MergeTags(
 			query.MustReflectTags(ev.Header),

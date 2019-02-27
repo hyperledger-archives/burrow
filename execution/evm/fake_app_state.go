@@ -20,7 +20,7 @@ import (
 	"bytes"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 )
@@ -30,7 +30,7 @@ type FakeAppState struct {
 	storage  map[string]Word256
 }
 
-var _ state.ReaderWriter = &FakeAppState{}
+var _ acmstate.ReaderWriter = &FakeAppState{}
 
 func (fas *FakeAppState) GetAccount(addr crypto.Address) (*acm.Account, error) {
 	account := fas.accounts[addr]

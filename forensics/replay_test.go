@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/config/source"
-	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/require"
@@ -16,16 +16,50 @@ import (
 
 // This serves as a testbed for looking at non-deterministic burrow instances capture from the wild
 // Put the path to 'good' and 'bad' burrow directories here (containing the config files and .burrow dir)
-const goodDir = "/home/silas/burrows/catch-up-non-determinism/demo-silas-validator-good"
-const badDir = "/home/silas/burrows/catch-up-non-determinism/demo-silas-validator-bad"
-const criticalBlock uint64 = 35693
+const goodDir = "/home/silas/burrows/legal-platform-non-determinism/000-working"
+const badDir = "/home/silas/burrows/legal-platform-non-determinism/001-not-working"
+const criticalBlock uint64 = 39
 
 func TestReplay_Good(t *testing.T) {
+	replay := newReplay(t, goodDir)
+	recaps, err := replay.Blocks(1, criticalBlock+1)
+	require.NoError(t, err)
+	for _, recap := range recaps {
+		fmt.Println(recap.String())
+	}
+}
+
+func TestStateHashes_Bad(t *testing.T) {
+	badReplay := newReplay(t, badDir)
+	goodReplay := newReplay(t, goodDir)
+	for i := uint64(0); i <= criticalBlock+1; i++ {
+		fmt.Println("Good")
+		goodSt, err := goodReplay.State(i)
+		require.NoError(t, err)
+		fmt.Printf("Good: Version: %d, Hash: %X\n", goodSt.Version(), goodSt.Hash())
+		fmt.Println("Bad")
+		badSt, err := badReplay.State(i)
+		require.NoError(t, err)
+		fmt.Printf("Bad: Version: %d, Hash: %X\n", badSt.Version(), badSt.Hash())
+		fmt.Println()
+	}
+}
+
+func TestReplay_Good_Block(t *testing.T) {
 	replayBlock(t, goodDir, criticalBlock)
 }
 
-func TestReplay_Bad(t *testing.T) {
+func TestReplay_Bad_Block(t *testing.T) {
 	replayBlock(t, badDir, criticalBlock)
+}
+
+func TestReplay_Bad(t *testing.T) {
+	replay := newReplay(t, badDir)
+	recaps, err := replay.Blocks(1, criticalBlock+1)
+	require.NoError(t, err)
+	for _, recap := range recaps {
+		fmt.Println(recap.String())
+	}
 }
 
 func TestCriticalBlock(t *testing.T) {
@@ -33,46 +67,28 @@ func TestCriticalBlock(t *testing.T) {
 	goodState := getState(t, goodDir, criticalBlock)
 	require.Equal(t, goodState.Hash(), badState.Hash())
 	fmt.Printf("good: %X, bad: %X\n", goodState.Hash(), badState.Hash())
-	_, err := badState.Update(func(up execution.Updatable) error {
+	_, _, err := badState.Update(func(up state.Updatable) error {
 		return nil
 	})
 	require.NoError(t, err)
-	_, err = goodState.Update(func(up execution.Updatable) error {
+	_, _, err = goodState.Update(func(up state.Updatable) error {
 		return nil
 	})
 	require.NoError(t, err)
 
-	fmt.Printf("good: %X, bad: %X\n", goodState.Hash(), badState.Hash())
-	_, err = badState.Update(func(up execution.Updatable) error {
-		return nil
-	})
-	require.NoError(t, err)
-	_, err = goodState.Update(func(up execution.Updatable) error {
-		return nil
-	})
-	require.NoError(t, err)
-	fmt.Printf("good: %X, bad: %X\n", goodState.Hash(), badState.Hash())
-
-	_, err = badState.Update(func(up execution.Updatable) error {
-		return nil
-	})
-	require.NoError(t, err)
-	_, err = goodState.Update(func(up execution.Updatable) error {
-		return nil
-	})
-	require.NoError(t, err)
 	fmt.Printf("good: %X, bad: %X\n", goodState.Hash(), badState.Hash())
 }
 
 func replayBlock(t *testing.T, burrowDir string, height uint64) {
 	replay := newReplay(t, burrowDir)
+	//replay.State()
 	recap, err := replay.Block(height)
 	require.NoError(t, err)
 	recap.TxExecutions = nil
 	fmt.Println(recap)
 }
 
-func getState(t *testing.T, burrowDir string, height uint64) *execution.State {
+func getState(t *testing.T, burrowDir string, height uint64) *state.State {
 	st, err := newReplay(t, burrowDir).State(height)
 	require.NoError(t, err)
 	return st

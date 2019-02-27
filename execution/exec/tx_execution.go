@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hyperledger/burrow/binary"
+
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/event/query"
@@ -20,12 +22,13 @@ func EventStringAccountCall(addr crypto.Address) string    { return fmt.Sprintf(
 func EventStringLogEvent(addr crypto.Address) string       { return fmt.Sprintf("Log/%s", addr) }
 func EventStringTxExecution(txHash []byte) string          { return fmt.Sprintf("Execution/Tx/%X", txHash) }
 func EventStringGovernAccount(addr *crypto.Address) string { return fmt.Sprintf("Govern/Acc/%v", addr) }
-func EventStringPayload(index uint32) string               { return fmt.Sprintf("Payload/%d", index) }
 
 func NewTxExecution(txEnv *txs.Envelope) *TxExecution {
 	return &TxExecution{
-		TxHash:   txEnv.Tx.Hash(),
-		TxType:   txEnv.Tx.Type(),
+		TxHeader: &TxHeader{
+			TxHash: txEnv.Tx.Hash(),
+			TxType: txEnv.Tx.Type(),
+		},
 		Envelope: txEnv,
 		Receipt:  txEnv.Tx.GenerateReceipt(),
 	}
@@ -33,28 +36,59 @@ func NewTxExecution(txEnv *txs.Envelope) *TxExecution {
 
 func DecodeTxExecution(bs []byte) (*TxExecution, error) {
 	txe := new(TxExecution)
-	err := cdc.UnmarshalBinary(bs, txe)
+	err := cdc.UnmarshalBinaryBare(bs, txe)
 	if err != nil {
 		return nil, err
 	}
 	return txe, nil
 }
 
+func (txe *TxExecution) StreamEvents() StreamEvents {
+	var ses StreamEvents
+	ses = append(ses, &StreamEvent{
+		BeginTx: &BeginTx{
+			TxHeader:  txe.TxHeader,
+			Exception: txe.Exception,
+			Result:    txe.Result,
+		},
+	})
+	for _, ev := range txe.Events {
+		ses = append(ses, &StreamEvent{
+			Event: ev,
+		})
+	}
+	for _, txeNested := range txe.TxExecutions {
+		ses = append(ses, txeNested.StreamEvents()...)
+	}
+	return append(ses, &StreamEvent{
+		EndTx: &EndTx{
+			TxHash: txe.TxHash,
+		},
+	})
+}
+
 func (txe *TxExecution) Encode() ([]byte, error) {
-	return cdc.MarshalBinary(txe)
+	return cdc.MarshalBinaryBare(txe)
 }
 
 func (*TxExecution) EventType() EventType {
 	return TypeTxExecution
 }
 
+func (txe *TxExecution) GetTxHash() binary.HexBytes {
+	if txe == nil || txe.TxHeader == nil {
+		return nil
+	}
+	return txe.TxHeader.TxHash
+}
+
 func (txe *TxExecution) Header(eventType EventType, eventID string, exception *errors.Exception) *Header {
 	return &Header{
-		TxType:    txe.TxType,
-		TxHash:    txe.TxHash,
+		TxType:    txe.GetTxType(),
+		TxHash:    txe.GetTxHash(),
+		Height:    txe.GetHeight(),
 		EventType: eventType,
 		EventID:   eventID,
-		Height:    txe.Height,
 		Exception: exception,
 	}
 }
@@ -109,13 +143,6 @@ func (txe *TxExecution) PushError(err error) {
 			txe.Exception = ex
 		}
 	}
-}
-
-func (txe *TxExecution) PayloadEvent(payload *PayloadEvent) {
-	txe.Append(&Event{
-		Header:  txe.Header(TypePayload, EventStringPayload(payload.Index), nil),
-		Payload: payload,
-	})
 }
 
 func (txe *TxExecution) Trace() string {
@@ -191,7 +218,7 @@ func (txe *TxExecution) Append(tail ...*Event) {
 	for i, ev := range tail {
 		if ev != nil && ev.Header != nil {
 			ev.Header.Index = uint64(len(txe.Events) + i)
-			ev.Header.Height = txe.Height
+			ev.Header.Height = txe.GetHeight()
 		}
 	}
 	txe.Events = append(txe.Events, tail...)
@@ -204,14 +231,19 @@ type TaggedTxExecution struct {
 }
 
 func (txe *TxExecution) Tagged() *TaggedTxExecution {
-	return &TaggedTxExecution{
-		Tagged: query.MergeTags(
+	var tagged query.Tagged = query.TagMap{}
+	if txe != nil {
+		tagged = query.MergeTags(
 			query.TagMap{
 				event.EventIDKey:   EventStringTxExecution(txe.TxHash),
 				event.EventTypeKey: txe.EventType()},
 			query.MustReflectTags(txe),
+			query.MustReflectTags(txe.TxHeader),
 			txe.Envelope.Tagged(),
-		),
+		)
+	}
+	return &TaggedTxExecution{
+		Tagged:      tagged,
 		TxExecution: txe,
 	}
 }
@@ -225,5 +257,5 @@ func (txe *TxExecution) TaggedEvents() TaggedEvents {
 }
 
 func QueryForTxExecution(txHash []byte) query.Queryable {
-	return query.NewBuilder().AndEquals(event.EventIDKey, EventStringTxExecution(txHash))
+	return event.QueryForEventID(EventStringTxExecution(txHash))
 }

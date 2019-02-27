@@ -5,7 +5,7 @@ import (
 
 	"github.com/go-stack/stack"
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
@@ -19,7 +19,7 @@ type Interface interface {
 	errors.Provider
 	errors.Sink
 	// Create a new cached state over this one inheriting any cache options
-	NewCache(cacheOptions ...state.CacheOption) Interface
+	NewCache(cacheOptions ...acmstate.CacheOption) Interface
 	// Sync this state cache to into its originator
 	Sync() errors.CodedError
 }
@@ -31,6 +31,8 @@ type Reader interface {
 	GetCode(address crypto.Address) acm.Bytecode
 	GetSequence(address crypto.Address) uint64
 	Exists(address crypto.Address) bool
+	// GetBlockHash returns	hash of the specific block
+	GetBlockHash(blockNumber uint64) (binary.Word256, error)
 }
 
 type Writer interface {
@@ -44,30 +46,32 @@ type Writer interface {
 	UnsetPermission(address crypto.Address, permFlag permission.PermFlag)
 	AddRole(address crypto.Address, role string) bool
 	RemoveRole(address crypto.Address, role string) bool
-	IncSequence(address crypto.Address)
 }
 
 type State struct {
 	// Where we sync
-	backend state.ReaderWriter
+	backend acmstate.ReaderWriter
+	// Block chain info
+	blockHashGetter func(height uint64) []byte
 	// Cache this State wraps
-	cache *state.Cache
+	cache *acmstate.Cache
 	// Any error that may have occurred
 	error errors.CodedError
 	// In order for nested cache to inherit any options
-	cacheOptions []state.CacheOption
+	cacheOptions []acmstate.CacheOption
 }
 
-func NewState(st state.ReaderWriter, cacheOptions ...state.CacheOption) *State {
+func NewState(st acmstate.ReaderWriter, blockHashGetter func(height uint64) []byte, cacheOptions ...acmstate.CacheOption) *State {
 	return &State{
-		backend:      st,
-		cache:        state.NewCache(st, cacheOptions...),
-		cacheOptions: cacheOptions,
+		backend:         st,
+		blockHashGetter: blockHashGetter,
+		cache:           acmstate.NewCache(st, cacheOptions...),
+		cacheOptions:    cacheOptions,
 	}
 }
 
-func (st *State) NewCache(cacheOptions ...state.CacheOption) Interface {
-	return NewState(st.cache, append(st.cacheOptions, cacheOptions...)...)
+func (st *State) NewCache(cacheOptions ...acmstate.CacheOption) Interface {
+	return NewState(st.cache, st.blockHashGetter, append(st.cacheOptions, cacheOptions...)...)
 }
 
 func (st *State) Sync() errors.CodedError {
@@ -265,13 +269,12 @@ func (st *State) RemoveRole(address crypto.Address, role string) bool {
 	return removed
 }
 
-func (st *State) IncSequence(address crypto.Address) {
-	acc := st.mustAccount(address)
-	if acc == nil {
-		return
+func (st *State) GetBlockHash(height uint64) (binary.Word256, error) {
+	hash := st.blockHashGetter(height)
+	if len(hash) == 0 {
+		st.PushError(fmt.Errorf("got empty BlockHash from blockHashGetter"))
 	}
-	acc.Sequence++
-	st.updateAccount(acc)
+	return binary.LeftPadWord256(hash), nil
 }
 
 // Helpers

@@ -17,6 +17,8 @@ package core
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"net/http"
@@ -26,6 +28,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/hyperledger/burrow/execution/state"
 
 	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/bcm"
@@ -40,6 +44,7 @@ import (
 	"github.com/hyperledger/burrow/process"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/metrics"
+	"github.com/hyperledger/burrow/rpc/rpcdump"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/rpcinfo"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
@@ -66,7 +71,7 @@ type Kernel struct {
 	Emitter    event.Emitter
 	Service    *rpc.Service
 	Launchers  []process.Launcher
-	State      *execution.State
+	State      *state.State
 	Blockchain *bcm.Blockchain
 	Node       *tendermint.Node
 	Transactor *execution.Transactor
@@ -85,7 +90,7 @@ func NewBurrowDB(dbDir string) dbm.DB {
 
 func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTypes.PrivValidator,
 	genesisDoc *genesis.GenesisDoc, tmConf *tmConfig.Config, rpcConfig *rpc.RPCConfig, keyConfig *keys.KeysConfig,
-	keyStore *keys.KeyStore, exeOptions []execution.ExecutionOption, authorizedPeersProvider abci.PeersFilterProvider, logger *logging.Logger) (*Kernel, error) {
+	keyStore *keys.KeyStore, exeOptions []execution.ExecutionOption, authorizedPeersProvider abci.PeersFilterProvider, restore string, logger *logging.Logger) (*Kernel, error) {
 
 	var err error
 	kern := &Kernel{
@@ -109,7 +114,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	// These should be in sync unless we are at the genesis block
 	if kern.Blockchain.LastBlockHeight() > 0 {
 		kern.Logger.InfoMsg("Loading application state")
-		kern.State, err = execution.LoadState(stateDB, int64(kern.Blockchain.LastBlockHeight()+execution.VersionOffset))
+		kern.State, err = state.LoadState(stateDB, execution.VersionAtHeight(kern.Blockchain.LastBlockHeight()))
 		if err != nil {
 			return nil, fmt.Errorf("could not load persisted execution state at hash 0x%X: %v",
 				kern.Blockchain.AppHashAfterLastBlock(), err)
@@ -119,21 +124,61 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 				"state gives %X, blockchain gives %X", kern.Blockchain.LastBlockHeight(),
 				kern.State.Hash(), kern.Blockchain.AppHashAfterLastBlock())
 		}
+		if restore != "" {
+			return nil, fmt.Errorf("Cannot restore onto existing chain; don't give --restore-dump argument")
+		}
 	} else {
-		kern.State, err = execution.MakeGenesisState(stateDB, genesisDoc)
+		kern.State, err = state.MakeGenesisState(stateDB, genesisDoc)
+		if err != nil {
+			return nil, fmt.Errorf("could not build genesis state: %v", err)
+		}
+
+		if restore != "" {
+			if genesisDoc.AppHash == "" {
+				return nil, fmt.Errorf("AppHash is required when restoring chain")
+			}
+
+			reader, err := state.NewFileDumpReader(restore)
+			if err != nil {
+				return nil, err
+			}
+
+			err = kern.State.LoadDump(reader)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		err = kern.State.InitialCommit()
+		if err != nil {
+			return nil, err
+		}
+
+		if genesisDoc.AppHash != "" {
+			hash, err := hex.DecodeString(genesisDoc.AppHash)
+			if err != nil || len(hash) != sha256.Size {
+				return nil, fmt.Errorf("AppHash field is not valid hash")
+			}
+
+			if !bytes.Equal(hash, kern.State.Hash()) {
+				return nil, fmt.Errorf("AppHash does not match, got AppHash 0x%X expected 0x%s. Is the correct --restore-dump specified?", kern.State.Hash(), genesisDoc.AppHash)
+			}
+		}
 	}
 
 	kern.Logger.InfoMsg("State loading successful")
 
 	txCodec := txs.NewAminoCodec()
 	tmGenesisDoc := tendermint.DeriveGenesisDoc(genesisDoc)
-	checker := execution.NewBatchChecker(kern.State, kern.Blockchain, kern.Logger)
+	params := execution.ParamsFromGenesis(genesisDoc)
+	checker := execution.NewBatchChecker(kern.State, params, kern.Blockchain, kern.Logger)
 
 	kern.Emitter = event.NewEmitter(kern.Logger)
-	committer := execution.NewBatchCommitter(kern.State, kern.Blockchain, kern.Emitter, kern.Logger, exeOptions...)
+	committer := execution.NewBatchCommitter(kern.State, params, kern.Blockchain, kern.Emitter, kern.Logger, exeOptions...)
 
-	kern.nodeInfo = fmt.Sprintf("Burrow_%s_ValidatorID:%X", genesisDoc.ChainID(), privValidator.GetAddress())
-	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, checker, committer, txCodec, authorizedPeersProvider, kern.Panic, logger)
+	kern.nodeInfo = fmt.Sprintf("Burrow_%s_ValidatorID:%X", genesisDoc.ChainID(), privValidator.GetPubKey().Address())
+	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, kern.State, checker, committer, txCodec, authorizedPeersProvider,
+		kern.Panic, logger)
 	// We could use this to provide/register our own metrics (though this will register them with us). Unfortunately
 	// Tendermint currently ignores the metrics passed unless its own server is turned on.
 	metricsProvider := node.DefaultMetricsProvider(&tmConfig.InstrumentationConfig{
@@ -145,8 +190,9 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 		return nil, err
 	}
 
-	kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter, execution.NewAccounts(checker, keyClient, AccountsRingMutexCount),
-		kern.Node.MempoolReactor().BroadcastTx, txCodec, kern.Logger)
+	kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter,
+		execution.NewAccounts(checker, keyClient, AccountsRingMutexCount),
+		kern.Node.MempoolReactor().Mempool.CheckTx, txCodec, kern.Logger)
 
 	nameRegState := kern.State
 	proposalRegState := kern.State
@@ -155,7 +201,8 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	if err != nil {
 		return nil, err
 	}
-	kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, nodeView, kern.Logger)
+	kern.Blockchain.SetBlockStore(bcm.NewBlockStore(nodeView.BlockStore()))
+	kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, kern.State, nodeView, kern.Logger)
 
 	kern.Launchers = []process.Launcher{
 		{
@@ -257,12 +304,15 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 				}
 
 				rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(kern.State, nameRegState, proposalRegState,
-					kern.Blockchain, nodeView, kern.Logger))
+					kern.Blockchain, kern.State, nodeView, kern.Logger))
 
 				rpctransact.RegisterTransactServer(grpcServer, rpctransact.NewTransactServer(kern.Transactor, txCodec))
 
 				rpcevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer(kern.State,
 					kern.Emitter, kern.Blockchain, kern.Logger))
+
+				rpcdump.RegisterDumpServer(grpcServer, rpcdump.NewDumpServer(kern.State,
+					kern.Blockchain, nodeView, kern.Logger))
 
 				// Provides metadata about services registered
 				//reflection.Register(grpcServer)

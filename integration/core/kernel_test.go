@@ -11,6 +11,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/governance"
+
+	"github.com/hyperledger/burrow/acm/balance"
+	"github.com/hyperledger/burrow/rpc/rpctransact"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -127,12 +132,13 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, t
 
 	keyStore := keys.NewKeyStore(keys.DefaultKeysDir, false, logger)
 	keyClient := mock.NewKeyClient(privateAccounts...)
-	kern, err := core.NewKernel(context.Background(), keyClient, privValidator,
+	ctx := context.Background()
+	kern, err := core.NewKernel(ctx, keyClient, privValidator,
 		testConfig.GenesisDoc,
 		testConfig.Tendermint.TendermintConfig(),
 		testConfig.RPC,
 		testConfig.Keys,
-		keyStore, nil, testConfig.Tendermint.DefaultAuthorizedPeersProvider(), logger)
+		keyStore, nil, testConfig.Tendermint.DefaultAuthorizedPeersProvider(), "", logger)
 	if err != nil {
 		return err
 	}
@@ -150,9 +156,10 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, t
 	errCh := make(chan error, 1)
 	// Generate a few transactions concurrent with restarts
 	go func() {
+		pow := genesisDoc.Validators[0].Amount
 		for {
 			// Fire and forget - we can expect a few to fail since we are restarting kernel
-			txe, err := tcli.CallTxSync(context.Background(), &payload.CallTx{
+			txe, err := tcli.CallTxSync(ctx, &payload.CallTx{
 				Input: &payload.TxInput{
 					Address: inputAddress,
 					Amount:  2,
@@ -162,21 +169,14 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, t
 				Fee:      2,
 				GasLimit: 10000,
 			})
-			if err == nil {
-				err = txe.Exception.AsError()
-			}
-			if err != nil {
-				statusError := status.Convert(err)
-				// We expect the GRPC service to be unavailable when we restart
-				if statusError != nil && statusError.Code() != codes.Unavailable {
-					// Don't block - we'll just capture first error
-					select {
-					case errCh <- err:
-					default:
+			handleTxe(txe, err, errCh)
 
-					}
-				}
-			}
+			txe, err = tcli.BroadcastTxSync(ctx, &rpctransact.TxEnvelopeParam{
+				Payload: &payload.Any{
+					GovTx: governance.AlterBalanceTx(inputAddress, privateValidators[0], balance.New().Power(pow)),
+				},
+			})
+			handleTxe(txe, err, errCh)
 			select {
 			case <-stopCh:
 				close(errCh)
@@ -184,6 +184,7 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, t
 			default:
 				time.Sleep(time.Millisecond)
 			}
+			pow += 100
 		}
 	}()
 	defer func() {
@@ -194,11 +195,11 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, t
 	}()
 
 	subID := event.GenSubID()
-	ch, err := kern.Emitter.Subscribe(context.Background(), subID, exec.QueryForBlockExecution(), 10)
+	ch, err := kern.Emitter.Subscribe(ctx, subID, exec.QueryForBlockExecution(), 10)
 	if err != nil {
 		return err
 	}
-	defer kern.Emitter.UnsubscribeAll(context.Background(), subID)
+	defer kern.Emitter.UnsubscribeAll(ctx, subID)
 	cont := true
 	for cont {
 		select {
@@ -215,5 +216,23 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, t
 		}
 	}
 
-	return kern.Shutdown(context.Background())
+	return kern.Shutdown(ctx)
+}
+
+func handleTxe(txe *exec.TxExecution, err error, errCh chan<- error) {
+	if err == nil {
+		err = txe.Exception.AsError()
+	}
+	if err != nil {
+		statusError := status.Convert(err)
+		// We expect the GRPC service to be unavailable when we restart
+		if statusError != nil && statusError.Code() != codes.Unavailable {
+			// Don't block - we'll just capture first error
+			select {
+			case errCh <- err:
+			default:
+
+			}
+		}
+	}
 }

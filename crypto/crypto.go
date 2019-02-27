@@ -65,7 +65,7 @@ func (err ErrInvalidCurve) Error() string {
 // exposed regardless of crypto library
 
 type Signer interface {
-	Sign(msg []byte) (Signature, error)
+	Sign(msg []byte) (*Signature, error)
 }
 
 // Signable is an interface for all signable things.

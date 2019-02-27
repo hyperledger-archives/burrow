@@ -25,10 +25,10 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
-	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
 )
@@ -76,7 +76,7 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	}
 	require.NoError(t, st.UpdateAccount(caller))
 	require.NoError(t, st.UpdateAccount(grantee))
-	cache := NewState(st)
+	cache := NewState(st, blockHashGetter)
 
 	function, err := contract.FunctionByName("addRole")
 	if err != nil {

@@ -11,7 +11,6 @@ import (
 
 	"github.com/elgs/gojq"
 	"github.com/hyperledger/burrow/acm/validator"
-	"github.com/hyperledger/burrow/crypto"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -24,7 +23,7 @@ func GetBlockHeight(client *def.Client) (latestBlockHeight uint64, err error) {
 }
 
 func AccountsInfo(account, field string, client *def.Client) (string, error) {
-	address, err := crypto.AddressFromHexString(account)
+	address, err := client.GetKeyAddress(account)
 	if err != nil {
 		return "", err
 	}
@@ -103,17 +102,11 @@ func ValidatorsInfo(query string, client *def.Client) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	history := make([]interface{}, len(validatorSet.History))
-	for i, vs := range validatorSet.History {
-		history[i] = validatorMap(vs.Validators)
-	}
 	// Yes, this feels a bit silly, but it is the easiest way to get the generic map of slice object that gojq needs
 	// mapstructure is not able to do this it would seem.
 	bs, err := json.Marshal(map[string]interface{}{
-		"Height":  validatorSet.Height,
-		"Set":     validatorMap(validatorSet.Set),
-		"History": history,
+		"Height": validatorSet.Height,
+		"Set":    validatorMap(validatorSet.Set),
 	})
 	if err != nil {
 		return nil, err

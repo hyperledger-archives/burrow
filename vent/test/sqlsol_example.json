@@ -1,0 +1,55 @@
+[
+  {
+    "TableName": "EventTest",
+    "Filter": "EventType = 'LogEvent'",
+    "DeleteMarkerField": "__DELETE__",
+    "FieldMappings": [
+      {
+        "Field": "key",
+        "ColumnName": "testkey",
+        "Type": "bytes32",
+        "Primary": true,
+        "Notify": ["keyed_meta"]
+      },
+      {
+        "Field": "name",
+        "ColumnName": "testname",
+        "Type": "bytes32",
+        "Primary": true,
+        "BytesToString": true,
+        "Notify": ["meta", "keyed_meta"]
+      },
+      {
+        "Field": "description",
+        "ColumnName": "testdescription",
+        "Type": "bytes32",
+        "Primary": false,
+        "Notify": ["meta", "keyed_meta"]
+      }
+    ]
+  },
+  {
+    "TableName": "UserAccounts",
+    "Filter": "LOG1 = 'UserAccounts'",
+    "FieldMappings": [
+      {
+        "Field": "height",
+        "ColumnName": "_height",
+        "Type": "string",
+        "Notify": ["meta", "keyed_meta"]
+      },
+      {
+        "Field": "userAddress",
+        "ColumnName": "address",
+        "Type": "address",
+        "Primary": true
+      },
+      {
+        "Field": "userName",
+        "ColumnName": "username",
+        "Type": "string",
+        "Primary": false
+      }
+    ]
+  }
+]

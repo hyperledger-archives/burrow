@@ -39,7 +39,7 @@ func (pa *PrivateAccount) GetPublicKey() crypto.PublicKey {
 	return pa.concretePrivateAccount.PublicKey
 }
 
-func (pa *PrivateAccount) Sign(msg []byte) (crypto.Signature, error) {
+func (pa *PrivateAccount) Sign(msg []byte) (*crypto.Signature, error) {
 	return pa.concretePrivateAccount.PrivateKey.Sign(msg)
 }
 

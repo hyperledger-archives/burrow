@@ -3,9 +3,12 @@ package commands
 import (
 	"bytes"
 	"fmt"
+	"strings"
+	"time"
 
 	pkgs "github.com/hyperledger/burrow/deploy"
 	"github.com/hyperledger/burrow/deploy/def"
+	"github.com/hyperledger/burrow/deploy/proposals"
 	"github.com/hyperledger/burrow/deploy/util"
 	cli "github.com/jawher/mow.cli"
 	log "github.com/sirupsen/logrus"
@@ -24,7 +27,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 
 		pathOpt := cmd.StringOpt("i dir", "", "root directory of app (will use pwd by default)")
 
-		defaultOutputOpt := cmd.StringOpt("o output", "deploy.output.json",
+		defaultOutputOpt := cmd.StringOpt("o output", def.DefaultOutputFile,
 			"filename for jobs output file. by default, this name will reflect the name passed in on the optional [--file]")
 
 		yamlPathOpt := cmd.StringOpt("f file", "deploy.yaml",
@@ -56,13 +59,26 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 
 		proposalVerify := cmd.BoolOpt("proposal-verify", false, "Verify any proposal, do NOT create new proposal or vote")
 
-		proposalVote := cmd.BoolOpt("proposal-vote", false, "Vot for proposal, do NOT create new proposal")
+		proposalVote := cmd.BoolOpt("proposal-vote", false, "Vote for proposal, do NOT create new proposal")
+
+		proposalCreate := cmd.BoolOpt("proposal-create", false, "Create new proposal")
+
+		timeoutOpt := cmd.IntOpt("t timeout", 10, "Timeout to talk to the chain")
+
+		proposalList := cmd.StringOpt("list-proposals state", "", "List proposals, either all, executed, expired, or current")
 
 		cmd.Action = func() {
 			do := new(def.DeployArgs)
 
 			if *proposalVerify && *proposalVote {
 				output.Fatalf("Cannot combine --proposal-verify and --proposal-vote")
+			}
+
+			for _, e := range *defaultSetsOpt {
+				s := strings.Split(e, "=")
+				if len(s) != 2 || s[0] == "" {
+					output.Fatalf("`--set %s' should have format VARIABLE=value", e)
+				}
 			}
 
 			do.Path = *pathOpt
@@ -79,6 +95,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			do.Jobs = *jobsOpt
 			do.ProposeVerify = *proposalVerify
 			do.ProposeVote = *proposalVote
+			do.ProposeCreate = *proposalCreate
 			log.SetFormatter(new(PlainFormatter))
 			log.SetLevel(log.WarnLevel)
 			if do.Verbose {
@@ -86,9 +103,18 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			} else if do.Debug {
 				log.SetLevel(log.DebugLevel)
 			}
-			client := def.NewClient(*chainUrlOpt, *signerOpt, *mempoolSigningOpt)
+			client := def.NewClient(*chainUrlOpt, *signerOpt, *mempoolSigningOpt, time.Duration(*timeoutOpt)*time.Second)
+			handleTerm()
 
-			util.IfExit(pkgs.RunPackage(do, client))
+			if *proposalList != "" {
+				state, err := proposals.ProposalStateFromString(*proposalList)
+				if err != nil {
+					output.Fatalf(err.Error())
+				}
+				proposals.ListProposals(client, state)
+			} else {
+				util.IfExit(pkgs.RunPackage(do, nil, client))
+			}
 		}
 	}
 }
@@ -137,4 +163,5 @@ func (f *PlainFormatter) appendMessageData(b *bytes.Buffer, key string, value in
 		stringVal = fmt.Sprint(value)
 	}
 	b.WriteString(stringVal)
+	b.WriteString(" ")
 }

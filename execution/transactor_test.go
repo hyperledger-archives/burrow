@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
 	"github.com/hyperledger/burrow/crypto"
@@ -52,7 +52,7 @@ func TestTransactor_BroadcastTxSync(t *testing.T) {
 	err := txEnv.Sign(privAccount)
 	require.NoError(t, err)
 	height := uint64(35)
-	trans := NewTransactor(bc, evc, NewAccounts(state.NewMemoryState(), mock.NewKeyClient(privAccount), 100),
+	trans := NewTransactor(bc, evc, NewAccounts(acmstate.NewMemoryState(), mock.NewKeyClient(privAccount), 100),
 		func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error {
 			txe := exec.NewTxExecution(txEnv)
 			txe.Height = height

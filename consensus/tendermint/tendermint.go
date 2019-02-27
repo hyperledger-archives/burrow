@@ -87,8 +87,6 @@ func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tmTypes.GenesisDoc 
 		}
 	}
 	consensusParams := tmTypes.DefaultConsensusParams()
-	// Default limit is 10KiB. Raise his to 1MiB
-	consensusParams.TxSize.MaxBytes = 1024 * 1024
 
 	return &tmTypes.GenesisDoc{
 		ChainID:         burrowGenesisDoc.ChainID(),
@@ -99,8 +97,8 @@ func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tmTypes.GenesisDoc 
 	}
 }
 
-func NewNodeInfo(ni p2p.NodeInfo) *NodeInfo {
-	address, _ := crypto.AddressFromHexString(string(ni.ID))
+func NewNodeInfo(ni p2p.DefaultNodeInfo) *NodeInfo {
+	address, _ := crypto.AddressFromHexString(string(ni.ID()))
 	return &NodeInfo{
 		ID:            address,
 		Moniker:       ni.Moniker,
@@ -108,6 +106,7 @@ func NewNodeInfo(ni p2p.NodeInfo) *NodeInfo {
 		Version:       ni.Version,
 		Channels:      binary.HexBytes(ni.Channels),
 		Network:       ni.Network,
-		Other:         ni.Other,
+		RPCAddress:    ni.Other.RPCAddress,
+		TxIndex:       ni.Other.TxIndex,
 	}
 }

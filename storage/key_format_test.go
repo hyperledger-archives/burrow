@@ -27,6 +27,13 @@ func TestKeyFormat(t *testing.T) {
 	assert.Equal(t, b, *bo)
 	assert.Equal(t, c, *co)
 
+	// Allow for omitted values
+	bo, co = new(int64), new(int64)
+	kf.Scan(key, nil, bo, co)
+	assert.Equal(t, b, *bo)
+	assert.Equal(t, c, *co)
+
+	ao, bo, co = new(int64), new(int64), new(int64)
 	bs := new([]byte)
 	kf.Scan(key, ao, bo, bs)
 	assert.Equal(t, a, *ao)
@@ -92,6 +99,12 @@ func TestKeyFormat_Fix(t *testing.T) {
 
 func TestKeyFormat_Suffix(t *testing.T) {
 	kf := NewMustKeyFormat("diplodocus", 4, 0)
-	key := kf.Suffix([]byte("Hi, "), "dinosaur")
+	key := kf.KeyNoPrefix([]byte("Hi, "), "dinosaur")
+	assert.Equal(t, "Hi, dinosaur", key.String())
+}
+
+func TestKeyFormat_Layout(t *testing.T) {
+	kf := NewMustKeyFormat("diplodocus", 4, DelimiterSegmentLength, VariadicSegmentLength)
+	key := kf.KeyNoPrefix([]byte("Hi, "), "dinosaur")
 	assert.Equal(t, "Hi, dinosaur", key.String())
 }

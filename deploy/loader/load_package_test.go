@@ -19,7 +19,7 @@ func TestUnmarshal(t *testing.T) {
     source: foo
     target: bar
     permissions: [foo, bar]
-    roles: []
+    roles: ["foo"]
 
 - name: nameRegTest1
   register:
@@ -34,7 +34,7 @@ func TestUnmarshal(t *testing.T) {
     source: foo
     target: bar
     permissions: [foo, bar]
-    roles: []
+    roles: ["foo"]
 `)
 }
 
@@ -43,7 +43,7 @@ func testUnmarshal(t *testing.T, testPackageYAML string) {
 	pkgs.SetConfigType("yaml")
 	err := pkgs.ReadConfig(bytes.NewBuffer([]byte(testPackageYAML)))
 	require.NoError(t, err)
-	do := new(def.Package)
+	do := new(def.Playbook)
 
 	err = pkgs.UnmarshalExact(do)
 	require.NoError(t, err)
@@ -51,7 +51,7 @@ func testUnmarshal(t *testing.T, testPackageYAML string) {
 	require.NoError(t, err)
 	assert.True(t, len(yamlOut) > 100, "should marshal some yaml")
 
-	doOut := new(def.Package)
+	doOut := new(def.Playbook)
 	err = yaml.Unmarshal(yamlOut, doOut)
 	require.NoError(t, err)
 	assert.Equal(t, do, doOut)

@@ -7,7 +7,7 @@ jobs:
 - name: permSetup
   permission:
       action: setBase
-      target: $addr2
+      target: $key2
       permission: call
       value: "true"
 
@@ -48,7 +48,7 @@ jobs:
 - name: roleSetup
   permission:
       action: addRole
-      target: $addr2
+      target: $key2
       role: marmots_deny
 
 # roles
@@ -57,7 +57,7 @@ jobs:
       destination: $deployPermK
       function: hasRole
       data:
-        - $addr2
+        - $key2_addr
         - marmots_deny
 
 - name: assertRole1
@@ -71,7 +71,7 @@ jobs:
       destination: $deployPermK
       function: addRole 
       data: 
-        - $addr2
+        - $key2_addr
         - $role
 
 - name: checkRole2
@@ -79,7 +79,7 @@ jobs:
       destination: $deployPermK
       function: hasRole
       data:
-        - $addr2
+        - $key2_addr
         - $role
 
 - name: assertRole2
@@ -93,7 +93,7 @@ jobs:
       destination: $deployPermK
       function: removeRole
       data:
-        - $addr2
+        - $key2_addr
         - $role
 
 - name: checkRole3
@@ -101,7 +101,7 @@ jobs:
       destination: $deployPermK
       function: hasRole
       data:
-        - $addr2
+        - $key2_addr
         - $role
 
 - name: assertRole3
@@ -116,7 +116,7 @@ jobs:
       destination: $deployPermK
       function: hasBase
       data:
-        - $addr2
+        - $key2_addr
         - 8262
 
 - name: assertBase1
@@ -130,7 +130,7 @@ jobs:
       destination: $deployPermK
       function: hasBase
       data: 
-        - $addr2
+        - $key2_addr
         - 59007
 
 - name: assertBase2
@@ -144,7 +144,7 @@ jobs:
       destination: $deployPermK
       function: setBase 
       data:
-        - $addr2
+        - $key2_addr
         - 8263
         - true
 
@@ -153,7 +153,7 @@ jobs:
       destination: $deployPermK
       function: hasBase
       data:
-        - $addr2
+        - $key2_addr
         - 8263
 
 - name: assertBase3
@@ -167,7 +167,7 @@ jobs:
       destination: $deployPermK
       function: unsetBase
       data:
-        - $addr2
+        - $key2_addr
         - 8263
 
 - name: checkBase4
@@ -175,7 +175,7 @@ jobs:
       destination: $deployPermK
       function: hasBase
       data:
-        - $addr2
+        - $key2_addr
         - 8263
 
 - name: assertBase4

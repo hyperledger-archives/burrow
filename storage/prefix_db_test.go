@@ -1,10 +1,12 @@
 package storage
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
@@ -119,8 +121,46 @@ func TestPrefixDBReverseIterator2(t *testing.T) {
 	db := mockDBWithStuff()
 	pdb := NewPrefixDB(db, "key")
 
+	itr := pdb.ReverseIterator(bz(""), nil)
+	checkDomain(t, itr, bz(""), nil)
+	checkItem(t, itr, bz("3"), bz("value3"))
+	checkNext(t, itr, true)
+	checkItem(t, itr, bz("2"), bz("value2"))
+	checkNext(t, itr, true)
+	checkItem(t, itr, bz("1"), bz("value1"))
+	checkNext(t, itr, true)
+	checkItem(t, itr, bz(""), bz("value"))
+	checkNext(t, itr, false)
+	checkInvalid(t, itr)
+	itr.Close()
+}
+
+func TestPrefixDBReverseIterator3(t *testing.T) {
+	db := mockDBWithStuff()
+	pdb := NewPrefixDB(db, "key")
+
 	itr := pdb.ReverseIterator(nil, bz(""))
 	checkDomain(t, itr, nil, bz(""))
+	checkInvalid(t, itr)
+	itr.Close()
+}
+
+func TestPrefixDBReverseIterator4(t *testing.T) {
+	db := mockDBWithStuff()
+	pdb := NewPrefixDB(db, "key")
+
+	itr := pdb.ReverseIterator(bz(""), bz(""))
+	checkDomain(t, itr, bz(""), bz(""))
+	checkInvalid(t, itr)
+	itr.Close()
+}
+
+func TestPrefixDBReverseIterator5(t *testing.T) {
+	db := mockDBWithStuff()
+	pdb := NewPrefixDB(db, "key")
+
+	itr := pdb.ReverseIterator(bz("1"), nil)
+	checkDomain(t, itr, bz("1"), nil)
 	checkItem(t, itr, bz("3"), bz("value3"))
 	checkNext(t, itr, true)
 	checkItem(t, itr, bz("2"), bz("value2"))
@@ -131,25 +171,47 @@ func TestPrefixDBReverseIterator2(t *testing.T) {
 	itr.Close()
 }
 
-func TestPrefixDBReverseIterator3(t *testing.T) {
+func TestPrefixDBReverseIterator6(t *testing.T) {
 	db := mockDBWithStuff()
 	pdb := NewPrefixDB(db, "key")
 
-	itr := pdb.ReverseIterator(bz(""), nil)
-	checkDomain(t, itr, bz(""), nil)
+	itr := pdb.ReverseIterator(bz("2"), nil)
+	checkDomain(t, itr, bz("2"), nil)
+	checkItem(t, itr, bz("3"), bz("value3"))
+	checkNext(t, itr, true)
+	checkItem(t, itr, bz("2"), bz("value2"))
+	checkNext(t, itr, false)
+	checkInvalid(t, itr)
+	itr.Close()
+}
+
+func TestPrefixDBReverseIterator7(t *testing.T) {
+	db := mockDBWithStuff()
+	pdb := NewPrefixDB(db, "key")
+
+	itr := pdb.ReverseIterator(nil, bz("2"))
+	checkDomain(t, itr, nil, bz("2"))
+	checkItem(t, itr, bz("1"), bz("value1"))
+	checkNext(t, itr, true)
 	checkItem(t, itr, bz(""), bz("value"))
 	checkNext(t, itr, false)
 	checkInvalid(t, itr)
 	itr.Close()
 }
 
-func TestPrefixDBReverseIterator4(t *testing.T) {
-	db := mockDBWithStuff()
-	pdb := NewPrefixDB(db, "key")
+func (p Prefix) BadSuffix(key []byte) []byte {
+	return key[len(p):]
+}
 
-	itr := pdb.ReverseIterator(bz(""), bz(""))
-	checkInvalid(t, itr)
-	itr.Close()
+func TestBadSuffix(t *testing.T) {
+	p := Prefix([]byte("foo"))
+	fmt.Println(cap(p))
+	key1 := p.BadSuffix([]byte("fooaaa"))
+	fmt.Println(cap(p), p, string(key1))
+	key2 := p.BadSuffix([]byte("foobbb"))
+	fmt.Println(cap(p), p, string(key1))
+	fmt.Println(cap(p), p, string(key2))
+
 }
 
 func checkValue(t *testing.T, db dbm.DB, key []byte, valueWanted []byte) {

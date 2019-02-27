@@ -8,10 +8,11 @@ import (
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/jobs"
 	"github.com/hyperledger/burrow/deploy/loader"
+	"github.com/hyperledger/burrow/execution/evm/abi"
 	log "github.com/sirupsen/logrus"
 )
 
-func RunPackage(do *def.DeployArgs, client *def.Client) error {
+func RunPackage(do *def.DeployArgs, script *def.Playbook, client *def.Client) error {
 	var err error
 	var pwd string
 
@@ -52,12 +53,23 @@ func RunPackage(do *def.DeployArgs, client *def.Client) error {
 		do.BinPath = filepath.Join(do.Path, "bin")
 	}
 
+	if _, err := os.Stat(do.BinPath); os.IsNotExist(err) {
+		if err := os.Mkdir(do.BinPath, 0775); err != nil {
+			return err
+		}
+	}
+
+	do.AllSpecs, err = abi.LoadPath(do.BinPath)
+	if err != nil {
+		log.Errorf("failed to load ABIs for Event parsing from %s: %v", do.BinPath, err)
+	}
+
 	// useful for debugging
 	printPathPackage(client)
 
 	// Load the package if it doesn't exist
-	if do.Package == nil {
-		do.Package, err = loader.LoadPackage(do.YAMLPath)
+	if script == nil {
+		script, err = loader.LoadPlaybook(do.YAMLPath, do, nil)
 		if err != nil {
 			return err
 		}
@@ -73,7 +85,7 @@ func RunPackage(do *def.DeployArgs, client *def.Client) error {
 		}
 	}
 
-	return jobs.DoJobs(do, client)
+	return jobs.ExecutePlaybook(do, script, client)
 }
 
 func printPathPackage(client *def.Client) {

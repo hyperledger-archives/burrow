@@ -3,26 +3,51 @@ package exec
 import (
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/txs"
-	abciTypes "github.com/tendermint/tendermint/abci/types"
 )
 
 func EventStringBlockExecution(height uint64) string { return fmt.Sprintf("Execution/Block/%v", height) }
 
-func DecodeBlockExecution(bs []byte) (*BlockExecution, error) {
-	be := new(BlockExecution)
-	err := cdc.UnmarshalBinary(bs, be)
+func DecodeStreamEvent(bs []byte) (*StreamEvent, error) {
+	be := new(StreamEvent)
+	err := cdc.UnmarshalBinaryBare(bs, be)
 	if err != nil {
 		return nil, err
 	}
 	return be, nil
 }
 
+// Write out TxExecutions parenthetically
+func (be *BlockExecution) StreamEvents() StreamEvents {
+	var ses StreamEvents
+	ses = append(ses, &StreamEvent{
+		BeginBlock: &BeginBlock{
+			Height: be.Height,
+			Header: be.Header,
+		},
+	})
+	for _, txe := range be.TxExecutions {
+		ses = append(ses, txe.StreamEvents()...)
+	}
+	return append(ses, &StreamEvent{
+		EndBlock: &EndBlock{
+			Height: be.Height,
+		},
+	})
+}
+
 func (be *BlockExecution) Encode() ([]byte, error) {
-	return cdc.MarshalBinary(be)
+	return cdc.MarshalBinaryBare(be)
+}
+
+func (be *BlockExecution) EncodeHeader() ([]byte, error) {
+	return cdc.MarshalBinaryBare(be.Header)
+}
+
+func (be *StreamEvent) Encode() ([]byte, error) {
+	return cdc.MarshalBinaryBare(be)
 }
 
 func (*BlockExecution) EventType() EventType {
@@ -31,11 +56,11 @@ func (*BlockExecution) EventType() EventType {
 
 func (be *BlockExecution) Tx(txEnv *txs.Envelope) *TxExecution {
 	txe := NewTxExecution(txEnv)
-	be.Append(txe)
+	be.AppendTxs(txe)
 	return txe
 }
 
-func (be *BlockExecution) Append(tail ...*TxExecution) {
+func (be *BlockExecution) AppendTxs(tail ...*TxExecution) {
 	for i, txe := range tail {
 		txe.Index = uint64(len(be.TxExecutions) + i)
 		txe.Height = be.Height
@@ -57,23 +82,10 @@ func (be *BlockExecution) Tagged() *TaggedBlockExecution {
 				event.EventTypeKey: be.EventType(),
 			},
 			query.MustReflectTags(be),
-			query.MustReflectTags(be.BlockHeader),
+			query.MustReflectTags(be.Header),
 		),
 		BlockExecution: be,
 	}
-}
-
-type ABCIHeader struct {
-	*abciTypes.Header
-}
-
-// Gogo proto support
-func (h *ABCIHeader) Marshal() ([]byte, error) {
-	return proto.Marshal(h.Header)
-}
-
-func (h *ABCIHeader) Unmarshal(data []byte) error {
-	return proto.Unmarshal(data, h.Header)
 }
 
 func QueryForBlockExecutionFromHeight(height uint64) *query.Builder {
@@ -82,4 +94,46 @@ func QueryForBlockExecutionFromHeight(height uint64) *query.Builder {
 
 func QueryForBlockExecution() *query.Builder {
 	return query.NewBuilder().AndEquals(event.EventTypeKey, TypeBlockExecution)
+}
+
+type TaggedBlockEvent struct {
+	query.Tagged
+	*StreamEvent
+}
+
+func (ev *StreamEvent) EventType() EventType {
+	switch {
+	case ev.BeginBlock != nil:
+		return TypeBeginBlock
+	case ev.BeginTx != nil:
+		return TypeBeginTx
+	case ev.Envelope != nil:
+		return TypeEnvelope
+	case ev.Event != nil:
+		return ev.Event.EventType()
+	case ev.EndTx != nil:
+		return TypeEndTx
+	case ev.EndBlock != nil:
+		return TypeEndBlock
+	}
+	return TypeUnknown
+}
+
+func (ev *StreamEvent) Tagged() *TaggedBlockEvent {
+	return &TaggedBlockEvent{
+		Tagged: query.MergeTags(
+			query.TagMap{
+				event.EventTypeKey: ev.EventType(),
+			},
+			query.MustReflectTags(ev.BeginBlock, "Height"),
+			query.MustReflectTags(ev.BeginBlock.GetHeader()),
+			query.MustReflectTags(ev.BeginTx),
+			query.MustReflectTags(ev.BeginTx.GetTxHeader()),
+			ev.Envelope.Tagged(),
+			ev.Event.Tagged(),
+			query.MustReflectTags(ev.EndTx),
+			query.MustReflectTags(ev.EndBlock, "Height"),
+		),
+		StreamEvent: ev,
+	}
 }

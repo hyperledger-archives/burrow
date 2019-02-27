@@ -26,13 +26,16 @@ import (
 
 type KeyClient interface {
 	// Sign returns the signature bytes for given message signed with the key associated with signAddress
-	Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error)
+	Sign(signAddress crypto.Address, message []byte) (*crypto.Signature, error)
 
 	// PublicKey returns the public key associated with a given address
 	PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error)
 
 	// Generate requests that a key be generate within the keys instance and returns the address
 	Generate(keyName string, keyType crypto.CurveType) (keyAddress crypto.Address, err error)
+
+	// Get the address for a keyname or the adress itself
+	GetAddressForKeyName(keyName string) (keyAddress crypto.Address, err error)
 
 	// Returns nil if the keys instance is healthy, error otherwise
 	HealthCheck() error
@@ -52,16 +55,12 @@ type remoteKeyClient struct {
 	logger     *logging.Logger
 }
 
-func (l *localKeyClient) Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error) {
+func (l *localKeyClient) Sign(signAddress crypto.Address, message []byte) (*crypto.Signature, error) {
 	resp, err := l.ks.Sign(nil, &SignRequest{Address: signAddress.String(), Message: message})
 	if err != nil {
-		return crypto.Signature{}, err
+		return nil, err
 	}
-	curveType, err := crypto.CurveTypeFromString(resp.GetCurveType())
-	if err != nil {
-		return crypto.Signature{}, err
-	}
-	return crypto.SignatureFromBytes(resp.GetSignature(), curveType)
+	return resp.GetSignature(), nil
 }
 
 func (l *localKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
@@ -85,12 +84,31 @@ func (l *localKeyClient) Generate(keyName string, curveType crypto.CurveType) (k
 	return crypto.AddressFromHexString(resp.GetAddress())
 }
 
+func (l *localKeyClient) GetAddressForKeyName(keyName string) (keyAddress crypto.Address, err error) {
+	keyAddress, err = crypto.AddressFromHexString(keyName)
+	if err == nil {
+		return
+	}
+
+	all, err := l.ks.GetAllNames()
+
+	if err != nil {
+		return crypto.Address{}, err
+	}
+
+	if addr, ok := all[keyName]; ok {
+		return crypto.AddressFromHexString(addr)
+	}
+
+	return crypto.Address{}, fmt.Errorf("`%s` is neither an address or a known key name", keyName)
+}
+
 // Returns nil if the keys instance is healthy, error otherwise
 func (l *localKeyClient) HealthCheck() error {
 	return nil
 }
 
-func (l *remoteKeyClient) Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error) {
+func (l *remoteKeyClient) Sign(signAddress crypto.Address, message []byte) (*crypto.Signature, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	req := SignRequest{Address: signAddress.String(), Message: message}
@@ -98,14 +116,9 @@ func (l *remoteKeyClient) Sign(signAddress crypto.Address, message []byte) (sign
 	resp, err := l.kc.Sign(ctx, &req)
 	if err != nil {
 		l.logger.TraceMsg("Received Sign request error response: ", err)
-		return crypto.Signature{}, err
+		return nil, err
 	}
-	l.logger.TraceMsg("Received Sign response to remote key server: %v", resp)
-	curveType, err := crypto.CurveTypeFromString(resp.GetCurveType())
-	if err != nil {
-		return crypto.Signature{}, err
-	}
-	return crypto.SignatureFromBytes(resp.GetSignature(), curveType)
+	return resp.GetSignature(), nil
 }
 
 func (l *remoteKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
@@ -139,6 +152,25 @@ func (l *remoteKeyClient) Generate(keyName string, curveType crypto.CurveType) (
 	}
 	l.logger.TraceMsg("Received Generate response to remote key server: ", fmt.Sprintf("%v", resp))
 	return crypto.AddressFromHexString(resp.GetAddress())
+}
+
+func (l *remoteKeyClient) GetAddressForKeyName(keyName string) (keyAddress crypto.Address, err error) {
+	keyAddress, err = crypto.AddressFromHexString(keyName)
+	if err == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	key, err := l.kc.List(ctx, &ListRequest{KeyName: keyName})
+	if err != nil {
+		return crypto.Address{}, err
+	}
+
+	if len(key.Key) == 1 {
+		return crypto.AddressFromHexString(key.Key[0].Address)
+	}
+
+	return crypto.Address{}, fmt.Errorf("`%s` is neither an address or a known key name", keyName)
 }
 
 // Returns nil if the keys instance is healthy, error otherwise
@@ -197,10 +229,6 @@ func (ms *Signer) GetPublicKey() crypto.PublicKey {
 	return ms.publicKey
 }
 
-func (ms *Signer) Sign(messsage []byte) (crypto.Signature, error) {
-	signature, err := ms.keyClient.Sign(ms.address, messsage)
-	if err != nil {
-		return crypto.Signature{}, err
-	}
-	return signature, nil
+func (ms *Signer) Sign(messsage []byte) (*crypto.Signature, error) {
+	return ms.keyClient.Sign(ms.address, messsage)
 }

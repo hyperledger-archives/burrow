@@ -21,6 +21,11 @@ import (
 //
 // ```go
 // client := client.NewHTTP("tcp://0.0.0.0:26657", "/websocket")
+// err := client.Start()
+// if err != nil {
+//   // handle error
+// }
+// defer client.Stop()
 // tx, err := client.Tx([]byte("2B8EC32BA2579B3B8606E42C06DE2F7AFA2556EF"), true)
 // ```
 //
@@ -36,17 +41,17 @@ import (
 // 			},
 // 			"Data": "YWJjZA==",
 // 			"RootHash": "2B8EC32BA2579B3B8606E42C06DE2F7AFA2556EF",
-// 			"Total": 1,
-// 			"Index": 0
+// 			"Total": "1",
+// 			"Index": "0"
 // 		},
 // 		"tx": "YWJjZA==",
 // 		"tx_result": {
 // 			"log": "",
 // 			"data": "",
-// 			"code": 0
+// 			"code": "0"
 // 		},
-// 		"index": 0,
-// 		"height": 52,
+// 		"index": "0",
+// 		"height": "52",
 //		"hash": "2B8EC32BA2579B3B8606E42C06DE2F7AFA2556EF"
 // 	},
 // 	"id": "",
@@ -115,6 +120,11 @@ func Tx(hash []byte, prove bool) (*ctypes.ResultTx, error) {
 //
 // ```go
 // client := client.NewHTTP("tcp://0.0.0.0:26657", "/websocket")
+// err := client.Start()
+// if err != nil {
+//   // handle error
+// }
+// defer client.Stop()
 // q, err := tmquery.New("account.owner='Ivan'")
 // tx, err := client.TxSearch(q, true)
 // ```
@@ -140,17 +150,17 @@ func Tx(hash []byte, prove bool) (*ctypes.ResultTx, error) {
 //           },
 //           "Data": "mvZHHa7HhZ4aRT0xMDA=",
 //           "RootHash": "F6541223AA46E428CB1070E9840D2C3DF3B6D776",
-//           "Total": 32,
-//           "Index": 31
+//           "Total": "32",
+//           "Index": "31"
 //         },
 //         "tx": "mvZHHa7HhZ4aRT0xMDA=",
 //         "tx_result": {},
-//         "index": 31,
-//         "height": 12,
+//         "index": "31",
+//         "height": "12",
 //         "hash": "2B8EC32BA2579B3B8606E42C06DE2F7AFA2556EF"
 //       }
 //     ],
-//     "total_count": 1
+//     "total_count": "1"
 //   }
 // }
 // ```
@@ -191,10 +201,11 @@ func TxSearch(query string, prove bool, page, perPage int) (*ctypes.ResultTxSear
 	totalCount := len(results)
 	perPage = validatePerPage(perPage)
 	page = validatePage(page, perPage, totalCount)
-	skipCount := (page - 1) * perPage
+	skipCount := validateSkipCount(page, perPage)
 
 	apiResults := make([]*ctypes.ResultTx, cmn.MinInt(perPage, totalCount-skipCount))
 	var proof types.TxProof
+	// if there's no tx in the results array, we don't need to loop through the apiResults array
 	for i := 0; i < len(apiResults); i++ {
 		r := results[skipCount+i]
 		height := r.Height

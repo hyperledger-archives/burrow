@@ -9,8 +9,10 @@ import (
 
 type Prefix []byte
 
-func NewPrefix(p string) Prefix {
-	return Prefix(p)
+func NewPrefix(bs []byte) Prefix {
+	p := make(Prefix, len(bs))
+	copy(p, bs)
+	return p
 }
 
 func (p Prefix) Key(key []byte) []byte {
@@ -19,7 +21,9 @@ func (p Prefix) Key(key []byte) []byte {
 }
 
 func (p Prefix) Suffix(key []byte) []byte {
-	return key[len(p):]
+	bs := make([]byte, len(key)-len(p))
+	copy(bs, key[len(p):])
+	return bs
 }
 
 // Get the lexicographical sibling above this prefix (i.e. the fixed length integer plus one)
@@ -50,6 +54,41 @@ func (p Prefix) Below() []byte {
 	return nil
 }
 
+func (p Prefix) CallbackIterable(source KVCallbackIterable) *prefixCallbackIterable {
+	return &prefixCallbackIterable{
+		prefix: p,
+		source: source,
+	}
+}
+
+type prefixCallbackIterable struct {
+	prefix Prefix
+	source KVCallbackIterable
+}
+
+func (pi *prefixCallbackIterable) Iterate(start, end []byte, ascending bool, fn func(key []byte, value []byte) error) error {
+	var pstart, pend []byte = pi.prefix.Key(start), nil
+
+	if start == nil {
+		// We may iterate on a key that does not start with prefix
+		pstart = pi.prefix.Below()
+	} else {
+		pstart = pi.prefix.Key(start)
+	}
+	if end == nil {
+		// Source is exclusive on end so we won't iterate over it
+		pend = pi.prefix.Above()
+	} else {
+		pend = pi.prefix.Key(end)
+	}
+	return pi.source.Iterate(pstart, pend, ascending, func(key []byte, value []byte) error {
+		if bytes.HasPrefix(key, pi.prefix) {
+			return fn(pi.prefix.Suffix(key), value)
+		}
+		return nil
+	})
+}
+
 func (p Prefix) Iterator(iteratorFn func(start, end []byte) dbm.Iterator, start, end []byte) KVIterator {
 	var pstart, pend []byte = p.Key(start), nil
 
@@ -63,35 +102,6 @@ func (p Prefix) Iterator(iteratorFn func(start, end []byte) dbm.Iterator, start,
 		end:    end,
 		prefix: p,
 		source: iteratorFn(pstart, pend),
-	}
-}
-
-func (p Prefix) ReverseIterator(iteratorFn func(start, end []byte) dbm.Iterator, start, end []byte) KVIterator {
-	// Note because of the inclusive start, exclusive end on underlying iterator
-	// To get inclusive start/end we have to handle the following:
-	// 1012 above <- does not start with prefix (but included by underlying iterator)
-	// 1011232
-	// 1011 prefix
-	// 1010111 <- does not start with prefix (but included by underlying iterator)
-	// 1010 below
-	var pstart, pend []byte
-	above := p.Above()
-	if start == nil {
-		pstart = above
-	} else {
-		pstart = p.Key(start)
-	}
-	if end == nil {
-		pend = p.Below()
-	} else {
-		pend = p.Key(end)
-	}
-	return &prefixIterator{
-		start:  start,
-		end:    end,
-		prefix: p,
-		// Skip 'above' if necessary
-		source: skipOne(iteratorFn(pstart, pend), above),
 	}
 }
 
@@ -112,7 +122,7 @@ func (pi *prefixIterable) Iterator(start, end []byte) KVIterator {
 }
 
 func (pi *prefixIterable) ReverseIterator(start, end []byte) KVIterator {
-	return pi.prefix.ReverseIterator(pi.source.ReverseIterator, start, end)
+	return pi.prefix.Iterator(pi.source.ReverseIterator, start, end)
 }
 
 func (p Prefix) Store(source KVStore) KVStore {
@@ -188,17 +198,6 @@ func (pi *prefixIterator) validate() {
 	}
 }
 
-// If the first iterator item is skipKey, then
-// skip it.
-func skipOne(iterator dbm.Iterator, skipKey []byte) dbm.Iterator {
-	if iterator.Valid() {
-		if bytes.Equal(iterator.Key(), skipKey) {
-			iterator.Next()
-		}
-	}
-	return iterator
-}
-
 type prefixKVStore struct {
 	prefix Prefix
 	source KVStore
@@ -225,5 +224,5 @@ func (ps *prefixKVStore) Iterator(start, end []byte) dbm.Iterator {
 }
 
 func (ps *prefixKVStore) ReverseIterator(start, end []byte) dbm.Iterator {
-	return ps.prefix.ReverseIterator(ps.source.ReverseIterator, start, end)
+	return ps.prefix.Iterator(ps.source.ReverseIterator, start, end)
 }

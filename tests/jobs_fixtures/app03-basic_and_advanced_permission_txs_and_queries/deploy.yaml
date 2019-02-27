@@ -11,26 +11,26 @@ jobs:
 - name: permTest1
   permission:
       action: setBase
-      target: $addr2
+      target: $key2
       permission: $perm
       value: "true"
 
 - name: permTest2
   permission:
       action: unsetBase
-      target: $addr2
+      target: $key2
       permission: $perm
 
 - name: permTest3
   permission:
       action: addRole
-      target: $addr2
+      target: $key2
       role: $role
 
 - name: permTest4
   permission:
       action: removeRole
-      target: $addr2
+      target: $key2
       role: $role
 
 - name: permTest5
@@ -41,7 +41,7 @@ jobs:
 
 - name: queryPerm1
   query-account:
-      account: $addr2
+      account: $key2
       field: permissions.roles
 
 - name: assertPerm1
@@ -52,7 +52,7 @@ jobs:
 
 - name: queryPerm2
   query-account:
-      account: $addr2
+      account: $key2
       field: permissions.base
 
 - name: assertPerm2

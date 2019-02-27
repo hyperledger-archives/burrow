@@ -52,10 +52,10 @@ func (mkc *KeyClient) NewKey(name string) crypto.Address {
 	return key.Address
 }
 
-func (mkc *KeyClient) Sign(signAddress crypto.Address, message []byte) (crypto.Signature, error) {
+func (mkc *KeyClient) Sign(signAddress crypto.Address, message []byte) (*crypto.Signature, error) {
 	key := mkc.knownKeys[signAddress]
 	if key == nil {
-		return crypto.Signature{}, fmt.Errorf("unknown address (%s)", signAddress)
+		return nil, fmt.Errorf("unknown address (%s)", signAddress)
 	}
 	return key.Sign(message)
 }
@@ -70,6 +70,16 @@ func (mkc *KeyClient) PublicKey(address crypto.Address) (crypto.PublicKey, error
 
 func (mkc *KeyClient) Generate(keyName string, curve crypto.CurveType) (crypto.Address, error) {
 	return mkc.NewKey(keyName), nil
+}
+
+func (mkc *KeyClient) GetAddressForKeyName(keyName string) (crypto.Address, error) {
+	for _, m := range mkc.knownKeys {
+		if m.Name == keyName {
+			return m.Address, nil
+		}
+	}
+
+	return crypto.Address{}, nil
 }
 
 func (mkc *KeyClient) HealthCheck() error {

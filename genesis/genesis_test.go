@@ -42,8 +42,8 @@ func accountMap(names ...string) map[string]*acm.Account {
 	return accounts
 }
 
-func validatorMap(names ...string) map[string]validator.Validator {
-	validators := make(map[string]validator.Validator, len(names))
+func validatorMap(names ...string) map[string]*validator.Validator {
+	validators := make(map[string]*validator.Validator, len(names))
 	for _, name := range names {
 		acc := accountFromName(name)
 		validators[name] = validator.FromAccount(acc, acc.Balance)

@@ -35,8 +35,7 @@ import (
 )
 
 const (
-	BlockingTimeout = 1000 * time.Second
-	//BlockingTimeout     = 10 * time.Second
+	BlockingTimeout     = 10 * time.Second
 	SubscribeBufferSize = 10
 )
 
@@ -87,13 +86,13 @@ func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelop
 		// We do not want to hold the lock with a defer so we must
 		return nil, err
 	}
+	defer trans.Subscribable.UnsubscribeAll(context.Background(), subID)
 	// Push Tx to mempool
 	checkTxReceipt, err := trans.CheckTxSync(txEnv)
 	unlock()
 	if err != nil {
 		return nil, err
 	}
-	defer trans.Subscribable.UnsubscribeAll(context.Background(), subID)
 	// Wait for all responses
 	timer := time.NewTimer(BlockingTimeout)
 	defer timer.Stop()

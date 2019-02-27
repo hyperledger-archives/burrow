@@ -95,3 +95,17 @@ func TestExplicitFields(t *testing.T) {
 	_, err = ReflectTags(&tt, "Foo", "Address", "Balloons")
 	require.Error(t, err)
 }
+
+func TestReflectTagged_nil(t *testing.T) {
+	type testStruct struct {
+		Foo string
+	}
+
+	var ts *testStruct
+
+	rf, err := ReflectTags(ts)
+	require.NoError(t, err)
+	value, ok := rf.Get("Foo")
+	assert.False(t, ok)
+	assert.Equal(t, "", value)
+}

@@ -11,10 +11,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, client *def.Client) (string, []*abi.Variable, error) {
+func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, script *def.Playbook, client *def.Client) (string, []*abi.Variable, error) {
 	var queryDataArray []string
 	var err error
-	query.Function, queryDataArray, err = util.PreProcessInputData(query.Function, query.Data, do, client, false)
+	query.Function, queryDataArray, err = util.PreProcessInputData(query.Function, query.Data, do, script, client, false)
 	if err != nil {
 		return "", nil, err
 	}
@@ -23,11 +23,11 @@ func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, client *def.
 	var data string
 	var packedBytes []byte
 	if query.Bin != "" {
-		packedBytes, err = abi.ReadAbiFormulateCallFile(query.Bin, do.BinPath, query.Function, queryDataArray)
+		packedBytes, _, err = abi.EncodeFunctionCallFromFile(query.Bin, do.BinPath, query.Function, queryDataArray)
 		data = hex.EncodeToString(packedBytes)
 	}
 	if query.Bin == "" || err != nil {
-		packedBytes, err = abi.ReadAbiFormulateCallFile(query.Destination, do.BinPath, query.Function, queryDataArray)
+		packedBytes, _, err = abi.EncodeFunctionCallFromFile(query.Destination, do.BinPath, query.Function, queryDataArray)
 		data = hex.EncodeToString(packedBytes)
 	}
 	if err != nil {
@@ -49,11 +49,11 @@ func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, client *def.
 	log.WithField("res", txe.Result.Return).Debug("Decoding Raw Result")
 	if query.Bin != "" {
 		log.WithField("abi", query.Bin).Debug()
-		query.Variables, err = abi.ReadAndDecodeContractReturn(query.Bin, do.BinPath, query.Function, txe.Result.Return)
+		query.Variables, err = abi.DecodeFunctionReturnFromFile(query.Bin, do.BinPath, query.Function, txe.Result.Return)
 	}
 	if query.Bin == "" || err != nil {
 		log.WithField("abi", query.Destination).Debug()
-		query.Variables, err = abi.ReadAndDecodeContractReturn(query.Destination, do.BinPath, query.Function, txe.Result.Return)
+		query.Variables, err = abi.DecodeFunctionReturnFromFile(query.Destination, do.BinPath, query.Function, txe.Result.Return)
 	}
 	if err != nil {
 		return "", nil, err

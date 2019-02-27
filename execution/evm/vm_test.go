@@ -19,7 +19,12 @@ import (
 	"testing"
 	"time"
 
+	"fmt"
+
+	"github.com/hyperledger/burrow/acm/acmstate"
+
 	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/binary"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
@@ -28,6 +33,7 @@ import (
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
+	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	hex "github.com/tmthrgd/go-hex"
@@ -38,6 +44,19 @@ import (
 //var logger, _, _ = lifecycle.NewStdErrLogger()
 //
 var logger = logging.NewNoopLogger()
+
+type testState struct {
+	*State
+	BlockHashProvider func(blockNumber uint64) (Word256, error)
+}
+
+func NewTestState(st acmstate.ReaderWriter, blockHashGetter func(uint64) []byte) *testState {
+	evmState := NewState(st, blockHashGetter)
+	return &testState{
+		State:             evmState,
+		BlockHashProvider: evmState.GetBlockHash,
+	}
+}
 
 func newAppState() *FakeAppState {
 	fas := &FakeAppState{
@@ -54,7 +73,6 @@ func newAppState() *FakeAppState {
 func newParams() Params {
 	return Params{
 		BlockHeight: 0,
-		BlockHash:   Zero256,
 		BlockTime:   0,
 		GasLimit:    0,
 	}
@@ -82,7 +100,7 @@ func makeAccountWithCode(st Interface, name string, code []byte) crypto.Address 
 
 // Runs a basic loop
 func TestVM(t *testing.T) {
-	cache := NewState(newAppState())
+	cache := NewState(newAppState(), blockHashGetter)
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	// Create accounts
@@ -104,7 +122,7 @@ func TestVM(t *testing.T) {
 }
 
 func TestSHL(t *testing.T) {
-	cache := NewState(newAppState())
+	cache := NewState(newAppState(), blockHashGetter)
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 	account1 := newAccount(cache, "1")
 	account2 := newAccount(cache, "101")
@@ -254,7 +272,7 @@ func TestSHL(t *testing.T) {
 }
 
 func TestSHR(t *testing.T) {
-	cache := NewState(newAppState())
+	cache := NewState(newAppState(), blockHashGetter)
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 	account1 := newAccount(cache, "1")
 	account2 := newAccount(cache, "101")
@@ -408,7 +426,7 @@ func TestSHR(t *testing.T) {
 }
 
 func TestSAR(t *testing.T) {
-	cache := NewState(newAppState())
+	cache := NewState(newAppState(), blockHashGetter)
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 	account1 := newAccount(cache, "1")
 	account2 := newAccount(cache, "101")
@@ -581,7 +599,7 @@ func TestSAR(t *testing.T) {
 
 //Test attempt to jump to bad destination (position 16)
 func TestJumpErr(t *testing.T) {
-	cache := NewState(newAppState())
+	cache := NewState(newAppState(), blockHashGetter)
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	// Create accounts
@@ -612,7 +630,7 @@ func TestJumpErr(t *testing.T) {
 // Tests the code for a subcurrency contract compiled by serpent
 func TestSubcurrency(t *testing.T) {
 	st := newAppState()
-	cache := NewState(st)
+	cache := NewState(st, blockHashGetter)
 	// Create accounts
 	account1 := newAccount(cache, "1, 2, 3")
 	account2 := newAccount(cache, "3, 2, 1")
@@ -648,7 +666,7 @@ func TestSubcurrency(t *testing.T) {
 //This test case is taken from EIP-140 (https://github.com/ethereum/EIPs/blob/master/EIPS/eip-140.md);
 //it is meant to test the implementation of the REVERT opcode
 func TestRevert(t *testing.T) {
-	cache := NewState(newAppState())
+	cache := NewState(newAppState(), blockHashGetter)
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	// Create accounts
@@ -680,7 +698,7 @@ func TestRevert(t *testing.T) {
 
 // Test sending tokens from a contract to another account
 func TestSendCall(t *testing.T) {
-	cache := NewState(newAppState())
+	cache := NewState(newAppState(), blockHashGetter)
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	// Create accounts
@@ -735,7 +753,7 @@ func TestStaticCallReadOnly(t *testing.T) {
 		// TODO: CREATE2
 
 		t.Logf("Testing state-modifying bytecode: %v", illegalContractCode.MustTokens())
-		cache := NewState(newAppState())
+		cache := NewState(newAppState(), blockHashGetter)
 		ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger, DebugOpcodes)
 		callee := makeAccountWithCode(cache, "callee", MustSplice(illegalContractCode, PUSH1, 0x1, return1()))
 
@@ -758,7 +776,7 @@ func TestStaticCallWithValue(t *testing.T) {
 	value := byte(0x69)
 	var inOff, inSize, retOff, retSize byte
 
-	cache := NewState(newAppState())
+	cache := NewState(newAppState(), blockHashGetter)
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	finalAddress := makeAccountWithCode(cache, "final", MustSplice(PUSH1, int64(20), return1()))
@@ -784,7 +802,7 @@ func TestStaticCallNoValue(t *testing.T) {
 	var inOff, inSize, retOff, retSize byte
 
 	// this final test just checks that STATICCALL actually works
-	cache := NewState(newAppState())
+	cache := NewState(newAppState(), blockHashGetter)
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	finalAddress := makeAccountWithCode(cache, "final", MustSplice(PUSH1, int64(20), return1()))
@@ -805,13 +823,51 @@ func TestStaticCallNoValue(t *testing.T) {
 	require.Len(t, exCalls, 0)
 }
 
+// Test evm account creation
+func TestCreate(t *testing.T) {
+	st := newAppState()
+	cache := NewState(st, blockHashGetter)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+
+	callee := makeAccountWithCode(cache, "callee", MustSplice(PUSH1, 0x0, PUSH1, 0x0, PUSH1, 0x0, CREATE, PUSH1, 0, MSTORE, PUSH1, 20, PUSH1, 12, RETURN))
+	// ensure pre-generated address has same sequence number
+	nonce := make([]byte, txs.HashLength+uint64Length)
+	copy(nonce, ourVm.tx.Hash())
+	PutUint64BE(nonce[txs.HashLength:], ourVm.sequence+1)
+	addr := crypto.NewContractAddress(callee, nonce)
+
+	var gas uint64 = 100000
+	caller := newAccount(cache, "1, 2, 3")
+	output, err := ourVm.Call(cache, NewNoopEventSink(), caller, callee, cache.GetCode(callee), []byte{}, 0, &gas)
+	assert.NoError(t, err, "Should return new address without error")
+	assert.Equal(t, addr.Bytes(), output, "Addresses should be equal")
+}
+
+// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1014.md
+func TestCreate2(t *testing.T) {
+	st := newAppState()
+	cache := NewState(st, blockHashGetter)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+
+	// salt of 0s
+	var salt [32]byte
+	callee := makeAccountWithCode(cache, "callee", MustSplice(PUSH1, 0x0, PUSH1, 0x0, PUSH1, 0x0, PUSH32, salt[:], CREATE2, PUSH1, 0, MSTORE, PUSH1, 20, PUSH1, 12, RETURN))
+	addr := crypto.NewContractAddress2(callee, salt, cache.GetCode(callee))
+
+	var gas uint64 = 100000
+	caller := newAccount(cache, "1, 2, 3")
+	output, err := ourVm.Call(cache, NewNoopEventSink(), caller, callee, cache.GetCode(callee), []byte{}, 0, &gas)
+	assert.NoError(t, err, "Should return new address without error")
+	assert.Equal(t, addr.Bytes(), output, "Returned value not equal to create2 address")
+}
+
 // This test was introduced to cover an issues exposed in our handling of the
 // gas limit passed from caller to callee on various forms of CALL.
 // The idea of this test is to implement a simple DelegateCall in EVM code
 // We first run the DELEGATECALL with _just_ enough gas expecting a simple return,
 // and then run it with 1 gas unit less, expecting a failure
 func TestDelegateCallGas(t *testing.T) {
-	cache := NewState(newAppState())
+	cache := NewState(newAppState(), blockHashGetter)
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	inOff := 0
@@ -864,7 +920,7 @@ func TestDelegateCallGas(t *testing.T) {
 }
 
 func TestMemoryBounds(t *testing.T) {
-	cache := NewState(newAppState())
+	cache := NewState(newAppState(), blockHashGetter)
 	memoryProvider := func(err errors.Sink) Memory {
 		return NewDynamicMemory(1024, 2048, err)
 	}
@@ -911,7 +967,7 @@ func TestMemoryBounds(t *testing.T) {
 
 func TestMsgSender(t *testing.T) {
 	st := newAppState()
-	cache := NewState(st)
+	cache := NewState(st, blockHashGetter)
 	account1 := newAccount(cache, "1, 2, 3")
 	account2 := newAccount(cache, "3, 2, 1")
 
@@ -920,7 +976,7 @@ func TestMsgSender(t *testing.T) {
 	var gas uint64 = 100000
 
 	/*
-			pragma solidity ^0.4.0;
+			pragma solidity ^0.5.4;
 
 			contract SimpleStorage {
 		                function get() public constant returns (address) {
@@ -956,7 +1012,7 @@ func TestMsgSender(t *testing.T) {
 }
 
 func TestInvalid(t *testing.T) {
-	cache := NewState(newAppState())
+	cache := NewState(newAppState(), blockHashGetter)
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	// Create accounts
@@ -975,7 +1031,7 @@ func TestInvalid(t *testing.T) {
 }
 
 func TestReturnDataSize(t *testing.T) {
-	cache := NewState(newAppState())
+	cache := NewState(newAppState(), blockHashGetter)
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	accountName := "account2addresstests"
@@ -1013,7 +1069,7 @@ func TestReturnDataSize(t *testing.T) {
 }
 
 func TestReturnDataCopy(t *testing.T) {
-	cache := NewState(newAppState())
+	cache := NewState(newAppState(), blockHashGetter)
 	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
 
 	accountName := "account2addresstests"
@@ -1048,7 +1104,7 @@ func TestReturnDataCopy(t *testing.T) {
 }
 
 func TestCallNonExistent(t *testing.T) {
-	cache := NewState(newAppState())
+	cache := NewState(newAppState(), blockHashGetter)
 	account1 := newAccount(cache, "1")
 	cache.AddToBalance(account1, 10000)
 	unknownAddress := newAddress("nonexistent")
@@ -1059,6 +1115,65 @@ func TestCallNonExistent(t *testing.T) {
 	assertErrorCode(t, errors.ErrorCodeIllegalWrite, err,
 		"Should not be able to call account before creating it (even before initialising)")
 	assert.Equal(t, uint64(0), cache.GetBalance(unknownAddress))
+}
+
+func (ts testState) GetBlockHash(blockNumber uint64) (binary.Word256, error) {
+	return ts.BlockHashProvider(blockNumber)
+}
+
+func TestGetBlockHash(t *testing.T) {
+	cache := NewTestState(newAppState(), blockHashGetter)
+	params := newParams()
+
+	// Create accounts
+	account1 := newAccount(cache, "1")
+	account2 := newAccount(cache, "101")
+
+	var gas uint64 = 100000
+
+	// Non existing block
+	params.BlockHeight = 1
+	ourVm := NewVM(params, crypto.ZeroAddress, nil, logger)
+	bytecode := MustSplice(PUSH1, 2, BLOCKHASH)
+	_, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
+	assertErrorCode(t, errors.ErrorCodeInvalidBlockNumber, err, "attempt to get block hash of a non-existent block")
+
+	// Excessive old block
+	cache.error = nil
+	params.BlockHeight = 258
+	ourVm = NewVM(params, crypto.ZeroAddress, nil, logger)
+	bytecode = MustSplice(PUSH1, 1, BLOCKHASH)
+
+	_, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
+	assertErrorCode(t, errors.ErrorCodeBlockNumberOutOfRange, err, "attempt to get block hash of a block outside of allowed range")
+
+	// Get block hash
+	cache.error = nil
+	params.BlockHeight = 257
+	cache.BlockHashProvider = func(blockNumber uint64) (Word256, error) {
+		// Should be just within range 257 - 2 = 255 (and the first and last block count in that range so add one = 256)
+		assert.Equal(t, uint64(2), blockNumber)
+		return One256, nil
+	}
+	ourVm = NewVM(params, crypto.ZeroAddress, nil, logger)
+	bytecode = MustSplice(PUSH1, 2, BLOCKHASH, return1())
+
+	output, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
+	assert.NoError(t, err)
+	assert.Equal(t, One256, LeftPadWord256(output))
+
+	// Get block hash fail
+	cache.error = nil
+	params.BlockHeight = 3
+	cache.BlockHashProvider = func(blockNumber uint64) (Word256, error) {
+		assert.Equal(t, uint64(1), blockNumber)
+		return Zero256, fmt.Errorf("unknown block %v", blockNumber)
+	}
+	ourVm = NewVM(params, crypto.ZeroAddress, nil, logger)
+	bytecode = MustSplice(PUSH1, 1, BLOCKHASH, return1())
+
+	_, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
+	assertErrorCode(t, errors.ErrorCodeInvalidBlockNumber, err, "attempt to get block hash failed")
 }
 
 // These code segment helpers exercise the MSTORE MLOAD MSTORE cycle to test
@@ -1222,14 +1337,14 @@ func TestHasPermission(t *testing.T) {
 	}
 	require.NoError(t, st.UpdateAccount(acc))
 	// Ensure we are falling through to global permissions on those bits not set
-	cache := NewState(st)
+	cache := NewState(st, blockHashGetter)
 	assert.True(t, HasPermission(cache, acc.Address, PermFlagFromString(t, "100000001000110")))
 	require.NoError(t, cache.Error())
 }
 
 func TestDataStackOverflow(t *testing.T) {
 	st := newAppState()
-	cache := NewState(st)
+	cache := NewState(st, blockHashGetter)
 	account1 := newAccount(cache, "1, 2, 3")
 	account2 := newAccount(cache, "3, 2, 1")
 
@@ -1240,7 +1355,7 @@ func TestDataStackOverflow(t *testing.T) {
 	var gas uint64 = 100000
 
 	/*
-		pragma solidity ^0.4.0;
+		pragma solidity ^0.5.4;
 
 		contract SimpleStorage {
 			function get() public constant returns (address) {
@@ -1272,7 +1387,7 @@ func TestDataStackOverflow(t *testing.T) {
 
 func TestCallStackOverflow(t *testing.T) {
 	st := newAppState()
-	cache := NewState(st)
+	cache := NewState(st, blockHashGetter)
 	account1 := newAccount(cache, "1, 2, 3")
 	account2 := newAccount(cache, "3, 2, 1")
 
@@ -1285,7 +1400,7 @@ func TestCallStackOverflow(t *testing.T) {
 	ourVm := NewVM(params, crypto.ZeroAddress, nil, logger)
 
 	/*
-		pragma solidity ^0.4.0;
+		pragma solidity ^0.5.4;
 
 		contract A {
 		   function callMeBack() public {
@@ -1332,6 +1447,35 @@ func TestCallStackOverflow(t *testing.T) {
 	assert.Equal(t, params.CallStackMaxDepth, deepestErr.StackDepth)
 	assert.Equal(t, account2, deepestErr.Callee)
 	assert.Equal(t, account1, deepestErr.Caller)
+}
+
+func TestExtCodeHash(t *testing.T) {
+	cache := NewState(newAppState(), blockHashGetter)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+	account1 := newAccount(cache, "1")
+	account2 := newAccount(cache, "101")
+
+	var gas uint64 = 100000
+
+	// 1. The EXTCODEHASH of the account without code is c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
+	//    what is the keccack256 hash of empty data.
+	bytecode := MustSplice(PUSH20, account1, EXTCODEHASH, return1())
+	output, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
+	assert.NoError(t, err)
+	assert.Equal(t, hex.MustDecodeString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"), output)
+
+	// 2. The EXTCODEHASH of non-existent account is 0.
+	bytecode = MustSplice(PUSH1, 0x03, EXTCODEHASH, return1())
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
+	assert.NoError(t, err)
+	assert.Equal(t, LeftPadBytes([]uint8([]byte{0x00}), 32), output)
+
+	// 3. EXTCODEHASH is the hash of an account code
+	acc := makeAccountWithCode(cache, "trustedCode", MustSplice(BLOCKHASH, return1()))
+	bytecode = MustSplice(PUSH20, acc, EXTCODEHASH, return1())
+	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
+	assert.NoError(t, err)
+	assert.Equal(t, hex.MustDecodeString("010da270094b5199d3e54f89afe4c66cdd658dd8111a41998714227e14e171bd"), output)
 }
 
 func BasePermissionsFromStrings(t *testing.T, perms, setBit string) permission.BasePermissions {

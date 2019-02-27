@@ -48,12 +48,12 @@ func (acc *Account) GetAddress() crypto.Address {
 var cdc = amino.NewCodec()
 
 func (acc *Account) Encode() ([]byte, error) {
-	return cdc.MarshalBinary(acc)
+	return cdc.MarshalBinaryBare(acc)
 }
 
 func Decode(accBytes []byte) (*Account, error) {
 	ca := new(Account)
-	err := cdc.UnmarshalBinary(accBytes, ca)
+	err := cdc.UnmarshalBinaryBare(accBytes, ca)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,11 @@ func (acc Account) String() string {
 func (acc *Account) Tagged() query.Tagged {
 	return &TaggedAccount{
 		Account: acc,
-		Tagged:  query.MustReflectTags(acc),
+		Tagged: query.MergeTags(query.MustReflectTags(acc, "Address", "Balance", "Sequence", "Code"),
+			query.TagMap{
+				"Permissions": acc.Permissions.Base.ResultantPerms(),
+				"Roles":       acc.Permissions.Roles,
+			}),
 	}
 }
 

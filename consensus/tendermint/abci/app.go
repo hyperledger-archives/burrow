@@ -19,6 +19,15 @@ import (
 	abciTypes "github.com/tendermint/tendermint/abci/types"
 )
 
+type Validators interface {
+	validator.History
+}
+
+const (
+	TendermintValidatorDelayInBlocks = 2
+	BurrowValidatorDelayInBlocks     = 1
+)
+
 type App struct {
 	// Node information to return in Info
 	nodeInfo string
@@ -26,6 +35,7 @@ type App struct {
 	blockchain              *bcm.Blockchain
 	checker                 execution.BatchExecutor
 	committer               execution.BatchCommitter
+	validators              Validators
 	checkTx                 func(txBytes []byte) abciTypes.ResponseCheckTx
 	deliverTx               func(txBytes []byte) abciTypes.ResponseCheckTx
 	mempoolLocker           sync.Locker
@@ -43,19 +53,20 @@ type PeersFilterProvider func() (authorizedPeersID []string, authorizedPeersAddr
 
 var _ abciTypes.Application = &App{}
 
-func NewApp(nodeInfo string, blockchain *bcm.Blockchain, checker execution.BatchExecutor, committer execution.BatchCommitter,
-	txDecoder txs.Decoder, authorizedPeersProvider PeersFilterProvider, panicFunc func(error), logger *logging.Logger) *App {
+func NewApp(nodeInfo string, blockchain *bcm.Blockchain, validators Validators, checker execution.BatchExecutor,
+	committer execution.BatchCommitter, txDecoder txs.Decoder, authorizedPeersProvider PeersFilterProvider,
+	panicFunc func(error), logger *logging.Logger) *App {
 	return &App{
 		nodeInfo:                nodeInfo,
 		blockchain:              blockchain,
+		validators:              validators,
 		checker:                 checker,
 		committer:               committer,
 		checkTx:                 txExecutor("CheckTx", checker, txDecoder, logger.WithScope("CheckTx")),
 		deliverTx:               txExecutor("DeliverTx", committer, txDecoder, logger.WithScope("DeliverTx")),
 		authorizedPeersProvider: authorizedPeersProvider,
 		panicFunc:               panicFunc,
-		logger: logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App",
-			"node_info", nodeInfo),
+		logger:                  logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App", "node_info", nodeInfo),
 	}
 }
 
@@ -103,13 +114,18 @@ func (app *App) InitChain(chain abciTypes.RequestInitChain) (respInitChain abciT
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/InitChain: %v\n%s", r, debug.Stack()))
 		}
 	}()
-	if len(chain.Validators) != app.blockchain.NumValidators() {
+	currentSet := validator.NewTrimSet()
+	err := validator.Write(currentSet, app.validators.Validators(0))
+	if err != nil {
+		panic(fmt.Errorf("could not build current validator set: %v", err))
+	}
+	if len(chain.Validators) != currentSet.Size() {
 		panic(fmt.Errorf("Tendermint passes %d validators to InitChain but Burrow's Blockchain has %d",
-			len(chain.Validators), app.blockchain.NumValidators()))
+			len(chain.Validators), currentSet.Size()))
 	}
 	for _, v := range chain.Validators {
 		pk, err := crypto.PublicKeyFromABCIPubKey(v.GetPubKey())
-		err = app.checkValidatorMatches(app.blockchain.Validators(), abciTypes.Validator{Address: pk.GetAddress().Bytes(), Power: v.Power})
+		err = app.checkValidatorMatches(currentSet, abciTypes.Validator{Address: pk.GetAddress().Bytes(), Power: v.Power})
 		if err != nil {
 			panic(err)
 		}
@@ -127,11 +143,16 @@ func (app *App) BeginBlock(block abciTypes.RequestBeginBlock) (respBeginBlock ab
 	}()
 	if block.Header.Height > 1 {
 		var err error
-		// Tendermint runs a block behind with the validators passed in here
-		previousValidators := app.blockchain.PreviousValidators(2)
-		if len(block.LastCommitInfo.Votes) != previousValidators.Count() {
-			err = fmt.Errorf("Tendermint passes %d validators to BeginBlock but Burrow's Blockchain has %d/ %v",
-				len(block.LastCommitInfo.Votes), previousValidators.Count(), previousValidators.String())
+		previousValidators := validator.NewTrimSet()
+		// Tendermint runs two blocks behind plus we are updating in end block validators updated last round
+		err = validator.Write(previousValidators,
+			app.validators.Validators(BurrowValidatorDelayInBlocks+TendermintValidatorDelayInBlocks))
+		if err != nil {
+			panic(fmt.Errorf("could not build current validator set: %v", err))
+		}
+		if len(block.LastCommitInfo.Votes) != previousValidators.Size() {
+			err = fmt.Errorf("Tendermint passes %d validators to BeginBlock but Burrow's has %d:\n %v",
+				len(block.LastCommitInfo.Votes), previousValidators.Size(), previousValidators.String())
 			panic(err)
 		}
 		for _, v := range block.LastCommitInfo.Votes {
@@ -149,7 +170,10 @@ func (app *App) checkValidatorMatches(ours validator.Reader, v abciTypes.Validat
 	if err != nil {
 		return err
 	}
-	power := ours.Power(address)
+	power, err := ours.Power(address)
+	if err != nil {
+		return err
+	}
 	if power.Cmp(big.NewInt(v.Power)) != 0 {
 		return fmt.Errorf("validator %v has power %d from Tendermint but power %d from Burrow",
 			address, v.Power, power)
@@ -185,7 +209,8 @@ func (app *App) DeliverTx(txBytes []byte) abciTypes.ResponseDeliverTx {
 	}
 }
 
-func txExecutor(name string, executor execution.BatchExecutor, txDecoder txs.Decoder, logger *logging.Logger) func(txBytes []byte) abciTypes.ResponseCheckTx {
+func txExecutor(name string, executor execution.BatchExecutor, txDecoder txs.Decoder,
+	logger *logging.Logger) func(txBytes []byte) abciTypes.ResponseCheckTx {
 	logf := func(format string, args ...interface{}) string {
 		return fmt.Sprintf("%s: "+format, append([]interface{}{name}, args...)...)
 	}
@@ -233,7 +258,12 @@ func txExecutor(name string, executor execution.BatchExecutor, txDecoder txs.Dec
 
 func (app *App) EndBlock(reqEndBlock abciTypes.RequestEndBlock) abciTypes.ResponseEndBlock {
 	var validatorUpdates []abciTypes.ValidatorUpdate
-	app.blockchain.PendingValidators().Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			app.panicFunc(fmt.Errorf("panic occurred in abci.App/EndBlock: %v\n%s", r, debug.Stack()))
+		}
+	}()
+	err := app.validators.ValidatorChanges(BurrowValidatorDelayInBlocks).IterateValidators(func(id crypto.Addressable, power *big.Int) error {
 		app.logger.InfoMsg("Updating validator power", "validator_address", id.GetAddress(),
 			"new_power", power)
 		validatorUpdates = append(validatorUpdates, abciTypes.ValidatorUpdate{
@@ -241,8 +271,11 @@ func (app *App) EndBlock(reqEndBlock abciTypes.RequestEndBlock) abciTypes.Respon
 			// Must ensure power fits in an int64 during execution
 			Power: power.Int64(),
 		})
-		return
+		return nil
 	})
+	if err != nil {
+		panic(err)
+	}
 	return abciTypes.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,
 	}
@@ -290,7 +323,7 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 		}
 	}()
 
-	appHash, err := app.committer.Commit(app.block.Hash, blockTime, &app.block.Header)
+	appHash, err := app.committer.Commit(&app.block.Header)
 	if err != nil {
 		panic(errors.Wrap(err, "Could not commit transactions in block to execution state"))
 	}
@@ -298,6 +331,13 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 	if err != nil {
 		panic(errors.Wrap(err, "could not reset check cache during commit"))
 	}
+	// Commit to our blockchain state which will checkpoint the previous app hash by saving it to the database
+	// (we know the previous app hash is safely committed because we are about to commit the next)
+	err = app.blockchain.CommitBlock(blockTime, app.block.Hash, appHash)
+	if err != nil {
+		panic(fmt.Errorf("could not commit block to blockchain state: %v", err))
+	}
+	app.logger.InfoMsg("Committed block")
 
 	return abciTypes.ResponseCommit{
 		Data: appHash,

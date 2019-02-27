@@ -3,7 +3,6 @@ package abi
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -125,12 +124,7 @@ func TestPacker(t *testing.T) {
 		},
 	} {
 		t.Log(test.args)
-		fmt.Println(test.name)
-		/*abiStruct, err := JSON(strings.NewReader(test.ABI))
-		if err != nil {
-			t.Errorf("Incorrect ABI: ", err)
-		}*/
-		if output, err := Packer(test.ABI, test.name, test.args...); err != nil {
+		if output, _, err := EncodeFunctionCall(test.ABI, test.name, test.args...); err != nil {
 			t.Error("Unexpected error in ", test.name, ": ", err)
 		} else {
 			if !bytes.Equal(output[4:], test.expectedOutput) {
@@ -310,7 +304,7 @@ func TestUnpackerString(t *testing.T) {
 	} {
 		//t.Log(test.name)
 		t.Log(test.packed)
-		output, err := Unpacker(test.abi, test.name, test.packed)
+		output, err := unpacker(test.abi, test.name, test.packed)
 		if err != nil {
 			t.Errorf("Unpacker failed: %v", err)
 		}

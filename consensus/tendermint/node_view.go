@@ -25,6 +25,7 @@ func NewNodeView(tmNode *Node, txDecoder txs.Decoder, runID simpleuuid.UUID) (*N
 	if err != nil {
 		return nil, err
 	}
+	tmNode.BlockStore()
 	return &NodeView{
 		validatorPublicKey: publicKey,
 		tmNode:             tmNode,
@@ -38,19 +39,15 @@ func (nv *NodeView) ValidatorPublicKey() crypto.PublicKey {
 }
 
 func (nv *NodeView) NodeInfo() *NodeInfo {
-	return NewNodeInfo(nv.tmNode.NodeInfo())
-}
-
-func (nv *NodeView) IsListening() bool {
-	return nv.tmNode.Switch().IsListening()
+	ni, ok := nv.tmNode.NodeInfo().(p2p.DefaultNodeInfo)
+	if ok {
+		return NewNodeInfo(ni)
+	}
+	return &NodeInfo{}
 }
 
 func (nv *NodeView) IsFastSyncing() bool {
 	return nv.tmNode.ConsensusReactor().FastSync()
-}
-
-func (nv *NodeView) Listeners() []p2p.Listener {
-	return nv.tmNode.Switch().Listeners()
 }
 
 func (nv *NodeView) Peers() p2p.IPeerSet {

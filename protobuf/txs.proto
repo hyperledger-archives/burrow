@@ -31,7 +31,7 @@ message Envelope {
 message Signatory {
     bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address"];
     crypto.PublicKey PublicKey = 2;
-    bytes Signature = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Signature", (gogoproto.nullable) = false];
+    crypto.Signature Signature = 4;
 }
 
 // BroadcastTx or Transaction receipt

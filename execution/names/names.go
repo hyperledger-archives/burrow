@@ -40,7 +40,7 @@ const (
 var cdc = amino.NewCodec()
 
 func (e *Entry) Encode() ([]byte, error) {
-	return cdc.MarshalBinary(e)
+	return cdc.MarshalBinaryBare(e)
 }
 
 func (e *Entry) String() string {
@@ -61,7 +61,7 @@ func (e *Entry) Tagged() *TaggedEntry {
 
 func DecodeEntry(entryBytes []byte) (*Entry, error) {
 	entry := new(Entry)
-	err := cdc.UnmarshalBinary(entryBytes, entry)
+	err := cdc.UnmarshalBinaryBare(entryBytes, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ type ReaderWriter interface {
 }
 
 type Iterable interface {
-	IterateNames(consumer func(*Entry) (stop bool)) (stopped bool, err error)
+	IterateNames(consumer func(*Entry) error) (err error)
 }
 
 type IterableReader interface {

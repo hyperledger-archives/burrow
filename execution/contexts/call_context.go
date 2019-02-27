@@ -6,9 +6,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
-	"github.com/hyperledger/burrow/bcm"
-	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -21,9 +19,9 @@ import (
 const GasLimit = uint64(1000000)
 
 type CallContext struct {
-	Tip         bcm.BlockchainInfo
-	StateWriter state.ReaderWriter
+	StateWriter acmstate.ReaderWriter
 	RunCall     bool
+	Blockchain  Blockchain
 	VMOptions   []func(*evm.VM)
 	Logger      *logging.Logger
 	tx          *payload.CallTx
@@ -109,21 +107,11 @@ func (ctx *CallContext) Precheck() (*acm.Account, *acm.Account, error) {
 }
 
 func (ctx *CallContext) Check(inAcc *acm.Account, value uint64) error {
-	createContract := ctx.tx.Address == nil
 	// The mempool does not call txs until
 	// the proposer determines the order of txs.
 	// So mempool will skip the actual .Call(),
 	// and only deduct from the caller's balance.
 	inAcc.Balance -= value
-	if createContract {
-		// This is done by DeriveNewAccount when runCall == true
-		ctx.Logger.TraceMsg("Incrementing sequence number since creates contract",
-			"tag", "sequence",
-			"account", inAcc.Address,
-			"old_sequence", inAcc.Sequence,
-			"new_sequence", inAcc.Sequence+1)
-		inAcc.Sequence++
-	}
 	err := ctx.StateWriter.UpdateAccount(inAcc)
 	if err != nil {
 		return err
@@ -140,11 +128,10 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		callee  crypto.Address = crypto.ZeroAddress // initialized below
 		code    []byte         = nil
 		ret     []byte         = nil
-		txCache                = evm.NewState(ctx.StateWriter, state.Named("TxCache"))
+		txCache                = evm.NewState(ctx.StateWriter, ctx.Blockchain.BlockHash, acmstate.Named("TxCache"))
 		params                 = evm.Params{
-			BlockHeight: ctx.Tip.LastBlockHeight(),
-			BlockHash:   binary.LeftPadWord256(ctx.Tip.LastBlockHash()),
-			BlockTime:   ctx.Tip.LastBlockTime().Unix(),
+			BlockHeight: ctx.Blockchain.LastBlockHeight() + 1,
+			BlockTime:   ctx.Blockchain.LastBlockTime().Unix(),
 			GasLimit:    GasLimit,
 		}
 	)
@@ -152,8 +139,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 	// get or create callee
 	if createContract {
 		// We already checked for permission
-		txCache.IncSequence(caller)
-		callee = crypto.NewContractAddress(caller, txCache.GetSequence(caller))
+		callee = crypto.NewContractAddress(caller, ctx.txe.TxHash)
 		code = ctx.tx.Data
 		txCache.CreateAccount(callee)
 		ctx.Logger.TraceMsg("Creating new contract",

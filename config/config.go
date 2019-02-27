@@ -43,7 +43,7 @@ func DefaultBurrowConfig() *BurrowConfig {
 	}
 }
 
-func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
+func (conf *BurrowConfig) Kernel(ctx context.Context, restoreDump string) (*core.Kernel, error) {
 	if conf.GenesisDoc == nil {
 		return nil, fmt.Errorf("no GenesisDoc defined in config, cannot make Kernel")
 	}
@@ -85,7 +85,7 @@ func (conf *BurrowConfig) Kernel(ctx context.Context) (*core.Kernel, error) {
 	}
 
 	return core.NewKernel(ctx, keyClient, privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC,
-		conf.Keys, keyStore, exeOptions, conf.Tendermint.DefaultAuthorizedPeersProvider(), logger)
+		conf.Keys, keyStore, exeOptions, conf.Tendermint.DefaultAuthorizedPeersProvider(), restoreDump, logger)
 }
 
 func (conf *BurrowConfig) JSONString() string {

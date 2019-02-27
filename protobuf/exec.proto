@@ -6,6 +6,7 @@ option go_package = "github.com/hyperledger/burrow/execution/exec";
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "github.com/tendermint/tendermint/abci/types/types.proto";
+import "google/protobuf/timestamp.proto";
 
 import "errors.proto";
 import "names.proto";
@@ -19,22 +20,69 @@ option (gogoproto.sizer_all) = true;
 option (gogoproto.goproto_registration) = true;
 option (gogoproto.messagename_all) = true;
 
+message StreamEvent {
+    option (gogoproto.onlyone) = true;
+    BeginBlock BeginBlock = 1;
+    BeginTx BeginTx = 2;
+    txs.Envelope Envelope = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/txs.Envelope"];
+    Event Event = 4;
+    EndTx EndTx = 5;
+    EndBlock EndBlock = 6;
+}
+
+// A key to a stream event
+message StreamKey {
+    // The block height
+    uint64 Height = 1;
+    // The index of the StreamEvent amongst other StreamEvents at the same height
+    uint64 Index = 2;
+}
+
+message BeginBlock {
+    // The height of this block
+    uint64 Height = 1;
+    types.Header Header = 2;
+}
+
+message EndBlock {
+    uint64 Height = 1;
+}
+
+message BeginTx {
+    TxHeader TxHeader = 1;
+    // Result of tx execution
+    Result Result = 2;
+    // If tx execution was an exception
+    errors.Exception Exception = 4;
+}
+
+message EndTx {
+    // The hash of the transaction that caused this event to be generated
+    bytes TxHash = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
+}
+
+message TxHeader {
+    // Transaction type
+    uint32 TxType = 1 [(gogoproto.casttype) = "github.com/hyperledger/burrow/txs/payload.Type"];
+    // The hash of the transaction that caused this event to be generated
+    bytes TxHash = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
+    // The block height at which this Tx was included
+    uint64 Height = 3;
+    // The index of this transaction within the block
+    uint64 Index = 4;
+    // The origin information from the chain on which this tx was originally committed (if restored or otherwise imported)
+    Origin Origin = 5;
+}
+
 message BlockExecution {
     // The height of this block
     uint64 Height = 1;
-    types.Header BlockHeader = 2;
+    types.Header Header = 2;
     repeated TxExecution TxExecutions = 3;
 }
 
 message TxExecution {
-    // Transaction type
-    uint32 TxType = 2 [(gogoproto.casttype) = "github.com/hyperledger/burrow/txs/payload.Type"];
-    // The hash of the transaction that caused this event to be generated
-    bytes TxHash = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
-    // The block height at which this Tx was included
-    uint64 Height = 4;
-    // The index of this transaction within the block
-    uint64 Index = 5;
+    TxHeader Header = 1 [(gogoproto.embed) = true];
     // Signed Tx that triggered this execution
     txs.Envelope Envelope = 6 [(gogoproto.customtype) = "github.com/hyperledger/burrow/txs.Envelope"];
     // Execution events
@@ -45,6 +93,19 @@ message TxExecution {
     txs.Receipt Receipt = 9;
     // If execution was an exception
     errors.Exception Exception = 10;
+    // A proposal may contain other transactions
+    repeated TxExecution TxExecutions = 11;
+}
+
+message Origin {
+    // The original ChainID from for this transaction
+    string ChainID = 1;
+    // The original height at which this transaction was committed
+    uint64 Height = 2;
+    // The original index in the block
+    uint64 Index = 3;
+    // The original block time for this transaction
+    google.protobuf.Timestamp Time = 4 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
 }
 
 message Header {
@@ -74,7 +135,6 @@ message Event {
     CallEvent Call = 4;
     LogEvent Log = 5;
     GovernAccountEvent GovernAccount = 6;
-    PayloadEvent Payload = 7;
 }
 
 // Could structure this further if needed - sum type of various results relevant to different transaction types
@@ -113,13 +173,6 @@ message InputEvent {
 
 message OutputEvent {
     bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
-}
-
-message PayloadEvent {
-    // Transaction type
-    uint32 TxType = 1[(gogoproto.casttype) = "github.com/hyperledger/burrow/txs/payload.Type"];
-    // Index into BatchTx
-    uint32 Index = 2;
 }
 
 message CallData {

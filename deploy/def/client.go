@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"strconv"
+	"time"
 
 	"reflect"
 
 	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
@@ -32,14 +35,15 @@ type Client struct {
 	KeysClientAddress string
 	// Memoised clients and info
 	chainID               string
+	timeout               time.Duration
 	transactClient        rpctransact.TransactClient
 	queryClient           rpcquery.QueryClient
 	executionEventsClient rpcevents.ExecutionEventsClient
 	keyClient             keys.KeyClient
 }
 
-func NewClient(chainURL, keysClientAddress string, mempoolSigning bool) *Client {
-	client := Client{ChainAddress: chainURL, MempoolSigning: mempoolSigning, KeysClientAddress: keysClientAddress}
+func NewClient(chainURL, keysClientAddress string, mempoolSigning bool, timeout time.Duration) *Client {
+	client := Client{ChainAddress: chainURL, MempoolSigning: mempoolSigning, KeysClientAddress: keysClientAddress, timeout: timeout}
 	return &client
 }
 
@@ -56,6 +60,7 @@ func (c *Client) dial() error {
 		if c.KeysClientAddress == "" {
 			logrus.Info("Using mempool signing since no keyClient set, pass --keys to sign locally or elsewhere")
 			c.MempoolSigning = true
+			c.keyClient, err = keys.NewRemoteKeyClient(c.ChainAddress, logging.NewNoopLogger())
 		} else {
 			logrus.Infof("Using keys server at: %s", c.KeysClientAddress)
 			c.keyClient, err = keys.NewRemoteKeyClient(c.KeysClientAddress, logging.NewNoopLogger())
@@ -64,7 +69,10 @@ func (c *Client) dial() error {
 		if err != nil {
 			return err
 		}
-		stat, err := c.queryClient.Status(context.Background(), &rpcquery.StatusParam{})
+		ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+		defer cancel()
+
+		stat, err := c.queryClient.Status(ctx, &rpcquery.StatusParam{})
 		if err != nil {
 			return err
 		}
@@ -102,7 +110,21 @@ func (c *Client) Status() (*rpc.ResultStatus, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.queryClient.Status(context.Background(), &rpcquery.StatusParam{})
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	return c.queryClient.Status(ctx, &rpcquery.StatusParam{})
+}
+
+func (c *Client) GetKeyAddress(key string) (crypto.Address, error) {
+	address, err := crypto.AddressFromHexString(key)
+	if err == nil {
+		return address, nil
+	}
+	err = c.dial()
+	if err != nil {
+		return crypto.Address{}, err
+	}
+	return c.keyClient.GetAddressForKeyName(key)
 }
 
 func (c *Client) GetAccount(address crypto.Address) (*acm.Account, error) {
@@ -110,7 +132,21 @@ func (c *Client) GetAccount(address crypto.Address) (*acm.Account, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.queryClient.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: address})
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	return c.queryClient.GetAccount(ctx, &rpcquery.GetAccountParam{Address: address})
+}
+
+func (c *Client) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
+	err := c.dial()
+	if err != nil {
+		return binary.Word256{}, err
+	}
+	val, err := c.queryClient.GetStorage(context.Background(), &rpcquery.GetStorageParam{Address: address, Key: key})
+	if err != nil {
+		return binary.Word256{}, err
+	}
+	return val.Value, err
 }
 
 func (c *Client) GetName(name string) (*names.Entry, error) {
@@ -118,7 +154,9 @@ func (c *Client) GetName(name string) (*names.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.queryClient.GetName(context.Background(), &rpcquery.GetNameParam{Name: name})
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	return c.queryClient.GetName(ctx, &rpcquery.GetNameParam{Name: name})
 }
 
 func (c *Client) GetValidatorSet() (*rpcquery.ValidatorSet, error) {
@@ -126,7 +164,38 @@ func (c *Client) GetValidatorSet() (*rpcquery.ValidatorSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.queryClient.GetValidatorSet(context.Background(), &rpcquery.GetValidatorSetParam{IncludeHistory: true})
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	return c.queryClient.GetValidatorSet(ctx, &rpcquery.GetValidatorSetParam{})
+}
+
+func (c *Client) GetProposal(hash []byte) (*payload.Ballot, error) {
+	err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return c.queryClient.GetProposal(context.Background(), &rpcquery.GetProposalParam{Hash: hash})
+}
+
+func (c *Client) ListProposals(proposed bool) ([]*rpcquery.ProposalResult, error) {
+	err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	stream, err := c.queryClient.ListProposals(context.Background(), &rpcquery.ListProposalsParam{Proposed: proposed})
+	if err != nil {
+		return nil, err
+	}
+	var ballots []*rpcquery.ProposalResult
+	ballot, err := stream.Recv()
+	for err == nil {
+		ballots = append(ballots, ballot)
+		ballot, err = stream.Recv()
+	}
+	if err == io.EOF {
+		return ballots, nil
+	}
+	return nil, err
 }
 
 func (c *Client) SignAndBroadcast(tx payload.Payload) (*exec.TxExecution, error) {
@@ -196,7 +265,9 @@ func (c *Client) Broadcast(tx payload.Payload) (*exec.TxExecution, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.transactClient.BroadcastTxSync(context.Background(), &rpctransact.TxEnvelopeParam{Payload: tx.Any()})
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	return c.transactClient.BroadcastTxSync(ctx, &rpctransact.TxEnvelopeParam{Payload: tx.Any()})
 }
 
 // Broadcast envelope - can be locally signed or remote signing will be attempted
@@ -205,7 +276,10 @@ func (c *Client) BroadcastEnvelope(txEnv *txs.Envelope) (*exec.TxExecution, erro
 	if err != nil {
 		return nil, err
 	}
-	return c.transactClient.BroadcastTxSync(context.Background(), &rpctransact.TxEnvelopeParam{Envelope: txEnv})
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+
+	return c.transactClient.BroadcastTxSync(ctx, &rpctransact.TxEnvelopeParam{Envelope: txEnv})
 }
 
 func (c *Client) ParseUint64(amount string) (uint64, error) {
@@ -233,7 +307,9 @@ func (c *Client) QueryContract(arg *QueryArg) (*exec.TxExecution, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.transactClient.CallTxSim(context.Background(), tx)
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	return c.transactClient.CallTxSim(ctx, tx)
 }
 
 // Transaction types
@@ -264,7 +340,7 @@ func (c *Client) UpdateAccount(arg *GovArg) (*payload.GovTx, error) {
 		Roles:       arg.Permissions,
 	}
 	if arg.Address != "" {
-		address, err := crypto.AddressFromHexString(arg.Address)
+		address, err := c.GetKeyAddress(arg.Address)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse UpdateAccoount Address: %v", err)
 		}
@@ -356,7 +432,7 @@ func (c *Client) Call(arg *CallArg) (*payload.CallTx, error) {
 	}
 	var contractAddress *crypto.Address
 	if arg.Address != "" {
-		address, err := crypto.AddressFromHexString(arg.Address)
+		address, err := c.GetKeyAddress(arg.Address)
 		if err != nil {
 			return nil, err
 		}
@@ -397,7 +473,7 @@ func (c *Client) Send(arg *SendArg) (*payload.SendTx, error) {
 	if err != nil {
 		return nil, err
 	}
-	outputAddress, err := crypto.AddressFromHexString(arg.Output)
+	outputAddress, err := c.GetKeyAddress(arg.Output)
 	if err != nil {
 		return nil, err
 	}
@@ -463,7 +539,7 @@ func (c *Client) Permissions(arg *PermArg) (*payload.PermsTx, error) {
 		Action: action,
 	}
 	if arg.Target != "" {
-		target, err := crypto.AddressFromHexString(arg.Target)
+		target, err := c.GetKeyAddress(arg.Target)
 		if err != nil {
 			return nil, err
 		}
@@ -504,9 +580,9 @@ func (c *Client) TxInput(inputString, amountString, sequenceString string, allow
 	var err error
 	var inputAddress crypto.Address
 	if inputString != "" {
-		inputAddress, err = crypto.AddressFromHexString(inputString)
+		inputAddress, err = c.GetKeyAddress(inputString)
 		if err != nil {
-			return nil, fmt.Errorf("could not parse input address from %s: %v", inputString, err)
+			return nil, fmt.Errorf("TxInput(): could not obtain input address from '%s': %v", inputString, err)
 		}
 	}
 	var amount uint64
@@ -536,7 +612,9 @@ func (c *Client) getSequence(sequence string, inputAddress crypto.Address, mempo
 			return 0, nil
 		}
 		// Get from chain
-		acc, err := c.queryClient.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: inputAddress})
+		ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+		defer cancel()
+		acc, err := c.queryClient.GetAccount(ctx, &rpcquery.GetAccountParam{Address: inputAddress})
 		if err != nil {
 			return 0, err
 		}

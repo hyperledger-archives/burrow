@@ -73,10 +73,10 @@ const (
 	EXTCODECOPY
 	RETURNDATASIZE
 	RETURNDATACOPY
+	EXTCODEHASH // https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1052.md
 )
 
 const (
-
 	// 0x40 range - block operations
 	BLOCKHASH OpCode = 0x40 + iota
 	COINBASE
@@ -240,6 +240,11 @@ var opCodeNames = map[OpCode]string{
 	CODESIZE:            "CODESIZE",
 	CODECOPY:            "CODECOPY",
 	GASPRICE_DEPRECATED: "TXGASPRICE_DEPRECATED",
+	EXTCODESIZE:         "EXTCODESIZE",
+	EXTCODECOPY:         "EXTCODECOPY",
+	RETURNDATASIZE:      "RETURNDATASIZE",
+	RETURNDATACOPY:      "RETURNDATACOPY",
+	EXTCODEHASH:         "EXTCODEHASH",
 
 	// 0x40 range - block operations
 	BLOCKHASH:             "BLOCKHASH",
@@ -248,10 +253,6 @@ var opCodeNames = map[OpCode]string{
 	BLOCKHEIGHT:           "BLOCKHEIGHT",
 	DIFFICULTY_DEPRECATED: "DIFFICULTY_DEPRECATED",
 	GASLIMIT:              "GASLIMIT",
-	EXTCODESIZE:           "EXTCODESIZE",
-	EXTCODECOPY:           "EXTCODECOPY",
-	RETURNDATASIZE:        "RETURNDATASIZE",
-	RETURNDATACOPY:        "RETURNDATACOPY",
 
 	// 0x50 range - 'storage' and execution
 	POP:      "POP",

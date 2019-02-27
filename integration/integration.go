@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"runtime"
 	"strconv"
@@ -29,9 +30,9 @@ import (
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/core"
+	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/evm"
-	"github.com/hyperledger/burrow/execution/evm/sha3"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys/mock"
 	"github.com/hyperledger/burrow/logging"
@@ -41,8 +42,8 @@ import (
 )
 
 const (
-	ChainName = "Integration_Test_Chain"
-	testDir   = "./test_scratch/tm_test"
+	ChainName  = "Integration_Test_Chain"
+	scratchDir = "test_scratch"
 )
 
 // Enable logger output during tests
@@ -85,6 +86,7 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 		nil,
 		[]execution.ExecutionOption{execution.VMOptions(evm.DebugOpcodes)},
 		testConfig.Tendermint.DefaultAuthorizedPeersProvider(),
+		"",
 		logger)
 	if err != nil {
 		panic(err)
@@ -94,6 +96,12 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 }
 
 func EnterTestDirectory() (cleanup func()) {
+	testDir, err := ioutil.TempDir("", scratchDir)
+	if err != nil {
+		panic(fmt.Errorf("couldnot make temp dir for integration tests: %v", err))
+	}
+	// If you need to expect dirs
+	//testDir := scratchDir
 	os.RemoveAll(testDir)
 	os.MkdirAll(testDir, 0777)
 	os.Chdir(testDir)
@@ -114,7 +122,7 @@ func TestGenesisDoc(addressables []*acm.PrivateAccount) *genesis.GenesisDoc {
 		panic("could not parse test genesis time")
 	}
 	return genesis.MakeGenesisDocFromAccounts(ChainName, nil, genesisTime, accounts,
-		map[string]validator.Validator{
+		map[string]*validator.Validator{
 			"genesis_validator": validator.FromAccount(accounts["user_0"], 1<<16),
 		})
 }

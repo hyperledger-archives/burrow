@@ -49,7 +49,7 @@ func (m *ResultStatus) Reset()         { *m = ResultStatus{} }
 func (m *ResultStatus) String() string { return proto.CompactTextString(m) }
 func (*ResultStatus) ProtoMessage()    {}
 func (*ResultStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_f3f686e1c2813d24, []int{0}
+	return fileDescriptor_rpc_9ffe8fef64c845d2, []int{0}
 }
 func (m *ResultStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -143,7 +143,7 @@ func (m *SyncInfo) Reset()         { *m = SyncInfo{} }
 func (m *SyncInfo) String() string { return proto.CompactTextString(m) }
 func (*SyncInfo) ProtoMessage()    {}
 func (*SyncInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_f3f686e1c2813d24, []int{1}
+	return fileDescriptor_rpc_9ffe8fef64c845d2, []int{1}
 }
 func (m *SyncInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1022,10 +1022,10 @@ var (
 	ErrIntOverflowRpc   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("rpc.proto", fileDescriptor_rpc_f3f686e1c2813d24) }
-func init() { golang_proto.RegisterFile("rpc.proto", fileDescriptor_rpc_f3f686e1c2813d24) }
+func init() { proto.RegisterFile("rpc.proto", fileDescriptor_rpc_9ffe8fef64c845d2) }
+func init() { golang_proto.RegisterFile("rpc.proto", fileDescriptor_rpc_9ffe8fef64c845d2) }
 
-var fileDescriptor_rpc_f3f686e1c2813d24 = []byte{
+var fileDescriptor_rpc_9ffe8fef64c845d2 = []byte{
 	// 490 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x92, 0x3f, 0x6f, 0xd3, 0x40,
 	0x18, 0xc6, 0x7b, 0xf9, 0xd3, 0xa6, 0x97, 0x46, 0x85, 0xa3, 0x43, 0x94, 0xc1, 0x0e, 0x55, 0x87,

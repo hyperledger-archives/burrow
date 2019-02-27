@@ -29,13 +29,15 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 	defaultPerms := permission.DefaultAccountPermissions
 	for i := 0; i < numAccounts; i++ {
 		account, privAccount := dg.Account(randBalance, minBalance)
-		accounts[i] = Account{
+		acc := Account{
 			BasicAccount: BasicAccount{
 				Address: account.GetAddress(),
 				Amount:  account.Balance,
 			},
 			Permissions: defaultPerms.Clone(), // This will get copied into each state.Account.
 		}
+		acc.Permissions.Base.Set(permission.Root, true)
+		accounts[i] = acc
 		privAccounts[i] = privAccount
 	}
 	validators := make([]Validator, numValidators)
@@ -47,7 +49,8 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 			BasicAccount: BasicAccount{
 				Address:   validator.GetAddress(),
 				PublicKey: validator.GetPublicKey(),
-				Amount:    uint64(dg.random.Int63()),
+				// Avoid max validator cap
+				Amount: uint64(dg.random.Int63()/16 + 1),
 			},
 			UnbondTo: []BasicAccount{
 				{

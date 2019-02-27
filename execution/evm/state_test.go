@@ -1,9 +1,12 @@
 package evm
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/binary"
+
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/stretchr/testify/require"
 
 	"github.com/hyperledger/burrow/execution/errors"
@@ -11,7 +14,7 @@ import (
 )
 
 func TestState_PushError(t *testing.T) {
-	st := NewState(newAppState())
+	st := NewState(newAppState(), blockHashGetter)
 	// This will be a wrapped nil - it should not register as first error
 	var ex errors.CodedError = (*errors.Exception)(nil)
 	st.PushError(ex)
@@ -22,14 +25,14 @@ func TestState_PushError(t *testing.T) {
 }
 
 func TestState_CreateAccount(t *testing.T) {
-	st := NewState(newAppState())
+	st := NewState(newAppState(), blockHashGetter)
 	address := newAddress("frogs")
 	st.CreateAccount(address)
 	require.Nil(t, st.Error())
 	st.CreateAccount(address)
 	assertErrorCode(t, errors.ErrorCodeDuplicateAddress, st.Error())
 
-	st = NewState(newAppState())
+	st = NewState(newAppState(), blockHashGetter)
 	st.CreateAccount(address)
 	require.Nil(t, st.Error())
 	st.InitCode(address, []byte{1, 2, 3})
@@ -37,15 +40,13 @@ func TestState_CreateAccount(t *testing.T) {
 }
 
 func TestState_Sync(t *testing.T) {
-	backend := state.NewCache(newAppState())
-	st := NewState(backend)
+	backend := acmstate.NewCache(newAppState())
+	st := NewState(backend, blockHashGetter)
 	address := newAddress("frogs")
 
 	st.CreateAccount(address)
 	amt := uint64(1232)
 	st.AddToBalance(address, amt)
-	st.IncSequence(address)
-	require.Nil(t, st.Error())
 
 	var err error
 	err = st.Sync()
@@ -53,19 +54,16 @@ func TestState_Sync(t *testing.T) {
 	acc, err := backend.GetAccount(address)
 	require.NoError(t, err)
 	assert.Equal(t, acc.Balance, amt)
-	assert.Equal(t, uint64(1), acc.Sequence)
 }
 
 func TestState_NewCache(t *testing.T) {
-	st := NewState(newAppState())
+	st := NewState(newAppState(), blockHashGetter)
 	address := newAddress("frogs")
 
 	cache := st.NewCache()
 	cache.CreateAccount(address)
 	amt := uint64(1232)
 	cache.AddToBalance(address, amt)
-	cache.IncSequence(address)
-	require.Nil(t, st.Error())
 
 	var err error
 	assert.Equal(t, uint64(0), st.GetBalance(address))
@@ -77,8 +75,12 @@ func TestState_NewCache(t *testing.T) {
 	assert.Equal(t, amt, st.GetBalance(address))
 	require.Nil(t, st.Error())
 
-	cache = st.NewCache(state.ReadOnly).NewCache()
+	cache = st.NewCache(acmstate.ReadOnly).NewCache()
 	require.Nil(t, st.Error())
 	cache.AddToBalance(address, amt)
 	assertErrorCode(t, errors.ErrorCodeIllegalWrite, cache.Error())
+}
+
+func blockHashGetter(height uint64) []byte {
+	return binary.LeftPadWord256([]byte(fmt.Sprintf("block_hash_%d", height))).Bytes()
 }

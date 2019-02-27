@@ -3,7 +3,7 @@ package payload
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
 )
 
@@ -26,14 +26,14 @@ func (tx *SendTx) String() string {
 	return fmt.Sprintf("SendTx{%v -> %v}", tx.Inputs, tx.Outputs)
 }
 
-func (tx *SendTx) AddInput(st state.AccountGetter, pubkey crypto.PublicKey, amt uint64) error {
+func (tx *SendTx) AddInput(st acmstate.AccountGetter, pubkey crypto.PublicKey, amt uint64) error {
 	addr := pubkey.GetAddress()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
 		return err
 	}
 	if acc == nil {
-		return fmt.Errorf("invalid address %s from pubkey %s", addr, pubkey)
+		return fmt.Errorf("AddInput: could not find account with address %v", addr)
 	}
 	return tx.AddInputWithSequence(pubkey, amt, acc.Sequence+1)
 }

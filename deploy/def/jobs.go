@@ -14,13 +14,13 @@ import (
 // ------------------------------------------------------------------------
 
 type Proposal struct {
-	// (Optional), address of the account that signs the proposal
+	// (Optional), address of the account that signs the proposal or votes for the proposal
 	Source string `mapstructure:"source" json:"source" yaml:"source" toml:"source"`
 	// (Optional, advanced only) sequence to use when burrow keys signs the transaction (do not use unless you
 	// know what you're doing)
 	Sequence string `mapstructure:"sequence" json:"sequence" yaml:"sequence" toml:"sequence"`
 	// (Required), address of the account used for serialising proposals, the proposals system account
-	ProposalAddress string `mapstructure:"propposaladdress" json:"propposaladdress" yaml:"propposaladdress" toml:"proposaladdress"`
+	ProposalAddress string `mapstructure:"proposaladdress" json:"proposaladdress" yaml:"proposaladdress" toml:"proposaladdress"`
 	// (Optional), sequence of the ProposalAddress
 	ProposalSequence string `mapstructure:"proposalsequence" json:"proposalsequence" yaml:"proposalsequence" toml:"proposalsequence"`
 	// (Optional)
@@ -35,7 +35,6 @@ type Proposal struct {
 
 func (job *Proposal) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Source, rule.AddressOrPlaceholder),
 		validation.Field(&job.Sequence, rule.Uint64OrPlaceholder),
 		validation.Field(&job.VotingPower, rule.Uint64OrPlaceholder),
 		validation.Field(&job.Name, validation.Required),
@@ -65,7 +64,8 @@ func KeyNameCurveType(newKeyMatch []string) (keyName, curveType string) {
 
 type Meta struct {
 	// (Required) the file path of the sub yaml to run
-	File string `mapstructure:"file" json:"file" yaml:"file" toml:"file"`
+	File     string    `mapstructure:"file" json:"file" yaml:"file" toml:"file"`
+	Playbook *Playbook `json:"-" yaml:"-" toml:"-"`
 }
 
 func (job *Meta) Validate() error {
@@ -109,7 +109,6 @@ type UpdateAccount struct {
 
 func (job *UpdateAccount) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Source, rule.AddressOrPlaceholder),
 		validation.Field(&job.Target, validation.Required, rule.Or(rule.Placeholder, is.Hexadecimal,
 			validation.Match(NewKeyRegex))),
 		validation.Field(&job.Permissions),
@@ -133,7 +132,7 @@ type Account struct {
 
 func (job *Account) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Address, validation.Required, rule.AddressOrPlaceholder),
+		validation.Field(&job.Address, validation.Required),
 	)
 }
 
@@ -170,8 +169,7 @@ type Send struct {
 
 func (job *Send) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Source, rule.AddressOrPlaceholder),
-		validation.Field(&job.Destination, validation.Required, rule.AddressOrPlaceholder),
+		validation.Field(&job.Destination, validation.Required),
 		validation.Field(&job.Amount, rule.Uint64OrPlaceholder),
 		validation.Field(&job.Sequence, rule.Uint64OrPlaceholder),
 	)
@@ -198,7 +196,6 @@ type RegisterName struct {
 
 func (job *RegisterName) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Source, rule.AddressOrPlaceholder),
 		validation.Field(&job.Amount, rule.Uint64OrPlaceholder),
 		validation.Field(&job.Fee, rule.Uint64OrPlaceholder),
 		validation.Field(&job.Sequence, rule.Uint64OrPlaceholder),
@@ -227,7 +224,6 @@ type Permission struct {
 
 func (job *Permission) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Source, rule.AddressOrPlaceholder),
 		validation.Field(&job.Value, validation.In("true", "false", "")),
 		validation.Field(&job.Sequence, rule.Uint64OrPlaceholder),
 	)
@@ -347,7 +343,7 @@ type Call struct {
 
 func (job *Call) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Destination, validation.Required, rule.AddressOrPlaceholder),
+		validation.Field(&job.Destination, validation.Required),
 		validation.Field(&job.Amount, rule.Uint64OrPlaceholder),
 		validation.Field(&job.Fee, rule.Uint64OrPlaceholder),
 		validation.Field(&job.Gas, rule.Uint64OrPlaceholder),
@@ -411,7 +407,7 @@ type QueryContract struct {
 
 func (job *QueryContract) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Destination, validation.Required, rule.AddressOrPlaceholder),
+		validation.Field(&job.Destination, validation.Required),
 	)
 }
 
@@ -426,7 +422,7 @@ type QueryAccount struct {
 
 func (job *QueryAccount) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Account, validation.Required, rule.AddressOrPlaceholder),
+		validation.Field(&job.Account, validation.Required),
 		validation.Field(&job.Field, validation.Required),
 	)
 }

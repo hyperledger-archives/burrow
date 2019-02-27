@@ -19,10 +19,29 @@ type KVIterable interface {
 	Iterator(start, end []byte) KVIterator
 
 	// Iterator over a domain of keys in descending order. End is exclusive.
-	// Start must be greater than end, or the Iterator is invalid.
+	// Start must be less than end, or the Iterator is invalid.
 	// Iterator must be closed by caller.
 	// CONTRACT: No writes may happen within a domain while an iterator exists over it.
 	ReverseIterator(start, end []byte) KVIterator
+}
+
+// Provides the native iteration for IAVLTree
+type KVCallbackIterable interface {
+	// Start must be lexicographically less than end. End is exclusive unless it is nil in which case it is inclusive.
+	// ascending == false reverses order.
+	Iterate(start, end []byte, ascending bool, fn func(key []byte, value []byte) error) error
+}
+
+func KVCallbackIterator(rit KVCallbackIterable, ascending bool, start, end []byte) dbm.Iterator {
+	ch := make(chan KVPair)
+	go func() {
+		defer close(ch)
+		rit.Iterate(start, end, ascending, func(key, value []byte) (err error) {
+			ch <- KVPair{key, value}
+			return
+		})
+	}()
+	return NewChannelIterator(ch, start, end)
 }
 
 type KVReader interface {
@@ -42,6 +61,11 @@ type KVWriter interface {
 type KVIterableReader interface {
 	KVReader
 	KVIterable
+}
+
+type KVCallbackIterableReader interface {
+	KVReader
+	KVCallbackIterable
 }
 
 // KVStore is a simple interface to get/set data

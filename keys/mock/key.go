@@ -68,7 +68,7 @@ func mockKeyFromPrivateAccount(privateAccount *acm.PrivateAccount) *Key {
 	return key
 }
 
-func (key *Key) Sign(message []byte) (crypto.Signature, error) {
+func (key *Key) Sign(message []byte) (*crypto.Signature, error) {
 	return crypto.SignatureFromBytes(ed25519.Sign(key.PrivateKey, message), crypto.CurveTypeEd25519)
 }
 

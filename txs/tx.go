@@ -15,16 +15,20 @@
 package txs
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-
-	"github.com/tendermint/tendermint/crypto/tmhash"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/txs/payload"
+)
+
+const (
+	HashLength    = 32
+	HashLengthHex = HashLength * 2
 )
 
 // Tx is the canonical object that we serialise to produce the SignBytes that we sign
@@ -164,9 +168,10 @@ func (tx *Tx) String() string {
 
 // Regenerate the Tx hash if it has been mutated or as called by Hash() in first instance
 func (tx *Tx) Rehash() []byte {
-	hasher := tmhash.New()
+	hasher := sha256.New()
 	hasher.Write(tx.MustSignBytes())
 	tx.txHash = hasher.Sum(nil)
+	tx.txHash = tx.txHash[:HashLength]
 	return tx.txHash
 }
 
@@ -184,7 +189,7 @@ func (tx *Tx) GenerateReceipt() *Receipt {
 	if callTx, ok := tx.Payload.(*payload.CallTx); ok {
 		receipt.CreatesContract = callTx.Address == nil
 		if receipt.CreatesContract {
-			receipt.ContractAddress = crypto.NewContractAddress(callTx.Input.Address, callTx.Input.Sequence)
+			receipt.ContractAddress = crypto.NewContractAddress(callTx.Input.Address, tx.Hash())
 		} else {
 			receipt.ContractAddress = *callTx.Address
 		}
@@ -196,7 +201,7 @@ var cdc = NewAminoCodec()
 
 func DecodeReceipt(bs []byte) (*Receipt, error) {
 	receipt := new(Receipt)
-	err := cdc.UnmarshalBinary(bs, receipt)
+	err := cdc.UnmarshalBinaryBare(bs, receipt)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +209,7 @@ func DecodeReceipt(bs []byte) (*Receipt, error) {
 }
 
 func (receipt *Receipt) Encode() ([]byte, error) {
-	return cdc.MarshalBinary(receipt)
+	return cdc.MarshalBinaryBare(receipt)
 }
 
 func EnvelopeFromAny(chainID string, p *payload.Any) *Envelope {

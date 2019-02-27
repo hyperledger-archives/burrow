@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/state"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
@@ -45,28 +45,30 @@ const MaxBlockLookback = 1000
 
 // Base service that provides implementation for all underlying RPC methods
 type Service struct {
-	state      state.IterableReader
+	state      acmstate.IterableStatsReader
 	nameReg    names.IterableReader
 	blockchain bcm.BlockchainInfo
+	validators validator.History
 	nodeView   *tendermint.NodeView
 	logger     *logging.Logger
 }
 
 // Service provides an internal query and information service with serialisable return types on which can accomodate
 // a number of transport front ends
-func NewService(state state.IterableReader, nameReg names.IterableReader, blockchain bcm.BlockchainInfo,
-	nodeView *tendermint.NodeView, logger *logging.Logger) *Service {
+func NewService(state acmstate.IterableStatsReader, nameReg names.IterableReader, blockchain bcm.BlockchainInfo,
+	validators validator.History, nodeView *tendermint.NodeView, logger *logging.Logger) *Service {
 
 	return &Service{
 		state:      state,
 		nameReg:    nameReg,
 		blockchain: blockchain,
+		validators: validators,
 		nodeView:   nodeView,
 		logger:     logger.With(structure.ComponentKey, "Service"),
 	}
 }
 
-func (s *Service) State() state.Reader {
+func (s *Service) State() acmstate.IterableStatsReader {
 	return s.state
 }
 
@@ -95,11 +97,11 @@ func (s *Service) UnconfirmedTxs(maxTxs int64) (*ResultUnconfirmedTxs, error) {
 }
 
 func (s *Service) Status() (*ResultStatus, error) {
-	return Status(s.BlockchainInfo(), s.nodeView, "", "")
+	return Status(s.BlockchainInfo(), s.validators, s.nodeView, "", "")
 }
 
 func (s *Service) StatusWithin(blockTimeWithin, blockSeenTimeWithin string) (*ResultStatus, error) {
-	return Status(s.BlockchainInfo(), s.nodeView, blockTimeWithin, blockSeenTimeWithin)
+	return Status(s.BlockchainInfo(), s.validators, s.nodeView, blockTimeWithin, blockSeenTimeWithin)
 }
 
 func (s *Service) ChainIdentifiers() (*ResultChainId, error) {
@@ -114,8 +116,9 @@ func (s *Service) Peers() []core_types.Peer {
 	p2pPeers := s.nodeView.Peers().List()
 	peers := make([]core_types.Peer, len(p2pPeers))
 	for i, peer := range p2pPeers {
+		ni, _ := peer.NodeInfo().(p2p.DefaultNodeInfo)
 		peers[i] = core_types.Peer{
-			NodeInfo:         peer.NodeInfo(),
+			NodeInfo:         ni,
 			IsOutbound:       peer.IsOutbound(),
 			ConnectionStatus: peer.Status(),
 		}
@@ -125,14 +128,11 @@ func (s *Service) Peers() []core_types.Peer {
 
 func (s *Service) Network() (*ResultNetwork, error) {
 	var listeners []string
-	for _, listener := range s.nodeView.Listeners() {
-		listeners = append(listeners, listener.String())
-	}
 	peers := s.Peers()
 	return &ResultNetwork{
 		ThisNode: s.nodeView.NodeInfo(),
 		ResultNetInfo: &core_types.ResultNetInfo{
-			Listening: s.nodeView.IsListening(),
+			Listening: true,
 			Listeners: listeners,
 			NPeers:    len(peers),
 			Peers:     peers,
@@ -157,11 +157,11 @@ func (s *Service) Account(address crypto.Address) (*ResultAccount, error) {
 
 func (s *Service) Accounts(predicate func(*acm.Account) bool) (*ResultAccounts, error) {
 	accounts := make([]*acm.Account, 0)
-	s.state.IterateAccounts(func(account *acm.Account) (stop bool) {
+	s.state.IterateAccounts(func(account *acm.Account) error {
 		if predicate(account) {
 			accounts = append(accounts, account)
 		}
-		return
+		return nil
 	})
 
 	return &ResultAccounts{
@@ -198,9 +198,9 @@ func (s *Service) DumpStorage(address crypto.Address) (*ResultDumpStorage, error
 		return nil, fmt.Errorf("UnknownAddress: %X", address)
 	}
 	var storageItems []StorageItem
-	s.state.IterateStorage(address, func(key, value binary.Word256) (stop bool) {
+	s.state.IterateStorage(address, func(key, value binary.Word256) error {
 		storageItems = append(storageItems, StorageItem{Key: key.UnpadLeft(), Value: value.UnpadLeft()})
-		return
+		return nil
 	})
 	return &ResultDumpStorage{
 		StorageItems: storageItems,
@@ -236,6 +236,14 @@ func (s *Service) AccountHumanReadable(address crypto.Address) (*ResultAccountHu
 	}, nil
 }
 
+func (s *Service) AccountStats() (*ResultAccountStats, error) {
+	stats := s.state.GetAccountStats()
+	return &ResultAccountStats{
+		AccountsWithCode:    stats.AccountsWithCode,
+		AccountsWithoutCode: stats.AccountsWithoutCode,
+	}, nil
+}
+
 // Name registry
 func (s *Service) Name(name string) (*ResultName, error) {
 	entry, err := s.nameReg.GetName(name)
@@ -250,11 +258,11 @@ func (s *Service) Name(name string) (*ResultName, error) {
 
 func (s *Service) Names(predicate func(*names.Entry) bool) (*ResultNames, error) {
 	var nms []*names.Entry
-	s.nameReg.IterateNames(func(entry *names.Entry) (stop bool) {
+	s.nameReg.IterateNames(func(entry *names.Entry) error {
 		if predicate(entry) {
 			nms = append(nms, entry)
 		}
-		return
+		return nil
 	})
 	return &ResultNames{
 		BlockHeight: s.blockchain.LastBlockHeight(),
@@ -300,15 +308,15 @@ func (s *Service) Blocks(minHeight, maxHeight int64) (*ResultBlocks, error) {
 }
 
 func (s *Service) Validators() (*ResultValidators, error) {
-	validators := make([]*validator.Validator, 0, s.blockchain.NumValidators())
-	s.blockchain.Validators().Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
+	var validators []*validator.Validator
+	s.validators.Validators(0).IterateValidators(func(id crypto.Addressable, power *big.Int) error {
 		address := id.GetAddress()
 		validators = append(validators, &validator.Validator{
 			Address:   &address,
 			PublicKey: id.GetPublicKey(),
 			Power:     power.Uint64(),
 		})
-		return
+		return nil
 	})
 	return &ResultValidators{
 		BlockHeight:         s.blockchain.LastBlockHeight(),
@@ -328,7 +336,7 @@ func (s *Service) ConsensusState() (*ResultConsensusState, error) {
 		}
 		peerStates[i] = core_types.PeerStateInfo{
 			// Peer basic info.
-			NodeAddress: p2p.IDAddressString(peer.ID(), peer.NodeInfo().ListenAddr),
+			NodeAddress: p2p.IDAddressString(peer.ID(), peer.NodeInfo().NetAddress().String()),
 			// Peer consensus state.
 			PeerState: peerStateJSON,
 		}
@@ -356,9 +364,14 @@ func (s *Service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error
 	}, nil
 }
 
-func Status(blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, blockTimeWithin, blockSeenTimeWithin string) (*ResultStatus, error) {
+func Status(blockchain bcm.BlockchainInfo, validators validator.History, nodeView *tendermint.NodeView, blockTimeWithin,
+	blockSeenTimeWithin string) (*ResultStatus, error) {
 	publicKey := nodeView.ValidatorPublicKey()
 	address := publicKey.GetAddress()
+	power, err := validators.Validators(0).Power(address)
+	if err != nil {
+		return nil, err
+	}
 	res := &ResultStatus{
 		ChainID:       blockchain.ChainID(),
 		RunID:         nodeView.RunID().String(),
@@ -376,7 +389,7 @@ func Status(blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, blockT
 		ValidatorInfo: &validator.Validator{
 			Address:   &address,
 			PublicKey: publicKey,
-			Power:     blockchain.Validators().Power(address).Uint64(),
+			Power:     power.Uint64(),
 		},
 	}
 

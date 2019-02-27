@@ -1,0 +1,22 @@
+jobs:
+
+- name: deployContract
+  deploy:
+      contract: GetBlockHash.sol
+
+- name: setBlockNumber
+  set:
+    val: 1
+
+- name: getBlockHash
+  call:
+      destination: $deployContract
+      function: getBlockHash
+      data:
+        - $setBlockNumber
+
+- name: assertBlockHash
+  assert:
+    key: $getBlockHash
+    relation: ne
+    val: ""

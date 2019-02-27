@@ -3,6 +3,7 @@ package tendermint
 import (
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/hyperledger/burrow/consensus/tendermint/abci"
 	tm_config "github.com/tendermint/tendermint/config"
@@ -21,14 +22,17 @@ type BurrowTendermintConfig struct {
 	ListenAddress   string
 	// Optional external that nodes may provide with their NodeInfo
 	ExternalAddress string
-	Moniker         string
-	TendermintRoot  string
+	// Set true for strict address routability rules
+	// Set false for private or local networks
+	AddrBookStrict bool
+	Moniker        string
+	TendermintRoot string
 	// Peers ID or address this node is authorize to sync with
 	AuthorizedPeers string
 
 	// EmptyBlocks mode and possible interval between empty blocks in seconds
 	CreateEmptyBlocks         bool
-	CreateEmptyBlocksInterval int
+	CreateEmptyBlocksInterval time.Duration
 }
 
 func DefaultBurrowTendermintConfig() *BurrowTendermintConfig {
@@ -58,6 +62,9 @@ func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
 		conf.P2P.PersistentPeers = btc.PersistentPeers
 		conf.P2P.ListenAddress = btc.ListenAddress
 		conf.P2P.ExternalAddress = btc.ExternalAddress
+		conf.P2P.AddrBookStrict = btc.AddrBookStrict
+		// We use this in tests and I am not aware of a strong reason to reject nodes on the same IP with different ports
+		conf.P2P.AllowDuplicateIP = true
 		conf.Moniker = btc.Moniker
 		// Unfortunately this stops metrics from being used at all
 		conf.Instrumentation.Prometheus = false

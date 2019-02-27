@@ -1,9 +1,9 @@
 package payload
 
 import (
+	"crypto/sha256"
 	"fmt"
 
-	"github.com/hyperledger/burrow/execution/evm/sha3"
 	amino "github.com/tendermint/go-amino"
 )
 
@@ -35,7 +35,7 @@ func (tx *ProposalTx) Any() *Any {
 
 func DecodeProposal(proposalBytes []byte) (*Proposal, error) {
 	proposal := new(Proposal)
-	err := cdc.UnmarshalBinary(proposalBytes, proposal)
+	err := cdc.UnmarshalBinaryBare(proposalBytes, proposal)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func DecodeProposal(proposalBytes []byte) (*Proposal, error) {
 }
 
 func (p *Proposal) Encode() ([]byte, error) {
-	return cdc.MarshalBinary(p)
+	return cdc.MarshalBinaryBare(p)
 }
 
 func (p *Proposal) Hash() []byte {
@@ -52,7 +52,9 @@ func (p *Proposal) Hash() []byte {
 		panic("failed to encode Proposal")
 	}
 
-	return sha3.Sha3(bs)
+	hash := sha256.Sum256(bs)
+
+	return hash[:]
 }
 
 func (p *Proposal) String() string {
@@ -65,7 +67,7 @@ func (v *Vote) String() string {
 
 func DecodeBallot(ballotBytes []byte) (*Ballot, error) {
 	ballot := new(Ballot)
-	err := cdc.UnmarshalBinary(ballotBytes, ballot)
+	err := cdc.UnmarshalBinaryBare(ballotBytes, ballot)
 	if err != nil {
 		return nil, err
 	}
@@ -73,5 +75,5 @@ func DecodeBallot(ballotBytes []byte) (*Ballot, error) {
 }
 
 func (p *Ballot) Encode() ([]byte, error) {
-	return cdc.MarshalBinary(p)
+	return cdc.MarshalBinaryBare(p)
 }

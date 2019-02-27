@@ -168,6 +168,11 @@ type ResultAccountHumanReadable struct {
 	Account *AccountHumanReadable
 }
 
+type ResultAccountStats struct {
+	AccountsWithCode    uint64
+	AccountsWithoutCode uint64
+}
+
 type ResultUnconfirmedTxs struct {
 	NumTxs int
 	Txs    []*txs.Envelope

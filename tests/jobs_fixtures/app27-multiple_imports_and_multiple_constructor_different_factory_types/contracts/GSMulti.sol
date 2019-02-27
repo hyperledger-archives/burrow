@@ -14,11 +14,11 @@ contract GSMulti {
     storedData2 = second;
   }
 
-  function getFirst() public constant returns (uint retVal) {
+  function getFirst() public view returns (uint retVal) {
     return storedData1;
   }
 
-  function getSecond() public constant returns (uint retVal) {
+  function getSecond() public view returns (uint retVal) {
     return storedData2;
   }
 }

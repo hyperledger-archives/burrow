@@ -1,4 +1,4 @@
-pragma solidity ^0.4.16;
+pragma solidity ^0.5.4;
 
 contract EventEmitter {
     // indexed puts it in topic

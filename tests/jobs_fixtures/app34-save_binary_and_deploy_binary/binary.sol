@@ -7,7 +7,7 @@ contract binary {
     storedData = x;
   }
 
-  function get() public constant returns (uint retVal) {
+  function get() public view returns (uint retVal) {
     return storedData;
   }
 }

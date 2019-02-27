@@ -126,8 +126,9 @@ func (proof *RangeProof) VerifyAbsence(key []byte) error {
 	if cmp < 0 {
 		if proof.LeftPath.isLeftmost() {
 			return nil
+		} else {
+			return cmn.NewError("absence not proved by left path")
 		}
-		return cmn.NewError("absence not proved by left path")
 	} else if cmp == 0 {
 		return cmn.NewError("absence disproved via first item #0")
 	}
@@ -149,7 +150,7 @@ func (proof *RangeProof) VerifyAbsence(key []byte) error {
 		} else {
 			if i == len(proof.Leaves)-1 {
 				// If last item, check whether
-				// it's the last item in the tree.
+				// it's the last item in teh tree.
 
 			}
 			continue
@@ -164,8 +165,9 @@ func (proof *RangeProof) VerifyAbsence(key []byte) error {
 	// It's not a valid absence proof.
 	if len(proof.Leaves) < 2 {
 		return cmn.NewError("absence not proved by right leaf (need another leaf?)")
+	} else {
+		return cmn.NewError("absence not proved by right leaf")
 	}
-	return cmn.NewError("absence not proved by right leaf")
 }
 
 // Verify that proof is valid.
@@ -177,7 +179,7 @@ func (proof *RangeProof) Verify(root []byte) error {
 	return err
 }
 
-func (proof *RangeProof) verify(root []byte) error {
+func (proof *RangeProof) verify(root []byte) (err error) {
 	rootHash := proof.rootHash
 	if rootHash == nil {
 		derivedHash, err := proof.computeRootHash()
@@ -188,8 +190,9 @@ func (proof *RangeProof) verify(root []byte) error {
 	}
 	if !bytes.Equal(rootHash, root) {
 		return cmn.ErrorWrap(ErrInvalidRoot, "root hash doesn't match")
+	} else {
+		proof.rootVerified = true
 	}
-	proof.rootVerified = true
 	return nil
 }
 
@@ -302,13 +305,12 @@ func (proof *RangeProof) _computeRootHash() (rootHash []byte, treeEnd bool, err 
 ///////////////////////////////////////////////////////////////////////////////
 
 // keyStart is inclusive and keyEnd is exclusive.
-// Returns the range-proof and the included keys and values.
 // If keyStart or keyEnd don't exist, the leaf before keyStart
 // or after keyEnd will also be included, but not be included in values.
 // If keyEnd-1 exists, no later leaves will be included.
 // If keyStart >= keyEnd and both not nil, panics.
 // Limit is never exceeded.
-func (t *ImmutableTree) getRangeProof(keyStart, keyEnd []byte, limit int) (*RangeProof, [][]byte, [][]byte, error) {
+func (t *ImmutableTree) getRangeProof(keyStart, keyEnd []byte, limit int) (proof *RangeProof, keys, values [][]byte, err error) {
 	if keyStart != nil && keyEnd != nil && bytes.Compare(keyStart, keyEnd) >= 0 {
 		panic("if keyStart and keyEnd are present, need keyStart < keyEnd.")
 	}
@@ -316,7 +318,7 @@ func (t *ImmutableTree) getRangeProof(keyStart, keyEnd []byte, limit int) (*Rang
 		panic("limit must be greater or equal to 0 -- 0 means no limit")
 	}
 	if t.root == nil {
-		return nil, nil, nil, cmn.ErrorWrap(ErrNilRoot, "")
+		return nil, nil, nil, nil
 	}
 	t.root.hashWithCount() // Ensure that all hashes are calculated.
 
@@ -325,18 +327,17 @@ func (t *ImmutableTree) getRangeProof(keyStart, keyEnd []byte, limit int) (*Rang
 	if err != nil {
 		// Key doesn't exist, but instead we got the prev leaf (or the
 		// first or last leaf), which provides proof of absence).
-		// err = nil isn't necessary as we do not use it in the returns below
+		err = nil
 	}
 	startOK := keyStart == nil || bytes.Compare(keyStart, left.key) <= 0
 	endOK := keyEnd == nil || bytes.Compare(left.key, keyEnd) < 0
 	// If left.key is in range, add it to key/values.
-	var keys, values [][]byte
 	if startOK && endOK {
 		keys = append(keys, left.key) // == keyStart
 		values = append(values, left.value)
 	}
 	// Either way, add to proof leaves.
-	var leaves = []proofLeafNode{{
+	var leaves = []proofLeafNode{proofLeafNode{
 		Key:       left.key,
 		ValueHash: tmhash.Sum(left.value),
 		Version:   left.version,
@@ -362,7 +363,6 @@ func (t *ImmutableTree) getRangeProof(keyStart, keyEnd []byte, limit int) (*Rang
 
 	// Traverse starting from afterLeft, until keyEnd or the next leaf
 	// after keyEnd.
-	// nolint
 	var innersq = []PathToLeaf(nil)
 	var inners = PathToLeaf(nil)
 	var leafCount = 1 // from left above.
@@ -385,9 +385,9 @@ func (t *ImmutableTree) getRangeProof(keyStart, keyEnd []byte, limit int) (*Rang
 						pn.Right != nil && !bytes.Equal(pn.Right, node.rightHash) {
 
 						// We've diverged, so start appending to inners.
-						pathCount--
+						pathCount = -1
 					} else {
-						pathCount++
+						pathCount += 1
 					}
 				}
 			}
@@ -403,7 +403,7 @@ func (t *ImmutableTree) getRangeProof(keyStart, keyEnd []byte, limit int) (*Rang
 					ValueHash: tmhash.Sum(node.value),
 					Version:   node.version,
 				})
-				leafCount++
+				leafCount += 1
 				// Maybe terminate because we found enough leaves.
 				if limit > 0 && limit <= leafCount {
 					return true
@@ -451,16 +451,13 @@ func (t *ImmutableTree) getRangeProof(keyStart, keyEnd []byte, limit int) (*Rang
 // A proof of existence or absence is returned alongside the value.
 func (t *ImmutableTree) GetWithProof(key []byte) (value []byte, proof *RangeProof, err error) {
 	proof, _, values, err := t.getRangeProof(key, cpIncr(key), 2)
-	if err == nil {
-		if len(values) > 0 {
-			if !bytes.Equal(proof.Leaves[0].Key, key) {
-				return nil, proof, nil
-			}
-			return values[0], proof, nil
-		}
-		return nil, proof, nil
+	if err != nil {
+		return nil, nil, cmn.ErrorWrap(err, "constructing range proof")
 	}
-	return nil, nil, cmn.ErrorWrap(err, "could not construct any proof")
+	if len(values) > 0 && bytes.Equal(proof.Leaves[0].Key, key) {
+		return values[0], proof, nil
+	}
+	return nil, proof, nil
 }
 
 // GetRangeWithProof gets key/value pairs within the specified range and limit.
@@ -477,6 +474,7 @@ func (tree *MutableTree) GetVersionedWithProof(key []byte, version int64) ([]byt
 		if err != nil {
 			return nil, nil, err
 		}
+
 		return t.GetWithProof(key)
 	}
 	return nil, nil, cmn.ErrorWrap(ErrVersionDoesNotExist, "")

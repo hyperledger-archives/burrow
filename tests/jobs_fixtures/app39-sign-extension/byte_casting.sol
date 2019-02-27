@@ -1,4 +1,4 @@
-pragma solidity ^0.4.4;
+pragma solidity >=0.0.0;
 
 contract ByteCasting {
 
@@ -35,21 +35,21 @@ contract ByteCasting {
     }
 
 
-    function int8ToBytes(uint128 _offst, int8 _input, bytes _output) public {
+    function int8ToBytes(uint128 _offst, int8 _input, bytes memory _output) public {
 
         assembly {
             mstore(add(_output, _offst), _input)
         }
     }
 
-    function int16ToBytes(uint128 _offst, int16 _input, bytes _output) public {
+    function int16ToBytes(uint128 _offst, int16 _input, bytes memory _output) public {
 
         assembly {
             mstore(add(_output, _offst), _input)
         }
     }
 
-    function int256ToBytes(uint128 _offst, int256 _input, bytes _output) public {
+    function int256ToBytes(uint128 _offst, int256 _input, bytes memory _output) public {
 
         assembly {
             mstore(add(_output, _offst), _input)
@@ -57,21 +57,21 @@ contract ByteCasting {
     }
 
 
-    function bytesToInt8(uint128 _offst, bytes _input) public returns (int8 _output) {
+    function bytesToInt8(uint128 _offst, bytes memory _input) public returns (int8 _output) {
 
         assembly {
             _output := mload(add(_input, _offst))
         }
     }
 
-    function bytesToInt16(uint128 _offst, bytes _input) public returns (int16 _output) {
+    function bytesToInt16(uint128 _offst, bytes memory _input) public returns (int16 _output) {
 
         assembly {
             _output := mload(add(_input, _offst))
         }
     }
 
-    function bytesToInt256(uint128 _offst, bytes _input) public returns (int256 _output) {
+    function bytesToInt256(uint128 _offst, bytes memory _input) public returns (int256 _output) {
 
         assembly {
             _output := mload(add(_input, _offst))

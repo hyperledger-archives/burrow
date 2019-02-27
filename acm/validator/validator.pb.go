@@ -38,7 +38,7 @@ type Validator struct {
 func (m *Validator) Reset()      { *m = Validator{} }
 func (*Validator) ProtoMessage() {}
 func (*Validator) Descriptor() ([]byte, []int) {
-	return fileDescriptor_validator_e75750a6510c68af, []int{0}
+	return fileDescriptor_validator_8354b5dca739e62a, []int{0}
 }
 func (m *Validator) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -412,10 +412,10 @@ var (
 	ErrIntOverflowValidator   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("validator.proto", fileDescriptor_validator_e75750a6510c68af) }
-func init() { golang_proto.RegisterFile("validator.proto", fileDescriptor_validator_e75750a6510c68af) }
+func init() { proto.RegisterFile("validator.proto", fileDescriptor_validator_8354b5dca739e62a) }
+func init() { golang_proto.RegisterFile("validator.proto", fileDescriptor_validator_8354b5dca739e62a) }
 
-var fileDescriptor_validator_e75750a6510c68af = []byte{
+var fileDescriptor_validator_8354b5dca739e62a = []byte{
 	// 242 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x2f, 0x4b, 0xcc, 0xc9,
 	0x4c, 0x49, 0x2c, 0xc9, 0x2f, 0xd2, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x84, 0x0b, 0x48,

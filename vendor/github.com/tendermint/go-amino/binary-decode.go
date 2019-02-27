@@ -3,15 +3,25 @@ package amino
 import (
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"time"
 
-	"encoding/binary"
 	"github.com/davecgh/go-spew/spew"
 )
 
 //----------------------------------------
 // cdc.decodeReflectBinary
+
+var (
+	ErrOverflowInt = errors.New("encoded integer value overflows int(32)")
+)
+
+const (
+	// architecture dependent int limits:
+	maxInt = int(^uint(0) >> 1)
+	minInt = -maxInt - 1
+)
 
 // This is the main entrypoint for decoding all types from binary form. This
 // function calls decodeReflectBinary*, and generally those functions should
@@ -116,11 +126,12 @@ func (cdc *Codec) decodeReflectBinary(bz []byte, info *TypeInfo, rv reflect.Valu
 			}
 			rv.SetInt(num)
 		} else {
-			num, _n, err = DecodeVarint(bz)
+			var u64 uint64
+			u64, _n, err = DecodeUvarint(bz)
 			if slide(&bz, &n, _n) && err != nil {
 				return
 			}
-			rv.SetInt(num)
+			rv.SetInt(int64(u64))
 		}
 		return
 
@@ -133,9 +144,13 @@ func (cdc *Codec) decodeReflectBinary(bz []byte, info *TypeInfo, rv reflect.Valu
 			}
 			rv.SetInt(int64(num))
 		} else {
-			var num int64
-			num, _n, err = DecodeVarint(bz)
+			var num uint64
+			num, _n, err = DecodeUvarint(bz)
 			if slide(&bz, &n, _n) && err != nil {
+				return
+			}
+			if int64(num) > math.MaxInt32 || int64(num) < math.MinInt32 {
+				err = ErrOverflowInt
 				return
 			}
 			rv.SetInt(int64(num))
@@ -161,12 +176,16 @@ func (cdc *Codec) decodeReflectBinary(bz []byte, info *TypeInfo, rv reflect.Valu
 		return
 
 	case reflect.Int:
-		var num int64
-		num, _n, err = DecodeVarint(bz)
+		var num uint64
+		num, _n, err = DecodeUvarint(bz)
 		if slide(&bz, &n, _n) && err != nil {
 			return
 		}
-		rv.SetInt(num)
+		if int64(num) > int64(maxInt) || int64(num) < int64(minInt) {
+			err = ErrOverflowInt
+			return
+		}
+		rv.SetInt(int64(num))
 		return
 
 	//----------------------------------------
@@ -835,33 +854,6 @@ func consumeAny(typ3 Typ3, bz []byte) (n int, err error) {
 		return
 	}
 	slide(&bz, &n, _n)
-	return
-}
-
-func consumeStruct(bz []byte) (n int, err error) {
-	var _n, typ = int(0), Typ3(0x00)
-	for {
-		typ, _n, err = consumeFieldKey(bz)
-		if slide(&bz, &n, _n) && err != nil {
-			return
-		}
-		_n, err = consumeAny(typ, bz)
-		if slide(&bz, &n, _n) && err != nil {
-			return
-		}
-	}
-	return
-}
-
-func consumeFieldKey(bz []byte) (typ Typ3, n int, err error) {
-	var u64 uint64
-	u64, n = binary.Uvarint(bz)
-	if n < 0 {
-		n = 0
-		err = errors.New("error decoding uvarint")
-		return
-	}
-	typ = Typ3(u64 & 0x07)
 	return
 }
 

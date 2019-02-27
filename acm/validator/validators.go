@@ -3,21 +3,25 @@ package validator
 import (
 	"math/big"
 
-	"sync"
-
 	"github.com/hyperledger/burrow/crypto"
 )
 
 type Writer interface {
+	SetPower(id crypto.PublicKey, power *big.Int) error
+}
+
+type Alterer interface {
+	// AlterPower ensures that validator power would not change too quickly in a single block (unlike SetPower) which
+	// merely checks values are sane. It returns the flow induced by the change in power.
 	AlterPower(id crypto.PublicKey, power *big.Int) (flow *big.Int, err error)
 }
 
 type Reader interface {
-	Power(id crypto.Address) *big.Int
+	Power(id crypto.Address) (*big.Int, error)
 }
 
 type Iterable interface {
-	Iterate(func(id crypto.Addressable, power *big.Int) (stop bool)) (stopped bool)
+	IterateValidators(func(id crypto.Addressable, power *big.Int) error) error
 }
 
 type IterableReader interface {
@@ -35,77 +39,108 @@ type IterableReaderWriter interface {
 	Iterable
 }
 
-type WriterFunc func(id crypto.PublicKey, power *big.Int) (flow *big.Int, err error)
-
-func SyncWriter(locker sync.Locker, writerFunc WriterFunc) WriterFunc {
-	return WriterFunc(func(id crypto.PublicKey, power *big.Int) (flow *big.Int, err error) {
-		locker.Lock()
-		defer locker.Unlock()
-		return writerFunc(id, power)
-	})
-}
-
-func (wf WriterFunc) AlterPower(id crypto.PublicKey, power *big.Int) (flow *big.Int, err error) {
-	return wf(id, power)
+type History interface {
+	ValidatorChanges(blocksAgo int) IterableReader
+	Validators(blocksAgo int) IterableReader
 }
 
 func AddPower(vs ReaderWriter, id crypto.PublicKey, power *big.Int) error {
 	// Current power + power
-	_, err := vs.AlterPower(id, new(big.Int).Add(vs.Power(id.GetAddress()), power))
-	return err
+	currentPower, err := vs.Power(id.GetAddress())
+	if err != nil {
+		return err
+	}
+	return vs.SetPower(id, new(big.Int).Add(currentPower, power))
 }
 
 func SubtractPower(vs ReaderWriter, id crypto.PublicKey, power *big.Int) error {
-	_, err := vs.AlterPower(id, new(big.Int).Sub(vs.Power(id.GetAddress()), power))
-	return err
+	currentPower, err := vs.Power(id.GetAddress())
+	if err != nil {
+		return err
+	}
+	return vs.SetPower(id, new(big.Int).Sub(currentPower, power))
 }
 
-func Alter(vs Writer, vsOther Iterable) (err error) {
-	vsOther.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		_, err = vs.AlterPower(id.GetPublicKey(), power)
+// Returns the asymmetric difference, diff, between two Sets such that applying diff to before results in after
+func Diff(before, after IterableReader) (*Set, error) {
+	diff := NewSet()
+	err := after.IterateValidators(func(id crypto.Addressable, powerAfter *big.Int) error {
+		powerBefore, err := before.Power(id.GetAddress())
 		if err != nil {
-			return true
+			return err
 		}
-		return
+		// Exclude any powers from before that much after
+		if powerBefore.Cmp(powerAfter) != 0 {
+			diff.ChangePower(id.GetPublicKey(), powerAfter)
+		}
+		return nil
 	})
-	return
+	if err != nil {
+		return nil, err
+	}
+	// Make sure to zero any validators in before but not in after
+	err = before.IterateValidators(func(id crypto.Addressable, powerBefore *big.Int) error {
+		powerAfter, err := after.Power(id.GetAddress())
+		if err != nil {
+			return err
+		}
+		// If there is a difference value then add to diff
+		if powerAfter.Cmp(powerBefore) != 0 {
+			diff.ChangePower(id.GetPublicKey(), powerAfter)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return diff, nil
+}
+
+func Write(vs Writer, vsOther Iterable) error {
+	return vsOther.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
+		return vs.SetPower(id.GetPublicKey(), power)
+	})
+}
+
+func Alter(vs Alterer, vsOther Iterable) error {
+	return vsOther.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
+		_, err := vs.AlterPower(id.GetPublicKey(), power)
+		return err
+	})
 }
 
 // Adds vsOther to vs
-func Add(vs ReaderWriter, vsOther Iterable) (err error) {
-	vsOther.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		err = AddPower(vs, id.GetPublicKey(), power)
-		if err != nil {
-			return true
-		}
-		return
+func Add(vs ReaderWriter, vsOther Iterable) error {
+	return vsOther.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
+		return AddPower(vs, id.GetPublicKey(), power)
 	})
-	return
 }
 
 // Subtracts vsOther from vs
-func Subtract(vs ReaderWriter, vsOther Iterable) (err error) {
-	vsOther.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		err = SubtractPower(vs, id.GetPublicKey(), power)
-		if err != nil {
-			return true
-		}
-		return
+func Subtract(vs ReaderWriter, vsOther Iterable) error {
+	return vsOther.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
+		return SubtractPower(vs, id.GetPublicKey(), power)
 	})
-	return
 }
 
-func Copy(vs Iterable) *Set {
-	vsCopy := NewSet()
-	vs.Iterate(func(id crypto.Addressable, power *big.Int) (stop bool) {
-		vsCopy.ChangePower(id.GetPublicKey(), power)
-		return
-	})
+func copySet(trim bool, vss []Iterable) *Set {
+	vsCopy := newSet()
+	vsCopy.trim = trim
+	for _, vs := range vss {
+		vs.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
+			vsCopy.ChangePower(id.GetPublicKey(), power)
+			return nil
+		})
+	}
 	return vsCopy
 }
 
-func CopyTrim(vs Iterable) *Set {
-	s := Copy(vs)
-	s.trim = true
-	return s
+// Copy each of iterable in vss into a new Set - note any iterations errors thrown by the iterable itself will be swallowed
+// Use Write instead if source iterables may error
+func Copy(vss ...Iterable) *Set {
+	return copySet(false, vss)
+}
+
+func CopyTrim(vss ...Iterable) *Set {
+	return copySet(true, vss)
 }

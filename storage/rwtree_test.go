@@ -25,6 +25,12 @@ func TestSave(t *testing.T) {
 	assert.Equal(t, dam, rwt.Get(foo))
 }
 
+func TestEmptyTree(t *testing.T) {
+	db := dbm.NewMemDB()
+	rwt := NewRWTree(db, 100)
+	fmt.Printf("%X\n", rwt.Hash())
+}
+
 func TestRollback(t *testing.T) {
 	db := dbm.NewMemDB()
 	rwt := NewRWTree(db, 100)
@@ -42,15 +48,15 @@ func TestRollback(t *testing.T) {
 	rwt.Set(foo, gaa)
 	rwt.Set(gaa, dam)
 	hash2, version2, err := rwt.Save()
-	rwt.IterateRange(nil, nil, true, func(key []byte, value []byte) bool {
+	rwt.Iterate(nil, nil, true, func(key, value []byte) error {
 		fmt.Println(string(key), " => ", string(value))
-		return false
+		return nil
 	})
 	require.NoError(t, err)
 
 	// Make a new tree
 	rwt = NewRWTree(db, 100)
-	err = rwt.Load(version1)
+	err = rwt.Load(version1, true)
 	require.NoError(t, err)
 	// If you load version1 the working hash is that which you saved after version0, i.e. hash0
 	require.Equal(t, hash1, rwt.Hash())
@@ -60,9 +66,9 @@ func TestRollback(t *testing.T) {
 	rwt.Set(gaa, dam)
 	hash3, version3, err := rwt.Save()
 	require.NoError(t, err)
-	rwt.IterateRange(nil, nil, true, func(key []byte, value []byte) bool {
+	rwt.Iterate(nil, nil, true, func(key, value []byte) error {
 		fmt.Println(string(key), " => ", string(value))
-		return false
+		return nil
 	})
 
 	// Expect the same hashes
@@ -90,4 +96,29 @@ func TestVersionDivergence(t *testing.T) {
 
 	assert.Equal(t, hash11, hash21)
 	assert.NotEqual(t, hash11, hash22)
+}
+
+func TestMutableTree_Iterate(t *testing.T) {
+	mut := NewMutableTree(dbm.NewMemDB(), 100)
+	mut.Set(bz("aa"), bz("1"))
+	mut.Set(bz("aab"), bz("2"))
+	mut.Set(bz("aac"), bz("3"))
+	mut.Set(bz("aad"), bz("4"))
+	mut.Set(bz("ab"), bz("5"))
+	_, _, err := mut.SaveVersion()
+	require.NoError(t, err)
+	mut.IterateRange(bz("aab"), bz("aad"), true, func(key []byte, value []byte) bool {
+		fmt.Printf("%q -> %q\n", key, value)
+		return false
+	})
+	fmt.Println("foo")
+	mut.IterateRange(bz("aab"), bz("aad"), false, func(key []byte, value []byte) bool {
+		fmt.Printf("%q -> %q\n", key, value)
+		return false
+	})
+	fmt.Println("foo")
+	mut.IterateRange(bz("aad"), bz("aab"), true, func(key []byte, value []byte) bool {
+		fmt.Printf("%q -> %q\n", key, value)
+		return false
+	})
 }
