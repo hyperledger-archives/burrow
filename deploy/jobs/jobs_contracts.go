@@ -132,7 +132,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 		}
 		contractCode := contract.Evm.Bytecode.Object
 
-		mergeAbiSpecBytes(do, contract.Abi)
+		mergeAbiSpecBytes(client, contract.Abi)
 
 		if deploy.Data != nil {
 			_, callDataArray, err := util.PreProcessInputData("", deploy.Data, do, deployScript, client, true)
@@ -182,7 +182,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 			if response.Contract.Evm.Bytecode.Object == "" {
 				return nil, nil, errCodeMissing
 			}
-			mergeAbiSpecBytes(do, response.Contract.Abi)
+			mergeAbiSpecBytes(client, response.Contract.Abi)
 
 			tx, err := deployContract(deploy, do, deployScript, client, response, libs)
 			if err != nil {
@@ -200,7 +200,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 				if response.Contract.Evm.Bytecode.Object == "" {
 					continue
 				}
-				mergeAbiSpecBytes(do, response.Contract.Abi)
+				mergeAbiSpecBytes(client, response.Contract.Abi)
 				tx, err := deployContract(deploy, do, deployScript, client, response, libs)
 				if err != nil {
 					return nil, nil, err
@@ -448,7 +448,7 @@ func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, client *def
 		}
 	}
 
-	logEvents(txe, do)
+	logEvents(txe, client)
 
 	var result string
 
@@ -496,7 +496,7 @@ func deployFinalize(do *def.DeployArgs, client *def.Client, tx payload.Payload) 
 	}
 
 	// The contructor can generate events
-	logEvents(txe, do)
+	logEvents(txe, client)
 
 	if !txe.Receipt.CreatesContract || txe.Receipt.ContractAddress == crypto.ZeroAddress {
 		// Shouldn't get ZeroAddress when CreatesContract is true, but still
@@ -505,8 +505,8 @@ func deployFinalize(do *def.DeployArgs, client *def.Client, tx payload.Payload) 
 	return &txe.Receipt.ContractAddress, nil
 }
 
-func logEvents(txe *exec.TxExecution, do *def.DeployArgs) {
-	if do.AllSpecs == nil {
+func logEvents(txe *exec.TxExecution, client *def.Client) {
+	if client.AllSpecs == nil {
 		return
 	}
 
@@ -520,7 +520,7 @@ func logEvents(txe *exec.TxExecution, do *def.DeployArgs) {
 		var eventID abi.EventID
 		copy(eventID[:], eventLog.GetTopic(0).Bytes())
 
-		evAbi, ok := do.AllSpecs.EventsById[eventID]
+		evAbi, ok := client.AllSpecs.EventsById[eventID]
 		if !ok {
 			log.Errorf("Could not find ABI for Event with ID %x\n", eventID)
 			continue
@@ -542,9 +542,9 @@ func logEvents(txe *exec.TxExecution, do *def.DeployArgs) {
 	}
 }
 
-func mergeAbiSpecBytes(do *def.DeployArgs, bs []byte) {
+func mergeAbiSpecBytes(client *def.Client, bs []byte) {
 	spec, err := abi.ReadAbiSpec(bs)
 	if err == nil {
-		do.AllSpecs = abi.MergeAbiSpec([]*abi.AbiSpec{do.AllSpecs, spec})
+		client.AllSpecs = abi.MergeAbiSpec([]*abi.AbiSpec{client.AllSpecs, spec})
 	}
 }

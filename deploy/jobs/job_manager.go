@@ -80,14 +80,14 @@ func getCompilerWork(intermediate interface{}) (*compilers.Response, error) {
 	return nil, fmt.Errorf("internal error: no compiler work queued")
 }
 
-func doJobs(script *def.Playbook, args *def.DeployArgs, client *def.Client) error {
-	for _, job := range script.Jobs {
+func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client) error {
+	for _, job := range playbook.Jobs {
 		payload, err := job.Payload()
 		if err != nil {
 			return fmt.Errorf("could not get Job payload: %v", payload)
 		}
 
-		err = util.PreProcessFields(payload, args, script, client)
+		err = util.PreProcessFields(payload, args, playbook, client)
 		if err != nil {
 			return err
 		}
@@ -100,14 +100,14 @@ func doJobs(script *def.Playbook, args *def.DeployArgs, client *def.Client) erro
 		switch payload.(type) {
 		case *def.Proposal:
 			announce(job.Name, "Proposal")
-			job.Result, err = ProposalJob(job.Proposal, args, script, client)
+			job.Result, err = ProposalJob(job.Proposal, args, playbook, client)
 
 		// Meta Job
 		case *def.Meta:
 			announce(job.Name, "Meta")
 			metaPlaybook := job.Meta.Playbook
 			if metaPlaybook.Account == "" {
-				metaPlaybook.Account = script.Account
+				metaPlaybook.Account = playbook.Account
 			}
 			err = doJobs(metaPlaybook, args, client)
 
@@ -115,16 +115,16 @@ func doJobs(script *def.Playbook, args *def.DeployArgs, client *def.Client) erro
 		case *def.UpdateAccount:
 			announce(job.Name, "UpdateAccount")
 			var tx *pbpayload.GovTx
-			tx, job.Variables, err = FormulateUpdateAccountJob(job.UpdateAccount, script.Account, client)
+			tx, job.Variables, err = FormulateUpdateAccountJob(job.UpdateAccount, playbook.Account, client)
 			if err != nil {
 				return err
 			}
-			err = UpdateAccountJob(job.UpdateAccount, script.Account, tx, client)
+			err = UpdateAccountJob(job.UpdateAccount, playbook.Account, tx, client)
 
 		// Util jobs
 		case *def.Account:
 			announce(job.Name, "Account")
-			job.Result, err = SetAccountJob(job.Account, args, script)
+			job.Result, err = SetAccountJob(job.Account, args, playbook)
 		case *def.Set:
 			announce(job.Name, "Set")
 			job.Result, err = SetValJob(job.Set, args)
@@ -132,38 +132,38 @@ func doJobs(script *def.Playbook, args *def.DeployArgs, client *def.Client) erro
 		// Transaction jobs
 		case *def.Send:
 			announce(job.Name, "Send")
-			tx, err := FormulateSendJob(job.Send, script.Account, client)
+			tx, err := FormulateSendJob(job.Send, playbook.Account, client)
 			if err != nil {
 				return err
 			}
-			job.Result, err = SendJob(job.Send, tx, script.Account, client)
+			job.Result, err = SendJob(job.Send, tx, playbook.Account, client)
 		case *def.RegisterName:
 			announce(job.Name, "RegisterName")
-			txs, err := FormulateRegisterNameJob(job.RegisterName, args, script.Account, client)
+			txs, err := FormulateRegisterNameJob(job.RegisterName, args, playbook.Account, client)
 			if err != nil {
 				return err
 			}
-			job.Result, err = RegisterNameJob(job.RegisterName, args, script, txs, client)
+			job.Result, err = RegisterNameJob(job.RegisterName, args, playbook, txs, client)
 		case *def.Permission:
 			announce(job.Name, "Permission")
-			tx, err := FormulatePermissionJob(job.Permission, script.Account, client)
+			tx, err := FormulatePermissionJob(job.Permission, playbook.Account, client)
 			if err != nil {
 				return err
 			}
-			job.Result, err = PermissionJob(job.Permission, script.Account, tx, client)
+			job.Result, err = PermissionJob(job.Permission, playbook.Account, tx, client)
 
 		// Contracts jobs
 		case *def.Deploy:
 			announce(job.Name, "Deploy")
-			txs, contracts, ferr := FormulateDeployJob(job.Deploy, args, script, client, job.Intermediate)
+			txs, contracts, ferr := FormulateDeployJob(job.Deploy, args, playbook, client, job.Intermediate)
 			if ferr != nil {
 				return ferr
 			}
-			job.Result, err = DeployJob(job.Deploy, args, script, client, txs, contracts)
+			job.Result, err = DeployJob(job.Deploy, args, playbook, client, txs, contracts)
 
 		case *def.Call:
 			announce(job.Name, "Call")
-			CallTx, ferr := FormulateCallJob(job.Call, args, script, client)
+			CallTx, ferr := FormulateCallJob(job.Call, args, playbook, client)
 			if ferr != nil {
 				return ferr
 			}
@@ -191,7 +191,7 @@ func doJobs(script *def.Playbook, args *def.DeployArgs, client *def.Client) erro
 			job.Result, err = QueryAccountJob(job.QueryAccount, client)
 		case *def.QueryContract:
 			announce(job.Name, "QueryContract")
-			job.Result, job.Variables, err = QueryContractJob(job.QueryContract, args, script, client)
+			job.Result, job.Variables, err = QueryContractJob(job.QueryContract, args, playbook, client)
 		case *def.QueryName:
 			announce(job.Name, "QueryName")
 			job.Result, err = QueryNameJob(job.QueryName, client)

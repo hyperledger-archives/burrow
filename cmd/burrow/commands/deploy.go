@@ -19,7 +19,7 @@ const defaultChainTimeout = 15 * time.Second
 
 func Deploy(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
-		chainUrlOpt := cmd.StringOpt("u chain-url", "127.0.0.1:10997", "chain-url to be used in IP:PORT format")
+		chainURLOpt := cmd.StringOpt("u chain-url", "127.0.0.1:10997", "chain-url to be used in IP:PORT format")
 
 		signerOpt := cmd.StringOpt("s keys", "",
 			"IP:PORT of Burrow GRPC service which jobs should or otherwise transaction submitted unsigned for mempool signing in Burrow")
@@ -31,10 +31,10 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 		pathOpt := cmd.StringOpt("i dir", "", "root directory of app (will use pwd by default)")
 
 		defaultOutputOpt := cmd.StringOpt("o output", def.DefaultOutputFile,
-			"filename for jobs output file. by default, this name will reflect the name passed in on the optional [--file]")
+			"filename for playbook output file. by default, this name will reflect the name passed in on the optional [--file]")
 
-		yamlPathOpt := cmd.StringOpt("f file", "deploy.yaml",
-			"path to package file which jobs should use. if also using the --dir flag, give the relative path to jobs file, which should be in the same directory")
+		playbooksOpt := cmd.StringsOpt("f file", []string{"deploy.yaml"},
+			"path to playbook file which deploy should run. if also using the --dir flag, give the relative path to jobs file, which should be in the same directory")
 
 		defaultSetsOpt := cmd.StringsOpt("e set", []string{},
 			"default sets to use; operates the same way as the [set] jobs, only before the jobs file is ran (and after default address")
@@ -71,7 +71,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 		proposalList := cmd.StringOpt("list-proposals state", "", "List proposals, either all, executed, expired, or current")
 
 		cmd.Action = func() {
-			do := new(def.DeployArgs)
+			args := new(def.DeployArgs)
 
 			if *proposalVerify && *proposalVote {
 				output.Fatalf("Cannot combine --proposal-verify and --proposal-vote")
@@ -84,29 +84,28 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 				}
 			}
 
-			do.Path = *pathOpt
-			do.DefaultOutput = *defaultOutputOpt
-			do.YAMLPath = *yamlPathOpt
-			do.DefaultSets = *defaultSetsOpt
-			do.BinPath = *binPathOpt
-			do.DefaultGas = *defaultGasOpt
-			do.Address = *addressOpt
-			do.DefaultFee = *defaultFeeOpt
-			do.DefaultAmount = *defaultAmountOpt
-			do.Verbose = *verboseOpt
-			do.Debug = *debugOpt
-			do.Jobs = *jobsOpt
-			do.ProposeVerify = *proposalVerify
-			do.ProposeVote = *proposalVote
-			do.ProposeCreate = *proposalCreate
+			args.Path = *pathOpt
+			args.DefaultOutput = *defaultOutputOpt
+			args.DefaultSets = *defaultSetsOpt
+			args.BinPath = *binPathOpt
+			args.DefaultGas = *defaultGasOpt
+			args.Address = *addressOpt
+			args.DefaultFee = *defaultFeeOpt
+			args.DefaultAmount = *defaultAmountOpt
+			args.Verbose = *verboseOpt
+			args.Debug = *debugOpt
+			args.Jobs = *jobsOpt
+			args.ProposeVerify = *proposalVerify
+			args.ProposeVote = *proposalVote
+			args.ProposeCreate = *proposalCreate
 			log.SetFormatter(new(PlainFormatter))
 			log.SetLevel(log.WarnLevel)
-			if do.Verbose {
+			if args.Verbose {
 				log.SetLevel(log.InfoLevel)
-			} else if do.Debug {
+			} else if args.Debug {
 				log.SetLevel(log.DebugLevel)
 			}
-			client := def.NewClient(*chainUrlOpt, *signerOpt, *mempoolSigningOpt, time.Duration(*timeoutSecondsOpt)*time.Second)
+			client := def.NewClient(*chainURLOpt, *signerOpt, *mempoolSigningOpt, time.Duration(*timeoutSecondsOpt)*time.Second)
 			handleTerm()
 
 			if *proposalList != "" {
@@ -116,7 +115,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 				}
 				proposals.ListProposals(client, state)
 			} else {
-				util.IfExit(pkgs.RunPackage(do, client))
+				util.IfExit(pkgs.RunPackage(args, *playbooksOpt, client))
 			}
 		}
 	}

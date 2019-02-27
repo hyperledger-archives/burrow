@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/genesis/spec"
@@ -40,6 +41,7 @@ type Client struct {
 	queryClient           rpcquery.QueryClient
 	executionEventsClient rpcevents.ExecutionEventsClient
 	keyClient             keys.KeyClient
+	AllSpecs              *abi.AbiSpec
 }
 
 func NewClient(chainURL, keysClientAddress string, mempoolSigning bool, timeout time.Duration) *Client {
