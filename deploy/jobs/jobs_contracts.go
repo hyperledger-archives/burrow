@@ -287,12 +287,6 @@ func DeployJob(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook, cli
 			if err != nil {
 				return "", err
 			}
-			contractName := filepath.Join(do.BinPath, fmt.Sprintf("%s.bin", contracts[i].Objectname))
-			log.WithField("=>", contractName).Warn("Saving Binary")
-			err = contract.Save(contractName)
-			if err != nil {
-				return "", err
-			}
 			result = contractAddress.String()
 		} else {
 			// we shouldn't reach this point because we should have an error before this.
@@ -331,7 +325,14 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 	log.WithField("=>", string(compilersResponse.Contract.Abi)).Debug("Specification (From Compilers)")
 
 	contract := compilersResponse.Contract
-	err := contract.Link(libs)
+	contractName := filepath.Join(do.BinPath, fmt.Sprintf("%s.bin", compilersResponse.Objectname))
+	log.WithField("=>", contractName).Warn("Saving Binary")
+	err := contract.Save(contractName)
+	if err != nil {
+		return nil, err
+	}
+
+	err = contract.Link(libs)
 	if err != nil {
 		return nil, err
 	}
