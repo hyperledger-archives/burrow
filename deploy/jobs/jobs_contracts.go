@@ -48,11 +48,6 @@ func BuildJob(build *def.Build, binPath string, resp *compilers.Response) (resul
 	if binP == "" {
 		binP = binPath
 	}
-	if _, err := os.Stat(binP); os.IsNotExist(err) {
-		if err := os.Mkdir(binP, 0775); err != nil {
-			return "", err
-		}
-	}
 
 	for _, res := range resp.Objects {
 		switch build.Instance {
@@ -257,14 +252,6 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 }
 
 func DeployJob(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook, client *def.Client, txs []*payload.CallTx, contracts []*compilers.ResponseItem) (result string, err error) {
-
-	// Save
-	if _, err := os.Stat(do.BinPath); os.IsNotExist(err) {
-		if err := os.Mkdir(do.BinPath, 0775); err != nil {
-			return "", err
-		}
-	}
-
 	// saving contract
 	// additional data may be sent along with the contract
 	// these are naively added to the end of the contract code using standard
