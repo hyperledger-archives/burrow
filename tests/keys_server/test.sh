@@ -23,7 +23,7 @@ for UTILITY in jq xxd openssl; do
         missing_utility=$UTILITY
     fi
 done
-if [ ! -z $missing_utility ]; then
+if [[ ! -z ${missing_utility} ]]; then
     echo "FAILED dependency check: the '$missing_utility' utility is missing"
     exit 1
 fi

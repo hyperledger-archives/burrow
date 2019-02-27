@@ -26,7 +26,7 @@ import (
 
 type KeyClient interface {
 	// Sign returns the signature bytes for given message signed with the key associated with signAddress
-	Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error)
+	Sign(signAddress crypto.Address, message []byte) (*crypto.Signature, error)
 
 	// PublicKey returns the public key associated with a given address
 	PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error)
@@ -55,16 +55,12 @@ type remoteKeyClient struct {
 	logger     *logging.Logger
 }
 
-func (l *localKeyClient) Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error) {
+func (l *localKeyClient) Sign(signAddress crypto.Address, message []byte) (*crypto.Signature, error) {
 	resp, err := l.ks.Sign(nil, &SignRequest{Address: signAddress.String(), Message: message})
 	if err != nil {
-		return crypto.Signature{}, err
+		return nil, err
 	}
-	curveType, err := crypto.CurveTypeFromString(resp.GetCurveType())
-	if err != nil {
-		return crypto.Signature{}, err
-	}
-	return crypto.SignatureFromBytes(resp.GetSignature(), curveType)
+	return resp.GetSignature(), nil
 }
 
 func (l *localKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
@@ -112,7 +108,7 @@ func (l *localKeyClient) HealthCheck() error {
 	return nil
 }
 
-func (l *remoteKeyClient) Sign(signAddress crypto.Address, message []byte) (signature crypto.Signature, err error) {
+func (l *remoteKeyClient) Sign(signAddress crypto.Address, message []byte) (*crypto.Signature, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	req := SignRequest{Address: signAddress.String(), Message: message}
@@ -120,14 +116,9 @@ func (l *remoteKeyClient) Sign(signAddress crypto.Address, message []byte) (sign
 	resp, err := l.kc.Sign(ctx, &req)
 	if err != nil {
 		l.logger.TraceMsg("Received Sign request error response: ", err)
-		return crypto.Signature{}, err
+		return nil, err
 	}
-	l.logger.TraceMsg("Received Sign response to remote key server: %v", resp)
-	curveType, err := crypto.CurveTypeFromString(resp.GetCurveType())
-	if err != nil {
-		return crypto.Signature{}, err
-	}
-	return crypto.SignatureFromBytes(resp.GetSignature(), curveType)
+	return resp.GetSignature(), nil
 }
 
 func (l *remoteKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
@@ -238,10 +229,6 @@ func (ms *Signer) GetPublicKey() crypto.PublicKey {
 	return ms.publicKey
 }
 
-func (ms *Signer) Sign(messsage []byte) (crypto.Signature, error) {
-	signature, err := ms.keyClient.Sign(ms.address, messsage)
-	if err != nil {
-		return crypto.Signature{}, err
-	}
-	return signature, nil
+func (ms *Signer) Sign(messsage []byte) (*crypto.Signature, error) {
+	return ms.keyClient.Sign(ms.address, messsage)
 }

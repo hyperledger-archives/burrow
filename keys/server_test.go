@@ -113,7 +113,7 @@ func testServerSignAndVerify(t *testing.T, typ string) {
 		Signature: sig.GetSignature(),
 		PublicKey: resp.GetPublicKey(),
 		Message:   hash,
-		CurveType: typ})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

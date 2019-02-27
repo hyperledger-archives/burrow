@@ -41,28 +41,28 @@ func (p PrivateKey) RawBytes() []byte {
 	return p.PrivateKey
 }
 
-func (p PrivateKey) Sign(msg []byte) (Signature, error) {
+func (p PrivateKey) Sign(msg []byte) (*Signature, error) {
 	switch p.CurveType {
 	case CurveTypeEd25519:
 		if len(p.PrivateKey) != ed25519.PrivateKeySize {
-			return Signature{}, fmt.Errorf("bytes passed have length %v but ed25519 private keys have %v bytes",
+			return nil, fmt.Errorf("bytes passed have length %v but ed25519 private keys have %v bytes",
 				len(p.PrivateKey), ed25519.PrivateKeySize)
 		}
 		privKey := ed25519.PrivateKey(p.PrivateKey)
-		return Signature{CurveType: CurveTypeEd25519, Signature: ed25519.Sign(privKey, msg)}, nil
+		return &Signature{CurveType: CurveTypeEd25519, Signature: ed25519.Sign(privKey, msg)}, nil
 	case CurveTypeSecp256k1:
 		if len(p.PrivateKey) != btcec.PrivKeyBytesLen {
-			return Signature{}, fmt.Errorf("bytes passed have length %v but secp256k1 private keys have %v bytes",
+			return nil, fmt.Errorf("bytes passed have length %v but secp256k1 private keys have %v bytes",
 				len(p.PrivateKey), btcec.PrivKeyBytesLen)
 		}
 		privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), p.PrivateKey)
 		sig, err := privKey.Sign(msg)
 		if err != nil {
-			return Signature{}, err
+			return nil, err
 		}
-		return Signature{CurveType: CurveTypeSecp256k1, Signature: sig.Serialize()}, nil
+		return &Signature{CurveType: CurveTypeSecp256k1, Signature: sig.Serialize()}, nil
 	default:
-		return Signature{}, ErrInvalidCurve(p.CurveType)
+		return nil, ErrInvalidCurve(p.CurveType)
 	}
 }
 

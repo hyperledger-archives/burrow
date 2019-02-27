@@ -92,6 +92,7 @@ func CreateContract(t testing.TB, cli rpctransact.TransactClient, inputAddress c
 		GasLimit: 10000,
 	})
 	require.NoError(t, err)
+	require.NotNil(t, txe.TxHeader)
 	return txe
 }
 
@@ -108,6 +109,7 @@ func CallContract(t testing.TB, cli rpctransact.TransactClient, inputAddress, co
 		GasLimit: 1000000,
 	})
 	require.NoError(t, err)
+	require.NotNil(t, txe.TxHeader)
 	return txe
 }
 
