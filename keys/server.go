@@ -128,9 +128,11 @@ func (k *KeyStore) Sign(ctx context.Context, in *SignRequest) (*SignResponse, er
 		return nil, err
 	}
 
-	sig, err := key.Sign(in.GetMessage())
-
-	return &SignResponse{Signature: sig, CurveType: key.CurveType.String()}, nil
+	sig, err := key.PrivateKey.Sign(in.GetMessage())
+	if err != nil {
+		return nil, err
+	}
+	return &SignResponse{Signature: sig}, err
 }
 
 func (k *KeyStore) Verify(ctx context.Context, in *VerifyRequest) (*VerifyResponse, error) {
@@ -144,15 +146,8 @@ func (k *KeyStore) Verify(ctx context.Context, in *VerifyRequest) (*VerifyRespon
 		return nil, fmt.Errorf("must provide a signature")
 	}
 
-	curveT, err := crypto.CurveTypeFromString(in.GetCurveType())
-	if err != nil {
-		return nil, err
-	}
-	sig, err := crypto.SignatureFromBytes(in.GetSignature(), curveT)
-	if err != nil {
-		return nil, err
-	}
-	pubkey, err := crypto.PublicKeyFromBytes(in.GetPublicKey(), curveT)
+	sig := in.GetSignature()
+	pubkey, err := crypto.PublicKeyFromBytes(in.GetPublicKey(), sig.GetCurveType())
 	if err != nil {
 		return nil, err
 	}

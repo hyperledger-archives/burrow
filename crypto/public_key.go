@@ -80,7 +80,7 @@ func (p PublicKey) IsValid() bool {
 	return publicKeyLength != 0 && publicKeyLength == len(p.PublicKey)
 }
 
-func (p PublicKey) Verify(msg []byte, signature Signature) error {
+func (p PublicKey) Verify(msg []byte, signature *Signature) error {
 	switch p.CurveType {
 	case CurveTypeUnset:
 		return fmt.Errorf("public key is unset")

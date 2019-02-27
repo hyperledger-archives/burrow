@@ -52,10 +52,10 @@ func (mkc *KeyClient) NewKey(name string) crypto.Address {
 	return key.Address
 }
 
-func (mkc *KeyClient) Sign(signAddress crypto.Address, message []byte) (crypto.Signature, error) {
+func (mkc *KeyClient) Sign(signAddress crypto.Address, message []byte) (*crypto.Signature, error) {
 	key := mkc.knownKeys[signAddress]
 	if key == nil {
-		return crypto.Signature{}, fmt.Errorf("unknown address (%s)", signAddress)
+		return nil, fmt.Errorf("unknown address (%s)", signAddress)
 	}
 	return key.Sign(message)
 }

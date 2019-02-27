@@ -423,11 +423,3 @@ func NewKeyFromPriv(curveType crypto.CurveType, PrivKeyBytes []byte) (*Key, erro
 		PrivateKey: privKey,
 	}, nil
 }
-
-func (k *Key) Sign(hash []byte) ([]byte, error) {
-	signature, err := k.PrivateKey.Sign(hash)
-	if err != nil {
-		return nil, err
-	}
-	return signature.RawBytes(), nil
-}
