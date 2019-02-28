@@ -4,7 +4,11 @@ version_regex="^v[0-9]+\.[0-9]+\.[0-9]+$"
 
 set -e
 
+DOCKER_REPO=${DOCKER_REPO:-"hyperledger/burrow"}
+DOCKER_REPO_DEV=${DOCKER_REPO_DEV:-"quay.io/monax/burrow"}
+
 function release {
+    [[ -z "$DOCKER_PASS" ]] && echo "\$DOCKER_PASS must be set to release" && exit 1
     notes="NOTES.md"
     echo "Building and releasing $tag..."
     echo "Pushing docker image..."

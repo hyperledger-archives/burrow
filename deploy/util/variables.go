@@ -186,12 +186,12 @@ func replaceBlockVariable(toReplace string, client *def.Client) (string, error) 
 	return toReplace, nil
 }
 
-func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, script *def.Playbook, client *def.Client, constructor bool) (string, []string, error) {
-	var callDataArray []string
+func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, script *def.Playbook, client *def.Client, constructor bool) (string, []interface{}, error) {
+	var callDataArray []interface{}
 	var callArray []string
 	if function == "" && !constructor {
 		if reflect.TypeOf(data).Kind() == reflect.Slice {
-			return "", []string{""}, fmt.Errorf("Incorrect formatting of deploy.yaml. Please update it to include a function field.")
+			return "", []interface{}{""}, fmt.Errorf("Incorrect formatting of deploy.yaml. Please update it to include a function field.")
 		}
 		function = strings.Split(data.(string), " ")[0]
 		callArray = strings.Split(data.(string), " ")[1:]
@@ -210,7 +210,7 @@ func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, 
 				}
 				return function, callDataArray, nil
 			} else {
-				return "", make([]string, 0), fmt.Errorf("Incorrect formatting of deploy.yaml file. Please update it to include a function field.")
+				return "", []interface{}{}, fmt.Errorf("Incorrect formatting of deploy.yaml file. Please update it to include a function field.")
 			}
 		}
 		val := reflect.ValueOf(data)

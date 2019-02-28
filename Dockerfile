@@ -16,9 +16,6 @@ RUN make build
 FROM alpine:3.8
 
 # Variable arguments to populate labels
-ARG VERSION
-ARG VCS_REF=master
-ARG BUILD_DATE
 ARG USER=burrow
 ARG INSTALL_BASE=/usr/local/bin
 
@@ -28,10 +25,7 @@ LABEL org.label-schema.name = "Burrow"
 LABEL org.label-schema.vendor="Hyperledger Burrow Authors"
 LABEL org.label-schema.description="Hyperledger Burrow is a permissioned Ethereum smart-contract blockchain node."
 LABEL org.label-schema.license="Apache-2.0"
-LABEL org.label-schema.version=$VERSION
 LABEL org.label-schema.vcs-url="https://github.com/hyperledger/burrow"
-LABEL org.label-schema.vcs-ref=$VCS_REF
-LABEL org.label-schema.build-date=$BUILD_DATE
 
 # Run burrow as burrow user; not as root user
 ENV BURROW_PATH /home/$USER

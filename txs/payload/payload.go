@@ -2,6 +2,7 @@ package payload
 
 import (
 	"fmt"
+	"strings"
 )
 
 /*
@@ -99,6 +100,14 @@ type Payload interface {
 	Any() *Any
 	// The serialised size in bytes
 	Size() int
+}
+
+func InputsString(inputs []*TxInput) string {
+	strs := make([]string, len(inputs))
+	for i, in := range inputs {
+		strs[i] = in.Address.String()
+	}
+	return strings.Join(strs, ",")
 }
 
 func New(txType Type) (Payload, error) {

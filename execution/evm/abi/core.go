@@ -39,10 +39,10 @@ var RevertAbi *AbiSpec
 // must match the function being called.
 // Returns the ABI encoded function call, whether the function is constant according
 // to the ABI (which means it does not modified contract state)
-func EncodeFunctionCallFromFile(abiFileName, abiPath, funcName string, args []string) ([]byte, bool, error) {
+func EncodeFunctionCallFromFile(abiFileName, abiPath, funcName string, args ...interface{}) ([]byte, *FunctionSpec, error) {
 	abiSpecBytes, err := readAbi(abiPath, abiFileName)
 	if err != nil {
-		return []byte{}, false, err
+		return []byte{}, nil, err
 	}
 
 	return EncodeFunctionCall(abiSpecBytes, funcName, args...)
@@ -56,7 +56,7 @@ func EncodeFunctionCallFromFile(abiFileName, abiPath, funcName string, args []st
 // must match the function being called.
 // Returns the ABI encoded function call, whether the function is constant according
 // to the ABI (which means it does not modified contract state)
-func EncodeFunctionCall(abiData, funcName string, args ...string) ([]byte, bool, error) {
+func EncodeFunctionCall(abiData, funcName string, args ...interface{}) ([]byte, *FunctionSpec, error) {
 	log.WithField("=>", abiData).Debug("ABI Specification (Formulate)")
 	log.WithFields(log.Fields{
 		"function":  funcName,
@@ -69,23 +69,19 @@ func EncodeFunctionCall(abiData, funcName string, args ...string) ([]byte, bool,
 			"abi":   abiData,
 			"error": err.Error(),
 		}).Error("Failed to decode abi spec")
-		return nil, false, err
+		return nil, nil, err
 	}
 
-	iArgs := make([]interface{}, len(args))
-	for i, s := range args {
-		iArgs[i] = interface{}(s)
-	}
-	packedBytes, constant, err := abiSpec.Pack(funcName, iArgs...)
+	packedBytes, funcSpec, err := abiSpec.Pack(funcName, args...)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"abi":   abiData,
 			"error": err.Error(),
 		}).Error("Failed to encode abi spec")
-		return nil, false, err
+		return nil, nil, err
 	}
 
-	return packedBytes, constant, nil
+	return packedBytes, funcSpec, nil
 }
 
 // DecodeFunctionReturnFromFile ABI decodes the return value from a contract function call.
@@ -97,10 +93,10 @@ func DecodeFunctionReturnFromFile(abiLocation, binPath, funcName string, resultR
 	log.WithField("=>", abiSpecBytes).Debug("ABI Specification (Decode)")
 
 	// Unpack the result
-	return unpacker(abiSpecBytes, funcName, resultRaw)
+	return DecodeFunctionReturn(abiSpecBytes, funcName, resultRaw)
 }
 
-func unpacker(abiData, name string, data []byte) ([]*Variable, error) {
+func DecodeFunctionReturn(abiData, name string, data []byte) ([]*Variable, error) {
 	abiSpec, err := ReadAbiSpec([]byte(abiData))
 	if err != nil {
 		return nil, err

@@ -12,7 +12,7 @@ import (
 )
 
 func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, script *def.Playbook, client *def.Client) (string, []*abi.Variable, error) {
-	var queryDataArray []string
+	var queryDataArray []interface{}
 	var err error
 	query.Function, queryDataArray, err = util.PreProcessInputData(query.Function, query.Data, do, script, client, false)
 	if err != nil {
@@ -23,11 +23,11 @@ func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, script *def.
 	var data string
 	var packedBytes []byte
 	if query.Bin != "" {
-		packedBytes, _, err = abi.EncodeFunctionCallFromFile(query.Bin, do.BinPath, query.Function, queryDataArray)
+		packedBytes, _, err = abi.EncodeFunctionCallFromFile(query.Bin, do.BinPath, query.Function, queryDataArray...)
 		data = hex.EncodeToString(packedBytes)
 	}
 	if query.Bin == "" || err != nil {
-		packedBytes, _, err = abi.EncodeFunctionCallFromFile(query.Destination, do.BinPath, query.Function, queryDataArray)
+		packedBytes, _, err = abi.EncodeFunctionCallFromFile(query.Destination, do.BinPath, query.Function, queryDataArray...)
 		data = hex.EncodeToString(packedBytes)
 	}
 	if err != nil {

@@ -1172,7 +1172,7 @@ func (abiSpec *AbiSpec) UnpackWithID(data []byte, args ...interface{}) error {
 // must match the function being called.
 // Returns the ABI encoded function call, whether the function is constant according
 // to the ABI (which means it does not modified contract state)
-func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, bool, error) {
+func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, *FunctionSpec, error) {
 	var funcSpec FunctionSpec
 	var argSpec []Argument
 	if fname != "" {
@@ -1189,10 +1189,10 @@ func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, bool, e
 
 	if argSpec == nil {
 		if fname == "" {
-			return nil, false, fmt.Errorf("Contract does not have a constructor")
+			return nil, nil, fmt.Errorf("Contract does not have a constructor")
 		}
 
-		return nil, false, fmt.Errorf("Unknown function %s", fname)
+		return nil, nil, fmt.Errorf("Unknown function %s", fname)
 	}
 
 	packed := make([]byte, 0)
@@ -1203,10 +1203,10 @@ func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, bool, e
 
 	packedArgs, err := Pack(argSpec, args...)
 	if err != nil {
-		return nil, false, err
+		return nil, nil, err
 	}
 
-	return append(packed, packedArgs...), funcSpec.Constant, nil
+	return append(packed, packedArgs...), &funcSpec, nil
 }
 
 func PackIntoStruct(argSpec []Argument, st interface{}) ([]byte, error) {
