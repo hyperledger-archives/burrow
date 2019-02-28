@@ -2,8 +2,8 @@
 # ----------------------------------------------------------
 # PURPOSE
 
-# This is the test manager for monax jobs. It will run the testing
-# sequence for monax jobs referencing test fixtures in this tests directory.
+# This is the test manager for playbooks. It will run the testing
+# sequence for playbooks referencing test fixtures in this tests directory.
 
 # ----------------------------------------------------------
 # REQUIREMENTS
@@ -27,33 +27,19 @@ goto_base(){
   cd ${script_dir}/jobs_fixtures
 }
 
-run_test(){
-  # Run the jobs test
-  echo ""
-  echo -e "Testing $burrow_bin jobs using fixture =>\t$1"
-  goto_base
-
-  cd $1
-  cat readme.md
-  echo
-
-#
-  deploy_cmd="${burrow_bin} deploy --chain=$BURROW_HOST:$BURROW_GRPC_PORT --keys=$BURROW_HOST:$BURROW_GRPC_PORT \
-   --address $key1 --mempool-signing --set key2_addr=$key2_addr --set addr2_pub=$key2_pub --set key1=$key1 --set key2=$key2 --proposal-create deploy.yaml"
-  [[ "$debug" == true ]] && deploy_cmd="$deploy_cmd --debug"
-  echo "executing deploy with command line:"
-  echo "$deploy_cmd"
-  eval "${deploy_cmd}"
-}
-
 perform_tests(){
   echo ""
   goto_base
-  apps=($1*/)
+  apps=$1*/deploy.yaml
+
   # Run all jobs in parallel with mempool signing
-  parallel --joblog "$job_log" -k -j 100 run_test ::: "${apps[@]}" 2>&1 | tee "$test_output"
-  failures=($(awk 'NR==1{for(i=1;i<=NF;i++){if($i=="Exitval"){c=i;break}}} ($c=="1"&& NR>1){print $NF}' "$job_log"))
-  test_exit=${#failures[@]}
+  deploy_cmd="${burrow_bin} deploy --jobs=100 --chain=$BURROW_HOST:$BURROW_GRPC_PORT --keys=$BURROW_HOST:$BURROW_GRPC_PORT \
+   --address $key1 --mempool-signing --set key2_addr=$key2_addr --set addr2_pub=$key2_pub --set key1=$key1 --set key2=$key2 --proposal-create $apps"
+  [[ "$debug" == true ]] && deploy_cmd="$deploy_cmd --debug"
+  echo "executing deploy with command line:"
+  echo "$deploy_cmd"
+  ${deploy_cmd}
+  test_exit=$?
 }
 
 perform_tests_that_should_fail(){
@@ -64,7 +50,7 @@ perform_tests_that_should_fail(){
   expectedFailures="${#apps[@]}"
   if [[ "$test_exit" -eq $expectedFailures ]]
   then
-    echo "Success! We go the correct number of failures: $test_exit (don't worry about messages above)"
+    echo "Success! We go the correct number of failures: ${test_exit} (don't worry about messages above)"
     echo
     test_exit=0
   else
@@ -73,7 +59,7 @@ perform_tests_that_should_fail(){
   fi
 }
 
-export -f run_test goto_base
+export -f goto_base
 
 deploy_tests(){
   echo "Hello! I'm the marmot that tests the $burrow_bin tooling."

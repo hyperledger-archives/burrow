@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/hyperledger/burrow/crypto"
-	log "github.com/sirupsen/logrus"
+	"github.com/hyperledger/burrow/logging"
 )
 
 type SolidityInput struct {
@@ -147,7 +147,7 @@ func (contract *SolidityContract) Link(libraries map[string]string) error {
 	return nil
 }
 
-func Compile(file string, optimize bool, libraries map[string]string) (*Response, error) {
+func Compile(file string, optimize bool, workDir string, libraries map[string]string, logger *logging.Logger) (*Response, error) {
 	input := SolidityInput{Language: "Solidity", Sources: make(map[string]SolidityInputSource)}
 
 	input.Sources[file] = SolidityInputSource{Urls: []string{file}}
@@ -167,12 +167,12 @@ func Compile(file string, optimize bool, libraries map[string]string) (*Response
 		return nil, err
 	}
 
-	log.WithField("Command: ", string(command)).Debug("Command Input")
-	result, err := runSolidity(string(command))
+	logger.TraceMsg("Command Input", "command", string(command))
+	result, err := runSolidity(string(command), workDir)
 	if err != nil {
 		return nil, err
 	}
-	log.WithField("Command Result: ", result).Debug("Command Output")
+	logger.TraceMsg("Command Output", "result", result)
 
 	output := SolidityOutput{}
 	err = json.Unmarshal([]byte(result), &output)
@@ -204,11 +204,10 @@ func Compile(file string, optimize bool, libraries map[string]string) (*Response
 	}
 
 	for _, re := range respItemArray {
-		log.WithFields(log.Fields{
-			"name": re.Objectname,
-			"bin":  re.Contract.Evm.Bytecode.Object,
-			"abi":  string(re.Contract.Abi),
-		}).Debug("Response formulated")
+		logger.TraceMsg("Response formulated",
+			"name", re.Objectname,
+			"bin", re.Contract.Evm.Bytecode.Object,
+			"abi", string(re.Contract.Abi))
 	}
 
 	resp := Response{
@@ -228,31 +227,29 @@ func objectName(contract string) string {
 	return parts[len(parts)-1]
 }
 
-func runSolidity(jsonCmd string) (string, error) {
+func runSolidity(jsonCmd string, workDir string) (string, error) {
 	buf := bytes.NewBufferString(jsonCmd)
 	shellCmd := exec.Command("solc", "--standard-json", "--allow-paths", "/")
+	if workDir != "" {
+		shellCmd.Dir = workDir
+	}
 	shellCmd.Stdin = buf
 	output, err := shellCmd.CombinedOutput()
 	s := string(output)
 	return s, err
 }
 
-func PrintResponse(resp Response, cli bool) {
+func PrintResponse(resp Response, cli bool, logger *logging.Logger) {
 	if resp.Error != "" {
-		log.Warn(resp.Error)
+		logger.InfoMsg("solidity error", "errors", resp.Error)
 	} else {
 		for _, r := range resp.Objects {
-			message := log.WithFields((log.Fields{
-				"name": r.Objectname,
-				"bin":  r.Contract.Evm.Bytecode,
-				"abi":  string(r.Contract.Abi[:]),
-				"link": string(r.Contract.Evm.Bytecode.LinkReferences[:]),
-			}))
-			if cli {
-				message.Warn("Response")
-			} else {
-				message.Info("Response")
-			}
+			logger.InfoMsg("Response",
+				"name", r.Objectname,
+				"bin", r.Contract.Evm.Bytecode,
+				"abi", string(r.Contract.Abi[:]),
+				"link", string(r.Contract.Evm.Bytecode.LinkReferences[:]),
+			)
 		}
 	}
 }

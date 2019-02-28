@@ -239,8 +239,8 @@ type PackageDeploy struct {
 
 type Build struct {
 	// (Required) the filepath to the contract file. this should be relative to the current path **or**
-	// relative to the contracts path established via the --contracts-path flag or the $EPM_CONTRACTS_PATH
-	// environment variable. If contract has a "bin" file extension then it will not be sent to the
+	// relative to the contracts path established via the --dir.
+	// If contract has a "bin" file extension then it will not be sent to the
 	// compilers but rather will just be sent to the chain. Note, if you use a "call" job after deploying
 	// a binary contract then you will be **required** to utilize an abi field in the call job.
 	Contract string `mapstructure:"contract" json:"contract" yaml:"contract" toml:"contract"`
@@ -267,8 +267,8 @@ type Deploy struct {
 	// public key for the account must be available to burrow keys)
 	Source string `mapstructure:"source" json:"source" yaml:"source" toml:"source"`
 	// (Required) the filepath to the contract file. this should be relative to the current path **or**
-	// relative to the contracts path established via the --contracts-path flag or the $EPM_CONTRACTS_PATH
-	// environment variable. If contract has a "bin" file extension then it will not be sent to the
+	// relative to the contracts path established via the --dir.
+	// If contract has a "bin" file extension then it will not be sent to the
 	// compilers but rather will just be sent to the chain. Note, if you use a "call" job after deploying
 	// a binary contract then you will be **required** to utilize an abi field in the call job.
 	Contract string `mapstructure:"contract" json:"contract" yaml:"contract" toml:"contract"`

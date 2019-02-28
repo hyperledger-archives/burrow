@@ -2,13 +2,14 @@ package def
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"strconv"
 	"time"
 
 	"reflect"
+
+	hex "github.com/tmthrgd/go-hex"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
@@ -26,7 +27,6 @@ import (
 	"github.com/hyperledger/burrow/rpc/rpctransact"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
@@ -44,13 +44,18 @@ type Client struct {
 	AllSpecs              *abi.AbiSpec
 }
 
-func NewClient(chainURL, keysClientAddress string, mempoolSigning bool, timeout time.Duration) *Client {
-	client := Client{ChainAddress: chainURL, MempoolSigning: mempoolSigning, KeysClientAddress: keysClientAddress, timeout: timeout}
+func NewClient(chain, keysClientAddress string, mempoolSigning bool, timeout time.Duration) *Client {
+	client := Client{
+		ChainAddress:      chain,
+		MempoolSigning:    mempoolSigning,
+		KeysClientAddress: keysClientAddress,
+		timeout:           timeout,
+	}
 	return &client
 }
 
 // Connect GRPC clients using ChainURL
-func (c *Client) dial() error {
+func (c *Client) dial(logger *logging.Logger) error {
 	if c.transactClient == nil {
 		conn, err := grpc.Dial(c.ChainAddress, grpc.WithInsecure())
 		if err != nil {
@@ -60,12 +65,12 @@ func (c *Client) dial() error {
 		c.queryClient = rpcquery.NewQueryClient(conn)
 		c.executionEventsClient = rpcevents.NewExecutionEventsClient(conn)
 		if c.KeysClientAddress == "" {
-			logrus.Info("Using mempool signing since no keyClient set, pass --keys to sign locally or elsewhere")
+			logger.InfoMsg("Using mempool signing since no keyClient set, pass --keys to sign locally or elsewhere")
 			c.MempoolSigning = true
-			c.keyClient, err = keys.NewRemoteKeyClient(c.ChainAddress, logging.NewNoopLogger())
+			c.keyClient, err = keys.NewRemoteKeyClient(c.ChainAddress, logger)
 		} else {
-			logrus.Infof("Using keys server at: %s", c.KeysClientAddress)
-			c.keyClient, err = keys.NewRemoteKeyClient(c.KeysClientAddress, logging.NewNoopLogger())
+			logger.InfoMsg("Using keys server", "server", c.KeysClientAddress)
+			c.keyClient, err = keys.NewRemoteKeyClient(c.KeysClientAddress, logger)
 		}
 
 		if err != nil {
@@ -83,32 +88,32 @@ func (c *Client) dial() error {
 	return nil
 }
 
-func (c *Client) Transact() (rpctransact.TransactClient, error) {
-	err := c.dial()
+func (c *Client) Transact(logger *logging.Logger) (rpctransact.TransactClient, error) {
+	err := c.dial(logger)
 	if err != nil {
 		return nil, err
 	}
 	return c.transactClient, err
 }
 
-func (c *Client) Query() (rpcquery.QueryClient, error) {
-	err := c.dial()
+func (c *Client) Query(logger *logging.Logger) (rpcquery.QueryClient, error) {
+	err := c.dial(logger)
 	if err != nil {
 		return nil, err
 	}
 	return c.queryClient, nil
 }
 
-func (c *Client) Events() (rpcevents.ExecutionEventsClient, error) {
-	err := c.dial()
+func (c *Client) Events(logger *logging.Logger) (rpcevents.ExecutionEventsClient, error) {
+	err := c.dial(logger)
 	if err != nil {
 		return nil, err
 	}
 	return c.executionEventsClient, nil
 }
 
-func (c *Client) Status() (*rpc.ResultStatus, error) {
-	err := c.dial()
+func (c *Client) Status(logger *logging.Logger) (*rpc.ResultStatus, error) {
+	err := c.dial(logger)
 	if err != nil {
 		return nil, err
 	}
@@ -117,12 +122,12 @@ func (c *Client) Status() (*rpc.ResultStatus, error) {
 	return c.queryClient.Status(ctx, &rpcquery.StatusParam{})
 }
 
-func (c *Client) GetKeyAddress(key string) (crypto.Address, error) {
+func (c *Client) GetKeyAddress(key string, logger *logging.Logger) (crypto.Address, error) {
 	address, err := crypto.AddressFromHexString(key)
 	if err == nil {
 		return address, nil
 	}
-	err = c.dial()
+	err = c.dial(logger)
 	if err != nil {
 		return crypto.Address{}, err
 	}
@@ -130,20 +135,12 @@ func (c *Client) GetKeyAddress(key string) (crypto.Address, error) {
 }
 
 func (c *Client) GetAccount(address crypto.Address) (*acm.Account, error) {
-	err := c.dial()
-	if err != nil {
-		return nil, err
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 	return c.queryClient.GetAccount(ctx, &rpcquery.GetAccountParam{Address: address})
 }
 
 func (c *Client) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
-	err := c.dial()
-	if err != nil {
-		return binary.Word256{}, err
-	}
 	val, err := c.queryClient.GetStorage(context.Background(), &rpcquery.GetStorageParam{Address: address, Key: key})
 	if err != nil {
 		return binary.Word256{}, err
@@ -151,8 +148,8 @@ func (c *Client) GetStorage(address crypto.Address, key binary.Word256) (binary.
 	return val.Value, err
 }
 
-func (c *Client) GetName(name string) (*names.Entry, error) {
-	err := c.dial()
+func (c *Client) GetName(name string, logger *logging.Logger) (*names.Entry, error) {
+	err := c.dial(logger)
 	if err != nil {
 		return nil, err
 	}
@@ -161,8 +158,8 @@ func (c *Client) GetName(name string) (*names.Entry, error) {
 	return c.queryClient.GetName(ctx, &rpcquery.GetNameParam{Name: name})
 }
 
-func (c *Client) GetValidatorSet() (*rpcquery.ValidatorSet, error) {
-	err := c.dial()
+func (c *Client) GetValidatorSet(logger *logging.Logger) (*rpcquery.ValidatorSet, error) {
+	err := c.dial(logger)
 	if err != nil {
 		return nil, err
 	}
@@ -171,16 +168,16 @@ func (c *Client) GetValidatorSet() (*rpcquery.ValidatorSet, error) {
 	return c.queryClient.GetValidatorSet(ctx, &rpcquery.GetValidatorSetParam{})
 }
 
-func (c *Client) GetProposal(hash []byte) (*payload.Ballot, error) {
-	err := c.dial()
+func (c *Client) GetProposal(hash []byte, logger *logging.Logger) (*payload.Ballot, error) {
+	err := c.dial(logger)
 	if err != nil {
 		return nil, err
 	}
 	return c.queryClient.GetProposal(context.Background(), &rpcquery.GetProposalParam{Hash: hash})
 }
 
-func (c *Client) ListProposals(proposed bool) ([]*rpcquery.ProposalResult, error) {
-	err := c.dial()
+func (c *Client) ListProposals(proposed bool, logger *logging.Logger) ([]*rpcquery.ProposalResult, error) {
+	err := c.dial(logger)
 	if err != nil {
 		return nil, err
 	}
@@ -200,26 +197,26 @@ func (c *Client) ListProposals(proposed bool) ([]*rpcquery.ProposalResult, error
 	return nil, err
 }
 
-func (c *Client) SignAndBroadcast(tx payload.Payload) (*exec.TxExecution, error) {
-	err := c.dial()
+func (c *Client) SignAndBroadcast(tx payload.Payload, logger *logging.Logger) (*exec.TxExecution, error) {
+	err := c.dial(logger)
 	if err != nil {
 		return nil, err
 	}
-	txEnv, err := c.SignTx(tx)
+	txEnv, err := c.SignTx(tx, logger)
 	if err != nil {
 		return nil, err
 	}
-	return c.BroadcastEnvelope(txEnv)
+	return c.BroadcastEnvelope(txEnv, logger)
 }
 
-func (c *Client) SignTx(tx payload.Payload) (*txs.Envelope, error) {
-	err := c.dial()
+func (c *Client) SignTx(tx payload.Payload, logger *logging.Logger) (*txs.Envelope, error) {
+	err := c.dial(logger)
 	if err != nil {
 		return nil, err
 	}
 	txEnv := txs.Enclose(c.chainID, tx)
 	if c.MempoolSigning {
-		logrus.Info("Using mempool signing")
+		logger.InfoMsg("Using mempool signing")
 		return txEnv, nil
 	}
 	inputs := tx.GetInputs()
@@ -238,8 +235,8 @@ func (c *Client) SignTx(tx payload.Payload) (*txs.Envelope, error) {
 }
 
 // Creates a keypair using attached keys service
-func (c *Client) CreateKey(keyName, curveTypeString string) (crypto.PublicKey, error) {
-	err := c.dial()
+func (c *Client) CreateKey(keyName, curveTypeString string, logger *logging.Logger) (crypto.PublicKey, error) {
+	err := c.dial(logger)
 	if err != nil {
 		return crypto.PublicKey{}, err
 	}
@@ -262,8 +259,8 @@ func (c *Client) CreateKey(keyName, curveTypeString string) (crypto.PublicKey, e
 }
 
 // Broadcast payload for remote signing
-func (c *Client) Broadcast(tx payload.Payload) (*exec.TxExecution, error) {
-	err := c.dial()
+func (c *Client) Broadcast(tx payload.Payload, logger *logging.Logger) (*exec.TxExecution, error) {
+	err := c.dial(logger)
 	if err != nil {
 		return nil, err
 	}
@@ -273,8 +270,8 @@ func (c *Client) Broadcast(tx payload.Payload) (*exec.TxExecution, error) {
 }
 
 // Broadcast envelope - can be locally signed or remote signing will be attempted
-func (c *Client) BroadcastEnvelope(txEnv *txs.Envelope) (*exec.TxExecution, error) {
-	err := c.dial()
+func (c *Client) BroadcastEnvelope(txEnv *txs.Envelope, logger *logging.Logger) (*exec.TxExecution, error) {
+	err := c.dial(logger)
 	if err != nil {
 		return nil, err
 	}
@@ -299,13 +296,13 @@ type QueryArg struct {
 	Data    string
 }
 
-func (c *Client) QueryContract(arg *QueryArg) (*exec.TxExecution, error) {
-	logArg("Query contract", arg)
+func (c *Client) QueryContract(arg *QueryArg, logger *logging.Logger) (*exec.TxExecution, error) {
+	logger.InfoMsg("Query contract", "query", arg)
 	tx, err := c.Call(&CallArg{
 		Input:   arg.Input,
 		Address: arg.Address,
 		Data:    arg.Data,
-	})
+	}, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -327,13 +324,13 @@ type GovArg struct {
 	PublicKey   string
 }
 
-func (c *Client) UpdateAccount(arg *GovArg) (*payload.GovTx, error) {
-	logArg("GovTx", arg)
-	err := c.dial()
+func (c *Client) UpdateAccount(arg *GovArg, logger *logging.Logger) (*payload.GovTx, error) {
+	logger.InfoMsg("GovTx", "account", arg)
+	err := c.dial(logger)
 	if err != nil {
 		return nil, err
 	}
-	input, err := c.TxInput(arg.Input, arg.Native, arg.Sequence, true)
+	input, err := c.TxInput(arg.Input, arg.Native, arg.Sequence, true, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +339,7 @@ func (c *Client) UpdateAccount(arg *GovArg) (*payload.GovTx, error) {
 		Roles:       arg.Permissions,
 	}
 	if arg.Address != "" {
-		address, err := c.GetKeyAddress(arg.Address)
+		address, err := c.GetKeyAddress(arg.Address, logger)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse UpdateAccoount Address: %v", err)
 		}
@@ -364,7 +361,7 @@ func (c *Client) UpdateAccount(arg *GovArg) (*payload.GovTx, error) {
 			if c.keyClient != nil {
 				publicKey, err := c.keyClient.PublicKey(*update.Address)
 				if err != nil {
-					logrus.Infof("Could not retrieve public key for %v from keys server", *update.Address)
+					logger.InfoMsg("Could not retrieve public key from keys server", "address", *update.Address)
 				} else {
 					update.PublicKey = &publicKey
 				}
@@ -426,15 +423,15 @@ type CallArg struct {
 	Data     string
 }
 
-func (c *Client) Call(arg *CallArg) (*payload.CallTx, error) {
-	logArg("CallTx", arg)
-	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true)
+func (c *Client) Call(arg *CallArg, logger *logging.Logger) (*payload.CallTx, error) {
+	logger.InfoMsg("CallTx", "call", arg)
+	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true, logger)
 	if err != nil {
 		return nil, err
 	}
 	var contractAddress *crypto.Address
 	if arg.Address != "" {
-		address, err := c.GetKeyAddress(arg.Address)
+		address, err := c.GetKeyAddress(arg.Address, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -469,13 +466,13 @@ type SendArg struct {
 	Output   string
 }
 
-func (c *Client) Send(arg *SendArg) (*payload.SendTx, error) {
-	logArg("SendTx", arg)
-	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true)
+func (c *Client) Send(arg *SendArg, logger *logging.Logger) (*payload.SendTx, error) {
+	logger.InfoMsg("SendTx", "send", arg)
+	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true, logger)
 	if err != nil {
 		return nil, err
 	}
-	outputAddress, err := c.GetKeyAddress(arg.Output)
+	outputAddress, err := c.GetKeyAddress(arg.Output, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -498,9 +495,9 @@ type NameArg struct {
 	Fee      string
 }
 
-func (c *Client) Name(arg *NameArg) (*payload.NameTx, error) {
-	logArg("NameTx", arg)
-	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true)
+func (c *Client) Name(arg *NameArg, logger *logging.Logger) (*payload.NameTx, error) {
+	logger.InfoMsg("NameTx", "name", arg)
+	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -527,9 +524,9 @@ type PermArg struct {
 	Role       string
 }
 
-func (c *Client) Permissions(arg *PermArg) (*payload.PermsTx, error) {
-	logArg("PermsTx", arg)
-	input, err := c.TxInput(arg.Input, "", arg.Sequence, true)
+func (c *Client) Permissions(arg *PermArg, logger *logging.Logger) (*payload.PermsTx, error) {
+	logger.InfoMsg("PermsTx", "perm", arg)
+	input, err := c.TxInput(arg.Input, "", arg.Sequence, true, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -541,7 +538,7 @@ func (c *Client) Permissions(arg *PermArg) (*payload.PermsTx, error) {
 		Action: action,
 	}
 	if arg.Target != "" {
-		target, err := c.GetKeyAddress(arg.Target)
+		target, err := c.GetKeyAddress(arg.Target, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -578,11 +575,11 @@ func (c *Client) Permissions(arg *PermArg) (*payload.PermsTx, error) {
 	return tx, nil
 }
 
-func (c *Client) TxInput(inputString, amountString, sequenceString string, allowMempoolSigning bool) (*payload.TxInput, error) {
+func (c *Client) TxInput(inputString, amountString, sequenceString string, allowMempoolSigning bool, logger *logging.Logger) (*payload.TxInput, error) {
 	var err error
 	var inputAddress crypto.Address
 	if inputString != "" {
-		inputAddress, err = c.GetKeyAddress(inputString)
+		inputAddress, err = c.GetKeyAddress(inputString, logger)
 		if err != nil {
 			return nil, fmt.Errorf("TxInput(): could not obtain input address from '%s': %v", inputString, err)
 		}
@@ -592,7 +589,7 @@ func (c *Client) TxInput(inputString, amountString, sequenceString string, allow
 		amount, err = c.ParseUint64(amountString)
 	}
 	var sequence uint64
-	sequence, err = c.getSequence(sequenceString, inputAddress, c.MempoolSigning && allowMempoolSigning)
+	sequence, err = c.getSequence(sequenceString, inputAddress, c.MempoolSigning && allowMempoolSigning, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -603,8 +600,8 @@ func (c *Client) TxInput(inputString, amountString, sequenceString string, allow
 	}, nil
 }
 
-func (c *Client) getSequence(sequence string, inputAddress crypto.Address, mempoolSigning bool) (uint64, error) {
-	err := c.dial()
+func (c *Client) getSequence(sequence string, inputAddress crypto.Address, mempoolSigning bool, logger *logging.Logger) (uint64, error) {
+	err := c.dial(logger)
 	if err != nil {
 		return 0, err
 	}
@@ -638,8 +635,4 @@ func argMap(value interface{}) map[string]interface{} {
 		}
 	}
 	return fields
-}
-
-func logArg(message string, value interface{}) {
-	logrus.WithFields(argMap(value)).Info(message)
 }

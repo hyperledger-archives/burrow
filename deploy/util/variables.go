@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/def/rule"
 	"github.com/hyperledger/burrow/execution/evm/abi"
-	log "github.com/sirupsen/logrus"
+	"github.com/hyperledger/burrow/logging"
 )
 
 func Variables(value interface{}) []*abi.Variable {
@@ -43,7 +43,7 @@ func lowerFirstCharacter(name string) string {
 	return string(bs)
 }
 
-func PreProcessFields(value interface{}, do *def.DeployArgs, script *def.Playbook, client *def.Client) (err error) {
+func PreProcessFields(value interface{}, do *def.DeployArgs, script *def.Playbook, client *def.Client, logger *logging.Logger) (err error) {
 	rv := reflect.ValueOf(value)
 	if rv.Kind() == reflect.Ptr {
 		rv = rv.Elem()
@@ -51,7 +51,7 @@ func PreProcessFields(value interface{}, do *def.DeployArgs, script *def.Playboo
 	for i := 0; i < rv.NumField(); i++ {
 		field := rv.Field(i)
 		if field.Kind() == reflect.String {
-			str, err := PreProcess(field.String(), do, script, client)
+			str, err := PreProcess(field.String(), do, script, client, logger)
 			if err != nil {
 				return err
 			}
@@ -61,16 +61,18 @@ func PreProcessFields(value interface{}, do *def.DeployArgs, script *def.Playboo
 	return nil
 }
 
-func PreProcess(toProcess string, do *def.DeployArgs, script *def.Playbook, client *def.Client) (string, error) {
+func PreProcess(toProcess string, do *def.DeployArgs, script *def.Playbook, client *def.Client, logger *logging.Logger) (string, error) {
 	// Run through the replacement process for any placeholder matches
 	for _, pm := range rule.MatchPlaceholders(toProcess) {
-		log.WithField("match", toProcess).Debug("Replacement Match Found")
+		logger.TraceMsg("Replacement Match Found",
+			"match", toProcess)
 
 		// first parse the reserved words.
 		if strings.Contains(pm.JobName, "block") {
-			block, err := replaceBlockVariable(pm.Match, client)
+			block, err := replaceBlockVariable(pm.Match, client, logger)
 			if err != nil {
-				log.WithField("err", err).Error("Error replacing block variable.")
+				logger.InfoMsg("Errir replacing block variable",
+					"error", fmt.Sprintf("%v", err))
 				return "", err
 			}
 			/*log.WithFields(log.Fields{
@@ -98,11 +100,10 @@ func PreProcess(toProcess string, do *def.DeployArgs, script *def.Playbook, clie
 						for _, variable := range job.Variables {
 							if variable.Name == pm.VariableName { //find the value we want from the bunch
 								toProcess = strings.Replace(toProcess, pm.Match, variable.Value, 1)
-								log.WithFields(log.Fields{
-									"job":     pm.JobName,
-									"varName": pm.VariableName,
-									"result":  variable.Value,
-								}).Debug("Fixing Inner Vars =>")
+								logger.TraceMsg("Fixing Inner Vars",
+									"job", pm.JobName,
+									"varName", pm.VariableName,
+									"result", variable.Value)
 							}
 						}
 					} else {
@@ -115,10 +116,9 @@ func PreProcess(toProcess string, do *def.DeployArgs, script *def.Playbook, clie
 							}
 							result = string(bs)
 						}
-						log.WithFields(log.Fields{
-							"var": string(pm.JobName),
-							"res": result,
-						}).Debug("Fixing Variables =>")
+						logger.TraceMsg("Fixing Variables",
+							"var", string(pm.JobName),
+							"res", result)
 						toProcess = strings.Replace(toProcess, pm.Match, result, 1)
 					}
 				}
@@ -134,19 +134,21 @@ func PreProcess(toProcess string, do *def.DeployArgs, script *def.Playbook, clie
 	return toProcess, nil
 }
 
-func replaceBlockVariable(toReplace string, client *def.Client) (string, error) {
-	log.WithFields(log.Fields{
-		"var": toReplace,
-	}).Debug("Correcting $block variable")
-	blockHeight, err := GetBlockHeight(client)
+func replaceBlockVariable(toReplace string, client *def.Client, logger *logging.Logger) (string, error) {
+	logger.TraceMsg("Correcting $block variable",
+		"var", toReplace)
+
+	blockHeight, err := GetBlockHeight(client, logger)
 	block := itoaU64(blockHeight)
-	log.WithField("=>", block).Debug("Current height is")
+	logger.TraceMsg("Currnt height is",
+		"block", block)
 	if err != nil {
 		return "", err
 	}
 
 	if toReplace == "$block" {
-		log.WithField("=>", block).Debug("Replacement (=)")
+		logger.TraceMsg("Replacement (=)",
+			"block", block)
 		return block, nil
 	}
 
@@ -162,7 +164,9 @@ func replaceBlockVariable(toReplace string, client *def.Client) (string, error) 
 			return "", err
 		}
 		height = strconv.Itoa(h1 + h2)
-		log.WithField("=>", height).Debug("Replacement (+)")
+		logger.TraceMsg("Replacement (+)",
+			"replacement", height)
+
 		return height, nil
 	}
 
@@ -178,15 +182,18 @@ func replaceBlockVariable(toReplace string, client *def.Client) (string, error) 
 			return "", err
 		}
 		height = strconv.Itoa(h1 - h2)
-		log.WithField("=>", height).Debug("Replacement (-)")
+		logger.TraceMsg("Replacement (-)",
+			"replacement", height)
 		return height, nil
 	}
 
-	log.WithField("=>", toReplace).Debug("Replacement (unknown)")
+	logger.TraceMsg("Replacement (unknown)",
+		"replacement", toReplace)
+
 	return toReplace, nil
 }
 
-func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, script *def.Playbook, client *def.Client, constructor bool) (string, []interface{}, error) {
+func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, script *def.Playbook, client *def.Client, constructor bool, logger *logging.Logger) (string, []interface{}, error) {
 	var callDataArray []interface{}
 	var callArray []string
 	if function == "" && !constructor {
@@ -196,16 +203,16 @@ func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, 
 		function = strings.Split(data.(string), " ")[0]
 		callArray = strings.Split(data.(string), " ")[1:]
 		for _, val := range callArray {
-			output, _ := PreProcess(val, do, script, client)
+			output, _ := PreProcess(val, do, script, client, logger)
 			callDataArray = append(callDataArray, output)
 		}
 	} else if data != nil {
 		if reflect.TypeOf(data).Kind() != reflect.Slice {
 			if constructor {
-				log.Warn("Deprecation Warning: Your deploy job is currently using a soon to be deprecated way of declaring constructor values. Please remember to update your run file to store them as a array rather than a string. See documentation for further details.")
+				logger.InfoMsg("Deprecation Warning: Your deploy job is currently using a soon to be deprecated way of declaring constructor values. Please remember to update your run file to store them as a array rather than a string. See documentation for further details.")
 				callArray = strings.Split(data.(string), " ")
 				for _, val := range callArray {
-					output, _ := PreProcess(val, do, script, client)
+					output, _ := PreProcess(val, do, script, client, logger)
 					callDataArray = append(callDataArray, output)
 				}
 				return function, callDataArray, nil
@@ -233,42 +240,44 @@ func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, 
 					case reflect.String:
 						stringified = value.String()
 					}
-					index, _ = PreProcess(stringified, do, script, client)
+					index, _ = PreProcess(stringified, do, script, client, logger)
 					args = append(args, stringified)
 				}
 				newString = "[" + strings.Join(args, ",") + "]"
-				log.Debug(newString)
+				logger.TraceMsg(newString)
 			default:
 				newString = s.Interface().(string)
 			}
-			newString, _ = PreProcess(newString, do, script, client)
+			newString, _ = PreProcess(newString, do, script, client, logger)
 			callDataArray = append(callDataArray, newString)
 		}
 	}
 	return function, callDataArray, nil
 }
 
-func PreProcessLibs(libs string, do *def.DeployArgs, script *def.Playbook, client *def.Client) (string, error) {
-	libraries, _ := PreProcess(libs, do, script, client)
+func PreProcessLibs(libs string, do *def.DeployArgs, script *def.Playbook, client *def.Client, logger *logging.Logger) (string, error) {
+	libraries, _ := PreProcess(libs, do, script, client, logger)
 	if libraries != "" {
 		pairs := strings.Split(libraries, ",")
 		libraries = strings.Join(pairs, " ")
 	}
-	log.WithField("=>", libraries).Debug("Library String")
+	logger.TraceMsg("Library String", "libs", libraries)
 	return libraries, nil
 }
 
-func GetReturnValue(vars []*abi.Variable) string {
+func GetReturnValue(vars []*abi.Variable, logger *logging.Logger) string {
 	var result []string
 
 	if len(vars) > 1 {
 		for _, value := range vars {
-			log.WithField("=>", []byte(value.Value)).Debug("Value")
+			logger.TraceMsg("Value",
+				value.Name, value.Value)
 			result = append(result, value.Value)
 		}
 		return "(" + strings.Join(result, ", ") + ")"
 	} else if len(vars) == 1 {
-		log.Debug("Debugging: ", vars[0].Value)
+		logger.TraceMsg("Debugging",
+			"value", vars[0].Value)
 		return vars[0].Value
 	} else {
 		return ""

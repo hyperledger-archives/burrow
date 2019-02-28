@@ -8,12 +8,12 @@ import (
 	"strings"
 
 	"github.com/hyperledger/burrow/execution/exec"
-	log "github.com/sirupsen/logrus"
+	"github.com/hyperledger/burrow/logging"
 	hex "github.com/tmthrgd/go-hex"
 )
 
 // This is a closer function which is called by most of the tx_run functions
-func ReadTxSignAndBroadcast(txe *exec.TxExecution, err error) error {
+func ReadTxSignAndBroadcast(txe *exec.TxExecution, err error, logger *logging.Logger) error {
 	// if there's an error just return.
 	if err != nil {
 		return err
@@ -28,24 +28,28 @@ func ReadTxSignAndBroadcast(txe *exec.TxExecution, err error) error {
 	height := fmt.Sprintf("%d", txe.Height)
 
 	if txe.Receipt.CreatesContract {
-		log.WithField("addr", txe.Receipt.ContractAddress).Warn()
-		log.WithField("txHash", txe.TxHash).Info()
+		logger.InfoMsg("Tx Return",
+			"addr", txe.Receipt.ContractAddress.String(),
+			"Transaction Hash", hex.EncodeToString(txe.TxHash))
 	} else {
-		log.WithField("=>", txe.TxHash).Warn("Transaction Hash")
-		log.WithField("=>", height).Debug("Block height")
+		logger.InfoMsg("Tx Return",
+			"Transaction Hash", hex.EncodeToString(txe.TxHash),
+			"Block Height", height)
+
 		ret := txe.GetResult().GetReturn()
 		if len(ret) != 0 {
-			log.WithField("=>", hex.EncodeUpperToString(ret)).Warn("Return Value")
-			log.WithField("=>", txe.Exception).Debug("Exception")
+			logger.InfoMsg("Return",
+				"Return Value", hex.EncodeUpperToString(ret),
+				"Exception", txe.Exception)
 		}
 	}
 
 	return nil
 }
 
-func GetStringResponse(question string, defaultAnswer string, reader *os.File) (string, error) {
+func GetStringResponse(question string, defaultAnswer string, reader *os.File, logger *logging.Logger) (string, error) {
 	readr := bufio.NewReader(reader)
-	log.Warn(question)
+	logger.InfoMsg(question)
 
 	text, _ := readr.ReadString('\n')
 	text = strings.Replace(text, "\n", "", 1)
@@ -55,9 +59,8 @@ func GetStringResponse(question string, defaultAnswer string, reader *os.File) (
 	return text, nil
 }
 
-func GetIntResponse(question string, defaultAnswer int64, reader *os.File) (int64, error) {
+func GetIntResponse(question string, defaultAnswer int64, reader *os.File, logger *logging.Logger) (int64, error) {
 	readr := bufio.NewReader(reader)
-	log.Warn(question)
 
 	text, _ := readr.ReadString('\n')
 	text = strings.Replace(text, "\n", "", 1)
@@ -75,10 +78,10 @@ func GetIntResponse(question string, defaultAnswer int64, reader *os.File) (int6
 
 // displays the question, scans for the response, if the response is an empty
 // string will return default, otherwise will parseBool and return the result.
-func GetBoolResponse(question string, defaultAnswer bool, reader *os.File) (bool, error) {
+func GetBoolResponse(question string, defaultAnswer bool, reader *os.File, logger *logging.Logger) (bool, error) {
 	var result bool
 	readr := bufio.NewReader(reader)
-	log.Warn(question)
+	logger.InfoMsg(question)
 
 	text, _ := readr.ReadString('\n')
 	text = strings.Replace(text, "\n", "", 1)

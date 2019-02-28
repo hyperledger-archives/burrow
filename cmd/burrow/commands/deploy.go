@@ -1,17 +1,17 @@
 package commands
 
 import (
-	"bytes"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/go-kit/kit/log"
 	pkgs "github.com/hyperledger/burrow/deploy"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/proposals"
-	"github.com/hyperledger/burrow/deploy/util"
+	"github.com/hyperledger/burrow/logging"
 	cli "github.com/jawher/mow.cli"
-	log "github.com/sirupsen/logrus"
 )
 
 // 15 seconds is like a long time man
@@ -107,71 +107,33 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			args.ProposeVerify = *proposalVerify
 			args.ProposeVote = *proposalVote
 			args.ProposeCreate = *proposalCreate
-			log.SetFormatter(new(PlainFormatter))
-			log.SetLevel(log.WarnLevel)
-			if args.Verbose {
-				log.SetLevel(log.InfoLevel)
-			} else if args.Debug {
-				log.SetLevel(log.DebugLevel)
-			}
+			stderrLogger := log.NewLogfmtLogger(os.Stderr)
+			logger := logging.NewLogger(stderrLogger)
 			handleTerm()
+
+			if !*debugOpt {
+				logger.Trace = log.NewNopLogger()
+			}
 
 			if *proposalList != "" {
 				state, err := proposals.ProposalStateFromString(*proposalList)
 				if err != nil {
 					output.Fatalf(err.Error())
 				}
-				proposals.ListProposals(args, state)
+				err = proposals.ListProposals(args, state, logger)
+				if err != nil {
+					output.Fatalf(err.Error())
+				}
 			} else {
-				util.IfExit(pkgs.RunPlaybook(args, *playbooksOpt))
+				failures, err := pkgs.RunPlaybooks(args, *playbooksOpt, logger)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, err)
+					os.Exit(1)
+				}
+				if failures > 0 {
+					os.Exit(failures)
+				}
 			}
 		}
 	}
-}
-
-type PlainFormatter struct{}
-
-func (f *PlainFormatter) Format(entry *log.Entry) ([]byte, error) {
-	var b *bytes.Buffer
-	keys := make([]string, 0, len(entry.Data))
-	for k := range entry.Data {
-		keys = append(keys, k)
-	}
-
-	if entry.Buffer != nil {
-		b = entry.Buffer
-	} else {
-		b = &bytes.Buffer{}
-	}
-
-	f.appendMessage(b, entry.Message)
-	for _, key := range keys {
-		f.appendMessageData(b, key, entry.Data[key])
-	}
-
-	b.WriteByte('\n')
-	return b.Bytes(), nil
-}
-
-func (f *PlainFormatter) appendMessage(b *bytes.Buffer, message string) {
-	fmt.Fprintf(b, "%-44s", message)
-}
-
-func (f *PlainFormatter) appendMessageData(b *bytes.Buffer, key string, value interface{}) {
-	switch key {
-	case "":
-		b.WriteString("=> ")
-	case "=>":
-		b.WriteString(key)
-		b.WriteByte(' ')
-	default:
-		b.WriteString(key)
-		b.WriteString(" => ")
-	}
-	stringVal, ok := value.(string)
-	if !ok {
-		stringVal = fmt.Sprint(value)
-	}
-	b.WriteString(stringVal)
-	b.WriteString(" ")
 }

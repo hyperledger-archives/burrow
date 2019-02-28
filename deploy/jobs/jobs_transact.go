@@ -5,42 +5,42 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs/payload"
 
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
-	log "github.com/sirupsen/logrus"
 )
 
-func FormulateSendJob(send *def.Send, account string, client *def.Client) (*payload.SendTx, error) {
+func FormulateSendJob(send *def.Send, account string, client *def.Client, logger *logging.Logger) (*payload.SendTx, error) {
 	// Use Default
 	send.Source = useDefault(send.Source, account)
 
 	// Formulate tx
-	log.WithFields(log.Fields{
-		"source":      send.Source,
-		"destination": send.Destination,
-		"amount":      send.Amount,
-	}).Info("Sending Transaction")
+	logger.InfoMsg("Sending Transaction",
+		"source", send.Source,
+		"destination", send.Destination,
+		"amount", send.Amount)
 
 	return client.Send(&def.SendArg{
 		Input:    send.Source,
 		Output:   send.Destination,
 		Amount:   send.Amount,
 		Sequence: send.Sequence,
-	})
+	}, logger)
 }
 
-func SendJob(send *def.Send, tx *payload.SendTx, account string, client *def.Client) (string, error) {
+func SendJob(send *def.Send, tx *payload.SendTx, account string, client *def.Client, logger *logging.Logger) (string, error) {
 
 	// Sign, broadcast, display
-	txe, err := client.SignAndBroadcast(tx)
+	txe, err := client.SignAndBroadcast(tx, logger)
 	if err != nil {
-		return "", util.ChainErrorHandler(account, err)
+		return "", util.ChainErrorHandler(account, err, logger)
 	}
 
-	util.ReadTxSignAndBroadcast(txe, err)
+	util.ReadTxSignAndBroadcast(txe, err, logger)
 	if err != nil {
 		return "", err
 	}
@@ -48,7 +48,7 @@ func SendJob(send *def.Send, tx *payload.SendTx, account string, client *def.Cli
 	return txe.Receipt.TxHash.String(), nil
 }
 
-func FormulateRegisterNameJob(name *def.RegisterName, do *def.DeployArgs, account string, client *def.Client) ([]*payload.NameTx, error) {
+func FormulateRegisterNameJob(name *def.RegisterName, do *def.DeployArgs, playbook *def.Playbook, client *def.Client, logger *logging.Logger) ([]*payload.NameTx, error) {
 	txs := make([]*payload.NameTx, 0)
 
 	// If a data file is given it should be in csv format and
@@ -57,7 +57,13 @@ func FormulateRegisterNameJob(name *def.RegisterName, do *def.DeployArgs, accoun
 	// has been populated.
 	if name.DataFile != "" {
 		// open the file and use a reader
-		fileReader, err := os.Open(name.DataFile)
+		var path string
+		if filepath.IsAbs(name.DataFile) {
+			path = name.Data
+		} else {
+			path = filepath.Join(playbook.Path, name.DataFile)
+		}
+		fileReader, err := os.Open(path)
 		if err != nil {
 			return nil, err
 		}
@@ -93,7 +99,7 @@ func FormulateRegisterNameJob(name *def.RegisterName, do *def.DeployArgs, accoun
 				Amount:   record[2],
 				Fee:      name.Fee,
 				Sequence: name.Sequence,
-			}, do, account, client)
+			}, do, playbook.Account, client, logger)
 
 			if err != nil {
 				return nil, err
@@ -113,7 +119,7 @@ func FormulateRegisterNameJob(name *def.RegisterName, do *def.DeployArgs, accoun
 	// If the data field is populated then there is a single
 	// nameRegTx to send. So do that *now*.
 	if name.Data != "" {
-		tx, err := registerNameTx(name, do, account, client)
+		tx, err := registerNameTx(name, do, playbook.Account, client, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -128,18 +134,17 @@ func FormulateRegisterNameJob(name *def.RegisterName, do *def.DeployArgs, accoun
 }
 
 // Runs an individual nametx.
-func registerNameTx(name *def.RegisterName, do *def.DeployArgs, account string, client *def.Client) (*payload.NameTx, error) {
+func registerNameTx(name *def.RegisterName, do *def.DeployArgs, account string, client *def.Client, logger *logging.Logger) (*payload.NameTx, error) {
 	// Set Defaults
 	name.Source = useDefault(name.Source, account)
 	name.Fee = useDefault(name.Fee, do.DefaultFee)
 	name.Amount = useDefault(name.Amount, do.DefaultAmount)
 
 	// Formulate tx
-	log.WithFields(log.Fields{
-		"name":   name.Name,
-		"data":   name.Data,
-		"amount": name.Amount,
-	}).Info("NameReg Transaction")
+	logger.InfoMsg("NameReg Transaction",
+		"name", name.Name,
+		"data", name.Data,
+		"amount", name.Amount)
 
 	return client.Name(&def.NameArg{
 		Input:    name.Source,
@@ -148,20 +153,20 @@ func registerNameTx(name *def.RegisterName, do *def.DeployArgs, account string, 
 		Amount:   name.Amount,
 		Data:     name.Data,
 		Fee:      name.Fee,
-	})
+	}, logger)
 }
 
-func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, script *def.Playbook, txs []*payload.NameTx, client *def.Client) (string, error) {
+func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, script *def.Playbook, txs []*payload.NameTx, client *def.Client, logger *logging.Logger) (string, error) {
 	var result string
 
 	for _, tx := range txs {
 		// Sign, broadcast, display
-		txe, err := client.SignAndBroadcast(tx)
+		txe, err := client.SignAndBroadcast(tx, logger)
 		if err != nil {
-			return "", util.ChainErrorHandler(script.Account, err)
+			return "", util.ChainErrorHandler(script.Account, err, logger)
 		}
 
-		util.ReadTxSignAndBroadcast(txe, err)
+		util.ReadTxSignAndBroadcast(txe, err, logger)
 		if err != nil {
 			return "", err
 		}
@@ -171,13 +176,14 @@ func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, script *def.Pla
 	return result, nil
 }
 
-func FormulatePermissionJob(perm *def.Permission, account string, client *def.Client) (*payload.PermsTx, error) {
+func FormulatePermissionJob(perm *def.Permission, account string, client *def.Client, logger *logging.Logger) (*payload.PermsTx, error) {
 	// Set defaults
 	perm.Source = useDefault(perm.Source, account)
 
-	log.Debug("Target: ", perm.Target)
-	log.Debug("Marmots Deny: ", perm.Role)
-	log.Debug("Action: ", perm.Action)
+	logger.TraceMsg("Permsision",
+		"Target", perm.Target,
+		"Marmots Deny", perm.Role,
+		"Action", perm.Action)
 	// Populate the transaction appropriately
 
 	// Formulate tx
@@ -189,19 +195,19 @@ func FormulatePermissionJob(perm *def.Permission, account string, client *def.Cl
 		Permission: perm.Permission,
 		Role:       perm.Role,
 		Value:      perm.Value,
-	})
+	}, logger)
 }
 
-func PermissionJob(perm *def.Permission, account string, tx *payload.PermsTx, client *def.Client) (string, error) {
-	log.Debug("What are the args returned in transaction: ", tx.PermArgs)
+func PermissionJob(perm *def.Permission, account string, tx *payload.PermsTx, client *def.Client, logger *logging.Logger) (string, error) {
+	logger.TraceMsg("Permissions returned in transaction: ", "args", tx.PermArgs)
 
 	// Sign, broadcast, display
-	txe, err := client.SignAndBroadcast(tx)
+	txe, err := client.SignAndBroadcast(tx, logger)
 	if err != nil {
-		return "", util.ChainErrorHandler(account, err)
+		return "", util.ChainErrorHandler(account, err, logger)
 	}
 
-	util.ReadTxSignAndBroadcast(txe, err)
+	util.ReadTxSignAndBroadcast(txe, err, logger)
 	if err != nil {
 		return "", err
 	}
