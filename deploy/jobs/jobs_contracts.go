@@ -47,6 +47,12 @@ func BuildJob(build *def.Build, binPath string, resp *compilers.Response) (resul
 		binP = binPath
 	}
 
+	if _, err := os.Stat(binP); os.IsNotExist(err) {
+		if err := os.Mkdir(binP, 0775); err != nil {
+			return "", err
+		}
+	}
+
 	for _, res := range resp.Objects {
 		switch build.Instance {
 		case "":
