@@ -184,6 +184,7 @@ func TestRevert(t *testing.T) {
 	contractAddress := txe.Receipt.ContractAddress
 	txe = rpctest.CallContract(t, tcli, inputAddress, contractAddress, data)
 	assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
+	assert.Contains(t, txe.Exception.Error(), "I have reverted")
 
 	request := &rpcevents.BlocksRequest{
 		BlockRange: rpcevents.NewBlockRange(rpcevents.AbsoluteBound(0), rpcevents.LatestBound()),

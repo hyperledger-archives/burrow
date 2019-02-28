@@ -170,29 +170,31 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 		}
 	}()
 
-	for range doneCh {
+	for {
 		select {
+		// Process block events
 		case blk := <-eventCh:
-			// upsert rows in specific SQL event tables and update block number
-			if err := c.DB.SetBlock(projection.Tables, blk); err != nil {
-				return fmt.Errorf("error upserting rows in database: %v", err)
+			err := c.commitBlock(projection, blk)
+			if err != nil {
+				c.Log.Info("msg", "error committing block", "err", err)
+				return err
 			}
 
-			// send to the external events channel in a non-blocking manner
+		// Await completion
+		case <-doneCh:
 			select {
-			case c.EventsChannel <- blk:
+
+			// Select possible error
+			case err := <-errCh:
+				c.Log.Info("msg", "finished with error", "err", err)
+				return err
+
+			// Or fallback to success
 			default:
+				c.Log.Info("msg", "finished successfully")
+				return nil
 			}
 		}
-	}
-
-	select {
-	case err := <-errCh:
-		c.Log.Info("msg", "Finished with error", "err", err)
-		return err
-	default:
-		c.Log.Info("msg", "Finished with no error!")
-		return nil
 	}
 }
 
@@ -282,6 +284,20 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 		}
 		return nil
 	}
+}
+
+func (c *Consumer) commitBlock(projection *sqlsol.Projection, blockEvents types.EventData) error {
+	// upsert rows in specific SQL event tables and update block number
+	if err := c.DB.SetBlock(projection.Tables, blockEvents); err != nil {
+		return fmt.Errorf("error upserting rows in database: %v", err)
+	}
+
+	// send to the external events channel in a non-blocking manner
+	select {
+	case c.EventsChannel <- blockEvents:
+	default:
+	}
+	return nil
 }
 
 // Health returns the health status for the consumer

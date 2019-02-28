@@ -21,6 +21,8 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/hyperledger/burrow/execution/evm/abi"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
 	. "github.com/hyperledger/burrow/binary"
@@ -948,7 +950,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			offset, size := stack.PopBigInt(), stack.PopBigInt()
 			output := memory.Read(offset, size)
 			vm.Debugf(" => [%v, %v] (%d) 0x%X\n", offset, size, len(output), output)
-			callState.PushError(errors.ErrorCodeExecutionReverted)
+			callState.PushError(newRevertException(output))
 			return output
 
 		case INVALID: // 0xFE
@@ -1085,4 +1087,16 @@ func (vm *VM) ensureStackDepth() errors.CodedError {
 		return errors.ErrorCodeCallStackOverflow
 	}
 	return nil
+}
+
+func newRevertException(ret []byte) errors.CodedError {
+	code := errors.ErrorCodeExecutionReverted
+	if len(ret) > 0 {
+		// Attempt decode
+		reason, err := abi.UnpackRevert(ret)
+		if err == nil {
+			return errors.ErrorCodef(code, "with reason '%s'", *reason)
+		}
+	}
+	return code
 }

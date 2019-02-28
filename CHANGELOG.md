@@ -11,6 +11,7 @@
 
 ### Added
 - [Kernel] Added announce message for startup and shutdown including version, key address, and other useful metadata
+- [EVM] Attempt to provide REVERT reason where possible
 
 
 ## [0.24.1] - 2019-02-28

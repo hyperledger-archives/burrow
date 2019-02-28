@@ -834,6 +834,7 @@
     "github.com/tendermint/tendermint/state",
     "github.com/tendermint/tendermint/types",
     "github.com/tendermint/tendermint/types/time",
+    "github.com/tendermint/tendermint/version",
     "github.com/tmthrgd/go-hex",
     "github.com/xeipuuv/gojsonschema",
     "github.com/xlab/treeprint",

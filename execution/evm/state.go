@@ -98,7 +98,7 @@ func (st *State) PushError(err error) {
 		// Make sure we are not wrapping a known nil value
 		ex := errors.AsException(err)
 		if ex != nil {
-			ex.Exception = fmt.Sprintf("%s\nStack trace: %s", ex.Exception, stack.Trace().String())
+			ex.Exception = fmt.Sprintf("%s\nstack trace: %s", ex.Exception, stack.Trace().String())
 			st.error = ex
 		}
 	}

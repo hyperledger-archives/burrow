@@ -253,3 +253,6 @@ build_ci_image:
 .PHONY: push_ci_image
 push_ci_image: build_ci_image
 	docker push ${CI_IMAGE}
+
+.PHONY: ready_for_pull_request
+ready_for_pull_request: ensure_vendor docs fix

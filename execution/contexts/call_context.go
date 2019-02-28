@@ -189,7 +189,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 			structure.ErrorKey, exception)
 
 		ctx.txe.PushError(errors.ErrorCodef(exception.ErrorCode(), "call error: %s\ntrace: %s",
-			exception.Error(), ctx.txe.Trace()))
+			exception.String(), ctx.txe.Trace()))
 	} else {
 		ctx.Logger.TraceMsg("Successful execution")
 		if createContract {
