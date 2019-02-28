@@ -24,7 +24,6 @@ import (
 	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/p2p"
-	hex "github.com/tmthrgd/go-hex"
 )
 
 func Configure(output Output) func(cmd *cli.Cmd) {
@@ -240,7 +239,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("could not commit: %v", err)
 				}
 
-				conf.GenesisDoc.AppHash = hex.EncodeUpperToString(st.Hash())
+				conf.GenesisDoc.AppHash = st.Hash()
 			}
 
 			if conf.GenesisDoc != nil {

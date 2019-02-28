@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"sync"
+
+	"github.com/hyperledger/burrow/execution/exec"
 
 	"github.com/hyperledger/burrow/execution/evm/abi"
-	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	"github.com/hyperledger/burrow/vent/config"
@@ -56,6 +56,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 		return errors.Wrapf(err, "Error connecting to Burrow gRPC server at %s", c.Config.GRPCAddr)
 	}
 	defer c.GRPCConnection.Close()
+	defer close(c.EventsChannel)
 
 	// get the chain ID to compare with the one stored in the db
 	qCli := rpcquery.NewQueryClient(c.GRPCConnection)
@@ -95,14 +96,14 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 
 	// doneCh is used for sending a "done" signal from each goroutine to the main thread
 	// eventCh is used for sending received events to the main thread to be stored in the db
-	doneCh := make(chan error)
+	doneCh := make(chan struct{})
+	errCh := make(chan error, 1)
 	eventCh := make(chan types.EventData)
 
-	var wg sync.WaitGroup
-
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
+		defer func() {
+			close(doneCh)
+		}()
 
 		c.Log.Info("msg", "Getting last processed block number from SQL log table")
 
@@ -118,7 +119,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 		// and update event data if already present
 		fromBlock, err := c.DB.GetLastBlockHeight()
 		if err != nil {
-			doneCh <- errors.Wrapf(err, "Error trying to get last processed block number from SQL log table")
+			errCh <- errors.Wrapf(err, "Error trying to get last processed block number from SQL log table")
 			return
 		}
 
@@ -145,7 +146,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 		// gets blocks in given range based on last processed block taken from database
 		stream, err := cli.Stream(context.Background(), request)
 		if err != nil {
-			doneCh <- errors.Wrapf(err, "Error connecting to block stream")
+			errCh <- errors.Wrapf(err, "Error connecting to block stream")
 			return
 		}
 
@@ -153,119 +154,24 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 
 		c.Log.Debug("msg", "Waiting for blocks...")
 
-		err = rpcevents.ConsumeBlockExecutions(stream, func(blockExecution *exec.BlockExecution) error {
-			if c.Closing {
-				return io.EOF
-			}
-			c.Log.Debug("msg", "Block received", "height", blockExecution.Height, "num_txs", len(blockExecution.TxExecutions))
-
-			// set new block number
-			fromBlock = blockExecution.Height
-
-			// create a fresh new structure to store block data at this height
-			blockData := sqlsol.NewBlockData(fromBlock)
-
-			if c.Config.DBBlockTx {
-				blkRawData, err := buildBlkData(projection.Tables, blockExecution)
-				if err != nil {
-					doneCh <- errors.Wrapf(err, "Error building block raw data")
-				}
-				// set row in structure
-				blockData.AddRow(types.SQLBlockTableName, blkRawData)
-			}
-
-			// get transactions for a given block
-			for _, txe := range blockExecution.TxExecutions {
-				c.Log.Debug("msg", "Getting transaction", "TxHash", txe.TxHash, "num_events", len(txe.Events))
-
-				if c.Config.DBBlockTx {
-					txRawData, err := buildTxData(txe)
-					if err != nil {
-						doneCh <- errors.Wrapf(err, "Error building tx raw data")
-					}
-					// set row in structure
-					blockData.AddRow(types.SQLTxTableName, txRawData)
-				}
-
-				// reverted transactions don't have to update event data tables
-				// so check that condition to filter them
-				if txe.Exception == nil {
-
-					// get events for a given transaction
-					for _, event := range txe.Events {
-
-						taggedEvent := event.Tagged()
-
-						// see which spec filter matches with the one in event data
-						for _, eventClass := range projection.EventSpec {
-							qry, err := eventClass.Query()
-
-							if err != nil {
-								doneCh <- errors.Wrapf(err, "Error parsing query from filter string")
-								return io.EOF
-							}
-
-							// there's a matching filter, add data to the rows
-							if qry.Matches(taggedEvent) {
-
-								c.Log.Info("msg", fmt.Sprintf("Matched event header: %v", event.Header),
-									"filter", eventClass.Filter)
-
-								// unpack, decode & build event data
-								eventData, err := buildEventData(projection, eventClass, event, abiSpec, c.Log)
-								if err != nil {
-									doneCh <- errors.Wrapf(err, "Error building event data")
-								}
-
-								// set row in structure
-								blockData.AddRow(eventClass.TableName, eventData)
-							}
-						}
-					}
-				}
-			}
-
-			// upsert rows in specific SQL event tables and update block number
-			// store block data in SQL tables (if any)
-			if blockData.PendingRows(fromBlock) {
-				// gets block data to upsert
-				blk := blockData.Data
-
-				c.Log.Info("msg", fmt.Sprintf("Upserting rows in SQL tables %v", blk), "block", fromBlock)
-
-				eventCh <- blk
-			}
-			return nil
-		})
+		err = rpcevents.ConsumeBlockExecutions(stream, c.makeBlockConsumer(projection, abiSpec, eventCh))
 
 		if err != nil {
 			if err == io.EOF {
-				c.Log.Debug("msg", "EOF stream received...")
+				c.Log.Info("msg", "EOF stream received...")
 			} else {
 				if c.Closing {
 					c.Log.Debug("msg", "GRPC connection closed")
 				} else {
-					doneCh <- errors.Wrapf(err, "Error receiving blocks")
+					errCh <- errors.Wrapf(err, "Error receiving blocks")
 					return
 				}
 			}
 		}
 	}()
 
-	go func() {
-		// wait for all threads to end
-		wg.Wait()
-		doneCh <- nil
-	}()
-
-loop:
-	for {
+	for range doneCh {
 		select {
-		case err := <-doneCh:
-			if err != nil {
-				return err
-			}
-			break loop
 		case blk := <-eventCh:
 			// upsert rows in specific SQL event tables and update block number
 			if err := c.DB.SetBlock(projection.Tables, blk); err != nil {
@@ -280,9 +186,102 @@ loop:
 		}
 	}
 
-	close(c.EventsChannel)
-	c.Log.Info("msg", "Done!")
-	return nil
+	select {
+	case err := <-errCh:
+		c.Log.Info("msg", "Finished with error", "err", err)
+		return err
+	default:
+		c.Log.Info("msg", "Finished with no error!")
+		return nil
+	}
+}
+
+func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi.AbiSpec,
+	eventCh chan<- types.EventData) func(blockExecution *exec.BlockExecution) error {
+
+	return func(blockExecution *exec.BlockExecution) error {
+		if c.Closing {
+			return io.EOF
+		}
+		c.Log.Debug("msg", "Block received", "height", blockExecution.Height, "num_txs", len(blockExecution.TxExecutions))
+
+		// set new block number
+		fromBlock := blockExecution.Height
+
+		// create a fresh new structure to store block data at this height
+		blockData := sqlsol.NewBlockData(fromBlock)
+
+		if c.Config.DBBlockTx {
+			blkRawData, err := buildBlkData(projection.Tables, blockExecution)
+			if err != nil {
+				return errors.Wrapf(err, "Error building block raw data")
+			}
+			// set row in structure
+			blockData.AddRow(types.SQLBlockTableName, blkRawData)
+		}
+
+		// get transactions for a given block
+		for _, txe := range blockExecution.TxExecutions {
+			c.Log.Debug("msg", "Getting transaction", "TxHash", txe.TxHash, "num_events", len(txe.Events))
+
+			if c.Config.DBBlockTx {
+				txRawData, err := buildTxData(txe)
+				if err != nil {
+					return errors.Wrapf(err, "Error building tx raw data")
+				}
+				// set row in structure
+				blockData.AddRow(types.SQLTxTableName, txRawData)
+			}
+
+			// reverted transactions don't have to update event data tables
+			// so check that condition to filter them
+			if txe.Exception == nil {
+
+				// get events for a given transaction
+				for _, event := range txe.Events {
+
+					taggedEvent := event.Tagged()
+
+					// see which spec filter matches with the one in event data
+					for _, eventClass := range projection.EventSpec {
+						qry, err := eventClass.Query()
+
+						if err != nil {
+							return errors.Wrapf(err, "Error parsing query from filter string")
+						}
+
+						// there's a matching filter, add data to the rows
+						if qry.Matches(taggedEvent) {
+
+							c.Log.Info("msg", fmt.Sprintf("Matched event header: %v", event.Header),
+								"filter", eventClass.Filter)
+
+							// unpack, decode & build event data
+							eventData, err := buildEventData(projection, eventClass, event, abiSpec, c.Log)
+							if err != nil {
+								return errors.Wrapf(err, "Error building event data")
+							}
+
+							// set row in structure
+							blockData.AddRow(eventClass.TableName, eventData)
+						}
+					}
+				}
+			}
+		}
+
+		// upsert rows in specific SQL event tables and update block number
+		// store block data in SQL tables (if any)
+		if blockData.PendingRows(fromBlock) {
+			// gets block data to upsert
+			blk := blockData.Data
+
+			c.Log.Info("msg", fmt.Sprintf("Upserting rows in SQL tables %v", blk), "block", fromBlock)
+
+			eventCh <- blk
+		}
+		return nil
+	}
 }
 
 // Health returns the health status for the consumer

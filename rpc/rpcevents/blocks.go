@@ -74,11 +74,13 @@ func SingleBlock(height uint64) *BlockRange {
 }
 
 func ConsumeBlockExecutions(stream ExecutionEvents_StreamClient, consumer func(*exec.BlockExecution) error) error {
-	for be, err := exec.ConsumeBlockExecution(stream); err == nil; be, err = exec.ConsumeBlockExecution(stream) {
+	var be *exec.BlockExecution
+	var err error
+	for be, err = exec.ConsumeBlockExecution(stream); err == nil; be, err = exec.ConsumeBlockExecution(stream) {
 		err = consumer(be)
 		if err != nil {
 			return err
 		}
 	}
-	return nil
+	return err
 }

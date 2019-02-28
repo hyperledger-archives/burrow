@@ -17,8 +17,6 @@ package core
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"net"
 	"net/http"
@@ -28,6 +26,12 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/tendermint/tendermint/version"
+
+	hex "github.com/tmthrgd/go-hex"
+
+	"github.com/hyperledger/burrow/project"
 
 	"github.com/hyperledger/burrow/execution/state"
 
@@ -134,7 +138,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 		}
 
 		if restore != "" {
-			if genesisDoc.AppHash == "" {
+			if len(genesisDoc.AppHash) == 0 {
 				return nil, fmt.Errorf("AppHash is required when restoring chain")
 			}
 
@@ -154,14 +158,9 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 			return nil, err
 		}
 
-		if genesisDoc.AppHash != "" {
-			hash, err := hex.DecodeString(genesisDoc.AppHash)
-			if err != nil || len(hash) != sha256.Size {
-				return nil, fmt.Errorf("AppHash field is not valid hash")
-			}
-
-			if !bytes.Equal(hash, kern.State.Hash()) {
-				return nil, fmt.Errorf("AppHash does not match, got AppHash 0x%X expected 0x%s. Is the correct --restore-dump specified?", kern.State.Hash(), genesisDoc.AppHash)
+		if len(genesisDoc.AppHash) != 0 {
+			if !bytes.Equal(genesisDoc.AppHash, kern.State.Hash()) {
+				return nil, fmt.Errorf("AppHash does not match, got AppHash 0x%X expected 0x%s. Is the correct --restore-dump specified?", kern.State.Hash(), genesisDoc.AppHash.String())
 			}
 		}
 	}
@@ -176,7 +175,8 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	kern.Emitter = event.NewEmitter(kern.Logger)
 	committer := execution.NewBatchCommitter(kern.State, params, kern.Blockchain, kern.Emitter, kern.Logger, exeOptions...)
 
-	kern.nodeInfo = fmt.Sprintf("Burrow_%s_ValidatorID:%X", genesisDoc.ChainID(), privValidator.GetPubKey().Address())
+	kern.nodeInfo = fmt.Sprintf("Burrow_%s_%s_ValidatorID:%X", project.History.CurrentVersion().String(),
+		genesisDoc.ChainID(), privValidator.GetPubKey().Address())
 	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, kern.State, checker, committer, txCodec, authorizedPeersProvider,
 		kern.Panic, logger)
 	// We could use this to provide/register our own metrics (though this will register them with us). Unfortunately
@@ -256,6 +256,35 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 					}
 					return err
 				}), nil
+			},
+		},
+		// Run announcer after Tendermint so it can get some details
+		{
+			Name:    "Startup Announcer",
+			Enabled: true,
+			Launch: func() (process.Process, error) {
+				info := kern.Node.NodeInfo()
+
+				start := time.Now()
+				logger := kern.Logger.With(
+					"launch_time", start,
+					"burrow_version", project.FullVersion(),
+					"tendermint_version", version.TMCoreSemVer,
+					"validator_address", privValidator.GetPubKey().Address(),
+					"node_id", string(info.ID()),
+					"net_address", info.NetAddress().String(),
+					"genesis_app_hash", genesisDoc.AppHash.String(),
+					"genesis_hash", hex.EncodeUpperToString(genesisDoc.Hash()),
+				)
+
+				err := logger.InfoMsg("Burrow is launching. We have marmot-off.", "announce", "startup")
+				return process.ShutdownFunc(func(ctx context.Context) error {
+					stop := time.Now()
+					return logger.InfoMsg("Burrow is shutting down. Prepare for re-entrancy.",
+						"announce", "shutdown",
+						"shutdown_time", stop,
+						"elapsed_run_time", stop.Sub(start).String())
+				}), err
 			},
 		},
 		{

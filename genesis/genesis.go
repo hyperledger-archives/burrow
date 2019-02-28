@@ -16,11 +16,12 @@ package genesis
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
+
+	"github.com/hyperledger/burrow/binary"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/validator"
@@ -68,13 +69,14 @@ type params struct {
 type GenesisDoc struct {
 	GenesisTime       time.Time
 	ChainName         string
-	AppHash           string `json:",omitempty" toml:",omitempty"`
-	hash              []byte
-	Params            params `json:",omitempty" toml:",omitempty"`
-	Salt              []byte `json:",omitempty" toml:",omitempty"`
+	AppHash           binary.HexBytes `json:",omitempty" toml:",omitempty"`
+	Params            params          `json:",omitempty" toml:",omitempty"`
+	Salt              []byte          `json:",omitempty" toml:",omitempty"`
 	GlobalPermissions permission.AccountPermissions
 	Accounts          []Account
 	Validators        []Validator
+	// memo
+	hash []byte
 }
 
 func (genesisDoc *GenesisDoc) JSONString() string {
@@ -123,12 +125,8 @@ func GenesisDocFromJSON(jsonBlob []byte) (*GenesisDoc, error) {
 	if err != nil {
 		return nil, fmt.Errorf("couldn't read GenesisDoc: %v", err)
 	}
-	if genDoc.AppHash != "" {
-		bs, err := hex.DecodeString(genDoc.AppHash)
-		if err != nil || len(bs) != sha256.Size {
-			return nil, fmt.Errorf("AppHash field is not valid hash")
-		}
-		genDoc.hash = bs
+	if len(genDoc.AppHash) != 0 {
+		genDoc.hash = genDoc.AppHash
 	}
 
 	return genDoc, nil

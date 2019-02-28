@@ -49,9 +49,19 @@ func FullVersion() string {
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases("",
 		``,
+		"0.24.2 - 2019-02-28",
+		`### Changed
+- Use HexBytes for Genesis AppHash
+
+### Fixed
+- Stop Vent from swallowing errors (e.g. GRPC streaming errors)
+
+### Added
+- [Kernel] Added announce message for startup and shutdown including version, key address, and other useful metadata
+`,
 		"0.24.1 - 2019-02-28",
 		`### Changed
-- [ABI] abi.EncodeFunctionCall and AbiSpec.Pack now take a variadic ...interface{} type for function arguments rather than []
+- [ABI] abi.EncodeFunctionCall and AbiSpec.Pack now take a variadic ...interface{} type for function arguments rather than []string
 
 ### Fixed
 - [Deploy] Binary files are now written atomically to prevent issue with dependency libraries being momentarily truncated when deploying in parallel
