@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/hyperledger/burrow/deploy/compile"
 	"github.com/hyperledger/burrow/execution/errors"
@@ -169,25 +170,27 @@ func LoadPath(abiFileOrDir string) (*AbiSpec, error) {
 
 	specs := make([]*AbiSpec, 0)
 
-	err := filepath.Walk(abiFileOrDir, func(path string, fi os.FileInfo, err error) error {
-		if err != nil {
-			return fmt.Errorf("error returned while walking abiDir '%s': %v", abiFileOrDir, err)
-		}
-		ext := filepath.Ext(path)
-		if fi.IsDir() || !(ext == ".bin" || ext == ".abi") {
-			return nil
-		}
-		if err == nil {
-			abiSpc, err := ReadAbiSpecFile(path)
+	for _, dir := range strings.Split(abiFileOrDir, ":") {
+		err := filepath.Walk(dir, func(path string, fi os.FileInfo, err error) error {
 			if err != nil {
-				return errors.Wrap(err, "Error parsing abi file "+path)
+				return fmt.Errorf("error returned while walking abiDir '%s': %v", dir, err)
 			}
-			specs = append(specs, abiSpc)
+			ext := filepath.Ext(path)
+			if fi.IsDir() || !(ext == ".bin" || ext == ".abi") {
+				return nil
+			}
+			if err == nil {
+				abiSpc, err := ReadAbiSpecFile(path)
+				if err != nil {
+					return errors.Wrap(err, "Error parsing abi file "+path)
+				}
+				specs = append(specs, abiSpc)
+			}
+			return nil
+		})
+		if err != nil {
+			return &AbiSpec{}, err
 		}
-		return nil
-	})
-	if err != nil {
-		return &AbiSpec{}, err
 	}
 	return MergeAbiSpec(specs), nil
 }

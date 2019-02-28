@@ -55,7 +55,7 @@ func TestStreamDB(t *testing.T) {
 		blocks = append(blocks, be)
 		return nil
 	})
-	require.NoError(t, err)
+	require.Equal(t, io.EOF, err)
 
 	assert.True(t, len(blocks) > 0, "should see at least one block (height 2)")
 	var height uint64

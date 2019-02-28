@@ -40,39 +40,41 @@ func NewProjectionFromBytes(bs []byte) (*Projection, error) {
 }
 
 // NewProjectionFromFolder creates a Projection from a folder containing spec files
-func NewProjectionFromFolder(fileOrDir string) (*Projection, error) {
+func NewProjectionFromFolder(specFileOrDir string) (*Projection, error) {
 	eventSpec := types.EventSpec{}
 
 	const errHeader = "NewProjectionFromFolder():"
 
-	err := filepath.Walk(fileOrDir, func(path string, _ os.FileInfo, err error) error {
+	for _, dir := range strings.Split(specFileOrDir, ":") {
+		err := filepath.Walk(dir, func(path string, _ os.FileInfo, err error) error {
+			if err != nil {
+				return fmt.Errorf("error walking event spec files location '%s': %v", dir, err)
+			}
+			if filepath.Ext(path) == ".json" {
+				bs, err := readFile(path)
+				if err != nil {
+					return fmt.Errorf("error reading spec file '%s': %v", path, err)
+				}
+
+				err = ValidateJSONEventSpec(bs)
+				if err != nil {
+					return fmt.Errorf("could not validate spec file '%s': %v", path, err)
+				}
+
+				fileEventSpec := types.EventSpec{}
+				err = json.Unmarshal(bs, &fileEventSpec)
+				if err != nil {
+					return fmt.Errorf("error reading spec file '%s': %v", path, err)
+				}
+
+				eventSpec = append(eventSpec, fileEventSpec...)
+			}
+
+			return nil
+		})
 		if err != nil {
-			return fmt.Errorf("error walking event spec files location '%s': %v", fileOrDir, err)
+			return nil, fmt.Errorf("%s %v", errHeader, err)
 		}
-		if filepath.Ext(path) == ".json" {
-			bs, err := readFile(path)
-			if err != nil {
-				return fmt.Errorf("error reading spec file '%s': %v", path, err)
-			}
-
-			err = ValidateJSONEventSpec(bs)
-			if err != nil {
-				return fmt.Errorf("could not validate spec file '%s': %v", path, err)
-			}
-
-			fileEventSpec := types.EventSpec{}
-			err = json.Unmarshal(bs, &fileEventSpec)
-			if err != nil {
-				return fmt.Errorf("error reading spec file '%s': %v", path, err)
-			}
-
-			eventSpec = append(eventSpec, fileEventSpec...)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("%s %v", errHeader, err)
 	}
 
 	return NewProjectionFromEventSpec(eventSpec)
