@@ -19,7 +19,7 @@ const defaultChainTimeout = 15 * time.Second
 
 func Deploy(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
-		chainURLOpt := cmd.StringOpt("u chain-url", "127.0.0.1:10997", "chain-url to be used in IP:PORT format")
+		chainOpt := cmd.StringOpt("u chain", "127.0.0.1:10997", "chain to be used in IP:PORT format")
 
 		signerOpt := cmd.StringOpt("s keys", "",
 			"IP:PORT of Burrow GRPC service which jobs should or otherwise transaction submitted unsigned for mempool signing in Burrow")
@@ -31,10 +31,10 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 		pathOpt := cmd.StringOpt("i dir", "", "root directory of app (will use pwd by default)")
 
 		defaultOutputOpt := cmd.StringOpt("o output", def.DefaultOutputFile,
-			"filename for playbook output file. by default, this name will reflect the name passed in on the optional [--file]")
+			"filename for playbook output file. by default, this name will reflect the playbook passed")
 
-		playbooksOpt := cmd.StringsOpt("f file", []string{"deploy.yaml"},
-			"path to playbook file which deploy should run. if also using the --dir flag, give the relative path to jobs file, which should be in the same directory")
+		playbooksOpt := cmd.StringsArg("FILE", []string{"deploy.yaml"},
+			"path to playbook file which deploy should run. if also using the --dir flag, give the relative path to playbooks file, which should be in the same directory")
 
 		defaultSetsOpt := cmd.StringsOpt("e set", []string{},
 			"default sets to use; operates the same way as the [set] jobs, only before the jobs file is ran (and after default address")
@@ -45,8 +45,8 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 		defaultGasOpt := cmd.StringOpt("g gas", "1111111111",
 			"default gas to use; can be overridden for any single job")
 
-		jobsOpt := cmd.IntOpt("j jobs", 2,
-			"default number of concurrent solidity compilers to run")
+		jobsOpt := cmd.IntOpt("j jobs", 1,
+			"default number of concurrent playbooks to run if multiple are specified")
 
 		addressOpt := cmd.StringOpt("a address", "",
 			"default address to use; operates the same way as the [account] job, only before the deploy file is ran")
@@ -70,6 +70,11 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 
 		proposalList := cmd.StringOpt("list-proposals state", "", "List proposals, either all, executed, expired, or current")
 
+		cmd.Spec = "[--chain=<host:port>] [--keys=<host:port>] [--mempool-signing] [--dir=<root directory>] " +
+			"[--output=<output file>] [--set=<KEY=VALUE>]... [--bin-path=<path>] [--gas=<gas>] " +
+			"[--jobs=<concurrent playbooks>] [--address=<address>] [--fee=<fee>] [--amount=<amount>] " +
+			"[--verbose] [--debug] [--timeout=<timeout>] [--proposal-create|--proposal-verify|--proposal-create] [FILE...]"
+
 		cmd.Action = func() {
 			args := new(def.DeployArgs)
 
@@ -84,6 +89,10 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 				}
 			}
 
+			args.Chain = *chainOpt
+			args.KeysService = *signerOpt
+			args.MempoolSign = *mempoolSigningOpt
+			args.Timeout = *timeoutSecondsOpt
 			args.Path = *pathOpt
 			args.DefaultOutput = *defaultOutputOpt
 			args.DefaultSets = *defaultSetsOpt
@@ -105,7 +114,6 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			} else if args.Debug {
 				log.SetLevel(log.DebugLevel)
 			}
-			client := def.NewClient(*chainURLOpt, *signerOpt, *mempoolSigningOpt, time.Duration(*timeoutSecondsOpt)*time.Second)
 			handleTerm()
 
 			if *proposalList != "" {
@@ -113,9 +121,9 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 				if err != nil {
 					output.Fatalf(err.Error())
 				}
-				proposals.ListProposals(client, state)
+				proposals.ListProposals(args, state)
 			} else {
-				util.IfExit(pkgs.RunPackage(args, *playbooksOpt, client))
+				util.IfExit(pkgs.RunPlaybook(args, *playbooksOpt))
 			}
 		}
 	}

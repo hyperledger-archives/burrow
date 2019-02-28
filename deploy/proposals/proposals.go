@@ -3,6 +3,7 @@ package proposals
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/txs"
@@ -57,7 +58,9 @@ func ProposalStateFromString(s string) (ProposalState, error) {
 	return ALL, fmt.Errorf("Unknown proposal state %s", s)
 }
 
-func ListProposals(client *def.Client, reqState ProposalState) {
+func ListProposals(args *def.DeployArgs, reqState ProposalState) {
+	client := def.NewClient(args.Chain, args.KeysService, args.MempoolSign, time.Duration(args.Timeout)*time.Second)
+
 	props, err := client.ListProposals(reqState == PROPOSED)
 	if err != nil {
 		log.Warnf("Failed to list proposals: %v", err)

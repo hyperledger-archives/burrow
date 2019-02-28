@@ -348,9 +348,9 @@ func deployTx(client *def.Client, deploy *def.Deploy, contractName, contractCode
 	}).Warn("Deploying Contract")
 
 	log.WithFields(log.Fields{
-		"source":    deploy.Source,
-		"code":      contractCode,
-		"chain-url": client.ChainAddress,
+		"source": deploy.Source,
+		"code":   contractCode,
+		"chain":  client.ChainAddress,
 	}).Info()
 
 	return client.Call(&def.CallArg{

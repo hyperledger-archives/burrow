@@ -17,6 +17,7 @@ func LoadPlaybook(fileName string, args *def.DeployArgs) (*def.Playbook, error) 
 func loadPlaybook(fileName string, args *def.DeployArgs, parent *def.Playbook) (*def.Playbook, error) {
 	log.Info("Loading monax Jobs Definition File.")
 	playbook := new(def.Playbook)
+	playbook.Filename = fileName
 	deployJobs := viper.New()
 
 	if parent == nil {
@@ -26,7 +27,7 @@ func loadPlaybook(fileName string, args *def.DeployArgs, parent *def.Playbook) (
 		// if subYAMLPath does not exist, try YAMLPath relative to do.Path
 		if _, err := os.Stat(fileName); os.IsNotExist(err) {
 			fileName = filepath.Join(parent.Path, fileName)
-			log.WithField("=>", fileName).Info("Trying YAMLPath relative to do.Path")
+			log.WithField("=>", fileName).Info("Trying Playbook relative to Path")
 		}
 
 		playbook.Path = filepath.Dir(fileName)

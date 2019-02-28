@@ -13,6 +13,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	// How many concurrent
+	concurrentSolc = 2
+	// Ensure we have a queue large enough so that we don't have to wait for more work to be queued
+	concurrentSolcWorkQueue = 4
+)
+
 type intermediateJob struct {
 	contractName string
 	compilerResp *compilers.Response
@@ -236,14 +243,13 @@ func ExecutePlaybook(args *def.DeployArgs, script *def.Playbook, client *def.Cli
 
 	err := args.Validate()
 	if err != nil {
-		return fmt.Errorf("error validating Burrow deploy file at %s: %v", args.YAMLPath, err)
+		return fmt.Errorf("error validating Burrow deploy file at %s: %v", script.Filename, err)
 	}
 
-	// Ensure we have a queue large enough so that we don't have to wait for more work to be queued
-	jobs := make(chan *intermediateJob, args.Jobs*2)
+	jobs := make(chan *intermediateJob, concurrentSolcWorkQueue)
 	defer close(jobs)
 
-	for i := 0; i < args.Jobs; i++ {
+	for i := 0; i < concurrentSolc; i++ {
 		go intermediateJobRunner(jobs)
 	}
 
@@ -307,34 +313,34 @@ func defaultSetJobs(do *def.DeployArgs, deployScript *def.Playbook) {
 	deployScript.Jobs = append(newJobs, oldJobs...)
 }
 
-func postProcess(do *def.DeployArgs, deployScript *def.Playbook) error {
+func postProcess(args *def.DeployArgs, playbook *def.Playbook) error {
 	// Formulate the results map
 	results := make(map[string]interface{})
-	for _, job := range deployScript.Jobs {
+	for _, job := range playbook.Jobs {
 		results[job.Name] = job.Result
 	}
 
 	// check do.YAMLPath and do.DefaultOutput
 	var yaml string
-	yamlName := strings.LastIndexByte(do.YAMLPath, '.')
+	yamlName := strings.LastIndexByte(playbook.Filename, '.')
 	if yamlName >= 0 {
-		yaml = do.YAMLPath[:yamlName]
+		yaml = playbook.Filename
 	} else {
-		return fmt.Errorf("invalid jobs file path (%s)", do.YAMLPath)
+		return fmt.Errorf("invalid jobs file path (%s)", playbook.Filename)
 	}
 
 	// if do.YAMLPath is not default and do.DefaultOutput is default, over-ride do.DefaultOutput
-	if yaml != "deploy" && do.DefaultOutput == def.DefaultOutputFile {
-		do.DefaultOutput = fmt.Sprintf("%s.output.json", yaml)
+	if yaml != "deploy" && args.DefaultOutput == def.DefaultOutputFile {
+		args.DefaultOutput = fmt.Sprintf("%s.output.json", yaml)
 	}
 
 	// if CurrentOutput set, we're in a meta job
-	if do.CurrentOutput != "" {
-		log.Warn(fmt.Sprintf("Writing meta output of [%s] to current directory", do.CurrentOutput))
-		return WriteJobResultJSON(results, do.CurrentOutput)
+	if args.CurrentOutput != "" {
+		log.Warn(fmt.Sprintf("Writing meta output of [%s] to current directory", args.CurrentOutput))
+		return WriteJobResultJSON(results, args.CurrentOutput)
 	}
 
 	// Write the output
-	log.Warn(fmt.Sprintf("Writing [%s] to current directory", do.DefaultOutput))
-	return WriteJobResultJSON(results, do.DefaultOutput)
+	log.Warn(fmt.Sprintf("Writing [%s] to current directory", args.DefaultOutput))
+	return WriteJobResultJSON(results, args.DefaultOutput)
 }

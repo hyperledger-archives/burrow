@@ -41,7 +41,7 @@ echo "------------------------------------"
 echo "Creating code, events and names..."
 echo "------------------------------------"
 
-$burrow_bin deploy -o '' -a Validator_0 --file deploy.yaml --dir $burrow_dump
+$burrow_bin deploy -o '' -a Validator_0 --dir $burrow_dump deploy.yaml
 
 
 echo "------------------------------------"

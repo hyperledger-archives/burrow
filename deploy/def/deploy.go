@@ -8,6 +8,10 @@ import (
 const DefaultOutputFile = "deploy.output.json"
 
 type DeployArgs struct {
+	Chain         string   `mapstructure:"," json:"," yaml:"," toml:","`
+	KeysService   string   `mapstructure:"," json:"," yaml:"," toml:","`
+	MempoolSign   bool     `mapstructure:"," json:"," yaml:"," toml:","`
+	Timeout       int      `mapstructure:"," json:"," yaml:"," toml:","`
 	Address       string   `mapstructure:"," json:"," yaml:"," toml:","`
 	BinPath       string   `mapstructure:"," json:"," yaml:"," toml:","`
 	CurrentOutput string   `mapstructure:"," json:"," yaml:"," toml:","`
@@ -19,26 +23,26 @@ type DeployArgs struct {
 	DefaultSets   []string `mapstructure:"," json:"," yaml:"," toml:","`
 	Path          string   `mapstructure:"," json:"," yaml:"," toml:","`
 	Verbose       bool     `mapstructure:"," json:"," yaml:"," toml:","`
-	YAMLPath      string   `mapstructure:"," json:"," yaml:"," toml:","`
 	Jobs          int      `mapstructure:"," json:"," yaml:"," toml:","`
 	ProposeVerify bool     `mapstructure:"," json:"," yaml:"," toml:","`
 	ProposeVote   bool     `mapstructure:"," json:"," yaml:"," toml:","`
 	ProposeCreate bool     `mapstructure:"," json:"," yaml:"," toml:","`
 }
 
-func (do *DeployArgs) Validate() error {
-	return validation.ValidateStruct(do,
-		validation.Field(&do.DefaultAmount, rule.Uint64),
-		validation.Field(&do.DefaultFee, rule.Uint64),
-		validation.Field(&do.DefaultGas, rule.Uint64),
+func (args *DeployArgs) Validate() error {
+	return validation.ValidateStruct(args,
+		validation.Field(&args.DefaultAmount, rule.Uint64),
+		validation.Field(&args.DefaultFee, rule.Uint64),
+		validation.Field(&args.DefaultGas, rule.Uint64),
 	)
 }
 
 type Playbook struct {
-	Account string
-	Jobs    []*Job
-	Path    string `mapstructure:"-" json:"-" yaml:"-" toml:"-"`
-	BinPath string `mapstructure:"-" json:"-" yaml:"-" toml:"-"`
+	Filename string
+	Account  string
+	Jobs     []*Job
+	Path     string `mapstructure:"-" json:"-" yaml:"-" toml:"-"`
+	BinPath  string `mapstructure:"-" json:"-" yaml:"-" toml:"-"`
 	// If we're in a proposal or meta job, reference our parent script
 	Parent *Playbook `mapstructure:"-" json:"-" yaml:"-" toml:"-"`
 }
