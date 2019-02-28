@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -86,12 +88,25 @@ func LoadSolidityContract(file string) (*SolidityContract, error) {
 	return &contract, nil
 }
 
-func (contract *SolidityContract) Save(file string) error {
+func (contract *SolidityContract) Save(dir, file string) error {
 	str, err := json.Marshal(*contract)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(file, str, 0644)
+	// This will make the contract file appear atomically
+	// This is important since if we run concurrent jobs, one job could be compiling a solidity
+	// file while another reads the bin file. If write is incomplete, it will result in failures
+	f, err := ioutil.TempFile(dir, "bin.*.txt")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(f.Name())
+	_, err = f.Write(str)
+	if err != nil {
+		return err
+	}
+	f.Close()
+	return os.Rename(f.Name(), filepath.Join(dir, file))
 }
 
 func (contract *SolidityContract) Link(libraries map[string]string) error {

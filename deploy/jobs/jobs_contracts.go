@@ -2,9 +2,7 @@ package jobs
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -63,13 +61,10 @@ func BuildJob(build *def.Build, binPath string, resp *compilers.Response) (resul
 		}
 
 		// saving binary
-		b, err := json.Marshal(res.Contract)
+		log.WithField("=>", res.Objectname).Warn("Saving Binary")
+
+		err = res.Contract.Save(binP, fmt.Sprintf("%s.bin", res.Objectname))
 		if err != nil {
-			return "", err
-		}
-		contractName := filepath.Join(binP, fmt.Sprintf("%s.bin", res.Objectname))
-		log.WithField("=>", contractName).Warn("Saving Binary")
-		if err := ioutil.WriteFile(contractName, b, 0664); err != nil {
 			return "", err
 		}
 	}
@@ -259,7 +254,7 @@ func DeployJob(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook, cli
 
 	for i, tx := range txs {
 		// Sign, broadcast, display
-		contractAddress, err := deployFinalize(do, script, client, tx)
+		contractAddress, err := deployFinalize(do, client, tx)
 		if err != nil {
 			return "", fmt.Errorf("Error finalizing contract deploy %s: %v", deploy.Contract, err)
 		}
@@ -268,9 +263,8 @@ func DeployJob(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook, cli
 		if contracts != nil && contractAddress != nil {
 			contract := contracts[i].Contract
 			// saving binary
-			addressBin := filepath.Join(do.BinPath, contractAddress.String())
-			log.WithField("=>", addressBin).Debug("Saving Binary")
-			err = contract.Save(addressBin)
+			log.WithField("=>", contractAddress.String()).Debug("Saving Binary")
+			err = contract.Save(do.BinPath, contractAddress.String())
 			if err != nil {
 				return "", err
 			}
@@ -312,9 +306,9 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 	log.WithField("=>", string(compilersResponse.Contract.Abi)).Debug("Specification (From Compilers)")
 
 	contract := compilersResponse.Contract
-	contractName := filepath.Join(do.BinPath, fmt.Sprintf("%s.bin", compilersResponse.Objectname))
+	contractName := compilersResponse.Objectname
 	log.WithField("=>", contractName).Warn("Saving Binary")
-	err := contract.Save(contractName)
+	err := contract.Save(do.BinPath, fmt.Sprintf("%s.bin", contractName))
 	if err != nil {
 		return nil, err
 	}
@@ -365,7 +359,7 @@ func deployTx(client *def.Client, deploy *def.Deploy, contractName, contractCode
 
 func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Playbook, client *def.Client) (tx *payload.CallTx, err error) {
 	var callData string
-	var callDataArray []string
+	var callDataArray []interface{}
 	//todo: find a way to call the fallback function here
 	call.Function, callDataArray, err = util.PreProcessInputData(call.Function, call.Data, do, deployScript, client, false)
 	if err != nil {
@@ -379,13 +373,13 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 
 	// formulate call
 	var packedBytes []byte
-	var constant bool
+	var funcSpec *abi.FunctionSpec
 	if call.Bin != "" {
-		packedBytes, constant, err = abi.EncodeFunctionCallFromFile(call.Bin, do.BinPath, call.Function, callDataArray)
+		packedBytes, funcSpec, err = abi.EncodeFunctionCallFromFile(call.Bin, do.BinPath, call.Function, callDataArray...)
 		callData = hex.EncodeToString(packedBytes)
 	}
 	if call.Bin == "" || err != nil {
-		packedBytes, constant, err = abi.EncodeFunctionCallFromFile(call.Destination, do.BinPath, call.Function, callDataArray)
+		packedBytes, funcSpec, err = abi.EncodeFunctionCallFromFile(call.Destination, do.BinPath, call.Function, callDataArray...)
 		callData = hex.EncodeToString(packedBytes)
 	}
 	if err != nil {
@@ -397,7 +391,7 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 		}
 	}
 
-	if constant {
+	if funcSpec.Constant {
 		log.Warn("Function call to constant function, query-contract type job will be faster than call")
 	}
 
@@ -418,13 +412,13 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 	})
 }
 
-func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, deployScript *def.Playbook, client *def.Client) (string, []*abi.Variable, error) {
+func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, client *def.Client) (string, []*abi.Variable, error) {
 	var err error
 
 	// Sign, broadcast, display
 	txe, err := client.SignAndBroadcast(tx)
 	if err != nil {
-		var err = util.ChainErrorHandler(deployScript.Account, err)
+		var err = util.ChainErrorHandler(payload.InputsString(tx.GetInputs()), err)
 		return "", nil, err
 	}
 
@@ -485,10 +479,10 @@ func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, deployScrip
 	return result, call.Variables, nil
 }
 
-func deployFinalize(do *def.DeployArgs, deployScript *def.Playbook, client *def.Client, tx payload.Payload) (*crypto.Address, error) {
+func deployFinalize(do *def.DeployArgs, client *def.Client, tx payload.Payload) (*crypto.Address, error) {
 	txe, err := client.SignAndBroadcast(tx)
 	if err != nil {
-		return nil, util.ChainErrorHandler(deployScript.Account, err)
+		return nil, util.ChainErrorHandler(payload.InputsString(tx.GetInputs()), err)
 	}
 
 	if err := util.ReadTxSignAndBroadcast(txe, err); err != nil {

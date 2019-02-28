@@ -19,8 +19,9 @@ function log() {
     echo "$*" >> /dev/stderr
 }
 
-# Same as specified RFC3339 but contains the T
+# Gives RFC 3339 with T instead of space
 date=$(date -Idate)
+
 commit=$(git rev-parse --short HEAD)
 
 if [[ ${tag} =~ ${VERSION_REGEX} ]] ; then
@@ -35,5 +36,8 @@ else
     version="$version-dev-$date-$commit"
     log "Building non-release version $version..."
 fi
+
+# for export
+date=$(date -Iseconds)
 
 echo ${version}

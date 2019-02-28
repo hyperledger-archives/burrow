@@ -167,7 +167,7 @@ func doJobs(script *def.Playbook, args *def.DeployArgs, client *def.Client) erro
 			if ferr != nil {
 				return ferr
 			}
-			job.Result, job.Variables, err = CallJob(job.Call, CallTx, args, script, client)
+			job.Result, job.Variables, err = CallJob(job.Call, CallTx, args, client)
 		case *def.Build:
 			announce(job.Name, "Build")
 			var resp *compilers.Response

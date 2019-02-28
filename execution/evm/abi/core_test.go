@@ -19,74 +19,74 @@ import (
 func TestPacker(t *testing.T) {
 	for _, test := range []struct {
 		ABI            string
-		args           []string
+		args           []interface{}
 		name           string
 		expectedOutput []byte
 	}{
 		{
 			`[{"constant":false,"inputs":[{"name":"","type":"uint256"}],"name":"UInt","outputs":[],"payable":false,"type":"function"}]`,
-			[]string{"1"},
+			[]interface{}{"1"},
 			"UInt",
 			pad([]byte{1}, 32, true),
 		},
 		{
 			`[{"constant":false,"inputs":[{"name":"","type":"int256"}],"name":"Int","outputs":[],"payable":false,"type":"function"}]`,
-			[]string{"-1"},
+			[]interface{}{"-1"},
 			"Int",
 			[]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		{
 			`[{"constant":false,"inputs":[{"name":"","type":"bool"}],"name":"Bool","outputs":[],"payable":false,"type":"function"}]`,
-			[]string{"true"},
+			[]interface{}{"true"},
 			"Bool",
 			pad([]byte{1}, 32, true),
 		},
 		{
 			`[{"constant":false,"inputs":[{"name":"","type":"string"}],"name":"String","outputs":[],"payable":false,"type":"function"}]`,
-			[]string{"marmots"},
+			[]interface{}{"marmots"},
 			"String",
 			append(hexToBytes(t, "00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000007"), pad([]byte("marmots"), 32, false)...),
 		},
 		{
 			`[{"constant":false,"inputs":[{"name":"x","type":"bytes32"}],"name":"Bytes32","outputs":[],"payable":false,"type":"function"}]`,
-			[]string{"marmatoshi"},
+			[]interface{}{"marmatoshi"},
 			"Bytes32",
 			pad([]byte("marmatoshi"), 32, false),
 		},
 		{
 			`[{"constant":false,"inputs":[{"name":"","type":"uint8"}],"name":"UInt8","outputs":[],"payable":false,"type":"function"}]`,
-			[]string{"1"},
+			[]interface{}{"1"},
 			"UInt8",
 			pad([]byte{1}, 32, true),
 		},
 		{
 			`[{"constant":false,"inputs":[{"name":"","type":"int8"}],"name":"Int8","outputs":[],"payable":false,"type":"function"}]`,
-			[]string{"-1"},
+			[]interface{}{"-1"},
 			"Int8",
 			[]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		{
 			`[{"constant":false,"inputs":[{"name":"","type":"uint256"},{"name":"","type":"uint256"}],"name":"multiPackUInts","outputs":[],"payable":false,"type":"function"}]`,
-			[]string{"1", "1"},
+			[]interface{}{"1", "1"},
 			"multiPackUInts",
 			append(pad([]byte{1}, 32, true), pad([]byte{1}, 32, true)...),
 		},
 		{
 			`[{"constant":false,"inputs":[{"name":"","type":"bool"},{"name":"","type":"bool"}],"name":"multiPackBools","outputs":[],"payable":false,"type":"function"}]`,
-			[]string{"true", "false"},
+			[]interface{}{"true", "false"},
 			"multiPackBools",
 			append(pad([]byte{1}, 32, true), pad([]byte{0}, 32, true)...),
 		},
 		{
 			`[{"constant":false,"inputs":[{"name":"","type":"int256"},{"name":"","type":"int256"}],"name":"multiPackInts","outputs":[],"payable":false,"type":"function"}]`,
-			[]string{"-1", "-1"},
+			[]interface{}{"-1", "-1"},
 			"multiPackInts",
 			[]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 
 		{
 			`[{"constant":false,"inputs":[{"name":"","type":"string"},{"name":"","type":"string"}],"name":"multiPackStrings","outputs":[],"payable":false,"type":"function"}]`,
-			[]string{"hello", "world"},
+			[]interface{}{"hello", "world"},
 			"multiPackStrings",
 			append(
 				hexToBytes(t, "000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000005"),
@@ -97,7 +97,7 @@ func TestPacker(t *testing.T) {
 		},
 		{
 			`[{"constant":false,"inputs":[],"name":"arrayOfBytes32Pack","inputs":[{"name":"","type":"bytes32[3]"}],"payable":false,"type":"function"}]`,
-			[]string{`[den,of,marmots]`},
+			[]interface{}{`[den,of,marmots]`},
 			"arrayOfBytes32Pack",
 			append(
 				pad([]byte("den"), 32, false),
@@ -106,19 +106,19 @@ func TestPacker(t *testing.T) {
 		},
 		{
 			`[{"constant":false,"inputs":[{"name":"","type":"uint256[3]"}],"name":"arrayOfUIntsPack","outputs":[],"payable":false,"type":"function"}]`,
-			[]string{"[1,2,3]"},
+			[]interface{}{"[1,2,3]"},
 			"arrayOfUIntsPack",
 			hexToBytes(t, "000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000003"),
 		},
 		{
 			`[{"constant":false,"inputs":[{"name":"","type":"int256[3]"}],"name":"arrayOfIntsPack","outputs":[],"payable":false,"type":"function"}]`,
-			[]string{"[-1,-2,-3]"},
+			[]interface{}{"[-1,-2,-3]"},
 			"arrayOfIntsPack",
 			[]byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 253},
 		},
 		{
 			`[{"constant":false,"inputs":[{"name":"","type":"bool[2]"}],"name":"arrayOfBoolsPack","outputs":[],"payable":false,"type":"function"}]`,
-			[]string{"[true,false]"},
+			[]interface{}{"[true,false]"},
 			"arrayOfBoolsPack",
 			append(pad([]byte{1}, 32, true), pad([]byte{0}, 32, true)...),
 		},
@@ -304,7 +304,7 @@ func TestUnpackerString(t *testing.T) {
 	} {
 		//t.Log(test.name)
 		t.Log(test.packed)
-		output, err := unpacker(test.abi, test.name, test.packed)
+		output, err := DecodeFunctionReturn(test.abi, test.name, test.packed)
 		if err != nil {
 			t.Errorf("Unpacker failed: %v", err)
 		}

@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func RunPackage(do *def.DeployArgs, script *def.Playbook, client *def.Client) error {
+func RunPackage(do *def.DeployArgs, client *def.Client) error {
 	var err error
 	var pwd string
 
@@ -68,11 +68,9 @@ func RunPackage(do *def.DeployArgs, script *def.Playbook, client *def.Client) er
 	printPathPackage(client)
 
 	// Load the package if it doesn't exist
-	if script == nil {
-		script, err = loader.LoadPlaybook(do.YAMLPath, do, nil)
-		if err != nil {
-			return err
-		}
+	script, err := loader.LoadPlaybook(do.YAMLPath, do)
+	if err != nil {
+		return err
 	}
 
 	// Ensure relative paths if we're given a different path for deploy contracts jobs
