@@ -46,10 +46,10 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 		generateNodeKeys := cmd.BoolOpt("generate-node-keys", false, "Generate node keys for validators")
 
 		configTemplateIn := cmd.StringsOpt("t config-template-in", nil,
-			fmt.Sprintf("Go text/template template input filename (left delim: %s right delim: %s) to output generate config "+
+			fmt.Sprintf("Go text/template template input filename (left delim: %s right delim: %s) to generate config "+
 				"file specified with --config-out", deployment.LeftTemplateDelim, deployment.RightTemplateDelim))
 
-		configOut := cmd.StringsOpt("t config-out", nil,
+		configOut := cmd.StringsOpt("o config-out", nil,
 			"Go text/template template output file. Template filename specified with --config-template-in "+
 				"file specified with --config-out")
 
