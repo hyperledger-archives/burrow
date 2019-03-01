@@ -22,9 +22,13 @@ func TestBurrow(t *testing.T) {
 	}
 	app := burrow(out)
 	// Basic smoke test for cli config
-	assert.NoError(t, app.Run([]string{"burrow", "--version"}))
-	assert.NoError(t, app.Run([]string{"burrow", "spec", "--name-prefix", "foo", "-f1"}))
-	assert.NoError(t, app.Run([]string{"burrow", "configure"}))
-	assert.NoError(t, app.Run([]string{"burrow", "start", "-h"}))
+	err := app.Run([]string{"burrow", "--version"})
+	assert.NoError(t, err)
+	err = app.Run([]string{"burrow", "spec", "--name-prefix", "foo", "-f1"})
+	assert.NoError(t, err)
+	err = app.Run([]string{"burrow", "configure"})
+	assert.NoError(t, err)
+	err = app.Run([]string{"burrow", "start", "--help"})
+	assert.NoError(t, err)
 	assert.True(t, outputCount > 0)
 }

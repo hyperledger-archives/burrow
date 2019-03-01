@@ -55,7 +55,7 @@ func TestStreamDB(t *testing.T) {
 		blocks = append(blocks, be)
 		return nil
 	})
-	require.NoError(t, err)
+	require.Equal(t, io.EOF, err)
 
 	assert.True(t, len(blocks) > 0, "should see at least one block (height 2)")
 	var height uint64
@@ -184,6 +184,7 @@ func TestRevert(t *testing.T) {
 	contractAddress := txe.Receipt.ContractAddress
 	txe = rpctest.CallContract(t, tcli, inputAddress, contractAddress, data)
 	assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
+	assert.Contains(t, txe.Exception.Error(), "I have reverted")
 
 	request := &rpcevents.BlocksRequest{
 		BlockRange: rpcevents.NewBlockRange(rpcevents.AbsoluteBound(0), rpcevents.LatestBound()),
