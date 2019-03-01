@@ -184,8 +184,8 @@ func newConsumer(t *testing.T, cfg *config.VentConfig) *service.Consumer {
 	_, testFile, _, _ := runtime.Caller(0)
 	testDir := path.Join(path.Dir(testFile), "..", "test")
 
-	cfg.SpecFileOrDir = path.Join(testDir, "sqlsol_example.json")
-	cfg.AbiFileOrDir = path.Join(testDir, "EventsTest.abi")
+	cfg.SpecFileOrDirs = []string{path.Join(testDir, "sqlsol_example.json")}
+	cfg.AbiFileOrDirs = []string{path.Join(testDir, "EventsTest.abi")}
 	cfg.GRPCAddr = testConfig.RPC.GRPC.ListenAddress
 	cfg.DBBlockTx = true
 
@@ -198,10 +198,10 @@ func newConsumer(t *testing.T, cfg *config.VentConfig) *service.Consumer {
 func runConsumer(t *testing.T, cfg *config.VentConfig) chan types.EventData {
 	consumer := newConsumer(t, cfg)
 
-	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDir, cfg.DBBlockTx)
+	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, cfg.DBBlockTx)
 	require.NoError(t, err)
 
-	abiSpec, err := abi.LoadPath(cfg.AbiFileOrDir)
+	abiSpec, err := abi.LoadPath(cfg.AbiFileOrDirs...)
 	require.NoError(t, err)
 
 	err = consumer.Run(projection, abiSpec, false)

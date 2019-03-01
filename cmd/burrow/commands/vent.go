@@ -31,8 +31,8 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				grpcAddrOpt := cmd.StringOpt("grpc-addr", cfg.GRPCAddr, "Address to connect to the Hyperledger Burrow gRPC server")
 				httpAddrOpt := cmd.StringOpt("http-addr", cfg.HTTPAddr, "Address to bind the HTTP server")
 				logLevelOpt := cmd.StringOpt("log-level", cfg.LogLevel, "Logging level (error, warn, info, debug)")
-				abiFileOpt := cmd.StringOpt("abi", cfg.AbiFileOrDir, "EVM Contract ABI file or folder")
-				specFileOrDirOpt := cmd.StringOpt("spec", cfg.SpecFileOrDir, "SQLSol specification file or folder")
+				abiFileOpt := cmd.StringsOpt("abi", cfg.AbiFileOrDirs, "EVM Contract ABI file or folder")
+				specFileOrDirOpt := cmd.StringsOpt("spec", cfg.SpecFileOrDirs, "SQLSol specification file or folder")
 				dbBlockTxOpt := cmd.BoolOpt("db-block", cfg.DBBlockTx, "Create block & transaction tables and persist related data (true/false)")
 
 				cmd.Before = func() {
@@ -43,8 +43,8 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					cfg.GRPCAddr = *grpcAddrOpt
 					cfg.HTTPAddr = *httpAddrOpt
 					cfg.LogLevel = *logLevelOpt
-					cfg.AbiFileOrDir = *abiFileOpt
-					cfg.SpecFileOrDir = *specFileOrDirOpt
+					cfg.AbiFileOrDirs = *abiFileOpt
+					cfg.SpecFileOrDirs = *specFileOrDirOpt
 					cfg.DBBlockTx = *dbBlockTxOpt
 				}
 
@@ -56,11 +56,11 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
 					server := service.NewServer(cfg, log, consumer)
 
-					projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDir, cfg.DBBlockTx)
+					projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, cfg.DBBlockTx)
 					if err != nil {
 						output.Fatalf("Spec loader error: %v", err)
 					}
-					abiSpec, err := abi.LoadPath(cfg.AbiFileOrDir)
+					abiSpec, err := abi.LoadPath(cfg.AbiFileOrDirs...)
 					if err != nil {
 						output.Fatalf("ABI loader error: %v", err)
 					}

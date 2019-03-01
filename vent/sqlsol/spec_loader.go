@@ -8,15 +8,15 @@ import (
 )
 
 // SpecLoader loads spec files and parses them
-func SpecLoader(specFileOrDir string, createBlkTxTables bool) (*Projection, error) {
+func SpecLoader(specFileOrDirs []string, createBlkTxTables bool) (*Projection, error) {
 	var projection *Projection
 	var err error
 
-	if specFileOrDir == "" {
+	if len(specFileOrDirs) == 0 {
 		return nil, fmt.Errorf("please provide a spec file or directory")
 	}
 
-	projection, err = NewProjectionFromFolder(specFileOrDir)
+	projection, err = NewProjectionFromFolder(specFileOrDirs...)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing spec: %v", err)
 	}

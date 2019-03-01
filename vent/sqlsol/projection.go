@@ -40,12 +40,12 @@ func NewProjectionFromBytes(bs []byte) (*Projection, error) {
 }
 
 // NewProjectionFromFolder creates a Projection from a folder containing spec files
-func NewProjectionFromFolder(specFileOrDir string) (*Projection, error) {
+func NewProjectionFromFolder(specFileOrDirs ...string) (*Projection, error) {
 	eventSpec := types.EventSpec{}
 
 	const errHeader = "NewProjectionFromFolder():"
 
-	for _, dir := range filepath.SplitList(specFileOrDir) {
+	for _, dir := range specFileOrDirs {
 		err := filepath.Walk(dir, func(path string, _ os.FileInfo, err error) error {
 			if err != nil {
 				return fmt.Errorf("error walking event spec files location '%s': %v", dir, err)

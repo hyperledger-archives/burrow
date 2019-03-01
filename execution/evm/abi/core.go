@@ -162,14 +162,14 @@ func readAbi(root, contract string) (string, error) {
 }
 
 // LoadPath loads one abi file or finds all files in a directory
-func LoadPath(abiFileOrDir string) (*AbiSpec, error) {
-	if abiFileOrDir == "" {
+func LoadPath(abiFileOrDirs ...string) (*AbiSpec, error) {
+	if len(abiFileOrDirs) == 0 {
 		return &AbiSpec{}, fmt.Errorf("no ABI file or directory provided")
 	}
 
 	specs := make([]*AbiSpec, 0)
 
-	for _, dir := range filepath.SplitList(abiFileOrDir) {
+	for _, dir := range abiFileOrDirs {
 		err := filepath.Walk(dir, func(path string, fi os.FileInfo, err error) error {
 			if err != nil {
 				return fmt.Errorf("error returned while walking abiDir '%s': %v", dir, err)
