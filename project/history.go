@@ -55,6 +55,7 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 
 ### Fixed
 - Stop Vent from swallowing errors (e.g. GRPC streaming errors)
+- Updated to patched version of Tendermint that does not pull in go-ethereum dependency
 
 ### Added
 - [Kernel] Added announce message for startup and shutdown including version, key address, and other useful metadata

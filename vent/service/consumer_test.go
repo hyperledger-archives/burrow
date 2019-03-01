@@ -178,6 +178,7 @@ func testInvalidUTF8(t *testing.T, cfg *config.VentConfig) {
 	//require.Error(t, err)
 	//require.Contains(t, err.Error(), "pq: invalid byte sequence for encoding \"UTF8\": 0xf3 0x6e")
 }
+
 func newConsumer(t *testing.T, cfg *config.VentConfig) *service.Consumer {
 	// Resolve relative path to test dir
 	_, testFile, _, _ := runtime.Caller(0)
