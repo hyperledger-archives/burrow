@@ -45,7 +45,7 @@ func NewProjectionFromFolder(specFileOrDir string) (*Projection, error) {
 
 	const errHeader = "NewProjectionFromFolder():"
 
-	for _, dir := range strings.Split(specFileOrDir, ":") {
+	for _, dir := range filepath.SplitList(specFileOrDir) {
 		err := filepath.Walk(dir, func(path string, _ os.FileInfo, err error) error {
 			if err != nil {
 				return fmt.Errorf("error walking event spec files location '%s': %v", dir, err)

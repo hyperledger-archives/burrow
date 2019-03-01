@@ -170,7 +170,7 @@ func LoadPath(abiFileOrDir string) (*AbiSpec, error) {
 
 	specs := make([]*AbiSpec, 0)
 
-	for _, dir := range strings.Split(abiFileOrDir, ":") {
+	for _, dir := range filepath.SplitList(abiFileOrDir) {
 		err := filepath.Walk(dir, func(path string, fi os.FileInfo, err error) error {
 			if err != nil {
 				return fmt.Errorf("error returned while walking abiDir '%s': %v", dir, err)
