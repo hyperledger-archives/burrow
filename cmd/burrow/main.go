@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -19,6 +20,8 @@ func main() {
 
 func burrow(output commands.Output) *cli.Cli {
 	app := cli.App("burrow", "The EVM smart contract machine with Tendermint consensus")
+	// We'll handle any errors
+	app.ErrorHandling = flag.ContinueOnError
 
 	versionOpt := app.BoolOpt("v version", false, "Print the Burrow version")
 	app.Spec = "[--version]"

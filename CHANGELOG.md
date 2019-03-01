@@ -2,6 +2,18 @@
 ## [Unreleased]
 
 
+## [0.24.2] - 2019-02-28
+### Changed
+- Use HexBytes for Genesis AppHash
+
+### Fixed
+- Stop Vent from swallowing errors (e.g. GRPC streaming errors)
+
+### Added
+- [Kernel] Added announce message for startup and shutdown including version, key address, and other useful metadata
+- [EVM] Attempt to provide REVERT reason where possible
+
+
 ## [0.24.1] - 2019-02-28
 ### Changed
 - [ABI] abi.EncodeFunctionCall and AbiSpec.Pack now take a variadic ...interface{} type for function arguments rather than []string
@@ -382,7 +394,8 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
-[Unreleased]: https://github.com/hyperledger/burrow/compare/v0.24.1...HEAD
+[Unreleased]: https://github.com/hyperledger/burrow/compare/v0.24.2...HEAD
+[0.24.2]: https://github.com/hyperledger/burrow/compare/v0.24.1...v0.24.2
 [0.24.1]: https://github.com/hyperledger/burrow/compare/v0.24.0...v0.24.1
 [0.24.0]: https://github.com/hyperledger/burrow/compare/v0.23.3...v0.24.0
 [0.23.3]: https://github.com/hyperledger/burrow/compare/v0.23.2...v0.23.3

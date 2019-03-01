@@ -1,9 +1,10 @@
 ### Changed
-- [ABI] abi.EncodeFunctionCall and AbiSpec.Pack now take a variadic ...interface{} type for function arguments rather than []string
+- Use HexBytes for Genesis AppHash
 
 ### Fixed
-- [Deploy] Binary files are now written atomically to prevent issue with dependency libraries being momentarily truncated when deploying in parallel
+- Stop Vent from swallowing errors (e.g. GRPC streaming errors)
 
 ### Added
-- [ABI] DecodeFunctionReturn re-exposed (formerly Packer then packer in 0.24.0) to make deploy API symmetrical
+- [Kernel] Added announce message for startup and shutdown including version, key address, and other useful metadata
+- [EVM] Attempt to provide REVERT reason where possible
 

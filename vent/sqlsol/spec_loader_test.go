@@ -10,7 +10,7 @@ import (
 )
 
 func TestSpecLoader(t *testing.T) {
-	specFile := os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_example.json"
+	specFile := []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_example.json"}
 	dBBlockTx := true
 	t.Run("successfully add block and transaction tables to event structures", func(t *testing.T) {
 		projection, err := sqlsol.SpecLoader(specFile, dBBlockTx)

@@ -43,7 +43,7 @@ type CallError struct {
 func (err CallError) Error() string {
 	buf := new(bytes.Buffer)
 	buf.WriteString("Call error: ")
-	buf.WriteString(err.CodedError.Error())
+	buf.WriteString(err.CodedError.String())
 	if len(err.NestedErrors) > 0 {
 		buf.WriteString(", nested call errors:\n")
 		for _, nestedErr := range err.NestedErrors {

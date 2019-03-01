@@ -97,14 +97,6 @@
   revision = "a491c5eeb3c841d55913cf4888f5c957be4c598d"
 
 [[projects]]
-  digest = "1:fcfafd871e9048e685700e381573395f23809364c9463e5f01b0c1aec9f69753"
-  name = "github.com/ethereum/go-ethereum"
-  packages = ["crypto/secp256k1"]
-  pruneopts = "NUT"
-  revision = "c942700427557e3ff6de3aaf6b916e2f056c1ec2"
-  version = "v1.8.23"
-
-[[projects]]
   digest = "1:1b91ae0dc69a41d4c2ed23ea5cffb721ea63f5037ca4b81e6d6771fbb8f45129"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
@@ -201,15 +193,15 @@
   version = "v1.4.0"
 
 [[projects]]
-  digest = "1:b42cde0e1f3c816dd57f57f7bbcf05ca40263ad96f168714c130c611fc0856a6"
+  digest = "1:52094d0f8bdf831d1a2401e9b6fee5795fdc0b2a2d1f8bb1980834c289e79129"
   name = "github.com/hashicorp/golang-lru"
   packages = [
     ".",
     "simplelru",
   ]
   pruneopts = "NUT"
-  revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
-  version = "v0.5.0"
+  revision = "7087cb70de9f7a8bc0a10c375cb0d2280a8edf9c"
+  version = "v0.5.1"
 
 [[projects]]
   digest = "1:11c6c696067d3127ecf332b10f89394d386d9083f82baf71f40f2da31841a009"
@@ -255,7 +247,7 @@
   version = "v0.3.7"
 
 [[projects]]
-  digest = "1:c7ef3ee638cc1e5d39c2b1d9874183ecc62e4822c9524360bc8fbdc3139ab4c3"
+  digest = "1:9a59fd17829144570f031bcb501e81531677254686fbf32d009e93a3c300e356"
   name = "github.com/jawher/mow.cli"
   packages = [
     ".",
@@ -268,8 +260,8 @@
     "internal/values",
   ]
   pruneopts = "NUT"
-  revision = "2f22195f169da29d54624afd9eb83ada5c9e4ee9"
-  version = "v1.0.4"
+  revision = "d9c41c7c90d99b076732ee72a657577128d610da"
+  version = "v1.0.5"
 
 [[projects]]
   digest = "1:3d24306f696fc55f4773ba2ea288be218ca725b572e714483e65de169c731845"
@@ -279,12 +271,12 @@
   revision = "c42d9e0ca023e2198120196f842701bb4c55d7b9"
 
 [[projects]]
-  digest = "1:4059c14e87a2de3a434430340521b5feece186c1469eff0834c29a63870de3ed"
+  digest = "1:58999a98719fddbac6303cb17e8d85b945f60b72f48e3a2df6b950b97fa926f1"
   name = "github.com/konsorten/go-windows-terminal-sequences"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242"
-  version = "v1.0.1"
+  revision = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e"
+  version = "v1.0.2"
 
 [[projects]]
   branch = "master"
@@ -413,7 +405,7 @@
     "xfs",
   ]
   pruneopts = "NUT"
-  revision = "e4d4a2206da023361ed100d85c5f2cf9c8364e9f"
+  revision = "bbced9601137e764853b2fad7ec3e2dc4c504e02"
 
 [[projects]]
   digest = "1:7c522337040d4ec9a136cd9d64fe4677ee1d3eae4a7f8831c2108f9bec43fa48"
@@ -538,7 +530,7 @@
   version = "v0.12.1"
 
 [[projects]]
-  digest = "1:c7a409df01eea1b3dbb2cb9dadd75c0244736a531b551b8f885eb2d4c4bc9693"
+  digest = "1:9c6fd56a7c1c277576d6e5ebc2c6c26907f034b306707e4fe379377f1685c054"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -557,6 +549,7 @@
     "crypto/multisig",
     "crypto/multisig/bitarray",
     "crypto/secp256k1",
+    "crypto/secp256k1/internal/secp256k1",
     "crypto/tmhash",
     "evidence",
     "libs/autofile",
@@ -590,7 +583,8 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "e0f8936455029a40287a69d5b0e7baa4d5864da1"
+  revision = "df304d2276b731f2f924e93ef176337951bb5f27"
+  source = "github.com/silasdavis/tendermint"
   version = "v0.30.1"
 
 [[projects]]
@@ -682,7 +676,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5804ad4b270667530e8396460de5e1976efa8c1a329399c468fcdbe4d1643fc5"
+  digest = "1:06016ff94d4b63a5d59477d44567a8baab8d9f0b1f7c7e226fc5870cffdf2d07"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -690,7 +684,7 @@
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "a9d3bda3a223baa6bba6ef412cb273f0fd163c05"
+  revision = "a34e9553db1e492c9a76e60db2296ae7e5fbb772"
 
 [[projects]]
   digest = "1:e7071ed636b5422cc51c0e3a6cebc229d6c9fffc528814b519a980641422d619"
@@ -721,10 +715,10 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "NUT"
-  revision = "082222b4a5c572e33e82ee9162d1352c7cf38682"
+  revision = "4f5b463f9597cbe0dd13a6a2cd4f85e788d27508"
 
 [[projects]]
-  digest = "1:4837585442801f3c7ebd044a96fce852242529a73bdd96fcba2119ff74987b0b"
+  digest = "1:f2df7088cd31687fdce0f2eee853682416bf1e70baa487094913e3881f1f12f8"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -760,8 +754,8 @@
     "tap",
   ]
   pruneopts = "NUT"
-  revision = "a02b0774206b209466313a0b525d2c738fe407eb"
-  version = "v1.18.0"
+  revision = "2fdaae294f38ed9a121193c51ec99fecd3b13eb7"
+  version = "v1.19.0"
 
 [[projects]]
   digest = "1:18108594151654e9e696b27b181b953f9a90b16bf14d253dd1b397b025a1487f"
@@ -834,6 +828,7 @@
     "github.com/tendermint/tendermint/state",
     "github.com/tendermint/tendermint/types",
     "github.com/tendermint/tendermint/types/time",
+    "github.com/tendermint/tendermint/version",
     "github.com/tmthrgd/go-hex",
     "github.com/xeipuuv/gojsonschema",
     "github.com/xlab/treeprint",

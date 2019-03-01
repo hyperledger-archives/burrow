@@ -15,7 +15,9 @@
 
 [[constraint]]
   name = "github.com/tendermint/tendermint"
-  version = "=0.30.1"
+  source = "github.com/silasdavis/tendermint"
+  # Until Tendermint remove go-ethereum
+  version = "v0.30.1-libsecp256k1"
 
 [[constraint]]
   name = "github.com/tendermint/iavl"

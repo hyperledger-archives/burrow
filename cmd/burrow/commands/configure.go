@@ -24,7 +24,6 @@ import (
 	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/p2p"
-	hex "github.com/tmthrgd/go-hex"
 )
 
 func Configure(output Output) func(cmd *cli.Cmd) {
@@ -47,10 +46,10 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 		generateNodeKeys := cmd.BoolOpt("generate-node-keys", false, "Generate node keys for validators")
 
 		configTemplateIn := cmd.StringsOpt("t config-template-in", nil,
-			fmt.Sprintf("Go text/template template input filename (left delim: %s right delim: %s) to output generate config "+
+			fmt.Sprintf("Go text/template template input filename (left delim: %s right delim: %s) to generate config "+
 				"file specified with --config-out", deployment.LeftTemplateDelim, deployment.RightTemplateDelim))
 
-		configOut := cmd.StringsOpt("t config-out", nil,
+		configOut := cmd.StringsOpt("o config-out", nil,
 			"Go text/template template output file. Template filename specified with --config-template-in "+
 				"file specified with --config-out")
 
@@ -240,7 +239,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("could not commit: %v", err)
 				}
 
-				conf.GenesisDoc.AppHash = hex.EncodeUpperToString(st.Hash())
+				conf.GenesisDoc.AppHash = st.Hash()
 			}
 
 			if conf.GenesisDoc != nil {

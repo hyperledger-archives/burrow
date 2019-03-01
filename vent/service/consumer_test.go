@@ -179,29 +179,32 @@ func testInvalidUTF8(t *testing.T, cfg *config.VentConfig) {
 	//require.Contains(t, err.Error(), "pq: invalid byte sequence for encoding \"UTF8\": 0xf3 0x6e")
 }
 
-// Run consumer to listen to events
-func runConsumer(t *testing.T, cfg *config.VentConfig) chan types.EventData {
+func newConsumer(t *testing.T, cfg *config.VentConfig) *service.Consumer {
 	// Resolve relative path to test dir
 	_, testFile, _, _ := runtime.Caller(0)
 	testDir := path.Join(path.Dir(testFile), "..", "test")
 
-	cfg.SpecFileOrDir = path.Join(testDir, "sqlsol_example.json")
-	cfg.AbiFileOrDir = path.Join(testDir, "EventsTest.abi")
+	cfg.SpecFileOrDirs = []string{path.Join(testDir, "sqlsol_example.json")}
+	cfg.AbiFileOrDirs = []string{path.Join(testDir, "EventsTest.abi")}
 	cfg.GRPCAddr = testConfig.RPC.GRPC.ListenAddress
 	cfg.DBBlockTx = true
 
-	log := logger.NewLogger("")
+	log := logger.NewLogger(cfg.LogLevel)
 	ch := make(chan types.EventData, 100)
-	consumer := service.NewConsumer(cfg, log, ch)
+	return service.NewConsumer(cfg, log, ch)
+}
 
-	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDir, cfg.DBBlockTx)
+// Run consumer to listen to events
+func runConsumer(t *testing.T, cfg *config.VentConfig) chan types.EventData {
+	consumer := newConsumer(t, cfg)
+
+	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, cfg.DBBlockTx)
 	require.NoError(t, err)
 
-	abiSpec, err := abi.LoadPath(cfg.AbiFileOrDir)
+	abiSpec, err := abi.LoadPath(cfg.AbiFileOrDirs...)
 	require.NoError(t, err)
 
 	err = consumer.Run(projection, abiSpec, false)
 	require.NoError(t, err)
-
-	return ch
+	return consumer.EventsChannel
 }

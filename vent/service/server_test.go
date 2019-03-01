@@ -29,15 +29,15 @@ func TestServer(t *testing.T) {
 	_, closeDB := test.NewTestDB(t, cfg)
 	defer closeDB()
 
-	cfg.SpecFileOrDir = os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_example.json"
-	cfg.AbiFileOrDir = os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/EventsTest.abi"
+	cfg.SpecFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_example.json"}
+	cfg.AbiFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/EventsTest.abi"}
 	cfg.GRPCAddr = testConfig.RPC.GRPC.ListenAddress
 
 	log := logger.NewLogger(cfg.LogLevel)
 	consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
 
-	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDir, false)
-	abiSpec, err := abi.LoadPath(cfg.AbiFileOrDir)
+	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, false)
+	abiSpec, err := abi.LoadPath(cfg.AbiFileOrDirs...)
 
 	var wg sync.WaitGroup
 

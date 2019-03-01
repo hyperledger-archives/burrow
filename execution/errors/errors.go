@@ -1,10 +1,13 @@
 package errors
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type CodedError interface {
 	error
 	ErrorCode() Code
+	String() string
 }
 
 type Provider interface {
@@ -74,81 +77,81 @@ func (c Code) Error() string {
 func (c Code) String() string {
 	switch c {
 	case ErrorCodeUnknownAddress:
-		return "Unknown address"
+		return "unknown address"
 	case ErrorCodeInsufficientBalance:
-		return "Insufficient balance"
+		return "insufficient balance"
 	case ErrorCodeInvalidJumpDest:
-		return "Invalid jump dest"
+		return "invalid jump dest"
 	case ErrorCodeInsufficientGas:
-		return "Insufficient gas"
+		return "insufficient gas"
 	case ErrorCodeMemoryOutOfBounds:
-		return "Memory out of bounds"
+		return "memory out of bounds"
 	case ErrorCodeCodeOutOfBounds:
-		return "Code out of bounds"
+		return "code out of bounds"
 	case ErrorCodeInputOutOfBounds:
-		return "Input out of bounds"
+		return "input out of bounds"
 	case ErrorCodeReturnDataOutOfBounds:
-		return "Return data out of bounds"
+		return "return data out of bounds"
 	case ErrorCodeCallStackOverflow:
-		return "Call stack overflow"
+		return "call stack overflow"
 	case ErrorCodeCallStackUnderflow:
-		return "Call stack underflow"
+		return "call stack underflow"
 	case ErrorCodeDataStackOverflow:
-		return "Data stack overflow"
+		return "data stack overflow"
 	case ErrorCodeDataStackUnderflow:
-		return "Data stack underflow"
+		return "data stack underflow"
 	case ErrorCodeInvalidContract:
-		return "Invalid contract"
+		return "invalid contract"
 	case ErrorCodePermissionDenied:
-		return "Permission denied"
+		return "permission denied"
 	case ErrorCodeNativeContractCodeCopy:
-		return "Tried to copy native contract code"
+		return "tried to copy native contract code"
 	case ErrorCodeExecutionAborted:
-		return "Execution aborted"
+		return "execution aborted"
 	case ErrorCodeExecutionReverted:
-		return "Execution reverted"
+		return "execution reverted"
 	case ErrorCodeNativeFunction:
-		return "Native function error"
+		return "native function error"
 	case ErrorCodeEventPublish:
-		return "Event publish error"
+		return "event publish error"
 	case ErrorCodeInvalidString:
-		return "Invalid string"
+		return "invalid string"
 	case ErrorCodeEventMapping:
-		return "Event mapping error"
+		return "event mapping error"
 	case ErrorCodeGeneric:
-		return "Generic error"
+		return "generic error"
 	case ErrorCodeInvalidAddress:
-		return "Invalid address"
+		return "invalid address"
 	case ErrorCodeDuplicateAddress:
-		return "Duplicate address"
+		return "duplicate address"
 	case ErrorCodeInsufficientFunds:
-		return "Insufficient funds"
+		return "insufficient funds"
 	case ErrorCodeOverpayment:
-		return "Overpayment"
+		return "overpayment"
 	case ErrorCodeZeroPayment:
-		return "Zero payment error"
+		return "zero payment error"
 	case ErrorCodeInvalidSequence:
-		return "Invalid sequence number"
+		return "invalid sequence number"
 	case ErrorCodeReservedAddress:
-		return "Address is reserved for SNative or internal use"
+		return "address is reserved for SNative or internal use"
 	case ErrorCodeIllegalWrite:
-		return "Callee attempted to illegally modify state"
+		return "callee attempted to illegally modify state"
 	case ErrorCodeIntegerOverflow:
-		return "Integer overflow"
+		return "integer overflow"
 	case ErrorCodeInvalidProposal:
-		return "Proposal is invalid"
+		return "proposal is invalid"
 	case ErrorCodeExpiredProposal:
-		return "Proposal is expired since sequence number does not match"
+		return "proposal is expired since sequence number does not match"
 	case ErrorCodeProposalExecuted:
-		return "Proposal has already been executed"
+		return "proposal has already been executed"
 	case ErrorCodeNoInputPermission:
-		return "Account has no input permission"
+		return "account has no input permission"
 	case ErrorCodeInvalidBlockNumber:
-		return "Invalid block number"
+		return "invalid block number"
 	case ErrorCodeBlockNumberOutOfRange:
-		return "Block number out of range"
+		return "block number out of range"
 	case ErrorCodeAlreadyVoted:
-		return "Vote already registered for this address"
+		return "vote already registered for this address"
 	default:
 		return "Unknown error"
 	}
@@ -173,7 +176,7 @@ func AsException(err error) *Exception {
 	case *Exception:
 		return e
 	case CodedError:
-		return NewException(e.ErrorCode(), e.Error())
+		return NewException(e.ErrorCode(), e.String())
 	default:
 		return NewException(ErrorCodeGeneric, err.Error())
 	}
@@ -204,11 +207,11 @@ func (e *Exception) ErrorCode() Code {
 	return e.Code
 }
 
-func (e *Exception) String() string {
-	return fmt.Sprintf("Error %d: %s", e.Code, e.Exception)
+func (e *Exception) Error() string {
+	return fmt.Sprintf("error %d - %s: %s", e.Code, e.Code.String(), e.Exception)
 }
 
-func (e *Exception) Error() string {
+func (e *Exception) String() string {
 	if e == nil {
 		return ""
 	}

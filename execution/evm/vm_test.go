@@ -689,6 +689,7 @@ func TestRevert(t *testing.T) {
 
 	output, cErr := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	assert.Error(t, cErr, "Expected execution reverted error")
+	fmt.Println(cErr)
 
 	storageVal := cache.GetStorage(account1, LeftPadWord256(key))
 	assert.Equal(t, LeftPadWord256(value), storageVal)

@@ -68,7 +68,16 @@ func (opts *configOptions) configure(conf *config.BurrowConfig) error {
 	if *opts.validatorPassphraseOpt != "" {
 		conf.ValidatorPassphrase = opts.validatorPassphraseOpt
 	}
-	if *opts.validatorMonikerOpt != "" {
+	if *opts.validatorMonikerOpt == "" {
+		chainIDHeader := ""
+		if conf.GenesisDoc != nil && conf.GenesisDoc.ChainID() != "" {
+			chainIDHeader = conf.GenesisDoc.ChainID() + "_"
+		}
+		if conf.ValidatorAddress != nil {
+			// Set a default moniker... since we can at this stage of config completion and it is required for start
+			conf.Tendermint.Moniker = fmt.Sprintf("%sValidator_%s", chainIDHeader, conf.ValidatorAddress)
+		}
+	} else {
 		conf.Tendermint.Moniker = *opts.validatorMonikerOpt
 	}
 	if *opts.externalAddressOpt != "" {
