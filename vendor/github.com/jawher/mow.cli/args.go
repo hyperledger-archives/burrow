@@ -2,6 +2,9 @@ package cli
 
 import (
 	"flag"
+	"fmt"
+
+	"github.com/jawher/mow.cli/internal/lexer"
 
 	"github.com/jawher/mow.cli/internal/container"
 	"github.com/jawher/mow.cli/internal/values"
@@ -205,8 +208,27 @@ func (c *Cmd) VarArg(name string, value flag.Value, desc string) {
 }
 
 func (c *Cmd) mkArg(arg container.Container) {
+	if !validArgName(arg.Name) {
+		panic(fmt.Sprintf("invalid argument name %q: must be in all caps", arg.Name))
+	}
+	if _, found := c.argsIdx[arg.Name]; found {
+		panic(fmt.Sprintf("duplicate argument name %q", arg.Name))
+	}
+
 	arg.ValueSetFromEnv = values.SetFromEnv(arg.Value, arg.EnvVar)
 
 	c.args = append(c.args, &arg)
 	c.argsIdx[arg.Name] = &arg
+}
+
+func validArgName(n string) bool {
+	tokens, err := lexer.Tokenize(n)
+	if err != nil {
+		return false
+	}
+	if len(tokens) != 1 {
+		return false
+	}
+
+	return tokens[0].Typ == lexer.TTArg
 }
