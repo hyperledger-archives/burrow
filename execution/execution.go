@@ -204,6 +204,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 	}()
 
 	logger := exe.logger.WithScope("executor.Execute(tx txs.Tx)").With(
+		"height", exe.block.Height,
 		"run_call", exe.runCall,
 		"tx_hash", txEnv.Tx.Hash())
 
@@ -223,8 +224,6 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 			if r := recover(); r != nil {
 				err = fmt.Errorf("recovered from panic in executor.Execute(%s): %v\n%s", txEnv.String(), r,
 					debug.Stack())
-				// If we recover here we are in a position to promulgate the error to the TxExecution
-				txe.PushError(err)
 			}
 		}()
 

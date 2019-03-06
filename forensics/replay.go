@@ -1,3 +1,5 @@
+// +build forensics
+
 package forensics
 
 import (
@@ -14,7 +16,6 @@ import (
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/storage"
 	"github.com/hyperledger/burrow/txs"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/types"
@@ -22,7 +23,7 @@ import (
 
 type Replay struct {
 	explorer   *bcm.BlockStore
-	burrowDB   *storage.CacheDB
+	burrowDB   dbm.DB
 	blockchain *bcm.Blockchain
 	genesisDoc *genesis.GenesisDoc
 	logger     *logging.Logger
@@ -40,7 +41,7 @@ func (recap *ReplayCapture) String() string {
 
 func NewReplay(dbDir string, genesisDoc *genesis.GenesisDoc, logger *logging.Logger) *Replay {
 	// Avoid writing through to underlying DB
-	burrowDB := storage.NewCacheDB(core.NewBurrowDB(dbDir))
+	burrowDB := core.NewBurrowDB(dbDir)
 	return &Replay{
 		explorer:   bcm.NewBlockExplorer(dbm.LevelDBBackend, dbDir),
 		burrowDB:   burrowDB,
@@ -50,8 +51,17 @@ func NewReplay(dbDir string, genesisDoc *genesis.GenesisDoc, logger *logging.Log
 	}
 }
 
+func (re *Replay) LatestBlockchain() (*bcm.Blockchain, error) {
+	blockchain, err := bcm.LoadOrNewBlockchain(re.burrowDB, re.genesisDoc, re.logger)
+	if err != nil {
+		return nil, err
+	}
+	re.blockchain = blockchain
+	return blockchain, nil
+}
+
 func (re *Replay) State(height uint64) (*state.State, error) {
-	return state.LoadState(re.burrowDB, int64(height))
+	return state.LoadState(re.burrowDB, execution.VersionAtHeight(height))
 }
 
 func (re *Replay) Block(height uint64) (*ReplayCapture, error) {
@@ -102,11 +112,16 @@ func (re *Replay) Block(height uint64) (*ReplayCapture, error) {
 	if execErr != nil {
 		return nil, execErr
 	}
-	//abciHeader := types.TM2PB.Header(&block.Header)
-	recap.AppHashAfter, err = committer.Commit(nil)
+	abciHeader := types.TM2PB.Header(&block.Header)
+	recap.AppHashAfter, err = committer.Commit(&abciHeader)
 	if err != nil {
 		return nil, err
 	}
+	block, err = re.explorer.Block(int64(height + 1))
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(block.AppHash)
 	return recap, nil
 }
 

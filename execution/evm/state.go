@@ -3,7 +3,6 @@ package evm
 import (
 	"fmt"
 
-	"github.com/go-stack/stack"
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
@@ -93,12 +92,14 @@ func (st *State) Error() errors.CodedError {
 	return st.error
 }
 
+// Errors pushed to state may end up in TxExecutions and therefore the merkle state so it is essential that errors are
+// deterministic and independent of the code path taken to execution (e.g. replay takes a different path to that of
+// normal consensus reactor so stack traces may differ - as they may across architectures)
 func (st *State) PushError(err error) {
 	if st.error == nil {
 		// Make sure we are not wrapping a known nil value
 		ex := errors.AsException(err)
 		if ex != nil {
-			ex.Exception = fmt.Sprintf("%s\nstack trace: %s", ex.Exception, stack.Trace().String())
 			st.error = ex
 		}
 	}

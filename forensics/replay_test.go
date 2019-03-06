@@ -16,13 +16,13 @@ import (
 
 // This serves as a testbed for looking at non-deterministic burrow instances capture from the wild
 // Put the path to 'good' and 'bad' burrow directories here (containing the config files and .burrow dir)
-const goodDir = "/home/silas/burrows/legal-platform-non-determinism/000-working"
-const badDir = "/home/silas/burrows/legal-platform-non-determinism/001-not-working"
-const criticalBlock uint64 = 39
+const goodDir = "/home/silas/burrows/t7-dev-studio-burrow-000/001"
+const badDir = "/home/silas/burrows/t7-dev-studio-burrow-000/003"
+const criticalBlock uint64 = 33675
 
 func TestReplay_Good(t *testing.T) {
 	replay := newReplay(t, goodDir)
-	recaps, err := replay.Blocks(1, criticalBlock+1)
+	recaps, err := replay.Blocks(2, criticalBlock+1)
 	require.NoError(t, err)
 	for _, recap := range recaps {
 		fmt.Println(recap.String())

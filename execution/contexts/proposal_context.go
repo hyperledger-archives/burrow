@@ -196,8 +196,6 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 				if r := recover(); r != nil {
 					err = fmt.Errorf("recovered from panic in executor.Execute(%s): %v\n%s", txEnv.String(), r,
 						debug.Stack())
-					// If we recover here we are in a position to promulgate the error to the TxExecution
-					containedTxe.PushError(err)
 				}
 			}()
 
