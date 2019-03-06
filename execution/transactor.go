@@ -16,6 +16,7 @@ package execution
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -48,7 +49,7 @@ const (
 // for a key it holds or is provided - it is down to the key-holder to manage the mutual information between transactions
 // concurrent within a new block window.
 type Transactor struct {
-	Tip             bcm.BlockchainInfo
+	BlockchainInfo  bcm.BlockchainInfo
 	Subscribable    event.Subscribable
 	MempoolAccounts *Accounts
 	checkTxAsync    func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error
@@ -61,7 +62,7 @@ func NewTransactor(tip bcm.BlockchainInfo, subscribable event.Subscribable, memp
 	logger *logging.Logger) *Transactor {
 
 	return &Transactor{
-		Tip:             tip,
+		BlockchainInfo:  tip,
 		Subscribable:    subscribable,
 		MempoolAccounts: mempoolAccounts,
 		checkTxAsync:    checkTxAsync,
@@ -102,8 +103,14 @@ func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelop
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	case <-timer.C:
-		return nil, fmt.Errorf("timed out waiting for transaction with hash %v timed out after %v",
-			checkTxReceipt.TxHash, BlockingTimeout)
+		syncInfo := bcm.GetSyncInfo(trans.BlockchainInfo)
+		bs, err := json.Marshal(syncInfo)
+		syncInfoString := string(bs)
+		if err != nil {
+			syncInfoString = fmt.Sprintf("{error could not marshal SyncInfo: %v}", err)
+		}
+		return nil, fmt.Errorf("timed out waiting for transaction with hash %v timed out after %v, SyncInfo: %s",
+			checkTxReceipt.TxHash, BlockingTimeout, syncInfoString)
 	case msg := <-out:
 		txe := msg.(*exec.TxExecution)
 		callError := txe.CallError()
@@ -259,9 +266,9 @@ func (trans *Transactor) CheckTxAsync(txEnv *txs.Envelope, callback func(res *ab
 }
 
 func (trans *Transactor) CallCodeSim(fromAddress crypto.Address, code, data []byte) (*exec.TxExecution, error) {
-	return CallCodeSim(trans.MempoolAccounts, trans.Tip, fromAddress, fromAddress, code, data, trans.logger)
+	return CallCodeSim(trans.MempoolAccounts, trans.BlockchainInfo, fromAddress, fromAddress, code, data, trans.logger)
 }
 
 func (trans *Transactor) CallSim(fromAddress, address crypto.Address, data []byte) (*exec.TxExecution, error) {
-	return CallSim(trans.MempoolAccounts, trans.Tip, fromAddress, address, data, trans.logger)
+	return CallSim(trans.MempoolAccounts, trans.BlockchainInfo, fromAddress, address, data, trans.logger)
 }

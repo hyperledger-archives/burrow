@@ -10,12 +10,10 @@ import math "math"
 import _ "github.com/gogo/protobuf/gogoproto"
 import _ "github.com/golang/protobuf/ptypes/timestamp"
 import validator "github.com/hyperledger/burrow/acm/validator"
+import bcm "github.com/hyperledger/burrow/bcm"
 import tendermint "github.com/hyperledger/burrow/consensus/tendermint"
 
 import github_com_hyperledger_burrow_binary "github.com/hyperledger/burrow/binary"
-import time "time"
-
-import github_com_gogo_protobuf_types "github.com/gogo/protobuf/types"
 
 import io "io"
 
@@ -24,7 +22,6 @@ var _ = proto.Marshal
 var _ = golang_proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-var _ = time.Kitchen
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
@@ -38,7 +35,8 @@ type ResultStatus struct {
 	BurrowVersion        string                                        `protobuf:"bytes,3,opt,name=BurrowVersion,proto3" json:"BurrowVersion,omitempty"`
 	GenesisHash          github_com_hyperledger_burrow_binary.HexBytes `protobuf:"bytes,4,opt,name=GenesisHash,proto3,customtype=github.com/hyperledger/burrow/binary.HexBytes" json:"GenesisHash"`
 	NodeInfo             *tendermint.NodeInfo                          `protobuf:"bytes,5,opt,name=NodeInfo" json:"NodeInfo,omitempty"`
-	SyncInfo             *SyncInfo                                     `protobuf:"bytes,6,opt,name=SyncInfo" json:"SyncInfo,omitempty"`
+	SyncInfo             *bcm.SyncInfo                                 `protobuf:"bytes,6,opt,name=SyncInfo" json:"SyncInfo,omitempty"`
+	CatchingUp           bool                                          `protobuf:"varint,8,opt,name=CatchingUp,proto3" json:""`
 	ValidatorInfo        *validator.Validator                          `protobuf:"bytes,7,opt,name=ValidatorInfo" json:"ValidatorInfo,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                                      `json:"-"`
 	XXX_unrecognized     []byte                                        `json:"-"`
@@ -49,7 +47,7 @@ func (m *ResultStatus) Reset()         { *m = ResultStatus{} }
 func (m *ResultStatus) String() string { return proto.CompactTextString(m) }
 func (*ResultStatus) ProtoMessage()    {}
 func (*ResultStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_9ffe8fef64c845d2, []int{0}
+	return fileDescriptor_rpc_64e9562a8eef4c9e, []int{0}
 }
 func (m *ResultStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -106,11 +104,18 @@ func (m *ResultStatus) GetNodeInfo() *tendermint.NodeInfo {
 	return nil
 }
 
-func (m *ResultStatus) GetSyncInfo() *SyncInfo {
+func (m *ResultStatus) GetSyncInfo() *bcm.SyncInfo {
 	if m != nil {
 		return m.SyncInfo
 	}
 	return nil
+}
+
+func (m *ResultStatus) GetCatchingUp() bool {
+	if m != nil {
+		return m.CatchingUp
+	}
+	return false
 }
 
 func (m *ResultStatus) GetValidatorInfo() *validator.Validator {
@@ -123,91 +128,9 @@ func (m *ResultStatus) GetValidatorInfo() *validator.Validator {
 func (*ResultStatus) XXX_MessageName() string {
 	return "rpc.ResultStatus"
 }
-
-type SyncInfo struct {
-	LatestBlockHeight uint64                                        `protobuf:"varint,1,opt,name=LatestBlockHeight,proto3" json:""`
-	LatestBlockHash   github_com_hyperledger_burrow_binary.HexBytes `protobuf:"bytes,2,opt,name=LatestBlockHash,proto3,customtype=github.com/hyperledger/burrow/binary.HexBytes" json:"LatestBlockHash"`
-	LatestAppHash     github_com_hyperledger_burrow_binary.HexBytes `protobuf:"bytes,3,opt,name=LatestAppHash,proto3,customtype=github.com/hyperledger/burrow/binary.HexBytes" json:"LatestAppHash"`
-	// Timestamp of block as set by the block proposer
-	LatestBlockTime time.Time `protobuf:"bytes,4,opt,name=LatestBlockTime,stdtime" json:"LatestBlockTime"`
-	// Time at which we committed the last block
-	LatestBlockSeenTime time.Time `protobuf:"bytes,5,opt,name=LatestBlockSeenTime,stdtime" json:"LatestBlockSeenTime"`
-	// When catching up in fast sync
-	CatchingUp           bool     `protobuf:"varint,6,opt,name=CatchingUp,proto3" json:""`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *SyncInfo) Reset()         { *m = SyncInfo{} }
-func (m *SyncInfo) String() string { return proto.CompactTextString(m) }
-func (*SyncInfo) ProtoMessage()    {}
-func (*SyncInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_rpc_9ffe8fef64c845d2, []int{1}
-}
-func (m *SyncInfo) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *SyncInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_SyncInfo.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (dst *SyncInfo) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SyncInfo.Merge(dst, src)
-}
-func (m *SyncInfo) XXX_Size() int {
-	return m.Size()
-}
-func (m *SyncInfo) XXX_DiscardUnknown() {
-	xxx_messageInfo_SyncInfo.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_SyncInfo proto.InternalMessageInfo
-
-func (m *SyncInfo) GetLatestBlockHeight() uint64 {
-	if m != nil {
-		return m.LatestBlockHeight
-	}
-	return 0
-}
-
-func (m *SyncInfo) GetLatestBlockTime() time.Time {
-	if m != nil {
-		return m.LatestBlockTime
-	}
-	return time.Time{}
-}
-
-func (m *SyncInfo) GetLatestBlockSeenTime() time.Time {
-	if m != nil {
-		return m.LatestBlockSeenTime
-	}
-	return time.Time{}
-}
-
-func (m *SyncInfo) GetCatchingUp() bool {
-	if m != nil {
-		return m.CatchingUp
-	}
-	return false
-}
-
-func (*SyncInfo) XXX_MessageName() string {
-	return "rpc.SyncInfo"
-}
 func init() {
 	proto.RegisterType((*ResultStatus)(nil), "rpc.ResultStatus")
 	golang_proto.RegisterType((*ResultStatus)(nil), "rpc.ResultStatus")
-	proto.RegisterType((*SyncInfo)(nil), "rpc.SyncInfo")
-	golang_proto.RegisterType((*SyncInfo)(nil), "rpc.SyncInfo")
 }
 func (m *ResultStatus) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
@@ -280,66 +203,8 @@ func (m *ResultStatus) MarshalTo(dAtA []byte) (int, error) {
 		}
 		i += n4
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	return i, nil
-}
-
-func (m *SyncInfo) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *SyncInfo) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.LatestBlockHeight != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintRpc(dAtA, i, uint64(m.LatestBlockHeight))
-	}
-	dAtA[i] = 0x12
-	i++
-	i = encodeVarintRpc(dAtA, i, uint64(m.LatestBlockHash.Size()))
-	n5, err := m.LatestBlockHash.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n5
-	dAtA[i] = 0x1a
-	i++
-	i = encodeVarintRpc(dAtA, i, uint64(m.LatestAppHash.Size()))
-	n6, err := m.LatestAppHash.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n6
-	dAtA[i] = 0x22
-	i++
-	i = encodeVarintRpc(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdTime(m.LatestBlockTime)))
-	n7, err := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LatestBlockTime, dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n7
-	dAtA[i] = 0x2a
-	i++
-	i = encodeVarintRpc(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdTime(m.LatestBlockSeenTime)))
-	n8, err := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LatestBlockSeenTime, dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n8
 	if m.CatchingUp {
-		dAtA[i] = 0x30
+		dAtA[i] = 0x40
 		i++
 		if m.CatchingUp {
 			dAtA[i] = 1
@@ -395,29 +260,6 @@ func (m *ResultStatus) Size() (n int) {
 		l = m.ValidatorInfo.Size()
 		n += 1 + l + sovRpc(uint64(l))
 	}
-	if m.XXX_unrecognized != nil {
-		n += len(m.XXX_unrecognized)
-	}
-	return n
-}
-
-func (m *SyncInfo) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.LatestBlockHeight != 0 {
-		n += 1 + sovRpc(uint64(m.LatestBlockHeight))
-	}
-	l = m.LatestBlockHash.Size()
-	n += 1 + l + sovRpc(uint64(l))
-	l = m.LatestAppHash.Size()
-	n += 1 + l + sovRpc(uint64(l))
-	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.LatestBlockTime)
-	n += 1 + l + sovRpc(uint64(l))
-	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.LatestBlockSeenTime)
-	n += 1 + l + sovRpc(uint64(l))
 	if m.CatchingUp {
 		n += 2
 	}
@@ -646,7 +488,7 @@ func (m *ResultStatus) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.SyncInfo == nil {
-				m.SyncInfo = &SyncInfo{}
+				m.SyncInfo = &bcm.SyncInfo{}
 			}
 			if err := m.SyncInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -685,197 +527,7 @@ func (m *ResultStatus) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipRpc(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthRpc
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *SyncInfo) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowRpc
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: SyncInfo: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: SyncInfo: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LatestBlockHeight", wireType)
-			}
-			m.LatestBlockHeight = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRpc
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.LatestBlockHeight |= (uint64(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LatestBlockHash", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRpc
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthRpc
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.LatestBlockHash.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LatestAppHash", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRpc
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthRpc
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.LatestAppHash.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LatestBlockTime", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRpc
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthRpc
-			}
-			postIndex := iNdEx + msglen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(&m.LatestBlockTime, dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LatestBlockSeenTime", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRpc
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthRpc
-			}
-			postIndex := iNdEx + msglen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(&m.LatestBlockSeenTime, dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 6:
+		case 8:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field CatchingUp", wireType)
 			}
@@ -1022,40 +674,33 @@ var (
 	ErrIntOverflowRpc   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("rpc.proto", fileDescriptor_rpc_9ffe8fef64c845d2) }
-func init() { golang_proto.RegisterFile("rpc.proto", fileDescriptor_rpc_9ffe8fef64c845d2) }
+func init() { proto.RegisterFile("rpc.proto", fileDescriptor_rpc_64e9562a8eef4c9e) }
+func init() { golang_proto.RegisterFile("rpc.proto", fileDescriptor_rpc_64e9562a8eef4c9e) }
 
-var fileDescriptor_rpc_9ffe8fef64c845d2 = []byte{
-	// 490 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x92, 0x3f, 0x6f, 0xd3, 0x40,
-	0x18, 0xc6, 0x7b, 0xf9, 0xd3, 0xa6, 0x97, 0x46, 0x85, 0xa3, 0x43, 0x94, 0xc1, 0x0e, 0x55, 0x87,
-	0x30, 0xe0, 0xa0, 0x20, 0x84, 0xc4, 0x86, 0x8b, 0x44, 0x2a, 0xa1, 0x0e, 0x4e, 0x09, 0x12, 0x0c,
-	0xc8, 0x76, 0xde, 0xda, 0x27, 0xec, 0xbb, 0xd3, 0xdd, 0x19, 0xc8, 0xb7, 0xe0, 0x23, 0x31, 0x46,
-	0x4c, 0x4c, 0x0c, 0x0c, 0x01, 0xa5, 0x1b, 0x9f, 0x02, 0xe5, 0x1c, 0x27, 0x4e, 0x41, 0x48, 0xa8,
-	0x9b, 0xdf, 0xe7, 0x79, 0xdf, 0xdf, 0x9d, 0x9f, 0x7b, 0xf1, 0xbe, 0x14, 0xa1, 0x23, 0x24, 0xd7,
-	0x9c, 0x54, 0xa5, 0x08, 0x3b, 0xf7, 0x23, 0xaa, 0xe3, 0x2c, 0x70, 0x42, 0x9e, 0xf6, 0x23, 0x1e,
-	0xf1, 0xbe, 0xf1, 0x82, 0xec, 0xd2, 0x54, 0xa6, 0x30, 0x5f, 0xf9, 0x4c, 0xe7, 0x96, 0x06, 0x36,
-	0x01, 0x99, 0x52, 0xa6, 0x57, 0xca, 0xe1, 0x7b, 0x3f, 0xa1, 0x13, 0x5f, 0x73, 0xb9, 0x12, 0xec,
-	0x88, 0xf3, 0x28, 0x81, 0x0d, 0x48, 0xd3, 0x14, 0x94, 0xf6, 0x53, 0x91, 0x37, 0x1c, 0x7f, 0xab,
-	0xe0, 0x03, 0x0f, 0x54, 0x96, 0xe8, 0x91, 0xf6, 0x75, 0xa6, 0x48, 0x1b, 0xef, 0x9d, 0xc6, 0x3e,
-	0x65, 0x67, 0xcf, 0xda, 0xa8, 0x8b, 0x7a, 0xfb, 0x5e, 0x51, 0x92, 0x23, 0x5c, 0xf7, 0xb2, 0xa5,
-	0x5e, 0x31, 0x7a, 0x5e, 0x90, 0x13, 0xdc, 0x72, 0x33, 0x29, 0xf9, 0x87, 0x31, 0x48, 0x45, 0x39,
-	0x6b, 0x57, 0x8d, 0xbb, 0x2d, 0x92, 0x57, 0xb8, 0xf9, 0x1c, 0x18, 0x28, 0xaa, 0x86, 0xbe, 0x8a,
-	0xdb, 0xb5, 0x2e, 0xea, 0x1d, 0xb8, 0x8f, 0x66, 0x73, 0x7b, 0xe7, 0xfb, 0xdc, 0x2e, 0xff, 0x76,
-	0x3c, 0x15, 0x20, 0x13, 0x98, 0x44, 0x20, 0xfb, 0x81, 0x41, 0xf4, 0x03, 0xca, 0x7c, 0x39, 0x75,
-	0x86, 0xf0, 0xd1, 0x9d, 0x6a, 0x50, 0x5e, 0x99, 0x44, 0x1e, 0xe0, 0xc6, 0x39, 0x9f, 0xc0, 0x19,
-	0xbb, 0xe4, 0xed, 0x7a, 0x17, 0xf5, 0x9a, 0x83, 0x23, 0xa7, 0x14, 0x4b, 0xe1, 0x79, 0xeb, 0x2e,
-	0x72, 0x0f, 0x37, 0x46, 0x53, 0x16, 0x9a, 0x89, 0x5d, 0x33, 0xd1, 0x72, 0x96, 0xef, 0x50, 0x88,
-	0xde, 0xda, 0x26, 0x4f, 0x70, 0x6b, 0x5c, 0x04, 0x6a, 0xfa, 0xf7, 0x56, 0x27, 0x6c, 0x62, 0x5e,
-	0xfb, 0xde, 0x76, 0xeb, 0xf1, 0x97, 0xea, 0xe6, 0x1c, 0x32, 0xc0, 0xb7, 0x5f, 0xf8, 0x1a, 0x94,
-	0x76, 0x13, 0x1e, 0xbe, 0x1b, 0x02, 0x8d, 0x62, 0x6d, 0xe2, 0xad, 0xb9, 0xb5, 0x5f, 0x73, 0x7b,
-	0xc7, 0xfb, 0xd3, 0x26, 0x6f, 0xf1, 0x61, 0x59, 0x5c, 0xc6, 0x56, 0xb9, 0x49, 0x6c, 0xd7, 0x69,
-	0xe4, 0x0d, 0x6e, 0xe5, 0xd2, 0x53, 0x21, 0x0c, 0xbe, 0x7a, 0x13, 0xfc, 0x36, 0x8b, 0x9c, 0x6f,
-	0xdd, 0xfe, 0x82, 0xa6, 0x60, 0x1e, 0xbd, 0x39, 0xe8, 0x38, 0xf9, 0x4a, 0x3a, 0xc5, 0x4a, 0x3a,
-	0x17, 0xc5, 0x4a, 0xba, 0x8d, 0xe5, 0xd1, 0x9f, 0x7e, 0xd8, 0xc8, 0xbb, 0x3e, 0x4c, 0xc6, 0xf8,
-	0x4e, 0x49, 0x1a, 0x01, 0x30, 0xc3, 0xac, 0xff, 0x07, 0xf3, 0x6f, 0x00, 0x72, 0x82, 0xf1, 0xa9,
-	0xaf, 0xc3, 0x98, 0xb2, 0xe8, 0xa5, 0x30, 0xfb, 0xd0, 0x58, 0x3d, 0x49, 0x49, 0x77, 0x1f, 0xcf,
-	0x16, 0x16, 0xfa, 0xba, 0xb0, 0xd0, 0xcf, 0x85, 0x85, 0x3e, 0x5f, 0x59, 0x68, 0x76, 0x65, 0xa1,
-	0xd7, 0x77, 0xff, 0x9d, 0x90, 0x14, 0x61, 0xb0, 0x6b, 0x6e, 0xf4, 0xf0, 0x77, 0x00, 0x00, 0x00,
-	0xff, 0xff, 0x90, 0x42, 0x0c, 0xad, 0xea, 0x03, 0x00, 0x00,
+var fileDescriptor_rpc_64e9562a8eef4c9e = []byte{
+	// 382 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x91, 0x3f, 0xaf, 0xd3, 0x30,
+	0x14, 0xc5, 0x9f, 0xdf, 0xdf, 0xd4, 0xef, 0x55, 0x20, 0xab, 0x43, 0xd4, 0x21, 0x09, 0xa8, 0x43,
+	0x18, 0x48, 0x10, 0x08, 0x21, 0x31, 0xa6, 0x48, 0xb4, 0x0b, 0x83, 0x2b, 0x8a, 0xc4, 0xe6, 0x24,
+	0x6e, 0x62, 0x29, 0xb1, 0x23, 0xdb, 0x01, 0xf2, 0xed, 0x18, 0x3b, 0x32, 0x33, 0x54, 0xa8, 0xdd,
+	0xf8, 0x0c, 0x0c, 0xa8, 0x6e, 0xd2, 0xa6, 0xcb, 0xdb, 0xee, 0xf9, 0x9d, 0x73, 0xaf, 0xa5, 0x63,
+	0x38, 0x90, 0x55, 0x12, 0x54, 0x52, 0x68, 0x81, 0xae, 0x64, 0x95, 0x8c, 0x5f, 0x66, 0x4c, 0xe7,
+	0x75, 0x1c, 0x24, 0xa2, 0x0c, 0x33, 0x91, 0x89, 0xd0, 0x78, 0x71, 0xbd, 0x32, 0xca, 0x08, 0x33,
+	0x1d, 0x76, 0xc6, 0x4f, 0x35, 0xe5, 0x29, 0x95, 0x25, 0xe3, 0xba, 0x25, 0x4f, 0xbe, 0x91, 0x82,
+	0xa5, 0x44, 0x0b, 0xd9, 0x82, 0x41, 0x9c, 0x94, 0xed, 0xe8, 0x66, 0x42, 0x64, 0x05, 0x3d, 0xdd,
+	0xd4, 0xac, 0xa4, 0x4a, 0x93, 0xb2, 0x3a, 0x04, 0x9e, 0xff, 0xbb, 0x84, 0x0f, 0x98, 0xaa, 0xba,
+	0xd0, 0x0b, 0x4d, 0x74, 0xad, 0x90, 0x0d, 0xef, 0xa6, 0x39, 0x61, 0x7c, 0xfe, 0xc1, 0x06, 0x1e,
+	0xf0, 0x07, 0xb8, 0x93, 0x68, 0x04, 0x6f, 0x70, 0xbd, 0xe7, 0x97, 0x86, 0x1f, 0x04, 0x9a, 0xc0,
+	0x61, 0x54, 0x4b, 0x29, 0xbe, 0x2f, 0xa9, 0x54, 0x4c, 0x70, 0xfb, 0xca, 0xb8, 0xe7, 0x10, 0x7d,
+	0x81, 0xf7, 0x1f, 0x29, 0xa7, 0x8a, 0xa9, 0x19, 0x51, 0xb9, 0x7d, 0xed, 0x01, 0xff, 0x21, 0x7a,
+	0xbb, 0xde, 0xb8, 0x17, 0xbf, 0x37, 0x6e, 0xbf, 0x81, 0xbc, 0xa9, 0xa8, 0x2c, 0x68, 0x9a, 0x51,
+	0x19, 0xc6, 0xe6, 0x44, 0x18, 0x33, 0x4e, 0x64, 0x13, 0xcc, 0xe8, 0x8f, 0xa8, 0xd1, 0x54, 0xe1,
+	0xfe, 0x25, 0xf4, 0x0a, 0x5a, 0x9f, 0x44, 0x4a, 0xe7, 0x7c, 0x25, 0xec, 0x1b, 0x0f, 0xf8, 0xf7,
+	0xaf, 0x47, 0x41, 0xaf, 0xa1, 0xce, 0xc3, 0xc7, 0x14, 0x7a, 0x01, 0xad, 0x45, 0xc3, 0x13, 0xb3,
+	0x71, 0x6b, 0x36, 0x86, 0xc1, 0xbe, 0xb0, 0x0e, 0xe2, 0xa3, 0x8d, 0xde, 0xc3, 0xe1, 0xb2, 0xeb,
+	0xd6, 0xe4, 0xef, 0xda, 0x17, 0x4e, 0x8d, 0x1f, 0x7d, 0x7c, 0x1e, 0x45, 0x13, 0x08, 0xa7, 0x44,
+	0x27, 0x39, 0xe3, 0xd9, 0xe7, 0xca, 0xb6, 0x3c, 0xe0, 0x5b, 0xd1, 0xf5, 0xdf, 0x8d, 0x7b, 0x81,
+	0x7b, 0x3c, 0x7a, 0xb7, 0xde, 0x3a, 0xe0, 0xd7, 0xd6, 0x01, 0x7f, 0xb6, 0x0e, 0xf8, 0xb9, 0x73,
+	0xc0, 0x7a, 0xe7, 0x80, 0xaf, 0xcf, 0x1e, 0x2f, 0x44, 0x56, 0x49, 0x7c, 0x6b, 0xbe, 0xef, 0xcd,
+	0xff, 0x00, 0x00, 0x00, 0xff, 0xff, 0xd1, 0x51, 0x33, 0xc0, 0x4e, 0x02, 0x00, 0x00,
 }

@@ -104,6 +104,16 @@ func NewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *Blockchain {
 	return bc
 }
 
+func GetSyncInfo(blockchain BlockchainInfo) *SyncInfo {
+	return &SyncInfo{
+		LatestBlockHeight:   blockchain.LastBlockHeight(),
+		LatestBlockHash:     blockchain.LastBlockHash(),
+		LatestAppHash:       blockchain.AppHashAfterLastBlock(),
+		LatestBlockTime:     blockchain.LastBlockTime(),
+		LatestBlockSeenTime: blockchain.LastCommitTime(),
+	}
+}
+
 func loadBlockchain(db dbm.DB) (*Blockchain, error) {
 	buf := db.Get(stateKey)
 	if len(buf) == 0 {
