@@ -3,131 +3,14 @@ package storage
 import (
 	"bytes"
 	"sort"
+	"sync"
 )
 
 type KVCache struct {
+	sync.RWMutex
 	cache map[string]valueInfo
+	keys  byteSlices
 }
-
-type valueInfo struct {
-	value   []byte
-	deleted bool
-}
-
-// Creates an in-memory cache wrapping a map that stores the provided tombstone value for deleted keys
-func NewKVCache() *KVCache {
-	return &KVCache{
-		cache: make(map[string]valueInfo),
-	}
-}
-
-func (kvc *KVCache) Info(key []byte) (value []byte, deleted bool) {
-	vi := kvc.cache[string(key)]
-	return vi.value, vi.deleted
-}
-
-func (kvc *KVCache) Get(key []byte) []byte {
-	return kvc.cache[string(key)].value
-}
-
-func (kvc *KVCache) Has(key []byte) bool {
-	vi, ok := kvc.cache[string(key)]
-	return ok && !vi.deleted
-}
-
-func (kvc *KVCache) Set(key, value []byte) {
-	skey := string(key)
-	vi := kvc.cache[skey]
-	vi.deleted = false
-	vi.value = value
-	kvc.cache[skey] = vi
-}
-
-func (kvc *KVCache) Delete(key []byte) {
-	skey := string(key)
-	vi := kvc.cache[skey]
-	vi.deleted = true
-	vi.value = nil
-	kvc.cache[skey] = vi
-}
-
-func (kvc *KVCache) Iterator(start, end []byte) KVIterator {
-	return kvc.newIterator(NormaliseDomain(start, end, false))
-}
-
-func (kvc *KVCache) ReverseIterator(start, end []byte) KVIterator {
-	return kvc.newIterator(NormaliseDomain(start, end, true))
-}
-
-func (kvc *KVCache) newIterator(start, end []byte) *KVCacheIterator {
-	//keys := make([][]byte, 0, len(kvc.cache))
-	//for k := range kvc.cache {
-	//	keys = append(keys, []byte(k))
-	//}
-	keys := kvc.SortedKeysInDomain(start, end)
-	kvi := &KVCacheIterator{
-		start: start,
-		end:   end,
-		keys:  keys,
-		cache: kvc.cache,
-	}
-	return kvi
-}
-
-// Writes contents of cache to backend without flushing the cache
-func (kvi *KVCache) WriteTo(writer KVWriter) {
-	for k, vi := range kvi.cache {
-		kb := []byte(k)
-		if vi.deleted {
-			writer.Delete(kb)
-		} else {
-			writer.Set(kb, vi.value)
-		}
-	}
-}
-
-func (kvc *KVCache) Reset() {
-	kvc.cache = make(map[string]valueInfo)
-}
-
-type KVCacheIterator struct {
-	cache map[string]valueInfo
-	start []byte
-	end   []byte
-	keys  [][]byte
-	index int
-}
-
-func (kvi *KVCacheIterator) Domain() ([]byte, []byte) {
-	return kvi.start, kvi.end
-}
-
-func (kvi *KVCacheIterator) Info() (key, value []byte, deleted bool) {
-	key = kvi.keys[kvi.index]
-	vi := kvi.cache[string(key)]
-	return key, vi.value, vi.deleted
-}
-
-func (kvi *KVCacheIterator) Key() []byte {
-	return []byte(kvi.keys[kvi.index])
-}
-
-func (kvi *KVCacheIterator) Value() []byte {
-	return kvi.cache[string(kvi.keys[kvi.index])].value
-}
-
-func (kvi *KVCacheIterator) Next() {
-	if !kvi.Valid() {
-		panic("KVCacheIterator.Next() called on invalid iterator")
-	}
-	kvi.index++
-}
-
-func (kvi *KVCacheIterator) Valid() bool {
-	return kvi.index < len(kvi.keys)
-}
-
-func (kvi *KVCacheIterator) Close() {}
 
 type byteSlices [][]byte
 
@@ -143,30 +26,113 @@ func (bss byteSlices) Swap(i, j int) {
 	bss[i], bss[j] = bss[j], bss[i]
 }
 
-func (kvc *KVCache) SortedKeys(reverse bool) [][]byte {
-	keys := make(byteSlices, 0, len(kvc.cache))
-	for k := range kvc.cache {
-		keys = append(keys, []byte(k))
-	}
-	var sortable sort.Interface = keys
-	if reverse {
-		sortable = sort.Reverse(keys)
-	}
-	sort.Stable(sortable)
-	return keys
+type valueInfo struct {
+	value   []byte
+	deleted bool
 }
 
-func (kvc *KVCache) SortedKeysInDomain(start, end []byte) [][]byte {
-	comp := CompareKeys(start, end)
-	if comp == 0 {
-		return [][]byte{}
+// Creates an in-memory cache wrapping a map that stores the provided tombstone value for deleted keys
+func NewKVCache() *KVCache {
+	return &KVCache{
+		cache: make(map[string]valueInfo),
 	}
+}
+
+func (kvc *KVCache) Info(key []byte) (value []byte, deleted bool) {
+	kvc.RLock()
+	defer kvc.RUnlock()
+	vi := kvc.cache[string(key)]
+	return vi.value, vi.deleted
+}
+
+func (kvc *KVCache) Get(key []byte) []byte {
+	kvc.RLock()
+	defer kvc.RUnlock()
+	return kvc.cache[string(key)].value
+}
+
+func (kvc *KVCache) Has(key []byte) bool {
+	kvc.RLock()
+	defer kvc.RUnlock()
+	vi, ok := kvc.cache[string(key)]
+	return ok && !vi.deleted
+}
+
+func (kvc *KVCache) Set(key, value []byte) {
+	kvc.Lock()
+	defer kvc.Unlock()
+	skey := string(key)
+	vi, ok := kvc.cache[skey]
+	if !ok {
+		// first Set/Delete
+		kvc.keys = append(kvc.keys, key)
+		// This slows down write quite a lot but does give faster repeated iterations
+		// kvc.keys = insertKey(kvc.keys, key)
+	}
+	vi.deleted = false
+	vi.value = value
+	kvc.cache[skey] = vi
+}
+
+func (kvc *KVCache) Delete(key []byte) {
+	kvc.Lock()
+	defer kvc.Unlock()
+	skey := string(key)
+	vi, ok := kvc.cache[skey]
+	if !ok {
+		// first Set/Delete
+		kvc.keys = append(kvc.keys, key)
+		// This slows down write quite a lot but does give faster repeated iterations
+		// kvc.keys = insertKey(kvc.keys, key)
+	}
+	vi.deleted = true
+	vi.value = nil
+	kvc.cache[skey] = vi
+}
+
+func (kvc *KVCache) Iterator(low, high []byte) KVIterator {
+	kvc.RLock()
+	defer kvc.RUnlock()
+	low, high = NormaliseDomain(low, high)
+	return kvc.newIterator(low, high, false)
+}
+
+func (kvc *KVCache) ReverseIterator(low, high []byte) KVIterator {
+	kvc.RLock()
+	defer kvc.RUnlock()
+	low, high = NormaliseDomain(low, high)
+	return kvc.newIterator(low, high, true)
+}
+
+// Writes contents of cache to backend without flushing the cache
+func (kvc *KVCache) WriteTo(writer KVWriter) {
+	kvc.Lock()
+	defer kvc.Unlock()
+	for k, vi := range kvc.cache {
+		kb := []byte(k)
+		if vi.deleted {
+			writer.Delete(kb)
+		} else {
+			writer.Set(kb, vi.value)
+		}
+	}
+}
+
+func (kvc *KVCache) Reset() {
+	kvc.Lock()
+	defer kvc.Unlock()
+	kvc.cache = make(map[string]valueInfo)
+}
+
+func (kvc *KVCache) sortedKeysInDomain(start, end []byte) [][]byte {
 	// Sort keys depending on order of end points
-	sortedKeys := kvc.SortedKeys(comp == 1)
+	sort.Sort(kvc.keys)
+	sortedKeys := kvc.keys
 	// Attempt to seek to the first key in the range
-	startIndex := len(sortedKeys)
+	startIndex := len(kvc.keys)
 	for i, key := range sortedKeys {
-		if CompareKeys(key, start) != comp {
+		// !(key < start) => key >= start then include (inclusive start)
+		if CompareKeys(key, start) != -1 {
 			startIndex = i
 			break
 		}
@@ -174,10 +140,83 @@ func (kvc *KVCache) SortedKeysInDomain(start, end []byte) [][]byte {
 	// Reslice to beginning of range or end if not found
 	sortedKeys = sortedKeys[startIndex:]
 	for i, key := range sortedKeys {
-		if CompareKeys(key, end) != comp {
+		// !(key < end) => key >= end then exclude (exclusive end)
+		if CompareKeys(key, end) != -1 {
 			sortedKeys = sortedKeys[:i]
 			break
 		}
 	}
+	return sortedKeys
+}
+
+func (kvc *KVCache) newIterator(start, end []byte, reverse bool) *KVCacheIterator {
+	keys := kvc.sortedKeysInDomain(start, end)
+	kvi := &KVCacheIterator{
+		start:   start,
+		end:     end,
+		keys:    keys,
+		cache:   kvc.cache,
+		reverse: reverse,
+	}
+	return kvi
+}
+
+type KVCacheIterator struct {
+	cache    map[string]valueInfo
+	start    []byte
+	end      []byte
+	keys     [][]byte
+	keyIndex int
+	reverse  bool
+}
+
+func (kvi *KVCacheIterator) Domain() ([]byte, []byte) {
+	return kvi.start, kvi.end
+}
+
+func (kvi *KVCacheIterator) Info() (key, value []byte, deleted bool) {
+	key = kvi.keys[kvi.sliceIndex()]
+	vi := kvi.cache[string(key)]
+	return key, vi.value, vi.deleted
+}
+
+func (kvi *KVCacheIterator) Key() []byte {
+	return []byte(kvi.keys[kvi.sliceIndex()])
+}
+
+func (kvi *KVCacheIterator) Value() []byte {
+	return kvi.cache[string(kvi.keys[kvi.sliceIndex()])].value
+}
+
+func (kvi *KVCacheIterator) Next() {
+	if !kvi.Valid() {
+		panic("KVCacheIterator.Next() called on invalid iterator")
+	}
+	kvi.keyIndex++
+}
+
+func (kvi *KVCacheIterator) Valid() bool {
+	return kvi.keyIndex < len(kvi.keys)
+}
+
+func (kvi *KVCacheIterator) Close() {}
+
+func (kvi *KVCacheIterator) sliceIndex() int {
+	if kvi.reverse {
+		//reflect
+		return len(kvi.keys) - 1 - kvi.keyIndex
+	}
+	return kvi.keyIndex
+}
+
+func insertKey(sortedKeys [][]byte, key []byte) [][]byte {
+	i := sort.Search(len(sortedKeys), func(i int) bool {
+		// Smallest sortedKey such that key
+		return bytes.Compare(sortedKeys[i], key) > -1
+	})
+	// ensure space
+	sortedKeys = append(sortedKeys, nil)
+	copy(sortedKeys[i+1:], sortedKeys[i:])
+	sortedKeys[i] = key
 	return sortedKeys
 }

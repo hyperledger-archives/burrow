@@ -5,6 +5,7 @@ package forensics
 import (
 	"bytes"
 	"fmt"
+	"github.com/hyperledger/burrow/storage"
 
 	"github.com/hyperledger/burrow/execution/state"
 
@@ -40,8 +41,9 @@ func (recap *ReplayCapture) String() string {
 }
 
 func NewReplay(dbDir string, genesisDoc *genesis.GenesisDoc, logger *logging.Logger) *Replay {
+	//burrowDB := core.NewBurrowDB(dbDir)
 	// Avoid writing through to underlying DB
-	burrowDB := core.NewBurrowDB(dbDir)
+	burrowDB := storage.NewCacheDB(core.NewBurrowDB(dbDir))
 	return &Replay{
 		explorer:   bcm.NewBlockExplorer(dbm.LevelDBBackend, dbDir),
 		burrowDB:   burrowDB,

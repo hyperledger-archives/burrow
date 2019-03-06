@@ -43,12 +43,12 @@ func (pdb *PrefixDB) DeleteSync(key []byte) {
 	pdb.db.DeleteSync(pdb.prefix.Key(key))
 }
 
-func (pdb *PrefixDB) Iterator(start, end []byte) dbm.Iterator {
-	return pdb.prefix.Iterator(pdb.db.Iterator, start, end)
+func (pdb *PrefixDB) Iterator(low, high []byte) KVIterator {
+	return pdb.prefix.Iterator(pdb.db.Iterator, low, high)
 }
 
-func (pdb *PrefixDB) ReverseIterator(start, end []byte) dbm.Iterator {
-	return pdb.prefix.Iterator(pdb.db.ReverseIterator, start, end)
+func (pdb *PrefixDB) ReverseIterator(low, high []byte) KVIterator {
+	return pdb.prefix.Iterator(pdb.db.ReverseIterator, low, high)
 }
 
 func (pdb *PrefixDB) Close() {

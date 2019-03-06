@@ -11,37 +11,37 @@ type KVIterator = dbm.Iterator
 // This is partially extrated from Cosmos SDK for alignment but is more minimal, we should suggest this becomes an
 // embedded interface
 type KVIterable interface {
-	// Iterator over a domain of keys in ascending order. End is exclusive.
-	// Start must be less than end, or the Iterator is invalid.
+	// Iterator over a domain of keys in ascending order. high is exclusive.
+	// low must be less than high, or the Iterator is invalid.
 	// Iterator must be closed by caller.
 	// To iterate over entire domain, use store.Iterator(nil, nil)
 	// CONTRACT: No writes may happen within a domain while an iterator exists over it.
-	Iterator(start, end []byte) KVIterator
+	Iterator(low, high []byte) KVIterator
 
-	// Iterator over a domain of keys in descending order. End is exclusive.
-	// Start must be less than end, or the Iterator is invalid.
+	// Iterator over a domain of keys in descending order. high is exclusive.
+	//  must be less than high, or the Iterator is invalid.
 	// Iterator must be closed by caller.
 	// CONTRACT: No writes may happen within a domain while an iterator exists over it.
-	ReverseIterator(start, end []byte) KVIterator
+	ReverseIterator(low, high []byte) KVIterator
 }
 
 // Provides the native iteration for IAVLTree
 type KVCallbackIterable interface {
-	// Start must be lexicographically less than end. End is exclusive unless it is nil in which case it is inclusive.
+	// low must be lexicographically less than high. high is exclusive unless it is nil in which case it is inclusive.
 	// ascending == false reverses order.
-	Iterate(start, end []byte, ascending bool, fn func(key []byte, value []byte) error) error
+	Iterate(low, high []byte, ascending bool, fn func(key []byte, value []byte) error) error
 }
 
-func KVCallbackIterator(rit KVCallbackIterable, ascending bool, start, end []byte) dbm.Iterator {
+func KVCallbackIterator(rit KVCallbackIterable, ascending bool, low, high []byte) dbm.Iterator {
 	ch := make(chan KVPair)
 	go func() {
 		defer close(ch)
-		rit.Iterate(start, end, ascending, func(key, value []byte) (err error) {
+		rit.Iterate(low, high, ascending, func(key, value []byte) (err error) {
 			ch <- KVPair{key, value}
 			return
 		})
 	}()
-	return NewChannelIterator(ch, start, end)
+	return NewChannelIterator(ch, low, high)
 }
 
 type KVReader interface {
@@ -79,19 +79,12 @@ type KVStore interface {
 	KVIterable
 }
 
-// NormaliseDomain encodes the assumption that when nil is used as a lower bound is interpreted as low rather
-// than high
-func NormaliseDomain(start, end []byte, reverse bool) ([]byte, []byte) {
-	if reverse {
-		if len(end) == 0 {
-			end = []byte{}
-		}
-	} else {
-		if len(start) == 0 {
-			start = []byte{}
-		}
+// NormaliseDomain encodes the assumption that when nil is used as a lower bound is interpreted as low rather than high
+func NormaliseDomain(low, high []byte) ([]byte, []byte) {
+	if len(low) == 0 {
+		low = []byte{}
 	}
-	return start, end
+	return low, high
 }
 
 // KeyOrder maps []byte{} -> -1, []byte(nil) -> 1, and everything else to 0. This encodes the assumptions of the
