@@ -204,6 +204,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 	}()
 
 	logger := exe.logger.WithScope("executor.Execute(tx txs.Tx)").With(
+		"height", exe.block.Height,
 		"run_call", exe.runCall,
 		"tx_hash", txEnv.Tx.Hash())
 
@@ -223,8 +224,6 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 			if r := recover(); r != nil {
 				err = fmt.Errorf("recovered from panic in executor.Execute(%s): %v\n%s", txEnv.String(), r,
 					debug.Stack())
-				// If we recover here we are in a position to promulgate the error to the TxExecution
-				txe.PushError(err)
 			}
 		}()
 
@@ -413,6 +412,7 @@ func (exe *executor) updateSignatories(txEnv *txs.Envelope) error {
 		acc.PublicKey = *sig.PublicKey
 
 		exe.logger.TraceMsg("Incrementing sequence number Tx signatory/input",
+			"height", exe.block.Height,
 			"tag", "sequence",
 			"account", acc.Address,
 			"old_sequence", acc.Sequence,
@@ -431,6 +431,7 @@ func (exe *executor) publishBlock(blockExecution *exec.BlockExecution) {
 		publishErr := exe.publisher.Publish(context.Background(), txe, txe.Tagged())
 		if publishErr != nil {
 			exe.logger.InfoMsg("Error publishing TxExecution",
+				"height", blockExecution.Height,
 				"tx_hash", txe.TxHash,
 				structure.ErrorKey, publishErr)
 		}
@@ -438,6 +439,7 @@ func (exe *executor) publishBlock(blockExecution *exec.BlockExecution) {
 	publishErr := exe.publisher.Publish(context.Background(), blockExecution, blockExecution.Tagged())
 	if publishErr != nil {
 		exe.logger.InfoMsg("Error publishing BlockExecution",
-			"height", blockExecution.Height, structure.ErrorKey, publishErr)
+			"height", blockExecution.Height,
+			structure.ErrorKey, publishErr)
 	}
 }

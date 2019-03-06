@@ -87,7 +87,7 @@ func (ds *dumpServer) GetDump(param *GetDumpParam, stream Dump_GetDumpServer) er
 	var blockTime time.Time
 	var origin *exec.Origin
 
-	return ds.state.IterateStreamEvents(exec.StreamKey{}, exec.StreamKey{Height: height},
+	return ds.state.IterateStreamEvents(nil, &exec.StreamKey{Height: height},
 		func(ev *exec.StreamEvent) error {
 			switch {
 			case ev.BeginBlock != nil:

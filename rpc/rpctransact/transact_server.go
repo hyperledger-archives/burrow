@@ -23,7 +23,7 @@ func NewTransactServer(transactor *execution.Transactor, txCodec txs.Codec) Tran
 }
 
 func (ts *transactServer) BroadcastTxSync(ctx context.Context, param *TxEnvelopeParam) (*exec.TxExecution, error) {
-	txEnv := param.GetEnvelope(ts.transactor.Tip.ChainID())
+	txEnv := param.GetEnvelope(ts.transactor.BlockchainInfo.ChainID())
 	if txEnv == nil {
 		return nil, fmt.Errorf("no transaction envelope or payload provided")
 	}
@@ -31,7 +31,7 @@ func (ts *transactServer) BroadcastTxSync(ctx context.Context, param *TxEnvelope
 }
 
 func (ts *transactServer) BroadcastTxAsync(ctx context.Context, param *TxEnvelopeParam) (*txs.Receipt, error) {
-	txEnv := param.GetEnvelope(ts.transactor.Tip.ChainID())
+	txEnv := param.GetEnvelope(ts.transactor.BlockchainInfo.ChainID())
 	if txEnv == nil {
 		return nil, fmt.Errorf("no transaction envelope or payload provided")
 	}
@@ -39,7 +39,7 @@ func (ts *transactServer) BroadcastTxAsync(ctx context.Context, param *TxEnvelop
 }
 
 func (ts *transactServer) SignTx(ctx context.Context, param *TxEnvelopeParam) (*TxEnvelope, error) {
-	txEnv := param.GetEnvelope(ts.transactor.Tip.ChainID())
+	txEnv := param.GetEnvelope(ts.transactor.BlockchainInfo.ChainID())
 	if txEnv == nil {
 		return nil, fmt.Errorf("no transaction envelope or payload provided")
 	}
@@ -53,7 +53,7 @@ func (ts *transactServer) SignTx(ctx context.Context, param *TxEnvelopeParam) (*
 }
 
 func (ts *transactServer) FormulateTx(ctx context.Context, param *payload.Any) (*TxEnvelope, error) {
-	txEnv := txs.EnvelopeFromAny(ts.transactor.Tip.ChainID(), param)
+	txEnv := txs.EnvelopeFromAny(ts.transactor.BlockchainInfo.ChainID(), param)
 	if txEnv == nil {
 		return nil, fmt.Errorf("no payload provided to FormulateTx")
 	}

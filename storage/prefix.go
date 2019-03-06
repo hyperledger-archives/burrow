@@ -117,12 +117,12 @@ type prefixIterable struct {
 	source KVIterable
 }
 
-func (pi *prefixIterable) Iterator(start, end []byte) KVIterator {
-	return pi.prefix.Iterator(pi.source.Iterator, start, end)
+func (pi *prefixIterable) Iterator(low, high []byte) KVIterator {
+	return pi.prefix.Iterator(pi.source.Iterator, low, high)
 }
 
-func (pi *prefixIterable) ReverseIterator(start, end []byte) KVIterator {
-	return pi.prefix.Iterator(pi.source.ReverseIterator, start, end)
+func (pi *prefixIterable) ReverseIterator(low, high []byte) KVIterator {
+	return pi.prefix.Iterator(pi.source.ReverseIterator, low, high)
 }
 
 func (p Prefix) Store(source KVStore) KVStore {
@@ -219,10 +219,10 @@ func (ps *prefixKVStore) Delete(key []byte) {
 	ps.source.Delete(ps.prefix.Key(key))
 }
 
-func (ps *prefixKVStore) Iterator(start, end []byte) dbm.Iterator {
-	return ps.prefix.Iterator(ps.source.Iterator, start, end)
+func (ps *prefixKVStore) Iterator(low, high []byte) KVIterator {
+	return ps.prefix.Iterator(ps.source.Iterator, low, high)
 }
 
-func (ps *prefixKVStore) ReverseIterator(start, end []byte) dbm.Iterator {
-	return ps.prefix.Iterator(ps.source.ReverseIterator, start, end)
+func (ps *prefixKVStore) ReverseIterator(low, high []byte) KVIterator {
+	return ps.prefix.Iterator(ps.source.ReverseIterator, low, high)
 }

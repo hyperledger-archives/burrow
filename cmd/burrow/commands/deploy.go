@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger/burrow/execution"
+
 	pkgs "github.com/hyperledger/burrow/deploy"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/proposals"
@@ -13,6 +15,11 @@ import (
 	cli "github.com/jawher/mow.cli"
 	log "github.com/sirupsen/logrus"
 )
+
+// Set this to a bit longer than the transactors blocking timeout - it is more helpful to receive Burrow's remote
+// timeout and if they are set identically this will not happen because Burrow only starts its timer after receiving
+// request and doing a bit of work
+const defaultChainTimeout = execution.BlockingTimeout * 3 / 2
 
 func Deploy(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
@@ -63,7 +70,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 
 		proposalCreate := cmd.BoolOpt("proposal-create", false, "Create new proposal")
 
-		timeoutOpt := cmd.IntOpt("t timeout", 10, "Timeout to talk to the chain")
+		timeoutSecondsOpt := cmd.IntOpt("t timeout", int(defaultChainTimeout/time.Second), "Timeout to talk to the chain in seconds")
 
 		proposalList := cmd.StringOpt("list-proposals state", "", "List proposals, either all, executed, expired, or current")
 
@@ -103,7 +110,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			} else if do.Debug {
 				log.SetLevel(log.DebugLevel)
 			}
-			client := def.NewClient(*chainUrlOpt, *signerOpt, *mempoolSigningOpt, time.Duration(*timeoutOpt)*time.Second)
+			client := def.NewClient(*chainUrlOpt, *signerOpt, *mempoolSigningOpt, time.Duration(*timeoutSecondsOpt)*time.Second)
 			handleTerm()
 
 			if *proposalList != "" {

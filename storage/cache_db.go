@@ -5,13 +5,13 @@ import (
 )
 
 type CacheDB struct {
-	cache   *KVCacheSync
+	cache   *KVCache
 	backend KVIterableReader
 }
 
 func NewCacheDB(backend KVIterableReader) *CacheDB {
 	return &CacheDB{
-		cache:   NewKVCacheSync(),
+		cache:   NewKVCache(),
 		backend: backend,
 	}
 }
@@ -33,14 +33,14 @@ func (cdb *CacheDB) Has(key []byte) bool {
 	return !deleted && (value != nil || cdb.backend.Has(key))
 }
 
-func (cdb *CacheDB) Iterator(start, end []byte) KVIterator {
+func (cdb *CacheDB) Iterator(low, high []byte) KVIterator {
 	// Keys from cache will sort first because of order in MultiIterator and Uniq will take the first KVs so KVs
 	// appearing in cache will override values from backend.
-	return Uniq(NewMultiIterator(false, cdb.cache.Iterator(start, end), cdb.backend.Iterator(start, end)))
+	return Uniq(NewMultiIterator(false, cdb.cache.Iterator(low, high), cdb.backend.Iterator(low, high)))
 }
 
-func (cdb *CacheDB) ReverseIterator(start, end []byte) KVIterator {
-	return Uniq(NewMultiIterator(true, cdb.cache.ReverseIterator(start, end), cdb.backend.ReverseIterator(start, end)))
+func (cdb *CacheDB) ReverseIterator(low, high []byte) KVIterator {
+	return Uniq(NewMultiIterator(true, cdb.cache.ReverseIterator(low, high), cdb.backend.ReverseIterator(low, high)))
 }
 
 func (cdb *CacheDB) Set(key, value []byte) {
@@ -64,7 +64,7 @@ func (cdb *CacheDB) Close() {
 
 func (cdb *CacheDB) NewBatch() dbm.Batch {
 	return &cacheBatch{
-		cache:   NewKVCacheSync(),
+		cache:   NewKVCache(),
 		backend: cdb,
 	}
 }
@@ -75,7 +75,7 @@ func (cdb *CacheDB) Commit(writer KVWriter) {
 }
 
 type cacheBatch struct {
-	cache   *KVCacheSync
+	cache   *KVCache
 	backend *CacheDB
 }
 

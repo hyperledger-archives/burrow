@@ -22,18 +22,18 @@ func (kvc KVCascade) Has(key []byte) bool {
 	return false
 }
 
-func (kvc KVCascade) Iterator(start, end []byte) KVIterator {
+func (kvc KVCascade) Iterator(low, high []byte) KVIterator {
 	iterators := make([]KVIterator, len(kvc))
 	for i, kvs := range kvc {
-		iterators[i] = kvs.Iterator(start, end)
+		iterators[i] = kvs.Iterator(low, high)
 	}
 	return NewMultiIterator(false, iterators...)
 }
 
-func (kvc KVCascade) ReverseIterator(start, end []byte) KVIterator {
+func (kvc KVCascade) ReverseIterator(low, high []byte) KVIterator {
 	iterators := make([]KVIterator, len(kvc))
 	for i, kvs := range kvc {
-		iterators[i] = kvs.ReverseIterator(start, end)
+		iterators[i] = kvs.ReverseIterator(low, high)
 	}
 	return NewMultiIterator(true, iterators...)
 }

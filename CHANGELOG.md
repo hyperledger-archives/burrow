@@ -2,6 +2,16 @@
 ## [Unreleased]
 
 
+## [0.24.3] - 2019-03-06
+### Fixed
+- [State] Avoid stack traces which may be code-path-dependent or non-deterministic from being pushed to TxExecutions and so to merkle state where they can lead to breaking consensus
+- [State] KVCache iterator fixed to use low, high interface as per DB, fixing CacheDB for use in Replay
+
+### Added
+- [Logging] Included height in various execution log messages
+- [Transactor] Now provides SyncInfo in error message when there is a BroadcastTxSync timeout
+
+
 ## [0.24.2] - 2019-02-28
 ### Changed
 - [Genesis] Use HexBytes for Genesis AppHash
@@ -398,7 +408,8 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
-[Unreleased]: https://github.com/hyperledger/burrow/compare/v0.24.2...HEAD
+[Unreleased]: https://github.com/hyperledger/burrow/compare/v0.24.3...HEAD
+[0.24.3]: https://github.com/hyperledger/burrow/compare/v0.24.2...v0.24.3
 [0.24.2]: https://github.com/hyperledger/burrow/compare/v0.24.1...v0.24.2
 [0.24.1]: https://github.com/hyperledger/burrow/compare/v0.24.0...v0.24.1
 [0.24.0]: https://github.com/hyperledger/burrow/compare/v0.23.3...v0.24.0

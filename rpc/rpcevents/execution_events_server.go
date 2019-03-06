@@ -16,7 +16,7 @@ const SubscribeBufferSize = 100
 
 type Provider interface {
 	// Get transactions
-	IterateStreamEvents(start, end exec.StreamKey, consumer func(*exec.StreamEvent) error) (err error)
+	IterateStreamEvents(start, end *exec.StreamKey, consumer func(*exec.StreamEvent) error) (err error)
 	// Get a particular TxExecution by hash
 	TxByHash(txHash []byte) (*exec.TxExecution, error)
 }
@@ -202,7 +202,7 @@ func (ees *executionEventsServer) iterateStreamEvents(startHeight, endHeight uin
 	// NOTE: this will underflow when start is 0 (as it often will be - and needs to be for restored chains)
 	// however we at most underflow by 1 and we always add 1 back on when returning so we get away with this.
 	lastHeightSeen := startHeight - 1
-	err := ees.eventsProvider.IterateStreamEvents(exec.StreamKey{Height: startHeight}, exec.StreamKey{Height: endHeight},
+	err := ees.eventsProvider.IterateStreamEvents(&exec.StreamKey{Height: startHeight}, &exec.StreamKey{Height: endHeight},
 		func(blockEvent *exec.StreamEvent) error {
 			if blockEvent.EndBlock != nil {
 				lastHeightSeen = blockEvent.EndBlock.GetHeight()
