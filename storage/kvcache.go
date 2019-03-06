@@ -9,7 +9,8 @@ import (
 type KVCache struct {
 	sync.RWMutex
 	cache map[string]valueInfo
-	keys  byteSlices
+	// Store a sortable slice of keys to avoid always hitting
+	keys byteSlices
 }
 
 type byteSlices [][]byte
@@ -124,15 +125,15 @@ func (kvc *KVCache) Reset() {
 	kvc.cache = make(map[string]valueInfo)
 }
 
-func (kvc *KVCache) sortedKeysInDomain(start, end []byte) [][]byte {
-	// Sort keys depending on order of end points
+func (kvc *KVCache) sortedKeysInDomain(low, high []byte) [][]byte {
+	// Sort keys (which may be partially sorted if we have iterated before)
 	sort.Sort(kvc.keys)
 	sortedKeys := kvc.keys
 	// Attempt to seek to the first key in the range
 	startIndex := len(kvc.keys)
 	for i, key := range sortedKeys {
 		// !(key < start) => key >= start then include (inclusive start)
-		if CompareKeys(key, start) != -1 {
+		if CompareKeys(key, low) != -1 {
 			startIndex = i
 			break
 		}
@@ -141,7 +142,7 @@ func (kvc *KVCache) sortedKeysInDomain(start, end []byte) [][]byte {
 	sortedKeys = sortedKeys[startIndex:]
 	for i, key := range sortedKeys {
 		// !(key < end) => key >= end then exclude (exclusive end)
-		if CompareKeys(key, end) != -1 {
+		if CompareKeys(key, high) != -1 {
 			sortedKeys = sortedKeys[:i]
 			break
 		}
