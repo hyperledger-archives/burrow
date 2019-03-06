@@ -6,6 +6,7 @@ option go_package = "github.com/hyperledger/burrow/rpc";
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "tendermint.proto";
 import "validator.proto";
+import "bcm.proto";
 import "google/protobuf/timestamp.proto";
 
 package rpc;
@@ -22,18 +23,8 @@ message ResultStatus {
     string BurrowVersion = 3;
     bytes GenesisHash = 4 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
     tendermint.NodeInfo NodeInfo = 5;
-    SyncInfo SyncInfo = 6;
+    bcm.SyncInfo SyncInfo = 6;
+    bool CatchingUp = 8 [(gogoproto.jsontag) = ""];
     validator.Validator ValidatorInfo = 7;
-}
-
-message SyncInfo {
-    uint64 LatestBlockHeight = 1 [(gogoproto.jsontag) = ""];
-    bytes LatestBlockHash = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
-    bytes LatestAppHash = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
-    // Timestamp of block as set by the block proposer
-    google.protobuf.Timestamp LatestBlockTime = 4 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
-    // Time at which we committed the last block
-    google.protobuf.Timestamp LatestBlockSeenTime = 5 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
     // When catching up in fast sync
-    bool CatchingUp = 6 [(gogoproto.jsontag) = ""];
 }

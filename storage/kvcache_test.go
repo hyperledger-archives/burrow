@@ -11,60 +11,87 @@ import (
 
 func TestKVCache_Iterator(t *testing.T) {
 	kvc := NewKVCache()
-	kvp := kvPairs("b", "ar", "f", "oo", "im", "aginative")
+	kvp := kvPairs(
+		"f", "oo",
+		"b", "ar",
+		"aa", "ooh",
+		"im", "aginative",
+	)
+	sortedKVP := kvPairs(
+		"aa", "ooh",
+		"b", "ar",
+		"f", "oo",
+		"im", "aginative",
+	)
 	for _, kv := range kvp {
 		kvc.Set(kv.Key, kv.Value)
 	}
-	assert.Equal(t, kvp, collectIterator(kvc.Iterator(nil, nil)))
+	assert.Equal(t, sortedKVP, collectIterator(kvc.Iterator(nil, nil)))
 }
 
-func TestKVCache_SortedKeysInDomain(t *testing.T) {
-	assert.Equal(t, []string{"b"}, testSortedKeysInDomain(bz("b"), bz("c"), "a", "b", "c", "d"))
-	assert.Equal(t, []string{"b", "c"}, testSortedKeysInDomain(bz("b"), bz("cc"), "a", "b", "c", "d"))
-	assert.Equal(t, []string{"a", "b", "c", "d"}, testSortedKeysInDomain(bz(""), nil, "a", "b", "c", "d"))
-	assert.Equal(t, []string{"d", "c", "b", "a"}, testSortedKeysInDomain(nil, bz(""), "a", "b", "c", "d"))
-	assert.Equal(t, []string{}, testSortedKeysInDomain(nil, nil, "a", "b", "c", "d"))
-	assert.Equal(t, []string{}, testSortedKeysInDomain(bz(""), bz(""), "a", "b", "c", "d"))
-	assert.Equal(t, []string{}, testSortedKeysInDomain(bz("ab"), bz("ab"), "a", "b", "c", "d"))
-	assert.Equal(t, []string{"a"}, testSortedKeysInDomain(bz("0"), bz("ab"), "a", "b", "c", "d"))
-	assert.Equal(t, []string{"c", "b"}, testSortedKeysInDomain(bz("c1"), bz("a"), "a", "b", "c", "d"))
-	assert.Equal(t, []string{"c", "b"}, testSortedKeysInDomain(bz("c"), bz("a"), "a", "b", "c", "d"))
-	assert.Equal(t, []string{}, testSortedKeysInDomain(bz("e"), bz("c"), "a", "b"))
-	assert.Equal(t, []string{}, testSortedKeysInDomain(bz("e"), bz("c"), "z", "f"))
+func TestKVCache_Iterator2(t *testing.T) {
+	assert.Equal(t, []string{"b"}, testIterate(bz("b"), bz("c"), false, "a", "b", "c", "d"))
+	assert.Equal(t, []string{"b", "c"}, testIterate(bz("b"), bz("cc"), false, "a", "b", "c", "d"))
+	assert.Equal(t, []string{"a", "b", "c", "d"}, testIterate(bz(""), nil, false, "a", "b", "c", "d"))
+	assert.Equal(t, []string{"d", "c", "b", "a"}, testIterate(bz(""), nil, true, "a", "b", "c", "d"))
+	assert.Equal(t, []string{"a", "b", "c", "d"}, testIterate(nil, nil, false, "a", "b", "c", "d"))
+
+	assert.Equal(t, []string{}, testIterate(bz(""), bz(""), false, "a", "b", "c", "d"))
+	assert.Equal(t, []string{}, testIterate(bz("ab"), bz("ab"), false, "a", "b", "c", "d"))
+	assert.Equal(t, []string{"a"}, testIterate(bz("0"), bz("ab"), true, "a", "b", "c", "d"))
+	assert.Equal(t, []string{"c", "b", "a"}, testIterate(bz("a"), bz("c1"), true, "a", "b", "c", "d"))
+	assert.Equal(t, []string{"b", "a"}, testIterate(bz("a"), bz("c"), true, "a", "b", "c", "d"))
+	assert.Equal(t, []string{"b", "a"}, testIterate(bz("a"), bz("c"), true, "a", "b", "c", "d"))
+	assert.Equal(t, []string{}, testIterate(bz("c"), bz("e"), true, "a", "b"))
+	assert.Equal(t, []string{}, testIterate(bz("c"), bz("e"), true, "z", "f"))
 }
 
-func BenchmarkKVCache_Iterator(b *testing.B) {
+func BenchmarkKVCache_Iterator_1E6_Inserts(b *testing.B) {
+	benchmarkKVCache_Iterator(b, 1E6)
+}
+
+func BenchmarkKVCache_Iterator_1E7_Inserts(b *testing.B) {
+	benchmarkKVCache_Iterator(b, 1E7)
+}
+
+func benchmarkKVCache_Iterator(b *testing.B, inserts int) {
 	b.StopTimer()
 	cache := NewKVCache()
 	rnd := rand.NewSource(23425)
-	keyvals := make([][]byte, b.N)
-	for i := 0; i < b.N; i++ {
+	keyvals := make([][]byte, inserts)
+	for i := 0; i < inserts; i++ {
 		bs := make([]byte, 8)
 		binary.PutInt64BE(bs, rnd.Int63())
 		keyvals[i] = bs
 	}
-	for i := 0; i < b.N; i++ {
+	for i := 0; i < inserts; i++ {
 		cache.Set(keyvals[i], keyvals[i])
 	}
 	b.StartTimer()
-	it := cache.Iterator(nil, nil)
-	for it.Valid() {
-		it.Next()
+	for i := 0; i < b.N; i++ {
+		it := cache.Iterator(nil, nil)
+		for it.Valid() {
+			it.Next()
+		}
 	}
 }
 
-func testSortedKeysInDomain(start, end []byte, keys ...string) []string {
-	cache := make(map[string]valueInfo)
+func testIterate(low, high []byte, reverse bool, keys ...string) []string {
+	kvc := NewKVCache()
 	for _, k := range keys {
-		cache[k] = valueInfo{}
+		bs := []byte(k)
+		kvc.Set(bs, bs)
 	}
-	kvc := KVCache{
-		cache: cache,
+	var it KVIterator
+	if reverse {
+		it = kvc.ReverseIterator(low, high)
+	} else {
+		it = kvc.Iterator(low, high)
 	}
-	bkeys := kvc.SortedKeysInDomain(start, end)
-	keys = make([]string, len(bkeys))
-	for i, bk := range bkeys {
-		keys[i] = string(bk)
+	keysOut := []string{}
+	for it.Valid() {
+		keysOut = append(keysOut, string(it.Value()))
+		it.Next()
 	}
-	return keys
+	return keysOut
 }

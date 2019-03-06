@@ -378,14 +378,8 @@ func Status(blockchain bcm.BlockchainInfo, validators validator.History, nodeVie
 		BurrowVersion: project.FullVersion(),
 		GenesisHash:   blockchain.GenesisHash(),
 		NodeInfo:      nodeView.NodeInfo(),
-		SyncInfo: &SyncInfo{
-			LatestBlockHeight:   blockchain.LastBlockHeight(),
-			LatestBlockHash:     blockchain.LastBlockHash(),
-			LatestAppHash:       blockchain.AppHashAfterLastBlock(),
-			LatestBlockTime:     blockchain.LastBlockTime(),
-			LatestBlockSeenTime: blockchain.LastCommitTime(),
-			CatchingUp:          nodeView.IsFastSyncing(),
-		},
+		SyncInfo:      bcm.GetSyncInfo(blockchain),
+		CatchingUp:    nodeView.IsFastSyncing(),
 		ValidatorInfo: &validator.Validator{
 			Address:   &address,
 			PublicKey: publicKey,
