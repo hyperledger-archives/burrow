@@ -25,7 +25,7 @@ func TestWriteState_AddBlock(t *testing.T) {
 
 	txIndex := uint64(0)
 	eventIndex := uint64(0)
-	err = s.IterateStreamEvents(exec.StreamKey{Height: height}, exec.StreamKey{Height: height + 1},
+	err = s.IterateStreamEvents(&exec.StreamKey{Height: height}, &exec.StreamKey{Height: height + 1},
 		func(ev *exec.StreamEvent) error {
 			switch {
 			case ev.BeginTx != nil:

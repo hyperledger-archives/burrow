@@ -188,8 +188,8 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		ctx.Logger.InfoMsg("Error on execution",
 			structure.ErrorKey, exception)
 
-		ctx.txe.PushError(errors.ErrorCodef(exception.ErrorCode(), "call error: %s\ntrace: %s",
-			exception.String(), ctx.txe.Trace()))
+		ctx.txe.PushError(errors.ErrorCodef(exception.ErrorCode(), "call error: %s\nEVM call trace: %s",
+			exception.String(), ctx.txe.CallTrace()))
 	} else {
 		ctx.Logger.TraceMsg("Successful execution")
 		if createContract {

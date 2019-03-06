@@ -34,26 +34,31 @@ func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
 	return nil
 }
 
-func (s *ReadState) IterateStreamEvents(start, end exec.StreamKey, consumer func(*exec.StreamEvent) error) error {
+func (s *ReadState) IterateStreamEvents(start, end *exec.StreamKey, consumer func(*exec.StreamEvent) error) error {
 	tree, err := s.Forest.Reader(keys.Event.Prefix())
 	if err != nil {
 		return err
 	}
-	return tree.Iterate(keys.Event.KeyNoPrefix(start.Height, start.Index), keys.Event.KeyNoPrefix(end.Height, end.Index),
-		true,
-		func(_, value []byte) error {
-			txe, err := exec.DecodeStreamEvent(value)
-			if err != nil {
-				return fmt.Errorf("error unmarshalling BlockExecution in GetBlocks: %v", err)
-			}
-			return consumer(txe)
-		})
+	var startKey, endKey []byte
+	if start != nil {
+		startKey = keys.Event.KeyNoPrefix(start.Height, start.Index)
+	}
+	if end != nil {
+		endKey = keys.Event.KeyNoPrefix(end.Height, end.Index)
+	}
+	return tree.Iterate(startKey, endKey, true, func(_, value []byte) error {
+		txe, err := exec.DecodeStreamEvent(value)
+		if err != nil {
+			return fmt.Errorf("error unmarshalling BlockExecution in GetBlocks: %v", err)
+		}
+		return consumer(txe)
+	})
 }
 
 func (s *ReadState) TxsAtHeight(height uint64) ([]*exec.TxExecution, error) {
 	var stack exec.TxStack
 	var txExecutions []*exec.TxExecution
-	err := s.IterateStreamEvents(exec.StreamKey{Height: height}, exec.StreamKey{Height: height + 1},
+	err := s.IterateStreamEvents(&exec.StreamKey{Height: height}, &exec.StreamKey{Height: height + 1},
 		func(ev *exec.StreamEvent) error {
 			// Keep trying to consume TxExecutions at from events at this height
 			txe := stack.Consume(ev)
@@ -83,19 +88,19 @@ func (s *ReadState) StreamEvent(height, index uint64) (*exec.StreamEvent, error)
 
 func (s *ReadState) TxByHash(txHash []byte) (*exec.TxExecution, error) {
 	const errHeader = "TxByHash():"
-	txHashKey, err := s.Forest.Reader(keys.TxHash.Prefix())
+	eventKeyByTxHashTree, err := s.Forest.Reader(keys.TxHash.Prefix())
 	if err != nil {
 		return nil, err
 	}
-	key := txHashKey.Get(keys.TxHash.KeyNoPrefix(txHash))
-	if len(key) == 0 {
+	eventKey := eventKeyByTxHashTree.Get(keys.TxHash.KeyNoPrefix(txHash))
+	if len(eventKey) == 0 {
 		return nil, nil
 	}
-	tree, err := s.Forest.Reader(keys.Event.Prefix())
+	eventTree, err := s.Forest.Reader(keys.Event.Prefix())
 	if err != nil {
 		return nil, err
 	}
-	bs := tree.Get(key)
+	bs := eventTree.Get(eventKey)
 	if len(bs) == 0 {
 		return nil, fmt.Errorf("%s could not retieve transaction with TxHash %X despite finding reference",
 			errHeader, txHash)
@@ -109,14 +114,14 @@ func (s *ReadState) TxByHash(txHash []byte) (*exec.TxExecution, error) {
 			errHeader, ev)
 	}
 
-	var start exec.StreamKey
+	start := new(exec.StreamKey)
 	// Scan out position in storage
-	err = keys.Event.ScanNoPrefix(key, &start.Height, &start.Index)
+	err = keys.Event.ScanNoPrefix(eventKey, &start.Height, &start.Index)
 	if err != nil {
-		return nil, fmt.Errorf("%s could not scan height and index from tx key %X: %v", errHeader, key, err)
+		return nil, fmt.Errorf("%s could not scan height and index from tx key %X: %v", errHeader, eventKey, err)
 	}
 	// Iterate to end of block - we will break the iteration once we have scanned the tx so this is an upper bound
-	end := exec.StreamKey{Height: start.Height + 1}
+	end := &exec.StreamKey{Height: start.Height + 1}
 
 	// Establish iteration state
 	var stack exec.TxStack
