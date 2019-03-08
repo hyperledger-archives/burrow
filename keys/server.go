@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/tmthrgd/go-hex"
+	hex "github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ripemd160"
 	"google.golang.org/grpc"
 )
