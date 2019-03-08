@@ -832,7 +832,7 @@ func TestCreate(t *testing.T) {
 	callee := makeAccountWithCode(cache, "callee", MustSplice(PUSH1, 0x0, PUSH1, 0x0, PUSH1, 0x0, CREATE, PUSH1, 0, MSTORE, PUSH1, 20, PUSH1, 12, RETURN))
 	// ensure pre-generated address has same sequence number
 	nonce := make([]byte, txs.HashLength+uint64Length)
-	copy(nonce, ourVm.tx.Hash())
+	copy(nonce, ourVm.nonce)
 	PutUint64BE(nonce[txs.HashLength:], ourVm.sequence+1)
 	addr := crypto.NewContractAddress(callee, nonce)
 
