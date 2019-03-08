@@ -49,6 +49,11 @@ func FullVersion() string {
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases("",
 		``,
+		"0.24.4 - 2019-03-08",
+		`### Changed
+- [EVM] Accept []byte nonce rather than enforcing the use of txs.Tx.TxHash()
+- [Crypto] Expose SequenceNonce helper to allow library users to use sequence-number based addresses for newly created contracts
+`,
 		"0.24.3 - 2019-03-06",
 		`### Fixed
 - [State] Avoid stack traces which may be code-path-dependent or non-deterministic from being pushed to TxExecutions and so to merkle state where they can lead to breaking consensus

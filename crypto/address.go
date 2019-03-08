@@ -180,11 +180,22 @@ func (address *Address) Size() int {
 	return binary.Word160Length
 }
 
-func NewContractAddress(caller Address, nonce []byte) (newAddr Address) {
+func Nonce(caller Address, nonce []byte) []byte {
 	hasher := sha256.New()
 	hasher.Write(caller[:]) // does not error
 	hasher.Write(nonce)
-	copy(newAddr[:], hasher.Sum(nil))
+	return hasher.Sum(nil)
+}
+
+// Obtain a nearly unique nonce based on a montonic account sequence number
+func SequenceNonce(address Address, sequence uint64) []byte {
+	bs := make([]byte, 8)
+	binary.PutUint64BE(bs, sequence)
+	return Nonce(address, bs)
+}
+
+func NewContractAddress(caller Address, nonce []byte) (newAddr Address) {
+	copy(newAddr[:], Nonce(caller, nonce))
 	return
 }
 
