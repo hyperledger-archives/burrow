@@ -95,8 +95,9 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 	return kernel
 }
 
-func EnterTestDirectory() (cleanup func()) {
-	testDir, err := ioutil.TempDir("", scratchDir)
+func EnterTestDirectory() (testDir string, cleanup func()) {
+	var err error
+	testDir, err = ioutil.TempDir("", scratchDir)
 	if err != nil {
 		panic(fmt.Errorf("couldnot make temp dir for integration tests: %v", err))
 	}
@@ -106,7 +107,7 @@ func EnterTestDirectory() (cleanup func()) {
 	os.MkdirAll(testDir, 0777)
 	os.Chdir(testDir)
 	os.MkdirAll("config", 0777)
-	return func() { os.RemoveAll(testDir) }
+	return testDir, func() { os.RemoveAll(testDir) }
 }
 
 func TestGenesisDoc(addressables []*acm.PrivateAccount) *genesis.GenesisDoc {

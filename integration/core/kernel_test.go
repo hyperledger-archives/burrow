@@ -43,7 +43,7 @@ import (
 var genesisDoc, privateAccounts, privateValidators = genesis.NewDeterministicGenesis(123).GenesisDoc(1, true, 1000, 1, true, 1000)
 
 func TestBootThenShutdown(t *testing.T) {
-	cleanup := integration.EnterTestDirectory()
+	_, cleanup := integration.EnterTestDirectory()
 	defer cleanup()
 	//logger, _ := lifecycle.NewStdErrLogger()
 	logger := logging.NewNoopLogger()
@@ -52,7 +52,7 @@ func TestBootThenShutdown(t *testing.T) {
 }
 
 func TestBootShutdownResume(t *testing.T) {
-	cleanup := integration.EnterTestDirectory()
+	_, cleanup := integration.EnterTestDirectory()
 	defer cleanup()
 	//logger, _ := lifecycle.NewStdErrLogger()
 	logger := logging.NewNoopLogger()
