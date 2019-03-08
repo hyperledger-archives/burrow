@@ -19,7 +19,7 @@ var testConfig = integration.NewTestConfig(genesisDoc)
 var kern *core.Kernel
 
 func TestMain(m *testing.M) {
-	cleanup := integration.EnterTestDirectory()
+	_, cleanup := integration.EnterTestDirectory()
 	defer cleanup()
 
 	kern = integration.TestKernel(inputAccount, privateAccounts, testConfig, nil)

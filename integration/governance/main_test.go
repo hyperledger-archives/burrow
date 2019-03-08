@@ -40,7 +40,7 @@ var kernels []*core.Kernel
 
 // Needs to be in a _test.go file to be picked up
 func TestMain(m *testing.M) {
-	cleanup := integration.EnterTestDirectory()
+	_, cleanup := integration.EnterTestDirectory()
 	defer cleanup()
 	testConfigs = make([]*config.BurrowConfig, len(privateAccounts))
 	kernels = make([]*core.Kernel, len(privateAccounts))
