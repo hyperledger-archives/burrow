@@ -55,7 +55,7 @@ type VM struct {
 	memoryProvider func(errors.Sink) Memory
 	params         Params
 	origin         crypto.Address
-	tx             *txs.Tx
+	nonce          []byte
 	stackDepth     uint64
 	logger         *logging.Logger
 	debugOpcodes   bool
@@ -63,13 +63,16 @@ type VM struct {
 	sequence       uint64
 }
 
-func NewVM(params Params, origin crypto.Address, tx *txs.Tx, logger *logging.Logger, options ...func(*VM)) *VM {
+// Create a new EVM instance. Nonce is required to be globally unique (nearly almost surely) to avoid duplicate
+// addresses for EVM created accounts. In Burrow we use TxHash for this but a random nonce or sequence number could be
+// used.
+func NewVM(params Params, origin crypto.Address, nonce []byte, logger *logging.Logger, options ...func(*VM)) *VM {
 	vm := &VM{
 		memoryProvider: DefaultDynamicMemoryProvider,
 		params:         params,
 		origin:         origin,
 		stackDepth:     0,
-		tx:             tx,
+		nonce:          nonce,
 		logger:         logger.WithScope("NewVM"),
 	}
 	for _, option := range options {
@@ -224,10 +227,10 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 	code, input []byte, value uint64, gas *uint64) (returnData []byte) {
 	vm.Debugf("(%d) (%s) %s (code=%d) gas: %v (d) %X\n", vm.stackDepth, caller, callee, len(code), *gas, input)
 
-	logger := vm.logger.With("tx_hash", vm.tx.Hash())
+	logger := vm.logger.With("evm_nonce", vm.nonce)
 
 	if vm.dumpTokens {
-		dumpTokens(vm.tx.Hash(), caller, callee, code)
+		dumpTokens(vm.nonce, caller, callee, code)
 	}
 
 	// Program counter - the index into code that tracks current instruction
@@ -787,7 +790,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			if op == CREATE {
 				vm.sequence++
 				nonce := make([]byte, txs.HashLength+uint64Length)
-				copy(nonce, vm.tx.Hash())
+				copy(nonce, vm.nonce)
 				PutUint64BE(nonce[txs.HashLength:], vm.sequence)
 				newAccount = crypto.NewContractAddress(callee, nonce)
 			} else if op == CREATE2 {
@@ -1058,7 +1061,7 @@ func transfer(st Interface, from, to crypto.Address, amount uint64) errors.Coded
 }
 
 // Dump the bytecode being sent to the EVM in the current working directory
-func dumpTokens(txHash []byte, caller, callee crypto.Address, code []byte) {
+func dumpTokens(nonce []byte, caller, callee crypto.Address, code []byte) {
 	var tokensString string
 	tokens, err := acm.Bytecode(code).Tokens()
 	if err != nil {
@@ -1066,9 +1069,9 @@ func dumpTokens(txHash []byte, caller, callee crypto.Address, code []byte) {
 	} else {
 		tokensString = strings.Join(tokens, "\n")
 	}
-	txHashString := "tx-none"
-	if len(txHash) >= 4 {
-		txHashString = fmt.Sprintf("tx-%X", txHash[:4])
+	txHashString := "nil-nonce"
+	if len(nonce) >= 4 {
+		txHashString = fmt.Sprintf("nonce-%X", nonce[:4])
 	}
 	callerString := "caller-none"
 	if caller != crypto.ZeroAddress {
