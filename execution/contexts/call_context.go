@@ -181,7 +181,9 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 	}
 	ctx.Logger.Trace.Log("callee", callee)
 
-	vmach := evm.NewVM(params, caller, ctx.txe.Envelope.Tx, ctx.Logger, ctx.VMOptions...)
+	txHash := ctx.txe.Envelope.Tx.Hash()
+	logger := ctx.Logger.With("tx_hash", txHash)
+	vmach := evm.NewVM(params, caller, txHash, logger, ctx.VMOptions...)
 	ret, exception := vmach.Call(txCache, ctx.txe, caller, callee, code, ctx.tx.Data, value, &gas)
 	if exception != nil {
 		// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
