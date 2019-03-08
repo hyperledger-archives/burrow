@@ -1,8 +1,4 @@
-### Fixed
-- [State] Avoid stack traces which may be code-path-dependent or non-deterministic from being pushed to TxExecutions and so to merkle state where they can lead to breaking consensus
-- [State] KVCache iterator fixed to use low, high interface as per DB, fixing CacheDB for use in Replay
-
-### Added
-- [Logging] Included height in various execution log messages
-- [Transactor] Now provides SyncInfo in error message when there is a BroadcastTxSync timeout
+### Changed
+- [EVM] Accept []byte nonce rather than enforcing the use of txs.Tx.TxHash()
+- [Crypto] Expose SequenceNonce helper to allow library users to use sequence-number based addresses for newly created contracts
 
