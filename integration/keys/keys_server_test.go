@@ -5,10 +5,11 @@ package keys
 import (
 	"context"
 	"fmt"
-	"github.com/hyperledger/burrow/keys"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/hyperledger/burrow/keys"
 
 	"github.com/hyperledger/burrow/integration"
 

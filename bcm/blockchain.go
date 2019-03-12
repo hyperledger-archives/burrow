@@ -17,15 +17,14 @@ package bcm
 import (
 	"bytes"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/tendermint/tendermint/types"
 
-	"sync"
-
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	amino "github.com/tendermint/go-amino"
+	"github.com/tendermint/go-amino"
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
@@ -243,6 +242,7 @@ func (bc *Blockchain) BlockHash(height uint64) []byte {
 	}
 	return header.Hash()
 }
+
 func (bc *Blockchain) GetBlockHeader(height uint64) (*types.Header, error) {
 	const errHeader = "GetBlockHeader():"
 	if bc == nil {
