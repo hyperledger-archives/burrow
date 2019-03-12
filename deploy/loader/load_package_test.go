@@ -19,7 +19,7 @@ func TestUnmarshal(t *testing.T) {
     source: foo
     target: bar
     permissions: [foo, bar]
-    roles: ["foo"]
+    roles: []
 
 - name: nameRegTest1
   register:
@@ -34,7 +34,7 @@ func TestUnmarshal(t *testing.T) {
     source: foo
     target: bar
     permissions: [foo, bar]
-    roles: ["foo"]
+    roles: []
 `)
 }
 

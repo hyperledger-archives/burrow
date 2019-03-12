@@ -582,7 +582,7 @@ func (c *Client) TxInput(inputString, amountString, sequenceString string, allow
 	if inputString != "" {
 		inputAddress, err = c.GetKeyAddress(inputString)
 		if err != nil {
-			return nil, fmt.Errorf("TxInput(): could not obtain input address from '%s': %v", inputString, err)
+			return nil, fmt.Errorf("could not parse input address from %s: %v", inputString, err)
 		}
 	}
 	var amount uint64

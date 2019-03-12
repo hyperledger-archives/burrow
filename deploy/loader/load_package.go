@@ -2,8 +2,9 @@ package loader
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
+
+	"os"
 
 	"github.com/hyperledger/burrow/deploy/def"
 	log "github.com/sirupsen/logrus"

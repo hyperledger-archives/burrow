@@ -13,43 +13,50 @@
     name = "github.com/tendermint/tmlibs"
     non-go = false
 
-[[constraint]]
+# overriding here because of IAVL
+[[override]]
   name = "github.com/tendermint/tendermint"
-  source = "github.com/silasdavis/tendermint"
-  # Until Tendermint remove go-ethereum
-  version = "v0.30.1-libsecp256k1"
-
-[[constraint]]
-  name = "github.com/tendermint/iavl"
-  version = "=0.12.1"
-
-# Allow only patch releases for serialization libraries (from Tendermint)
-[[override]]
-  name = "github.com/gogo/protobuf"
-  version = "~1.2.1"
-
-# Dep needs a little help with the dependencies Tendermint has pinned to revisions (because they have no releases)
-[[override]]
-  name = "github.com/jmhodges/levigo"
-  revision = "c42d9e0ca023e2198120196f842701bb4c55d7b9"
-
-[[override]]
-  name = "github.com/btcsuite/btcd"
-  revision = "ed77733ec07dfc8a513741138419b8d9d3de9d2d"
-  
-# last revision used by go-crypto
-[[override]]
-  name = "github.com/btcsuite/btcutil"
-  revision = "d4cc87b860166d00d6b5b9e0d3b3d71d6088d4d4"
-
-[[constraint]]
-  name = "golang.org/x/crypto"
-  revision = "505ab145d0a99da450461ae2c1a9f6cd10d1f447"
-
-[[constraint]]
-  name = "github.com/rcrowley/go-metrics"
-  revision = "e2704e165165ec55d062f5919b4b29494e9fa790"
+  version = "=0.27.0"
 
 [[constraint]]
   name = "golang.org/x/net"
   revision = "292b43bbf7cb8d35ddf40f8d5100ef3837cced3f"
+
+[[override]]
+  name = "github.com/gogo/protobuf"
+  branch = "master"
+
+# v1.1.0 breaks load_package_test.go
+[[override]]
+  name = "github.com/mitchellh/mapstructure"
+  revision = "v1.0.0"
+
+[[constraint]]
+  name = "golang.org/x/crypto"
+  source = "github.com/tendermint/crypto"
+  revision = "3764759f34a542a3aef74d6b02e35be7ab893bba"
+
+#
+#[[override]]
+#  name = "github.com/gogo/protobuf"
+#  version = "~1.1.0"
+#
+#[[override]]
+#  name = "github.com/golang/protobuf"
+#  version = "~1.1.0"
+#
+[[constraint]]
+  name = "google.golang.org/grpc"
+  version = "~1.13.0"
+
+[[constraint]]
+  name = "github.com/hashicorp/golang-lru"
+  version = "0.5.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/alecthomas/jsonschema"
+
+[[constraint]]
+  name = "github.com/xeipuuv/gojsonschema"
+  version = "1.1.0"
