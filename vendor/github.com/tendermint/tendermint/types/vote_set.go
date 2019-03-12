@@ -541,11 +541,12 @@ func (voteSet *VoteSet) MakeCommit() *Commit {
 	}
 
 	// For every validator, get the precommit
-	commitSigs := make([]*CommitSig, len(voteSet.votes))
-	for i, v := range voteSet.votes {
-		commitSigs[i] = v.CommitSig()
+	votesCopy := make([]*Vote, len(voteSet.votes))
+	copy(votesCopy, voteSet.votes)
+	return &Commit{
+		BlockID:    *voteSet.maj23,
+		Precommits: votesCopy,
 	}
-	return NewCommit(*voteSet.maj23, commitSigs)
 }
 
 //--------------------------------------------------------------------------------

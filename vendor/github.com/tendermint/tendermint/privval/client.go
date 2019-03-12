@@ -53,11 +53,9 @@ type SocketVal struct {
 	// reset if the connection fails.
 	// failures are detected by a background
 	// ping routine.
-	// All messages are request/response, so we hold the mutex
-	// so only one request/response pair can happen at a time.
 	// Methods on the underlying net.Conn itself
 	// are already gorountine safe.
-	mtx    sync.Mutex
+	mtx    sync.RWMutex
 	signer *RemoteSignerClient
 }
 
@@ -84,22 +82,22 @@ func NewSocketVal(
 
 // GetPubKey implements PrivValidator.
 func (sc *SocketVal) GetPubKey() crypto.PubKey {
-	sc.mtx.Lock()
-	defer sc.mtx.Unlock()
+	sc.mtx.RLock()
+	defer sc.mtx.RUnlock()
 	return sc.signer.GetPubKey()
 }
 
 // SignVote implements PrivValidator.
 func (sc *SocketVal) SignVote(chainID string, vote *types.Vote) error {
-	sc.mtx.Lock()
-	defer sc.mtx.Unlock()
+	sc.mtx.RLock()
+	defer sc.mtx.RUnlock()
 	return sc.signer.SignVote(chainID, vote)
 }
 
 // SignProposal implements PrivValidator.
 func (sc *SocketVal) SignProposal(chainID string, proposal *types.Proposal) error {
-	sc.mtx.Lock()
-	defer sc.mtx.Unlock()
+	sc.mtx.RLock()
+	defer sc.mtx.RUnlock()
 	return sc.signer.SignProposal(chainID, proposal)
 }
 
@@ -108,15 +106,15 @@ func (sc *SocketVal) SignProposal(chainID string, proposal *types.Proposal) erro
 
 // Ping is used to check connection health.
 func (sc *SocketVal) Ping() error {
-	sc.mtx.Lock()
-	defer sc.mtx.Unlock()
+	sc.mtx.RLock()
+	defer sc.mtx.RUnlock()
 	return sc.signer.Ping()
 }
 
 // Close closes the underlying net.Conn.
 func (sc *SocketVal) Close() {
-	sc.mtx.Lock()
-	defer sc.mtx.Unlock()
+	sc.mtx.RLock()
+	defer sc.mtx.RUnlock()
 	if sc.signer != nil {
 		if err := sc.signer.Close(); err != nil {
 			sc.Logger.Error("OnStop", "err", err)

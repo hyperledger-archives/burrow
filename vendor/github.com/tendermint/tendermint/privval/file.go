@@ -31,6 +31,7 @@ func voteToStep(vote *types.Vote) int8 {
 		return stepPrecommit
 	default:
 		panic("Unknown vote type")
+		return 0
 	}
 }
 
@@ -86,17 +87,17 @@ type FilePVLastSignState struct {
 func (lss *FilePVLastSignState) CheckHRS(height int64, round int, step int8) (bool, error) {
 
 	if lss.Height > height {
-		return false, fmt.Errorf("Height regression. Got %v, last height %v", height, lss.Height)
+		return false, errors.New("Height regression")
 	}
 
 	if lss.Height == height {
 		if lss.Round > round {
-			return false, fmt.Errorf("Round regression at height %v. Got %v, last round %v", height, round, lss.Round)
+			return false, errors.New("Round regression")
 		}
 
 		if lss.Round == round {
 			if lss.Step > step {
-				return false, fmt.Errorf("Step regression at height %v round %v. Got %v, last step %v", height, round, step, lss.Step)
+				return false, errors.New("Step regression")
 			} else if lss.Step == step {
 				if lss.SignBytes != nil {
 					if lss.Signature == nil {

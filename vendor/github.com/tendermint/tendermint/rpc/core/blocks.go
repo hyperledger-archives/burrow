@@ -85,9 +85,7 @@ func BlockchainInfo(minHeight, maxHeight int64) (*ctypes.ResultBlockchainInfo, e
 		blockMetas = append(blockMetas, blockMeta)
 	}
 
-	return &ctypes.ResultBlockchainInfo{
-		LastHeight: blockStore.Height(),
-		BlockMetas: blockMetas}, nil
+	return &ctypes.ResultBlockchainInfo{blockStore.Height(), blockMetas}, nil
 }
 
 // error if either min or max are negative or min < max
@@ -235,7 +233,7 @@ func Block(heightPtr *int64) (*ctypes.ResultBlock, error) {
 
 	blockMeta := blockStore.LoadBlockMeta(height)
 	block := blockStore.LoadBlock(height)
-	return &ctypes.ResultBlock{BlockMeta: blockMeta, Block: block}, nil
+	return &ctypes.ResultBlock{blockMeta, block}, nil
 }
 
 // Get block commit at a given height.

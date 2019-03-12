@@ -363,8 +363,7 @@ func (pool *BlockPool) sendError(err error, peerID p2p.ID) {
 	pool.errorsCh <- peerError{err, peerID}
 }
 
-// for debugging purposes
-//nolint:unused
+// unused by tendermint; left for debugging purposes
 func (pool *BlockPool) debug() string {
 	pool.mtx.Lock()
 	defer pool.mtx.Unlock()

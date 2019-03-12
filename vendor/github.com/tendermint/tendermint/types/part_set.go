@@ -21,6 +21,9 @@ type Part struct {
 	Index int                `json:"index"`
 	Bytes cmn.HexBytes       `json:"bytes"`
 	Proof merkle.SimpleProof `json:"proof"`
+
+	// Cache
+	hash []byte
 }
 
 // ValidateBasic performs basic validation.

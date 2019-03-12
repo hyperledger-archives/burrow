@@ -43,20 +43,11 @@ func (pvs PrivValidatorsByAddress) Swap(i, j int) {
 // MockPV implements PrivValidator without any safety or persistence.
 // Only use it for testing.
 type MockPV struct {
-	privKey              crypto.PrivKey
-	breakProposalSigning bool
-	breakVoteSigning     bool
+	privKey crypto.PrivKey
 }
 
 func NewMockPV() *MockPV {
-	return &MockPV{ed25519.GenPrivKey(), false, false}
-}
-
-// NewMockPVWithParams allows one to create a MockPV instance, but with finer
-// grained control over the operation of the mock validator. This is useful for
-// mocking test failures.
-func NewMockPVWithParams(privKey crypto.PrivKey, breakProposalSigning, breakVoteSigning bool) *MockPV {
-	return &MockPV{privKey, breakProposalSigning, breakVoteSigning}
+	return &MockPV{ed25519.GenPrivKey()}
 }
 
 // Implements PrivValidator.
@@ -66,11 +57,7 @@ func (pv *MockPV) GetPubKey() crypto.PubKey {
 
 // Implements PrivValidator.
 func (pv *MockPV) SignVote(chainID string, vote *Vote) error {
-	useChainID := chainID
-	if pv.breakVoteSigning {
-		useChainID = "incorrect-chain-id"
-	}
-	signBytes := vote.SignBytes(useChainID)
+	signBytes := vote.SignBytes(chainID)
 	sig, err := pv.privKey.Sign(signBytes)
 	if err != nil {
 		return err
@@ -81,11 +68,7 @@ func (pv *MockPV) SignVote(chainID string, vote *Vote) error {
 
 // Implements PrivValidator.
 func (pv *MockPV) SignProposal(chainID string, proposal *Proposal) error {
-	useChainID := chainID
-	if pv.breakProposalSigning {
-		useChainID = "incorrect-chain-id"
-	}
-	signBytes := proposal.SignBytes(useChainID)
+	signBytes := proposal.SignBytes(chainID)
 	sig, err := pv.privKey.Sign(signBytes)
 	if err != nil {
 		return err
@@ -124,5 +107,5 @@ func (pv *erroringMockPV) SignProposal(chainID string, proposal *Proposal) error
 
 // NewErroringMockPV returns a MockPV that fails on each signing request. Again, for testing only.
 func NewErroringMockPV() *erroringMockPV {
-	return &erroringMockPV{&MockPV{ed25519.GenPrivKey(), false, false}}
+	return &erroringMockPV{&MockPV{ed25519.GenPrivKey()}}
 }

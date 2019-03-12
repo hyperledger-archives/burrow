@@ -1,7 +1,7 @@
 package pex
 
 import (
-	amino "github.com/tendermint/go-amino"
+	"github.com/tendermint/go-amino"
 )
 
 var cdc *amino.Codec = amino.NewCodec()

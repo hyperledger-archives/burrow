@@ -13,13 +13,12 @@
     name = "github.com/tendermint/tmlibs"
     non-go = false
 
-[[constraint]]
+[[override]]
   name = "github.com/tendermint/tendermint"
-  source = "github.com/silasdavis/tendermint"
-  # Until Tendermint remove go-ethereum
-  version = "v0.30.1-libsecp256k1"
+  version = "=0.29.1"
 
-[[constraint]]
+# Depends on Tendermint...
+[[override]]
   name = "github.com/tendermint/iavl"
   version = "=0.12.1"
 
@@ -36,7 +35,7 @@
 [[override]]
   name = "github.com/btcsuite/btcd"
   revision = "ed77733ec07dfc8a513741138419b8d9d3de9d2d"
-  
+
 # last revision used by go-crypto
 [[override]]
   name = "github.com/btcsuite/btcutil"

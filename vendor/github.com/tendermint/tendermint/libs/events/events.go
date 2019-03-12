@@ -188,7 +188,7 @@ func (cell *eventCell) RemoveListener(listenerID string) int {
 
 func (cell *eventCell) FireEvent(data EventData) {
 	cell.mtx.RLock()
-	eventCallbacks := make([]EventCallback, 0, len(cell.listeners))
+	var eventCallbacks []EventCallback
 	for _, cb := range cell.listeners {
 		eventCallbacks = append(eventCallbacks, cb)
 	}

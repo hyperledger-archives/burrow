@@ -514,6 +514,14 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:d32b18c99013d2a961a3b299369d9ddaba48e1b1a64e7c6f30e10d9c3736a65a"
+  name = "github.com/tendermint/btcd"
+  packages = ["btcec"]
+  pruneopts = "NUT"
+  revision = "80daadac05d1cd29571fccf27002d79667a88b58"
+  version = "v0.1.1"
+
+[[projects]]
   digest = "1:cab51cbba1fe9bd667ccd5198911b306a4b551c8fb2be754daae5b748d806d12"
   name = "github.com/tendermint/go-amino"
   packages = ["."]
@@ -530,7 +538,7 @@
   version = "v0.12.1"
 
 [[projects]]
-  digest = "1:9c6fd56a7c1c277576d6e5ebc2c6c26907f034b306707e4fe379377f1685c054"
+  digest = "1:da64513fa850158f4e5d9e99ff4f300f13480aefb0ecda6735d2d9ced608fa60"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -549,7 +557,6 @@
     "crypto/multisig",
     "crypto/multisig/bitarray",
     "crypto/secp256k1",
-    "crypto/secp256k1/internal/secp256k1",
     "crypto/tmhash",
     "evidence",
     "libs/autofile",
@@ -583,9 +590,8 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "df304d2276b731f2f924e93ef176337951bb5f27"
-  source = "github.com/silasdavis/tendermint"
-  version = "v0.30.1"
+  revision = "4d7b29cd8f8ef998cf8f7141f3a100b0a4fa718d"
+  version = "v0.29.1"
 
 [[projects]]
   branch = "master"

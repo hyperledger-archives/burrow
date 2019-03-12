@@ -2,16 +2,12 @@ package config
 
 import (
 	"bytes"
-	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"text/template"
 
 	cmn "github.com/tendermint/tendermint/libs/common"
 )
-
-// DefaultDirPerm is the default permissions used when creating directories.
-const DefaultDirPerm = 0700
 
 var configTemplate *template.Template
 
@@ -27,13 +23,13 @@ func init() {
 // EnsureRoot creates the root, config, and data directories if they don't exist,
 // and panics if it fails.
 func EnsureRoot(rootDir string) {
-	if err := cmn.EnsureDir(rootDir, DefaultDirPerm); err != nil {
+	if err := cmn.EnsureDir(rootDir, 0700); err != nil {
 		cmn.PanicSanity(err.Error())
 	}
-	if err := cmn.EnsureDir(filepath.Join(rootDir, defaultConfigDir), DefaultDirPerm); err != nil {
+	if err := cmn.EnsureDir(filepath.Join(rootDir, defaultConfigDir), 0700); err != nil {
 		cmn.PanicSanity(err.Error())
 	}
-	if err := cmn.EnsureDir(filepath.Join(rootDir, defaultDataDir), DefaultDirPerm); err != nil {
+	if err := cmn.EnsureDir(filepath.Join(rootDir, defaultDataDir), 0700); err != nil {
 		cmn.PanicSanity(err.Error())
 	}
 
@@ -321,21 +317,29 @@ namespace = "{{ .Instrumentation.Namespace }}"
 /****** these are for test settings ***********/
 
 func ResetTestRoot(testName string) *Config {
-	return ResetTestRootWithChainID(testName, "")
-}
-
-func ResetTestRootWithChainID(testName string, chainID string) *Config {
-	// create a unique, concurrency-safe test directory under os.TempDir()
-	rootDir, err := ioutil.TempDir("", fmt.Sprintf("%s-%s_", chainID, testName))
-	if err != nil {
-		panic(err)
+	rootDir := os.ExpandEnv("$HOME/.tendermint_test")
+	rootDir = filepath.Join(rootDir, testName)
+	// Remove ~/.tendermint_test_bak
+	if cmn.FileExists(rootDir + "_bak") {
+		if err := os.RemoveAll(rootDir + "_bak"); err != nil {
+			cmn.PanicSanity(err.Error())
+		}
 	}
-	// ensure config and data subdirs are created
-	if err := cmn.EnsureDir(filepath.Join(rootDir, defaultConfigDir), DefaultDirPerm); err != nil {
-		panic(err)
+	// Move ~/.tendermint_test to ~/.tendermint_test_bak
+	if cmn.FileExists(rootDir) {
+		if err := os.Rename(rootDir, rootDir+"_bak"); err != nil {
+			cmn.PanicSanity(err.Error())
+		}
 	}
-	if err := cmn.EnsureDir(filepath.Join(rootDir, defaultDataDir), DefaultDirPerm); err != nil {
-		panic(err)
+	// Create new dir
+	if err := cmn.EnsureDir(rootDir, 0700); err != nil {
+		cmn.PanicSanity(err.Error())
+	}
+	if err := cmn.EnsureDir(filepath.Join(rootDir, defaultConfigDir), 0700); err != nil {
+		cmn.PanicSanity(err.Error())
+	}
+	if err := cmn.EnsureDir(filepath.Join(rootDir, defaultDataDir), 0700); err != nil {
+		cmn.PanicSanity(err.Error())
 	}
 
 	baseConfig := DefaultBaseConfig()
@@ -349,10 +353,6 @@ func ResetTestRootWithChainID(testName string, chainID string) *Config {
 		writeDefaultConfigFile(configFilePath)
 	}
 	if !cmn.FileExists(genesisFilePath) {
-		if chainID == "" {
-			chainID = "tendermint_test"
-		}
-		testGenesis := fmt.Sprintf(testGenesisFmt, chainID)
 		cmn.MustWriteFile(genesisFilePath, []byte(testGenesis), 0644)
 	}
 	// we always overwrite the priv val
@@ -363,9 +363,9 @@ func ResetTestRootWithChainID(testName string, chainID string) *Config {
 	return config
 }
 
-var testGenesisFmt = `{
+var testGenesis = `{
   "genesis_time": "2018-10-10T08:20:13.695936996Z",
-  "chain_id": "%s",
+  "chain_id": "tendermint_test",
   "validators": [
     {
       "pub_key": {

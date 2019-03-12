@@ -60,9 +60,7 @@ func Validators(heightPtr *int64) (*ctypes.ResultValidators, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ctypes.ResultValidators{
-		BlockHeight: height,
-		Validators:  validators.Validators}, nil
+	return &ctypes.ResultValidators{height, validators.Validators}, nil
 }
 
 // DumpConsensusState dumps consensus state.
@@ -225,9 +223,7 @@ func DumpConsensusState() (*ctypes.ResultDumpConsensusState, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ctypes.ResultDumpConsensusState{
-		RoundState: roundState,
-		Peers:      peerStates}, nil
+	return &ctypes.ResultDumpConsensusState{roundState, peerStates}, nil
 }
 
 // ConsensusState returns a concise summary of the consensus state.
@@ -280,7 +276,7 @@ func DumpConsensusState() (*ctypes.ResultDumpConsensusState, error) {
 func ConsensusState() (*ctypes.ResultConsensusState, error) {
 	// Get self round state.
 	bz, err := consensusState.GetRoundStateSimpleJSON()
-	return &ctypes.ResultConsensusState{RoundState: bz}, err
+	return &ctypes.ResultConsensusState{bz}, err
 }
 
 // Get the consensus parameters  at the given block height.
@@ -331,7 +327,5 @@ func ConsensusParams(heightPtr *int64) (*ctypes.ResultConsensusParams, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ctypes.ResultConsensusParams{
-		BlockHeight:     height,
-		ConsensusParams: consensusparams}, nil
+	return &ctypes.ResultConsensusParams{BlockHeight: height, ConsensusParams: consensusparams}, nil
 }

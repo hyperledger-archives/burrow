@@ -480,12 +480,14 @@ func (sw *Switch) acceptRoutine() {
 			metrics:      sw.metrics,
 		})
 		if err != nil {
-			switch err := err.(type) {
+			switch err.(type) {
 			case ErrRejected:
-				if err.IsSelf() {
+				rErr := err.(ErrRejected)
+
+				if rErr.IsSelf() {
 					// Remove the given address from the address book and add to our addresses
 					// to avoid dialing in the future.
-					addr := err.Addr()
+					addr := rErr.Addr()
 					sw.addrBook.RemoveAddress(&addr)
 					sw.addrBook.AddOurAddress(&addr)
 				}

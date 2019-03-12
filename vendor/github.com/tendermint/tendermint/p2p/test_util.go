@@ -125,7 +125,7 @@ func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
 		return err
 	}
 
-	ni, err := handshake(conn, time.Second, sw.nodeInfo)
+	ni, err := handshake(conn, 50*time.Millisecond, sw.nodeInfo)
 	if err != nil {
 		if err := conn.Close(); err != nil {
 			sw.Logger.Error("Error closing connection", "err", err)
@@ -247,25 +247,35 @@ func testNodeInfo(id ID, name string) NodeInfo {
 }
 
 func testNodeInfoWithNetwork(id ID, name, network string) NodeInfo {
+	port, err := getFreePort()
+	if err != nil {
+		panic(err)
+	}
 	return DefaultNodeInfo{
 		ProtocolVersion: defaultProtocolVersion,
 		ID_:             id,
-		ListenAddr:      fmt.Sprintf("127.0.0.1:%d", getFreePort()),
+		ListenAddr:      fmt.Sprintf("127.0.0.1:%d", port),
 		Network:         network,
 		Version:         "1.2.3-rc0-deadbeef",
 		Channels:        []byte{testCh},
 		Moniker:         name,
 		Other: DefaultNodeInfoOther{
 			TxIndex:    "on",
-			RPCAddress: fmt.Sprintf("127.0.0.1:%d", getFreePort()),
+			RPCAddress: fmt.Sprintf("127.0.0.1:%d", port),
 		},
 	}
 }
 
-func getFreePort() int {
-	port, err := cmn.GetFreePort()
+func getFreePort() (int, error) {
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
-	return port
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return 0, err
+	}
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port, nil
 }

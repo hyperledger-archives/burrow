@@ -103,6 +103,7 @@ func (cs *ConsensusState) ReplayFile(file string, console bool) error {
 		}
 		pb.count++
 	}
+	return nil
 }
 
 //------------------------------------------------
@@ -294,6 +295,7 @@ func (pb *playback) replayConsoleLoop() int {
 			fmt.Println(pb.count)
 		}
 	}
+	return 0
 }
 
 //--------------------------------------------------------------------------------
@@ -324,16 +326,15 @@ func newConsensusStateForReplay(config cfg.BaseConfig, csConfig *cfg.ConsensusCo
 		cmn.Exit(fmt.Sprintf("Error starting proxy app conns: %v", err))
 	}
 
-	eventBus := types.NewEventBus()
-	if err := eventBus.Start(); err != nil {
-		cmn.Exit(fmt.Sprintf("Failed to start event bus: %v", err))
-	}
-
 	handshaker := NewHandshaker(stateDB, state, blockStore, gdoc)
-	handshaker.SetEventBus(eventBus)
 	err = handshaker.Handshake(proxyApp)
 	if err != nil {
 		cmn.Exit(fmt.Sprintf("Error on handshake: %v", err))
+	}
+
+	eventBus := types.NewEventBus()
+	if err := eventBus.Start(); err != nil {
+		cmn.Exit(fmt.Sprintf("Failed to start event bus: %v", err))
 	}
 
 	mempool, evpool := sm.MockMempool{}, sm.MockEvidencePool{}
