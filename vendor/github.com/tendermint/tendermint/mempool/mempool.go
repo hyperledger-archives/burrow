@@ -65,9 +65,6 @@ var (
 
 	// ErrMempoolIsFull means Tendermint & an application can't handle that much load
 	ErrMempoolIsFull = errors.New("Mempool is full")
-
-	// ErrTxTooLarge means the tx is too big to be sent in a message to other peers
-	ErrTxTooLarge = fmt.Errorf("Tx too large. Max size is %d", maxTxSize)
 )
 
 // ErrPreCheck is returned when tx is too big
@@ -110,10 +107,6 @@ func PostCheckMaxGas(maxGas int64) PostCheckFunc {
 	return func(tx types.Tx, res *abci.ResponseCheckTx) error {
 		if maxGas == -1 {
 			return nil
-		}
-		if res.GasWanted < 0 {
-			return fmt.Errorf("gas wanted %d is negative",
-				res.GasWanted)
 		}
 		if res.GasWanted > maxGas {
 			return fmt.Errorf("gas wanted %d is greater than max gas %d",
@@ -312,13 +305,6 @@ func (mem *Mempool) CheckTx(tx types.Tx, cb func(*abci.Response)) (err error) {
 		return ErrMempoolIsFull
 	}
 
-	// The size of the corresponding amino-encoded TxMessage
-	// can't be larger than the maxMsgSize, otherwise we can't
-	// relay it to peers.
-	if len(tx) > maxTxSize {
-		return ErrTxTooLarge
-	}
-
 	if mem.preCheck != nil {
 		if err := mem.preCheck(tx); err != nil {
 			return ErrPreCheck{err}
@@ -408,11 +394,14 @@ func (mem *Mempool) resCbRecheck(req *abci.Request, res *abci.Response) {
 	case *abci.Response_CheckTx:
 		tx := req.GetCheckTx().Tx
 		memTx := mem.recheckCursor.Value.(*mempoolTx)
-		if !bytes.Equal(tx, memTx.tx) {
-			panic(fmt.Sprintf(
-				"Unexpected tx response from proxy during recheck\nExpected %X, got %X",
-				memTx.tx,
-				tx))
+		if !bytes.Equal(req.GetCheckTx().Tx, memTx.tx) {
+			cmn.PanicSanity(
+				fmt.Sprintf(
+					"Unexpected tx response from proxy during recheck\nExpected %X, got %X",
+					r.CheckTx.Data,
+					memTx.tx,
+				),
+			)
 		}
 		var postCheckErr error
 		if mem.postCheck != nil {
@@ -497,15 +486,11 @@ func (mem *Mempool) ReapMaxBytesMaxGas(maxBytes, maxGas int64) types.Txs {
 			return txs
 		}
 		totalBytes += int64(len(memTx.tx)) + aminoOverhead
-		// Check total gas requirement.
-		// If maxGas is negative, skip this check.
-		// Since newTotalGas < masGas, which
-		// must be non-negative, it follows that this won't overflow.
-		newTotalGas := totalGas + memTx.gasWanted
-		if maxGas > -1 && newTotalGas > maxGas {
+		// Check total gas requirement
+		if maxGas > -1 && totalGas+memTx.gasWanted > maxGas {
 			return txs
 		}
-		totalGas = newTotalGas
+		totalGas += memTx.gasWanted
 		txs = append(txs, memTx.tx)
 	}
 	return txs
@@ -563,18 +548,13 @@ func (mem *Mempool) Update(
 	// Remove committed transactions.
 	txsLeft := mem.removeTxs(txs)
 
-	// Either recheck non-committed txs to see if they became invalid
-	// or just notify there're some txs left.
-	if len(txsLeft) > 0 {
-		if mem.config.Recheck {
-			mem.logger.Info("Recheck txs", "numtxs", len(txsLeft), "height", height)
-			mem.recheckTxs(txsLeft)
-			// At this point, mem.txs are being rechecked.
-			// mem.recheckCursor re-scans mem.txs and possibly removes some txs.
-			// Before mem.Reap(), we should wait for mem.recheckCursor to be nil.
-		} else {
-			mem.notifyTxsAvailable()
-		}
+	// Recheck mempool txs if any txs were committed in the block
+	if mem.config.Recheck && len(txsLeft) > 0 {
+		mem.logger.Info("Recheck txs", "numtxs", len(txsLeft), "height", height)
+		mem.recheckTxs(txsLeft)
+		// At this point, mem.txs are being rechecked.
+		// mem.recheckCursor re-scans mem.txs and possibly removes some txs.
+		// Before mem.Reap(), we should wait for mem.recheckCursor to be nil.
 	}
 
 	// Update metrics
@@ -683,7 +663,7 @@ func (cache *mapTxCache) Push(tx types.Tx) bool {
 	// Use the tx hash in the cache
 	txHash := sha256.Sum256(tx)
 	if moved, exists := cache.map_[txHash]; exists {
-		cache.list.MoveToBack(moved)
+		cache.list.MoveToFront(moved)
 		return false
 	}
 

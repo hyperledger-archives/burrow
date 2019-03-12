@@ -7,11 +7,7 @@ import (
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	// MetricsSubsystem is a subsystem shared by all metrics exposed by this
-	// package.
-	MetricsSubsystem = "p2p"
-)
+const MetricsSubsystem = "p2p"
 
 // Metrics contains metrics exposed by this package.
 type Metrics struct {
@@ -28,51 +24,45 @@ type Metrics struct {
 }
 
 // PrometheusMetrics returns Metrics build using Prometheus client library.
-// Optionally, labels can be provided along with their values ("foo",
-// "fooValue").
-func PrometheusMetrics(namespace string, labelsAndValues ...string) *Metrics {
-	labels := []string{}
-	for i := 0; i < len(labelsAndValues); i += 2 {
-		labels = append(labels, labelsAndValues[i])
-	}
+func PrometheusMetrics(namespace string) *Metrics {
 	return &Metrics{
 		Peers: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "peers",
 			Help:      "Number of peers.",
-		}, labels).With(labelsAndValues...),
+		}, []string{}),
 		PeerReceiveBytesTotal: prometheus.NewCounterFrom(stdprometheus.CounterOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "peer_receive_bytes_total",
 			Help:      "Number of bytes received from a given peer.",
-		}, append(labels, "peer_id")).With(labelsAndValues...),
+		}, []string{"peer_id"}),
 		PeerSendBytesTotal: prometheus.NewCounterFrom(stdprometheus.CounterOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "peer_send_bytes_total",
 			Help:      "Number of bytes sent to a given peer.",
-		}, append(labels, "peer_id")).With(labelsAndValues...),
+		}, []string{"peer_id"}),
 		PeerPendingSendBytes: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "peer_pending_send_bytes",
 			Help:      "Number of pending bytes to be sent to a given peer.",
-		}, append(labels, "peer_id")).With(labelsAndValues...),
+		}, []string{"peer_id"}),
 		NumTxs: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "num_txs",
 			Help:      "Number of transactions submitted by each peer.",
-		}, append(labels, "peer_id")).With(labelsAndValues...),
+		}, []string{"peer_id"}),
 	}
 }
 
 // NopMetrics returns no-op Metrics.
 func NopMetrics() *Metrics {
 	return &Metrics{
-		Peers:                 discard.NewGauge(),
+		Peers: discard.NewGauge(),
 		PeerReceiveBytesTotal: discard.NewCounter(),
 		PeerSendBytesTotal:    discard.NewCounter(),
 		PeerPendingSendBytes:  discard.NewGauge(),

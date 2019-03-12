@@ -98,7 +98,7 @@ func (prt *ProofRuntime) Decode(pop ProofOp) (ProofOperator, error) {
 }
 
 func (prt *ProofRuntime) DecodeProof(proof *Proof) (ProofOperators, error) {
-	poz := make(ProofOperators, 0, len(proof.Ops))
+	var poz ProofOperators
 	for _, pop := range proof.Ops {
 		operator, err := prt.Decode(pop)
 		if err != nil {

@@ -33,11 +33,13 @@ type Timeval struct {
 
 type Timex struct {
 	Modes     uint32
+	_         [4]byte
 	Offset    int64
 	Freq      int64
 	Maxerror  int64
 	Esterror  int64
 	Status    int32
+	_         [4]byte
 	Constant  int64
 	Precision int64
 	Tolerance int64
@@ -46,6 +48,7 @@ type Timex struct {
 	Ppsfreq   int64
 	Jitter    int64
 	Shift     int32
+	_         [4]byte
 	Stabil    int64
 	Jitcnt    int64
 	Calcnt    int64
@@ -159,6 +162,7 @@ type Fsid struct {
 type Flock_t struct {
 	Type   int16
 	Whence int16
+	_      [4]byte
 	Start  int64
 	Len    int64
 	Pid    int32
@@ -255,6 +259,7 @@ type RawSockaddrRFCOMM struct {
 
 type RawSockaddrCAN struct {
 	Family  uint16
+	_       [2]byte
 	Ifindex int32
 	Addr    [8]byte
 }
@@ -333,6 +338,7 @@ type PacketMreq struct {
 type Msghdr struct {
 	Name       *byte
 	Namelen    uint32
+	_          [4]byte
 	Iov        *Iovec
 	Iovlen     uint64
 	Control    *byte
@@ -380,6 +386,7 @@ type TCPInfo struct {
 	Probes         uint8
 	Backoff        uint8
 	Options        uint8
+	_              [2]byte
 	Rto            uint32
 	Ato            uint32
 	Snd_mss        uint32
@@ -404,11 +411,6 @@ type TCPInfo struct {
 	Rcv_rtt        uint32
 	Rcv_space      uint32
 	Total_retrans  uint32
-}
-
-type CanFilter struct {
-	Id   uint32
-	Mask uint32
 }
 
 const (
@@ -440,7 +442,6 @@ const (
 	SizeofICMPv6Filter      = 0x20
 	SizeofUcred             = 0xc
 	SizeofTCPInfo           = 0x68
-	SizeofCanFilter         = 0x8
 )
 
 const (
@@ -576,7 +577,6 @@ const (
 	SizeofIfAddrmsg      = 0x8
 	SizeofRtMsg          = 0xc
 	SizeofRtNexthop      = 0x8
-	SizeofNdUseroptmsg   = 0x10
 )
 
 type NlMsghdr struct {
@@ -642,17 +642,6 @@ type RtNexthop struct {
 	Ifindex int32
 }
 
-type NdUseroptmsg struct {
-	Family    uint8
-	Pad1      uint8
-	Opts_len  uint16
-	Ifindex   int32
-	Icmp_type uint8
-	Icmp_code uint8
-	Pad2      uint16
-	Pad3      uint32
-}
-
 const (
 	SizeofSockFilter = 0x8
 	SizeofSockFprog  = 0x10
@@ -667,6 +656,7 @@ type SockFilter struct {
 
 type SockFprog struct {
 	Len    uint16
+	_      [6]byte
 	Filter *SockFilter
 }
 
@@ -724,6 +714,7 @@ type Sysinfo_t struct {
 	Freeswap  uint64
 	Procs     uint16
 	Pad       uint16
+	_         [4]byte
 	Totalhigh uint64
 	Freehigh  uint64
 	Unit      uint32
@@ -742,6 +733,7 @@ type Utsname struct {
 
 type Ustat_t struct {
 	Tfree  int32
+	_      [4]byte
 	Tinode uint64
 	Fname  [6]int8
 	Fpack  [6]int8
@@ -790,30 +782,7 @@ type Sigset_t struct {
 	Val [16]uint64
 }
 
-type SignalfdSiginfo struct {
-	Signo     uint32
-	Errno     int32
-	Code      int32
-	Pid       uint32
-	Uid       uint32
-	Fd        int32
-	Tid       uint32
-	Band      uint32
-	Overrun   uint32
-	Trapno    uint32
-	Status    int32
-	Int       int32
-	Ptr       uint64
-	Utime     uint64
-	Stime     uint64
-	Addr      uint64
-	Addr_lsb  uint16
-	_         uint16
-	Syscall   int32
-	Call_addr uint64
-	Arch      uint32
-	_         [28]uint8
-}
+const RNDGETENTCNT = 0x80045200
 
 const PERF_IOC_FLAG_GROUP = 0x1
 
@@ -837,9 +806,11 @@ type Winsize struct {
 
 type Taskstats struct {
 	Version                   uint16
+	_                         [2]byte
 	Ac_exitcode               uint32
 	Ac_flag                   uint8
 	Ac_nice                   uint8
+	_                         [6]byte
 	Cpu_count                 uint64
 	Cpu_delay_total           uint64
 	Blkio_count               uint64
@@ -857,6 +828,7 @@ type Taskstats struct {
 	Ac_pid                    uint32
 	Ac_ppid                   uint32
 	Ac_btime                  uint32
+	_                         [4]byte
 	Ac_etime                  uint64
 	Ac_utime                  uint64
 	Ac_stime                  uint64
@@ -880,8 +852,6 @@ type Taskstats struct {
 	Cpu_scaled_run_real_total uint64
 	Freepages_count           uint64
 	Freepages_delay_total     uint64
-	Thrashing_count           uint64
-	Thrashing_delay_total     uint64
 }
 
 const (
@@ -1230,6 +1200,7 @@ type HDGeometry struct {
 	Heads     uint8
 	Sectors   uint8
 	Cylinders uint16
+	_         [4]byte
 	Start     uint64
 }
 
@@ -1915,6 +1886,7 @@ type RTCTime struct {
 type RTCWkAlrm struct {
 	Enabled uint8
 	Pending uint8
+	_       [2]byte
 	Time    RTCTime
 }
 
@@ -1932,6 +1904,7 @@ type BlkpgIoctlArg struct {
 	Op      int32
 	Flags   int32
 	Datalen int32
+	_       [4]byte
 	Data    *byte
 }
 
@@ -2018,10 +1991,6 @@ const (
 	NCSI_CHANNEL_ATTR_VLAN_ID       = 0xa
 )
 
-type ScmTimestamping struct {
-	Ts [3]Timespec
-}
-
 const (
 	SOF_TIMESTAMPING_TX_HARDWARE  = 0x1
 	SOF_TIMESTAMPING_TX_SOFTWARE  = 0x2
@@ -2041,18 +2010,4 @@ const (
 
 	SOF_TIMESTAMPING_LAST = 0x4000
 	SOF_TIMESTAMPING_MASK = 0x7fff
-
-	SCM_TSTAMP_SND   = 0x0
-	SCM_TSTAMP_SCHED = 0x1
-	SCM_TSTAMP_ACK   = 0x2
 )
-
-type SockExtendedErr struct {
-	Errno  uint32
-	Origin uint8
-	Type   uint8
-	Code   uint8
-	Pad    uint8
-	Info   uint32
-	Data   uint32
-}

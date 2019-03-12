@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
@@ -66,8 +67,7 @@ func SimpleProofsFromMap(m map[string][]byte) (rootHash []byte, proofs map[strin
 
 // Verify that the SimpleProof proves the root hash.
 // Check sp.Index/sp.Total manually if needed
-func (sp *SimpleProof) Verify(rootHash []byte, leaf []byte) error {
-	leafHash := leafHash(leaf)
+func (sp *SimpleProof) Verify(rootHash []byte, leafHash []byte) error {
 	if sp.Total < 0 {
 		return errors.New("Proof total must be positive")
 	}
@@ -128,19 +128,19 @@ func computeHashFromAunts(index int, total int, leafHash []byte, innerHashes [][
 		if len(innerHashes) == 0 {
 			return nil
 		}
-		numLeft := getSplitPoint(total)
+		numLeft := (total + 1) / 2
 		if index < numLeft {
 			leftHash := computeHashFromAunts(index, numLeft, leafHash, innerHashes[:len(innerHashes)-1])
 			if leftHash == nil {
 				return nil
 			}
-			return innerHash(leftHash, innerHashes[len(innerHashes)-1])
+			return simpleHashFromTwoHashes(leftHash, innerHashes[len(innerHashes)-1])
 		}
 		rightHash := computeHashFromAunts(index-numLeft, total-numLeft, leafHash, innerHashes[:len(innerHashes)-1])
 		if rightHash == nil {
 			return nil
 		}
-		return innerHash(innerHashes[len(innerHashes)-1], rightHash)
+		return simpleHashFromTwoHashes(innerHashes[len(innerHashes)-1], rightHash)
 	}
 }
 
@@ -182,13 +182,12 @@ func trailsFromByteSlices(items [][]byte) (trails []*SimpleProofNode, root *Simp
 	case 0:
 		return nil, nil
 	case 1:
-		trail := &SimpleProofNode{leafHash(items[0]), nil, nil, nil}
+		trail := &SimpleProofNode{tmhash.Sum(items[0]), nil, nil, nil}
 		return []*SimpleProofNode{trail}, trail
 	default:
-		k := getSplitPoint(len(items))
-		lefts, leftRoot := trailsFromByteSlices(items[:k])
-		rights, rightRoot := trailsFromByteSlices(items[k:])
-		rootHash := innerHash(leftRoot.Hash, rightRoot.Hash)
+		lefts, leftRoot := trailsFromByteSlices(items[:(len(items)+1)/2])
+		rights, rightRoot := trailsFromByteSlices(items[(len(items)+1)/2:])
+		rootHash := simpleHashFromTwoHashes(leftRoot.Hash, rightRoot.Hash)
 		root := &SimpleProofNode{rootHash, nil, nil, nil}
 		leftRoot.Parent = root
 		leftRoot.Right = rightRoot

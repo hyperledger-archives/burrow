@@ -58,7 +58,7 @@ type ParseError struct {
 	Input string
 	// Msg s the error message
 	Msg string
-	// Post is where in the input the error occurred
+	// Post is where in the input the error occured
 	Pos int
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/tendermint/tendermint/crypto/merkle"
+	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
@@ -21,6 +22,19 @@ type Part struct {
 	Index int                `json:"index"`
 	Bytes cmn.HexBytes       `json:"bytes"`
 	Proof merkle.SimpleProof `json:"proof"`
+
+	// Cache
+	hash []byte
+}
+
+func (part *Part) Hash() []byte {
+	if part.hash != nil {
+		return part.hash
+	}
+	hasher := tmhash.New()
+	hasher.Write(part.Bytes) // nolint: errcheck, gas
+	part.hash = hasher.Sum(nil)
+	return part.hash
 }
 
 // ValidateBasic performs basic validation.
@@ -61,7 +75,7 @@ func (psh PartSetHeader) String() string {
 }
 
 func (psh PartSetHeader) IsZero() bool {
-	return psh.Total == 0 && len(psh.Hash) == 0
+	return psh.Total == 0
 }
 
 func (psh PartSetHeader) Equals(other PartSetHeader) bool {
@@ -203,7 +217,7 @@ func (ps *PartSet) AddPart(part *Part) (bool, error) {
 	}
 
 	// Check hash proof
-	if part.Proof.Verify(ps.Hash(), part.Bytes) != nil {
+	if part.Proof.Verify(ps.Hash(), part.Hash()) != nil {
 		return false, ErrPartSetInvalidProof
 	}
 

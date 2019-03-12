@@ -2,7 +2,6 @@ package cli
 
 import (
 	"flag"
-	"fmt"
 	"strings"
 
 	"github.com/jawher/mow.cli/internal/container"
@@ -254,9 +253,6 @@ func (c *Cmd) mkOpt(opt container.Container) {
 
 	c.options = append(c.options, &opt)
 	for _, name := range opt.Names {
-		if _, found := c.optionsIdx[name]; found {
-			panic(fmt.Sprintf("duplicate option name %q", name))
-		}
 		c.optionsIdx[name] = &opt
 	}
 }

@@ -175,9 +175,6 @@ func (na *NetAddress) Same(other interface{}) bool {
 
 // String representation: <ID>@<IP>:<PORT>
 func (na *NetAddress) String() string {
-	if na == nil {
-		return "<nil-NetAddress>"
-	}
 	if na.str == "" {
 		addrStr := na.DialString()
 		if na.ID != "" {
@@ -189,9 +186,6 @@ func (na *NetAddress) String() string {
 }
 
 func (na *NetAddress) DialString() string {
-	if na == nil {
-		return "<nil-NetAddress>"
-	}
 	return net.JoinHostPort(
 		na.IP.String(),
 		strconv.FormatUint(uint64(na.Port), 10),

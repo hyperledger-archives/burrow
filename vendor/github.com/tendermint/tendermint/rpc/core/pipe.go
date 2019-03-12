@@ -149,19 +149,8 @@ func validatePage(page, perPage, totalCount int) int {
 }
 
 func validatePerPage(perPage int) int {
-	if perPage < 1 {
+	if perPage < 1 || perPage > maxPerPage {
 		return defaultPerPage
-	} else if perPage > maxPerPage {
-		return maxPerPage
 	}
 	return perPage
-}
-
-func validateSkipCount(page, perPage int) int {
-	skipCount := (page - 1) * perPage
-	if skipCount < 0 {
-		return 0
-	}
-
-	return skipCount
 }

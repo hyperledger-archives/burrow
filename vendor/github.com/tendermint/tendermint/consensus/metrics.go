@@ -8,11 +8,7 @@ import (
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	// MetricsSubsystem is a subsystem shared by all metrics exposed by this
-	// package.
-	MetricsSubsystem = "consensus"
-)
+const MetricsSubsystem = "consensus"
 
 // Metrics contains metrics exposed by this package.
 type Metrics struct {
@@ -54,107 +50,101 @@ type Metrics struct {
 }
 
 // PrometheusMetrics returns Metrics build using Prometheus client library.
-// Optionally, labels can be provided along with their values ("foo",
-// "fooValue").
-func PrometheusMetrics(namespace string, labelsAndValues ...string) *Metrics {
-	labels := []string{}
-	for i := 0; i < len(labelsAndValues); i += 2 {
-		labels = append(labels, labelsAndValues[i])
-	}
+func PrometheusMetrics(namespace string) *Metrics {
 	return &Metrics{
 		Height: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "height",
 			Help:      "Height of the chain.",
-		}, labels).With(labelsAndValues...),
+		}, []string{}),
 		Rounds: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "rounds",
 			Help:      "Number of rounds.",
-		}, labels).With(labelsAndValues...),
+		}, []string{}),
 
 		Validators: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "validators",
 			Help:      "Number of validators.",
-		}, labels).With(labelsAndValues...),
+		}, []string{}),
 		ValidatorsPower: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "validators_power",
 			Help:      "Total power of all validators.",
-		}, labels).With(labelsAndValues...),
+		}, []string{}),
 		MissingValidators: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "missing_validators",
 			Help:      "Number of validators who did not sign.",
-		}, labels).With(labelsAndValues...),
+		}, []string{}),
 		MissingValidatorsPower: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "missing_validators_power",
 			Help:      "Total power of the missing validators.",
-		}, labels).With(labelsAndValues...),
+		}, []string{}),
 		ByzantineValidators: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "byzantine_validators",
 			Help:      "Number of validators who tried to double sign.",
-		}, labels).With(labelsAndValues...),
+		}, []string{}),
 		ByzantineValidatorsPower: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "byzantine_validators_power",
 			Help:      "Total power of the byzantine validators.",
-		}, labels).With(labelsAndValues...),
+		}, []string{}),
 
 		BlockIntervalSeconds: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "block_interval_seconds",
 			Help:      "Time between this and the last block.",
-		}, labels).With(labelsAndValues...),
+		}, []string{}),
 
 		NumTxs: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "num_txs",
 			Help:      "Number of transactions.",
-		}, labels).With(labelsAndValues...),
+		}, []string{}),
 		BlockSizeBytes: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "block_size_bytes",
 			Help:      "Size of the block.",
-		}, labels).With(labelsAndValues...),
+		}, []string{}),
 		TotalTxs: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "total_txs",
 			Help:      "Total number of transactions.",
-		}, labels).With(labelsAndValues...),
+		}, []string{}),
 		CommittedHeight: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "latest_block_height",
 			Help:      "The latest block height.",
-		}, labels).With(labelsAndValues...),
+		}, []string{}),
 		FastSyncing: prometheus.NewGaugeFrom(stdprometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "fast_syncing",
 			Help:      "Whether or not a node is fast syncing. 1 if yes, 0 if no.",
-		}, labels).With(labelsAndValues...),
+		}, []string{}),
 		BlockParts: prometheus.NewCounterFrom(stdprometheus.CounterOpts{
 			Namespace: namespace,
 			Subsystem: MetricsSubsystem,
 			Name:      "block_parts",
 			Help:      "Number of blockparts transmitted by peer.",
-		}, append(labels, "peer_id")).With(labelsAndValues...),
+		}, []string{"peer_id"}),
 	}
 }
 

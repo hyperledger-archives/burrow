@@ -8,6 +8,7 @@ import (
 
 	amino "github.com/tendermint/go-amino"
 
+	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/tendermint/tendermint/p2p"
 	sm "github.com/tendermint/tendermint/state"
@@ -301,7 +302,7 @@ FOR_LOOP:
 
 			firstParts := first.MakePartSet(types.BlockPartSizeBytes)
 			firstPartsHeader := firstParts.Header()
-			firstID := types.BlockID{Hash: first.Hash(), PartsHeader: firstPartsHeader}
+			firstID := types.BlockID{first.Hash(), firstPartsHeader}
 			// Finally, verify the first block using the second's commit
 			// NOTE: we can probably make this more efficient, but note that calling
 			// first.Hash() doesn't verify the tx contents, so MakePartSet() is
@@ -337,7 +338,8 @@ FOR_LOOP:
 				state, err = bcR.blockExec.ApplyBlock(state, firstID, first)
 				if err != nil {
 					// TODO This is bad, are we zombie?
-					panic(fmt.Sprintf("Failed to process committed block (%d:%X): %v", first.Height, first.Hash(), err))
+					cmn.PanicQ(fmt.Sprintf("Failed to process committed block (%d:%X): %v",
+						first.Height, first.Hash(), err))
 				}
 				blocksSynced++
 
@@ -430,7 +432,11 @@ type bcBlockResponseMessage struct {
 
 // ValidateBasic performs basic validation.
 func (m *bcBlockResponseMessage) ValidateBasic() error {
-	return m.Block.ValidateBasic()
+	if err := m.Block.ValidateBasic(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *bcBlockResponseMessage) String() string {

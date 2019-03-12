@@ -2,16 +2,12 @@ package config
 
 import (
 	"bytes"
-	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"text/template"
 
 	cmn "github.com/tendermint/tendermint/libs/common"
 )
-
-// DefaultDirPerm is the default permissions used when creating directories.
-const DefaultDirPerm = 0700
 
 var configTemplate *template.Template
 
@@ -27,13 +23,13 @@ func init() {
 // EnsureRoot creates the root, config, and data directories if they don't exist,
 // and panics if it fails.
 func EnsureRoot(rootDir string) {
-	if err := cmn.EnsureDir(rootDir, DefaultDirPerm); err != nil {
+	if err := cmn.EnsureDir(rootDir, 0700); err != nil {
 		cmn.PanicSanity(err.Error())
 	}
-	if err := cmn.EnsureDir(filepath.Join(rootDir, defaultConfigDir), DefaultDirPerm); err != nil {
+	if err := cmn.EnsureDir(filepath.Join(rootDir, defaultConfigDir), 0700); err != nil {
 		cmn.PanicSanity(err.Error())
 	}
-	if err := cmn.EnsureDir(filepath.Join(rootDir, defaultDataDir), DefaultDirPerm); err != nil {
+	if err := cmn.EnsureDir(filepath.Join(rootDir, defaultDataDir), 0700); err != nil {
 		cmn.PanicSanity(err.Error())
 	}
 
@@ -99,10 +95,7 @@ log_format = "{{ .BaseConfig.LogFormat }}"
 genesis_file = "{{ js .BaseConfig.Genesis }}"
 
 # Path to the JSON file containing the private key to use as a validator in the consensus protocol
-priv_validator_key_file = "{{ js .BaseConfig.PrivValidatorKey }}"
-
-# Path to the JSON file containing the last sign state of a validator
-priv_validator_state_file = "{{ js .BaseConfig.PrivValidatorState }}"
+priv_validator_file = "{{ js .BaseConfig.PrivValidator }}"
 
 # TCP or UNIX socket address for Tendermint to listen on for
 # connections from an external PrivValidator process
@@ -132,13 +125,13 @@ laddr = "{{ .RPC.ListenAddress }}"
 # A list of origins a cross-domain request can be executed from
 # Default value '[]' disables cors support
 # Use '["*"]' to allow any origin
-cors_allowed_origins = [{{ range .RPC.CORSAllowedOrigins }}{{ printf "%q, " . }}{{end}}]
+cors_allowed_origins = "{{ .RPC.CORSAllowedOrigins }}"
 
 # A list of methods the client is allowed to use with cross-domain requests
-cors_allowed_methods = [{{ range .RPC.CORSAllowedMethods }}{{ printf "%q, " . }}{{end}}]
+cors_allowed_methods = "{{ .RPC.CORSAllowedMethods }}"
 
 # A list of non simple headers the client is allowed to use with cross-domain requests
-cors_allowed_headers = [{{ range .RPC.CORSAllowedHeaders }}{{ printf "%q, " . }}{{end}}]
+cors_allowed_headers = "{{ .RPC.CORSAllowedHeaders }}"
 
 # TCP or UNIX socket address for the gRPC server to listen on
 # NOTE: This server only supports /broadcast_tx_commit
@@ -146,7 +139,7 @@ grpc_laddr = "{{ .RPC.GRPCListenAddress }}"
 
 # Maximum number of simultaneous connections.
 # Does not include RPC (HTTP&WebSocket) connections. See max_open_connections
-# If you want to accept a larger number than the default, make sure
+# If you want to accept more significant number than the default, make sure
 # you increase your OS limits.
 # 0 - unlimited.
 # Should be < {ulimit -Sn} - {MaxNumInboundPeers} - {MaxNumOutboundPeers} - {N of wal, db and other open files}
@@ -158,7 +151,7 @@ unsafe = {{ .RPC.Unsafe }}
 
 # Maximum number of simultaneous connections (including WebSocket).
 # Does not include gRPC connections. See grpc_max_open_connections
-# If you want to accept a larger number than the default, make sure
+# If you want to accept more significant number than the default, make sure
 # you increase your OS limits.
 # 0 - unlimited.
 # Should be < {ulimit -Sn} - {MaxNumInboundPeers} - {MaxNumOutboundPeers} - {N of wal, db and other open files}
@@ -276,8 +269,8 @@ blocktime_iota = "{{ .Consensus.BlockTimeIota }}"
 # What indexer to use for transactions
 #
 # Options:
-#   1) "null"
-#   2) "kv" (default) - the simplest possible indexer, backed by key-value storage (defaults to levelDB; see DBBackend).
+#   1) "null" (default)
+#   2) "kv" - the simplest possible indexer, backed by key-value storage (defaults to levelDB; see DBBackend).
 indexer = "{{ .TxIndex.Indexer }}"
 
 # Comma-separated list of tags to index (by default the only tag is "tx.hash")
@@ -309,7 +302,7 @@ prometheus = {{ .Instrumentation.Prometheus }}
 prometheus_listen_addr = "{{ .Instrumentation.PrometheusListenAddr }}"
 
 # Maximum number of simultaneous connections.
-# If you want to accept a larger number than the default, make sure
+# If you want to accept more significant number than the default, make sure
 # you increase your OS limits.
 # 0 - unlimited.
 max_open_connections = {{ .Instrumentation.MaxOpenConnections }}
@@ -321,51 +314,53 @@ namespace = "{{ .Instrumentation.Namespace }}"
 /****** these are for test settings ***********/
 
 func ResetTestRoot(testName string) *Config {
-	return ResetTestRootWithChainID(testName, "")
-}
-
-func ResetTestRootWithChainID(testName string, chainID string) *Config {
-	// create a unique, concurrency-safe test directory under os.TempDir()
-	rootDir, err := ioutil.TempDir("", fmt.Sprintf("%s-%s_", chainID, testName))
-	if err != nil {
-		panic(err)
+	rootDir := os.ExpandEnv("$HOME/.tendermint_test")
+	rootDir = filepath.Join(rootDir, testName)
+	// Remove ~/.tendermint_test_bak
+	if cmn.FileExists(rootDir + "_bak") {
+		if err := os.RemoveAll(rootDir + "_bak"); err != nil {
+			cmn.PanicSanity(err.Error())
+		}
 	}
-	// ensure config and data subdirs are created
-	if err := cmn.EnsureDir(filepath.Join(rootDir, defaultConfigDir), DefaultDirPerm); err != nil {
-		panic(err)
+	// Move ~/.tendermint_test to ~/.tendermint_test_bak
+	if cmn.FileExists(rootDir) {
+		if err := os.Rename(rootDir, rootDir+"_bak"); err != nil {
+			cmn.PanicSanity(err.Error())
+		}
 	}
-	if err := cmn.EnsureDir(filepath.Join(rootDir, defaultDataDir), DefaultDirPerm); err != nil {
-		panic(err)
+	// Create new dir
+	if err := cmn.EnsureDir(rootDir, 0700); err != nil {
+		cmn.PanicSanity(err.Error())
+	}
+	if err := cmn.EnsureDir(filepath.Join(rootDir, defaultConfigDir), 0700); err != nil {
+		cmn.PanicSanity(err.Error())
+	}
+	if err := cmn.EnsureDir(filepath.Join(rootDir, defaultDataDir), 0700); err != nil {
+		cmn.PanicSanity(err.Error())
 	}
 
 	baseConfig := DefaultBaseConfig()
 	configFilePath := filepath.Join(rootDir, defaultConfigFilePath)
 	genesisFilePath := filepath.Join(rootDir, baseConfig.Genesis)
-	privKeyFilePath := filepath.Join(rootDir, baseConfig.PrivValidatorKey)
-	privStateFilePath := filepath.Join(rootDir, baseConfig.PrivValidatorState)
+	privFilePath := filepath.Join(rootDir, baseConfig.PrivValidator)
 
 	// Write default config file if missing.
 	if !cmn.FileExists(configFilePath) {
 		writeDefaultConfigFile(configFilePath)
 	}
 	if !cmn.FileExists(genesisFilePath) {
-		if chainID == "" {
-			chainID = "tendermint_test"
-		}
-		testGenesis := fmt.Sprintf(testGenesisFmt, chainID)
 		cmn.MustWriteFile(genesisFilePath, []byte(testGenesis), 0644)
 	}
 	// we always overwrite the priv val
-	cmn.MustWriteFile(privKeyFilePath, []byte(testPrivValidatorKey), 0644)
-	cmn.MustWriteFile(privStateFilePath, []byte(testPrivValidatorState), 0644)
+	cmn.MustWriteFile(privFilePath, []byte(testPrivValidator), 0644)
 
 	config := TestConfig().SetRoot(rootDir)
 	return config
 }
 
-var testGenesisFmt = `{
+var testGenesis = `{
   "genesis_time": "2018-10-10T08:20:13.695936996Z",
-  "chain_id": "%s",
+  "chain_id": "tendermint_test",
   "validators": [
     {
       "pub_key": {
@@ -379,7 +374,7 @@ var testGenesisFmt = `{
   "app_hash": ""
 }`
 
-var testPrivValidatorKey = `{
+var testPrivValidator = `{
   "address": "A3258DCBF45DCA0DF052981870F2D1441A36D145",
   "pub_key": {
     "type": "tendermint/PubKeyEd25519",
@@ -388,11 +383,8 @@ var testPrivValidatorKey = `{
   "priv_key": {
     "type": "tendermint/PrivKeyEd25519",
     "value": "EVkqJO/jIXp3rkASXfh9YnyToYXRXhBr6g9cQVxPFnQBP/5povV4HTjvsy530kybxKHwEi85iU8YL0qQhSYVoQ=="
-  }
-}`
-
-var testPrivValidatorState = `{
-  "height": "0",
-  "round": "0",
-  "step": 0
+  },
+  "last_height": "0",
+  "last_round": "0",
+  "last_step": 0
 }`

@@ -3,20 +3,25 @@ package types
 import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/merkle"
+	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 )
 
 //-----------------------------------------------------------------------------
 
 // ABCIResult is the deterministic component of a ResponseDeliverTx.
-// TODO: add tags and other fields
-// https://github.com/tendermint/tendermint/issues/1007
+// TODO: add Tags
 type ABCIResult struct {
 	Code uint32       `json:"code"`
 	Data cmn.HexBytes `json:"data"`
 }
 
-// Bytes returns the amino encoded ABCIResult
+// Hash returns the canonical hash of the ABCIResult
+func (a ABCIResult) Hash() []byte {
+	bz := tmhash.Sum(cdcEncode(a))
+	return bz
+}
+
 func (a ABCIResult) Bytes() []byte {
 	return cdcEncode(a)
 }

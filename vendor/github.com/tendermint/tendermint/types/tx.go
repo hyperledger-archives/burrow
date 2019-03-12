@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	amino "github.com/tendermint/go-amino"
+	"github.com/tendermint/go-amino"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/merkle"
@@ -31,14 +31,13 @@ func (tx Tx) String() string {
 // Txs is a slice of Tx.
 type Txs []Tx
 
-// Hash returns the Merkle root hash of the transaction hashes.
-// i.e. the leaves of the tree are the hashes of the txs.
+// Hash returns the simple Merkle root hash of the transactions.
 func (txs Txs) Hash() []byte {
 	// These allocations will be removed once Txs is switched to [][]byte,
 	// ref #2603. This is because golang does not allow type casting slices without unsafe
 	txBzs := make([][]byte, len(txs))
 	for i := 0; i < len(txs); i++ {
-		txBzs[i] = txs[i].Hash()
+		txBzs[i] = txs[i]
 	}
 	return merkle.SimpleHashFromByteSlices(txBzs)
 }
@@ -70,7 +69,7 @@ func (txs Txs) Proof(i int) TxProof {
 	l := len(txs)
 	bzs := make([][]byte, l)
 	for i := 0; i < l; i++ {
-		bzs[i] = txs[i].Hash()
+		bzs[i] = txs[i]
 	}
 	root, proofs := merkle.SimpleProofsFromByteSlices(bzs)
 
@@ -88,8 +87,8 @@ type TxProof struct {
 	Proof    merkle.SimpleProof
 }
 
-// Leaf returns the hash(tx), which is the leaf in the merkle tree which this proof refers to.
-func (tp TxProof) Leaf() []byte {
+// LeadHash returns the hash of the this proof refers to.
+func (tp TxProof) LeafHash() []byte {
 	return tp.Data.Hash()
 }
 
@@ -105,7 +104,7 @@ func (tp TxProof) Validate(dataHash []byte) error {
 	if tp.Proof.Total <= 0 {
 		return errors.New("Proof total must be positive")
 	}
-	valid := tp.Proof.Verify(tp.RootHash, tp.Leaf())
+	valid := tp.Proof.Verify(tp.RootHash, tp.LeafHash())
 	if valid != nil {
 		return errors.New("Proof is not internally consistent")
 	}

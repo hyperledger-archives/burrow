@@ -11,7 +11,6 @@ import (
 
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/merkle"
-	"github.com/tendermint/tendermint/crypto/tmhash"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/version"
 )
@@ -323,17 +322,16 @@ func MaxDataBytes(maxBytes int64, valsCount, evidenceCount int) int64 {
 }
 
 // MaxDataBytesUnknownEvidence returns the maximum size of block's data when
-// evidence count is unknown. MaxEvidencePerBlock will be used for the size
+// evidence count is unknown. MaxEvidenceBytesPerBlock will be used as the size
 // of evidence.
 //
 // XXX: Panics on negative result.
 func MaxDataBytesUnknownEvidence(maxBytes int64, valsCount int) int64 {
-	_, maxEvidenceBytes := MaxEvidencePerBlock(maxBytes)
 	maxDataBytes := maxBytes -
 		MaxAminoOverheadForBlock -
 		MaxHeaderBytes -
 		int64(valsCount)*MaxVoteBytes -
-		maxEvidenceBytes
+		MaxEvidenceBytesPerBlock(maxBytes)
 
 	if maxDataBytes < 0 {
 		panic(fmt.Sprintf(
@@ -477,100 +475,55 @@ func (h *Header) StringIndented(indent string) string {
 
 //-------------------------------------
 
-// CommitSig is a vote included in a Commit.
-// For now, it is identical to a vote,
-// but in the future it will contain fewer fields
-// to eliminate the redundancy in commits.
-// See https://github.com/tendermint/tendermint/issues/1648.
-type CommitSig Vote
-
-// String returns the underlying Vote.String()
-func (cs *CommitSig) String() string {
-	return cs.toVote().String()
-}
-
-// toVote converts the CommitSig to a vote.
-// TODO: deprecate for #1648. Converting to Vote will require
-// access to ValidatorSet.
-func (cs *CommitSig) toVote() *Vote {
-	if cs == nil {
-		return nil
-	}
-	v := Vote(*cs)
-	return &v
-}
-
 // Commit contains the evidence that a block was committed by a set of validators.
 // NOTE: Commit is empty for height 1, but never nil.
 type Commit struct {
 	// NOTE: The Precommits are in order of address to preserve the bonded ValidatorSet order.
 	// Any peer with a block can gossip precommits by index with a peer without recalculating the
 	// active ValidatorSet.
-	BlockID    BlockID      `json:"block_id"`
-	Precommits []*CommitSig `json:"precommits"`
+	BlockID    BlockID `json:"block_id"`
+	Precommits []*Vote `json:"precommits"`
 
-	// memoized in first call to corresponding method
-	// NOTE: can't memoize in constructor because constructor
-	// isn't used for unmarshaling
-	height   int64
-	round    int
-	hash     cmn.HexBytes
-	bitArray *cmn.BitArray
+	// Volatile
+	firstPrecommit *Vote
+	hash           cmn.HexBytes
+	bitArray       *cmn.BitArray
 }
 
-// NewCommit returns a new Commit with the given blockID and precommits.
-// TODO: memoize ValidatorSet in constructor so votes can be easily reconstructed
-// from CommitSig after #1648.
-func NewCommit(blockID BlockID, precommits []*CommitSig) *Commit {
-	return &Commit{
-		BlockID:    blockID,
-		Precommits: precommits,
-	}
-}
-
-// VoteSignBytes constructs the SignBytes for the given CommitSig.
-// The only unique part of the SignBytes is the Timestamp - all other fields
-// signed over are otherwise the same for all validators.
-func (commit *Commit) VoteSignBytes(chainID string, cs *CommitSig) []byte {
-	return commit.ToVote(cs).SignBytes(chainID)
-}
-
-// memoizeHeightRound memoizes the height and round of the commit using
-// the first non-nil vote.
-func (commit *Commit) memoizeHeightRound() {
+// FirstPrecommit returns the first non-nil precommit in the commit.
+// If all precommits are nil, it returns an empty precommit with height 0.
+func (commit *Commit) FirstPrecommit() *Vote {
 	if len(commit.Precommits) == 0 {
-		return
+		return nil
 	}
-	if commit.height > 0 {
-		return
+	if commit.firstPrecommit != nil {
+		return commit.firstPrecommit
 	}
 	for _, precommit := range commit.Precommits {
 		if precommit != nil {
-			commit.height = precommit.Height
-			commit.round = precommit.Round
-			return
+			commit.firstPrecommit = precommit
+			return precommit
 		}
 	}
-}
-
-// ToVote converts a CommitSig to a Vote.
-// If the CommitSig is nil, the Vote will be nil.
-func (commit *Commit) ToVote(cs *CommitSig) *Vote {
-	// TODO: use commit.validatorSet to reconstruct vote
-	// and deprecate .toVote
-	return cs.toVote()
+	return &Vote{
+		Type: PrecommitType,
+	}
 }
 
 // Height returns the height of the commit
 func (commit *Commit) Height() int64 {
-	commit.memoizeHeightRound()
-	return commit.height
+	if len(commit.Precommits) == 0 {
+		return 0
+	}
+	return commit.FirstPrecommit().Height
 }
 
 // Round returns the round of the commit
 func (commit *Commit) Round() int {
-	commit.memoizeHeightRound()
-	return commit.round
+	if len(commit.Precommits) == 0 {
+		return 0
+	}
+	return commit.FirstPrecommit().Round
 }
 
 // Type returns the vote type of the commit, which is always VoteTypePrecommit
@@ -599,14 +552,12 @@ func (commit *Commit) BitArray() *cmn.BitArray {
 	return commit.bitArray
 }
 
-// GetByIndex returns the vote corresponding to a given validator index.
-// Panics if `index >= commit.Size()`.
-// Implements VoteSetReader.
+// GetByIndex returns the vote corresponding to a given validator index
 func (commit *Commit) GetByIndex(index int) *Vote {
-	return commit.ToVote(commit.Precommits[index])
+	return commit.Precommits[index]
 }
 
-// IsCommit returns true if there is at least one vote.
+// IsCommit returns true if there is at least one vote
 func (commit *Commit) IsCommit() bool {
 	return len(commit.Precommits) != 0
 }
@@ -685,7 +636,6 @@ func (commit *Commit) StringIndented(indent string) string {
 //-----------------------------------------------------------------------------
 
 // SignedHeader is a header along with the commits that prove it.
-// It is the basis of the lite client.
 type SignedHeader struct {
 	*Header `json:"header"`
 	Commit  *Commit `json:"commit"`
@@ -838,6 +788,11 @@ type BlockID struct {
 	PartsHeader PartSetHeader `json:"parts"`
 }
 
+// IsZero returns true if this is the BlockID for a nil-block
+func (blockID BlockID) IsZero() bool {
+	return len(blockID.Hash) == 0 && blockID.PartsHeader.IsZero()
+}
+
 // Equals returns true if the BlockID matches the given BlockID
 func (blockID BlockID) Equals(other BlockID) bool {
 	return bytes.Equal(blockID.Hash, other.Hash) &&
@@ -863,19 +818,6 @@ func (blockID BlockID) ValidateBasic() error {
 		return fmt.Errorf("Wrong PartsHeader: %v", err)
 	}
 	return nil
-}
-
-// IsZero returns true if this is the BlockID of a nil block.
-func (blockID BlockID) IsZero() bool {
-	return len(blockID.Hash) == 0 &&
-		blockID.PartsHeader.IsZero()
-}
-
-// IsComplete returns true if this is a valid BlockID of a non-nil block.
-func (blockID BlockID) IsComplete() bool {
-	return len(blockID.Hash) == tmhash.Size &&
-		blockID.PartsHeader.Total > 0 &&
-		len(blockID.PartsHeader.Hash) == tmhash.Size
 }
 
 // String returns a human readable string representation of the BlockID
