@@ -87,6 +87,7 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 		[]execution.ExecutionOption{execution.VMOptions(evm.DebugOpcodes)},
 		testConfig.Tendermint.DefaultAuthorizedPeersProvider(),
 		"",
+		nil,
 		logger)
 	if err != nil {
 		panic(err)
