@@ -70,12 +70,14 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 		restoreDumpOpt := cmd.StringOpt("restore-dump", "", "Including AppHash for restored file")
 
+		testBurrows := cmd.BoolOpt("test-burrow-configs", false, "Write test configs for all the validators")
+
 		cmd.Spec = "[--keys-url=<keys URL> | --keysdir=<keys directory>] " +
 			"[--config-template-in=<text template> --config-out=<output file>]... " +
 			"[--genesis-spec=<GenesisSpec file> | --genesis-doc=<GenesisDoc file>] " +
 			"[--separate-genesis-doc=<genesis JSON file>] [--chain-name=<chain name>] [--json] " +
 			"[--generate-node-keys] [--restore-dump=<dump file>] " +
-			"[--logging=<logging program>] [--describe-logging] [--debug]"
+			"[--logging=<logging program>] [--describe-logging] [--debug] [--test-burrow-configs]"
 
 		configOpts := addConfigOptions(cmd)
 
@@ -285,6 +287,11 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				}
 			}
 
+			var validators []genesis.Validator
+			if conf.GenesisDoc != nil {
+				validators = conf.GenesisDoc.Validators
+			}
+
 			if *separateGenesisDoc != "" {
 				if conf.GenesisDoc == nil {
 					output.Fatalf("Cannot write separate genesis doc since no GenesisDoc/GenesisSpec provided.")
@@ -309,6 +316,36 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				output.Printf(conf.JSONString())
 			} else {
 				output.Printf(conf.TOMLString())
+			}
+
+			if *testBurrows && len(validators) > 0 {
+				for i, v := range validators {
+					if v.NodeAddress == nil {
+						continue
+					}
+					seeds := ""
+					for n, v := range validators {
+						if i == n || v.NodeAddress == nil {
+							continue
+						}
+						if seeds != "" {
+							seeds += ","
+						}
+						seeds += fmt.Sprintf("tcp://%s@127.0.0.1:%d", strings.ToLower(v.NodeAddress.String()), 26656+n)
+					}
+					// set stuff
+					conf.ValidatorAddress = &v.Address
+					conf.Tendermint.PersistentPeers = seeds
+					conf.Tendermint.ListenAddress = fmt.Sprintf("tcp://127.0.0.1:%d", 26656+i)
+					conf.Tendermint.TendermintRoot = fmt.Sprintf("burrow%03d", i)
+					conf.RPC.Info.ListenAddress = fmt.Sprintf("tcp://127.0.0.1:%d", 26758+i)
+					conf.RPC.GRPC.ListenAddress = fmt.Sprintf("127.0.0.1:%d", 10997+i)
+					conf.RPC.Metrics.ListenAddress = fmt.Sprintf("tcp://127.0.0.1:%d", 9102+i)
+					conf.Logging.RootSink.Output.OutputType = "file"
+					conf.Logging.RootSink.Output.FileConfig = &logconfig.FileConfig{Path: fmt.Sprintf("burrow%03d.log", i)}
+
+					ioutil.WriteFile(fmt.Sprintf("burrow%03d.toml", i), []byte(conf.TOMLString()), 0644)
+				}
 			}
 		}
 	}
