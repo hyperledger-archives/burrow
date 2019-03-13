@@ -119,7 +119,7 @@ func (e *Exporter) getBlocks() (*rpc.ResultBlocks, error) {
 // Get transaction buckets
 func (e *Exporter) getTxBuckets(res *rpc.ResultBlocks) error {
 	e.datum.TotalTxs = 0
-	e.datum.TxPerBlockBuckets = map[float64]float64{}
+	e.datum.TxPerBlockBuckets = map[float64]uint64{}
 
 	for _, block := range res.BlockMetas {
 		txAsFloat := float64(block.Header.NumTxs)
@@ -135,7 +135,7 @@ func (e *Exporter) getBlockTimeBuckets(res *rpc.ResultBlocks) error {
 	timeSampleEnded := res.BlockMetas[0].Header.Time
 	timeSampleBegan := res.BlockMetas[len(res.BlockMetas)-1].Header.Time
 	e.datum.TotalTime = round(timeSampleEnded.Sub(timeSampleBegan).Seconds())
-	e.datum.TimePerBlockBuckets = map[float64]float64{}
+	e.datum.TimePerBlockBuckets = map[float64]uint64{}
 
 	for i, block := range res.BlockMetas {
 		if i == 0 {

@@ -331,7 +331,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 
 				if keyConfig.GRPCServiceEnabled {
 					if keyStore == nil {
-						ks = keys.NewKeyStore(keyConfig.KeysDirectory, keyConfig.AllowBadFilePermissions, kern.Logger)
+						ks = keys.NewKeyStore(keyConfig.KeysDirectory, keyConfig.AllowBadFilePermissions)
 					}
 					keys.RegisterKeysServer(grpcServer, ks)
 				}

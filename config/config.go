@@ -62,7 +62,7 @@ func (conf *BurrowConfig) Kernel(ctx context.Context, restoreDump string) (*core
 			return nil, err
 		}
 	} else {
-		keyStore = keys.NewKeyStore(conf.Keys.KeysDirectory, conf.Keys.AllowBadFilePermissions, logger)
+		keyStore = keys.NewKeyStore(conf.Keys.KeysDirectory, conf.Keys.AllowBadFilePermissions)
 		keyClient = keys.NewLocalKeyClient(keyStore, logger)
 	}
 

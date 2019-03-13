@@ -5,6 +5,7 @@ package rpctransact;
 option go_package = "github.com/hyperledger/burrow/rpc/rpctransact";
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "google/protobuf/duration.proto";
 
 import "exec.proto";
 import "payload.proto";
@@ -70,5 +71,9 @@ message TxEnvelopeParam {
     txs.Envelope Envelope = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/txs.Envelope"];
     // If no Envelope provided then one will be generated from the provided payload and signed server-side
     payload.Any Payload = 2;
+    // The amount of time to wait for the transaction to be committed and the TxExecution to be returned (server-side).
+    // If zero there wait is unbounded. Timed out transactions return SyncInfo state that may be helpful debugging
+    // non-committed transactions - this timeout must be less than client timeout to see such information!
+    google.protobuf.Duration Timeout = 3 [(gogoproto.nullable) = false, (gogoproto.stdduration) = true];
 }
 

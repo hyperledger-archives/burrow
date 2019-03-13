@@ -43,7 +43,7 @@ func NewLoggerFromLoggingConfig(loggingConfig *logconfig.LoggingConfig) (*loggin
 			return nil, err
 		}
 		logger := logging.NewLogger(outputLogger)
-		if loggingConfig.ExcludeTrace {
+		if !loggingConfig.Trace {
 			logger.Trace = log.NewNopLogger()
 		}
 		go func() {

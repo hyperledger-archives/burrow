@@ -46,9 +46,9 @@ type Datum struct {
 	OutboundPeers       float64
 	BlockSampleSize     uint64
 	TotalTxs            float64
-	TxPerBlockBuckets   map[float64]float64
+	TxPerBlockBuckets   map[float64]uint64
 	TotalTime           float64
-	TimePerBlockBuckets map[float64]float64
+	TimePerBlockBuckets map[float64]uint64
 	AccountsWithCode    float64
 	AccountsWithoutCode float64
 }
@@ -187,7 +187,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		e.chainID,
 		e.validatorMoniker,
 	)
-	ch <- prometheus.MustNewConstSummary(
+	ch <- prometheus.MustNewConstHistogram(
 		e.burrowMetrics["Tx Per Block"],
 		e.datum.BlockSampleSize,
 		e.datum.TotalTxs,
@@ -195,7 +195,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		e.chainID,
 		e.validatorMoniker,
 	)
-	ch <- prometheus.MustNewConstSummary(
+	ch <- prometheus.MustNewConstHistogram(
 		e.burrowMetrics["Time Per Block"],
 		e.datum.BlockSampleSize,
 		e.datum.TotalTime,

@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hyperledger/burrow/execution"
-
 	pkgs "github.com/hyperledger/burrow/deploy"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/proposals"
@@ -16,10 +14,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Set this to a bit longer than the transactors blocking timeout - it is more helpful to receive Burrow's remote
-// timeout and if they are set identically this will not happen because Burrow only starts its timer after receiving
-// request and doing a bit of work
-const defaultChainTimeout = execution.BlockingTimeout * 3 / 2
+// 15 seconds is like a long time man
+const defaultChainTimeout = 15 * time.Second
 
 func Deploy(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {

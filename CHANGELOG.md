@@ -2,6 +2,20 @@
 ## [Unreleased]
 
 
+## [0.24.5] - 2019-03-14
+### Changed
+- [Consensus] Tendermint timeouts configurable by a float factor from defaults and default change to 0.33 of Tendermint's default for smaller networks'
+- [Transactor] Hard-coded timeout removed from transactor and added to TxEnvelopeParam for client specified server-side timeout (in case of longer confirmation times such as when some validators are unavailable
+- [Logging] ExcludeTrace config inverted to Trace and now defaults to false (i.e. no trace/debug logging). Default log output now excludes Tendermint logging (and is therefore much less talkative)
+
+### Added
+- [Logging] Add height to all logging messages
+- [RPC] Add LastBlockCommitDuration to SyncInfo
+
+### Fixed
+- [Metrics] Replace use of Summary metrics when Histogram was intended
+
+
 ## [0.24.4] - 2019-03-08
 ### Changed
 - [EVM] Accept []byte nonce rather than enforcing the use of txs.Tx.TxHash()
@@ -414,7 +428,8 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
-[Unreleased]: https://github.com/hyperledger/burrow/compare/v0.24.4...HEAD
+[Unreleased]: https://github.com/hyperledger/burrow/compare/v0.24.5...HEAD
+[0.24.5]: https://github.com/hyperledger/burrow/compare/v0.24.4...v0.24.5
 [0.24.4]: https://github.com/hyperledger/burrow/compare/v0.24.3...v0.24.4
 [0.24.3]: https://github.com/hyperledger/burrow/compare/v0.24.2...v0.24.3
 [0.24.2]: https://github.com/hyperledger/burrow/compare/v0.24.1...v0.24.2
