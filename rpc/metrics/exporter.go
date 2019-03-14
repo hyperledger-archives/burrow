@@ -17,15 +17,12 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/hyperledger/burrow/logging/structure"
-	core_types "github.com/tendermint/tendermint/rpc/core/types"
-
 	"github.com/hyperledger/burrow/acm/acmstate"
-
 	"github.com/hyperledger/burrow/logging"
-	"github.com/prometheus/client_golang/prometheus"
-
+	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/rpc"
+	"github.com/prometheus/client_golang/prometheus"
+	core_types "github.com/tendermint/tendermint/rpc/core/types"
 )
 
 const maxUnconfirmedTxsToFetch = 10000000000
