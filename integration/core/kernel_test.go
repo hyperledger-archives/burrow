@@ -130,7 +130,7 @@ func TestLoggingSignals(t *testing.T) {
 func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, testConfig *config.BurrowConfig,
 	logger *logging.Logger, blockChecker func(block *exec.BlockExecution) (cont bool)) error {
 
-	keyStore := keys.NewKeyStore(keys.DefaultKeysDir, false, logger)
+	keyStore := keys.NewKeyStore(keys.DefaultKeysDir, false)
 	keyClient := mock.NewKeyClient(privateAccounts...)
 	ctx := context.Background()
 	kern, err := core.NewKernel(ctx, keyClient, privValidator,

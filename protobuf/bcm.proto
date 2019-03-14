@@ -5,6 +5,7 @@ option go_package = "github.com/hyperledger/burrow/bcm";
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
 
 package bcm;
 
@@ -22,4 +23,6 @@ message SyncInfo {
     google.protobuf.Timestamp LatestBlockTime = 4 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
     // Time at which we committed the last block
     google.protobuf.Timestamp LatestBlockSeenTime = 5 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
+    // Time elapsed since last commit
+    google.protobuf.Duration LatestBlockDuration = 6 [(gogoproto.nullable) = false, (gogoproto.stdduration) = true];
 }

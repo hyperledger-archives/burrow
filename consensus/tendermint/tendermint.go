@@ -68,7 +68,7 @@ func NewNode(conf *config.Config, privValidator tmTypes.PrivValidator, genesisDo
 		},
 		nde.DBProvider,
 		metricsProvider,
-		NewLogger(logger.WithPrefix(structure.ComponentKey, "Tendermint").
+		NewLogger(logger.WithPrefix(structure.ComponentKey, structure.Tendermint).
 			With(structure.ScopeKey, "tendermint.NewNode")))
 	if err != nil {
 		return nil, err

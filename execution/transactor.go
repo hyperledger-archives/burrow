@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/bcm"
@@ -36,7 +35,6 @@ import (
 )
 
 const (
-	BlockingTimeout     = 10 * time.Second
 	SubscribeBufferSize = 10
 )
 
@@ -89,28 +87,21 @@ func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelop
 	}
 	defer trans.Subscribable.UnsubscribeAll(context.Background(), subID)
 	// Push Tx to mempool
-	checkTxReceipt, err := trans.CheckTxSync(txEnv)
+	checkTxReceipt, err := trans.CheckTxSync(ctx, txEnv)
 	unlock()
 	if err != nil {
 		return nil, err
 	}
-	// Wait for all responses
-	timer := time.NewTimer(BlockingTimeout)
-	defer timer.Stop()
-
 	// Get all the execution events for this Tx
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-timer.C:
 		syncInfo := bcm.GetSyncInfo(trans.BlockchainInfo)
 		bs, err := json.Marshal(syncInfo)
 		syncInfoString := string(bs)
 		if err != nil {
 			syncInfoString = fmt.Sprintf("{error could not marshal SyncInfo: %v}", err)
 		}
-		return nil, fmt.Errorf("timed out waiting for transaction with hash %v timed out after %v, SyncInfo: %s",
-			checkTxReceipt.TxHash, BlockingTimeout, syncInfoString)
+		return nil, fmt.Errorf("waiting for tx %v, SyncInfo: %s", checkTxReceipt.TxHash, syncInfoString)
 	case msg := <-out:
 		txe := msg.(*exec.TxExecution)
 		callError := txe.CallError()
@@ -123,13 +114,13 @@ func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelop
 
 // Broadcast a transaction without waiting for confirmation - will attempt to sign server-side and set sequence numbers
 // if no signatures are provided
-func (trans *Transactor) BroadcastTxAsync(txEnv *txs.Envelope) (*txs.Receipt, error) {
-	return trans.CheckTxSync(txEnv)
+func (trans *Transactor) BroadcastTxAsync(ctx context.Context, txEnv *txs.Envelope) (*txs.Receipt, error) {
+	return trans.CheckTxSync(ctx, txEnv)
 }
 
 // Broadcast a transaction and waits for a response from the mempool. Transactions to BroadcastTx will block during
 // various mempool operations (managed by Tendermint) including mempool Reap, Commit, and recheckTx.
-func (trans *Transactor) CheckTxSync(txEnv *txs.Envelope) (*txs.Receipt, error) {
+func (trans *Transactor) CheckTxSync(ctx context.Context, txEnv *txs.Envelope) (*txs.Receipt, error) {
 	trans.logger.Trace.Log("method", "CheckTxSync",
 		"tx_hash", txEnv.Tx.Hash(),
 		"tx", txEnv.String())
@@ -147,7 +138,7 @@ func (trans *Transactor) CheckTxSync(txEnv *txs.Envelope) (*txs.Receipt, error) 
 	if err != nil {
 		return nil, err
 	}
-	return trans.CheckTxSyncRaw(txBytes)
+	return trans.CheckTxSyncRaw(ctx, txBytes)
 }
 
 func (trans *Transactor) MaybeSignTxMempool(txEnv *txs.Envelope) (UnlockFunc, error) {
@@ -215,7 +206,7 @@ func (trans *Transactor) SignTx(txEnv *txs.Envelope) (*txs.Envelope, error) {
 	return txEnv, nil
 }
 
-func (trans *Transactor) CheckTxSyncRaw(txBytes []byte) (*txs.Receipt, error) {
+func (trans *Transactor) CheckTxSyncRaw(ctx context.Context, txBytes []byte) (*txs.Receipt, error) {
 	responseCh := make(chan *abciTypes.Response, 1)
 	err := trans.CheckTxAsyncRaw(txBytes, func(res *abciTypes.Response) {
 		responseCh <- res
@@ -223,12 +214,10 @@ func (trans *Transactor) CheckTxSyncRaw(txBytes []byte) (*txs.Receipt, error) {
 	if err != nil {
 		return nil, err
 	}
-	timer := time.NewTimer(BlockingTimeout)
-	defer timer.Stop()
 
 	select {
-	case <-timer.C:
-		return nil, fmt.Errorf("timed out waiting for CheckTx response in CheckTxSyncRaw")
+	case <-ctx.Done():
+		return nil, fmt.Errorf("waiting for CheckTx response in CheckTxSyncRaw: %v", ctx.Err())
 	case response := <-responseCh:
 		checkTxResponse := response.GetCheckTx()
 		if checkTxResponse == nil {

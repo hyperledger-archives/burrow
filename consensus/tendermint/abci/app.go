@@ -296,7 +296,9 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 		"txs", app.block.Header.NumTxs,
 		"block_time", blockTime,
 		"last_block_time", app.blockchain.LastBlockTime(),
-		"last_block_hash", app.blockchain.LastBlockHash())
+		"last_block_duration", app.blockchain.LastCommitDuration(),
+		"last_block_hash", app.blockchain.LastBlockHash(),
+	)
 
 	// Lock the checker while we reset it and possibly while recheckTxs replays transactions
 	app.checker.Lock()

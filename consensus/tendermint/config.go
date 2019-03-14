@@ -1,6 +1,7 @@
 package tendermint
 
 import (
+	"math"
 	"net/url"
 	"strings"
 	"time"
@@ -33,6 +34,9 @@ type BurrowTendermintConfig struct {
 	// EmptyBlocks mode and possible interval between empty blocks in seconds
 	CreateEmptyBlocks         bool
 	CreateEmptyBlocksInterval time.Duration
+	// This parameter scales the default Tendermint timeouts. A value of 1 gives the Tendermint defaults designed to
+	// work for 100 node + public network. Smaller networks should be able to sustain lower values.
+	TimeoutFactor float64
 }
 
 func DefaultBurrowTendermintConfig() *BurrowTendermintConfig {
@@ -43,19 +47,33 @@ func DefaultBurrowTendermintConfig() *BurrowTendermintConfig {
 		TendermintRoot:            ".burrow",
 		CreateEmptyBlocks:         tmDefaultConfig.Consensus.CreateEmptyBlocks,
 		CreateEmptyBlocksInterval: tmDefaultConfig.Consensus.CreateEmptyBlocksInterval,
+		// Takes proposal timeout to about a 1 second...
+		TimeoutFactor: 0.33,
 	}
 }
 
 func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
 	conf := tm_config.DefaultConfig()
+	// We expose Tendermint config as required, but try to give fewer levers to pull where possible
 	if btc != nil {
-		// We may need to expose more of the P2P/Consensus/Mempool options, but I'd like to keep the configuration
-		// minimal
 		conf.RootDir = btc.TendermintRoot
+		conf.Mempool.RootDir = btc.TendermintRoot
 		conf.Consensus.RootDir = btc.TendermintRoot
+
+		// Consensus
 		conf.Consensus.CreateEmptyBlocks = btc.CreateEmptyBlocks
 		conf.Consensus.CreateEmptyBlocksInterval = btc.CreateEmptyBlocksInterval
-		conf.Mempool.RootDir = btc.TendermintRoot
+		// Assume Tendermint has some mutually consistent values, assume scaling them linearly makes sense
+		conf.Consensus.TimeoutPropose = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPropose)
+		conf.Consensus.TimeoutProposeDelta = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutProposeDelta)
+		conf.Consensus.TimeoutPrevote = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPrevote)
+		conf.Consensus.TimeoutPrevoteDelta = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPrevoteDelta)
+		conf.Consensus.TimeoutPrecommit = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPrecommit)
+		conf.Consensus.TimeoutPrecommitDelta = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPrecommitDelta)
+		conf.Consensus.TimeoutCommit = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutCommit)
+
+		// P2P
+		conf.Moniker = btc.Moniker
 		conf.P2P.RootDir = btc.TendermintRoot
 		conf.P2P.Seeds = btc.Seeds
 		conf.P2P.SeedMode = btc.SeedMode
@@ -65,7 +83,7 @@ func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
 		conf.P2P.AddrBookStrict = btc.AddrBookStrict
 		// We use this in tests and I am not aware of a strong reason to reject nodes on the same IP with different ports
 		conf.P2P.AllowDuplicateIP = true
-		conf.Moniker = btc.Moniker
+
 		// Unfortunately this stops metrics from being used at all
 		conf.Instrumentation.Prometheus = false
 		conf.FilterPeers = btc.AuthorizedPeers != ""
@@ -92,4 +110,11 @@ func (btc *BurrowTendermintConfig) DefaultAuthorizedPeersProvider() abci.PeersFi
 	return func() ([]string, []string) {
 		return authorizedPeersID, authorizedPeersAddress
 	}
+}
+
+func scaleTimeout(factor float64, timeout time.Duration) time.Duration {
+	if factor == 0 {
+		return timeout
+	}
+	return time.Duration(math.Round(factor * float64(timeout)))
 }
