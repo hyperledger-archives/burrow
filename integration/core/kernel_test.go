@@ -43,7 +43,7 @@ import (
 var genesisDoc, privateAccounts, privateValidators = genesis.NewDeterministicGenesis(123).GenesisDoc(1, true, 1000, 1, true, 1000)
 
 func TestBootThenShutdown(t *testing.T) {
-	cleanup := integration.EnterTestDirectory()
+	_, cleanup := integration.EnterTestDirectory()
 	defer cleanup()
 	//logger, _ := lifecycle.NewStdErrLogger()
 	logger := logging.NewNoopLogger()
@@ -52,7 +52,7 @@ func TestBootThenShutdown(t *testing.T) {
 }
 
 func TestBootShutdownResume(t *testing.T) {
-	cleanup := integration.EnterTestDirectory()
+	_, cleanup := integration.EnterTestDirectory()
 	defer cleanup()
 	//logger, _ := lifecycle.NewStdErrLogger()
 	logger := logging.NewNoopLogger()
@@ -130,7 +130,7 @@ func TestLoggingSignals(t *testing.T) {
 func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, testConfig *config.BurrowConfig,
 	logger *logging.Logger, blockChecker func(block *exec.BlockExecution) (cont bool)) error {
 
-	keyStore := keys.NewKeyStore(keys.DefaultKeysDir, false, logger)
+	keyStore := keys.NewKeyStore(keys.DefaultKeysDir, false)
 	keyClient := mock.NewKeyClient(privateAccounts...)
 	ctx := context.Background()
 	kern, err := core.NewKernel(ctx, keyClient, privValidator,

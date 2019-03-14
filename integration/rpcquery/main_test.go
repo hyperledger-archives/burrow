@@ -33,7 +33,7 @@ var kern *core.Kernel
 
 // Needs to be in a _test.go file to be picked up
 func TestMain(m *testing.M) {
-	cleanup := integration.EnterTestDirectory()
+	_, cleanup := integration.EnterTestDirectory()
 	defer cleanup()
 	kern = integration.TestKernel(rpctest.PrivateAccounts[0], rpctest.PrivateAccounts, testConfig, nil)
 	err := kern.Boot()

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/hyperledger/burrow/logging/structure"
+
 	"encoding/json"
 
 	"github.com/BurntSushi/toml"
@@ -11,9 +13,12 @@ import (
 )
 
 type LoggingConfig struct {
-	RootSink     *SinkConfig `toml:",omitempty"`
-	ExcludeTrace bool
-	NonBlocking  bool
+	RootSink *SinkConfig `toml:",omitempty"`
+	// Trace debug is very noisy - mostly from Tendermint
+	Trace bool
+	// Send to a channel - will not affect progress if logging graph is intensive but output will lag and some logs
+	// may be missed in shutdown
+	NonBlocking bool
 }
 
 // For encoding a top-level '[logging]' TOML table
@@ -22,18 +27,16 @@ type LoggingConfigWrapper struct {
 }
 
 func DefaultNodeLoggingConfig() *LoggingConfig {
+	// Output only Burrow messages on stdout
 	return &LoggingConfig{
-		RootSink: Sink().SetOutput(StderrOutput().SetFormat(loggers.JSONFormat)),
+		RootSink: Sink().
+			SetTransform(FilterTransform(ExcludeWhenAnyMatches, structure.ComponentKey, structure.Tendermint)).
+			SetOutput(StdoutOutput().SetFormat(loggers.JSONFormat)),
 	}
 }
 
 func New() *LoggingConfig {
 	return &LoggingConfig{}
-}
-
-func (lc *LoggingConfig) NoTrace() *LoggingConfig {
-	lc.ExcludeTrace = true
-	return lc
 }
 
 func (lc *LoggingConfig) Root(configure func(sink *SinkConfig) *SinkConfig) *LoggingConfig {

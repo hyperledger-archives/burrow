@@ -106,7 +106,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 
 	logger = logger.WithScope("NewKernel()").With(structure.TimeKey, log.DefaultTimestampUTC,
 		structure.RunId, kern.RunID.String())
-	tmLogger := logger.With(structure.CallerKey, log.Caller(LoggingCallerDepth+1))
+	tendermintLogger := logger.With(structure.CallerKey, log.Caller(LoggingCallerDepth+1))
 	kern.Logger = logger.WithInfo(structure.CallerKey, log.Caller(LoggingCallerDepth))
 	stateDB := NewBurrowDB(tmConf.DBDir())
 
@@ -114,6 +114,10 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 	if err != nil {
 		return nil, fmt.Errorf("error creating or loading blockchain state: %v", err)
 	}
+
+	heightValuer := log.Valuer(func() interface{} { return kern.Blockchain.LastBlockHeight() })
+	kern.Logger = kern.Logger.With("height", heightValuer)
+	tendermintLogger = tendermintLogger.With("height", heightValuer)
 
 	// These should be in sync unless we are at the genesis block
 	if kern.Blockchain.LastBlockHeight() > 0 {
@@ -185,7 +189,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 		Prometheus:           false,
 		PrometheusListenAddr: "",
 	})
-	kern.Node, err = tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, app, metricsProvider, tmLogger)
+	kern.Node, err = tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, app, metricsProvider, tendermintLogger)
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +331,7 @@ func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTy
 
 				if keyConfig.GRPCServiceEnabled {
 					if keyStore == nil {
-						ks = keys.NewKeyStore(keyConfig.KeysDirectory, keyConfig.AllowBadFilePermissions, kern.Logger)
+						ks = keys.NewKeyStore(keyConfig.KeysDirectory, keyConfig.AllowBadFilePermissions)
 					}
 					keys.RegisterKeysServer(grpcServer, ks)
 				}

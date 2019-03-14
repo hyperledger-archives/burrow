@@ -126,7 +126,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					if *keysDir != "" {
 						dir = *keysDir
 					}
-					keyStore := keys.NewKeyStore(dir, conf.Keys.AllowBadFilePermissions, logging.NewNoopLogger())
+					keyStore := keys.NewKeyStore(dir, conf.Keys.AllowBadFilePermissions)
 
 					keyClient := keys.NewLocalKeyClient(keyStore, logging.NewNoopLogger())
 					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient, *generateNodeKeys)

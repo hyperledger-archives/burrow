@@ -1,3 +1,5 @@
+// +build integration
+
 package keys
 
 import (
@@ -6,6 +8,10 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/hyperledger/burrow/keys"
+
+	"github.com/hyperledger/burrow/integration"
 
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/crypto/sha3"
@@ -30,54 +36,54 @@ var (
 	HASH_TYPES = []string{"sha256", "ripemd160"}
 )
 
-// start the server
-func init() {
+func TestMain(m *testing.M) {
 	failedCh := make(chan error)
-	testDir := "test_scratch/" + DefaultKeysDir
-	os.RemoveAll(testDir)
+	testDir, cleanup := integration.EnterTestDirectory()
+	defer cleanup()
+	// start the server
 	go func() {
-		err := StartStandAloneServer(testDir, DefaultHost, TestPort, false, logging.NewNoopLogger())
-		failedCh <- err
+		failedCh <- keys.StartStandAloneServer(testDir, keys.DefaultHost, keys.TestPort, false, logging.NewNoopLogger())
 	}()
-	tick := time.NewTicker(time.Second)
+	ret := m.Run()
 	select {
 	case err := <-failedCh:
-		fmt.Println(err)
-		os.Exit(1)
-	case <-tick.C:
+		if err != nil {
+			panic(err)
+		}
+	default:
+		os.Exit(ret)
 	}
 }
 
-func grpcKeysClient() KeysClient {
+func grpcKeysClient() keys.KeysClient {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
-	conn, err := grpc.Dial(DefaultHost+":"+TestPort, opts...)
+	conn, err := grpc.Dial(keys.DefaultHost+":"+keys.TestPort, opts...)
 	if err != nil {
 		fmt.Printf("Failed to connect to grpc server: %v\n", err)
 		os.Exit(1)
 	}
-	return NewKeysClient(conn)
+	return keys.NewKeysClient(conn)
 }
 
 func testServerKeygenAndPub(t *testing.T, typ string) {
 	c := grpcKeysClient()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	genresp, err := c.GenerateKey(ctx, &GenRequest{CurveType: typ})
-	if err != nil {
-		t.Fatal(err)
-	}
+
+	genresp, err := c.GenerateKey(ctx, &keys.GenRequest{CurveType: typ})
+	require.NoError(t, err)
+
 	addr := genresp.Address
-	resp, err := c.PublicKey(ctx, &PubRequest{Address: addr})
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp, err := c.PublicKey(ctx, &keys.PubRequest{Address: addr})
+	require.NoError(t, err)
+
 	addrB, err := crypto.AddressFromHexString(addr)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+
 	curveType, err := crypto.CurveTypeFromString(typ)
 	require.NoError(t, err)
+
 	publicKey, err := crypto.PublicKeyFromBytes(resp.GetPublicKey(), curveType)
 	require.NoError(t, err)
 	assert.Equal(t, addrB, publicKey.GetAddress())
@@ -93,30 +99,24 @@ func testServerSignAndVerify(t *testing.T, typ string) {
 	c := grpcKeysClient()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	genresp, err := c.GenerateKey(ctx, &GenRequest{CurveType: typ})
-	if err != nil {
-		t.Fatal(err)
-	}
+	genresp, err := c.GenerateKey(ctx, &keys.GenRequest{CurveType: typ})
+	require.NoError(t, err)
+
 	addr := genresp.Address
-	resp, err := c.PublicKey(ctx, &PubRequest{Address: addr})
-	if err != nil {
-		t.Fatal(err)
-	}
+	resp, err := c.PublicKey(ctx, &keys.PubRequest{Address: addr})
+	require.NoError(t, err)
+
 	hash := sha3.Sha3([]byte("the hash of something!"))
 
-	sig, err := c.Sign(ctx, &SignRequest{Address: addr, Message: hash})
-	if err != nil {
-		t.Fatal(err)
-	}
+	sig, err := c.Sign(ctx, &keys.SignRequest{Address: addr, Message: hash})
+	require.NoError(t, err)
 
-	_, err = c.Verify(ctx, &VerifyRequest{
+	_, err = c.Verify(ctx, &keys.VerifyRequest{
 		Signature: sig.GetSignature(),
 		PublicKey: resp.GetPublicKey(),
 		Message:   hash,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 }
 
 func TestServerSignAndVerify(t *testing.T) {
@@ -132,30 +132,14 @@ func testServerHash(t *testing.T, typ string) {
 	c := grpcKeysClient()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	resp, err := c.Hash(ctx, &HashRequest{Hashtype: typ, Message: []byte(data)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	hash := resp.GetHash()
+	resp, err := c.Hash(ctx, &keys.HashRequest{Hashtype: typ, Message: []byte(data)})
+	require.NoError(t, err)
 
-	if hash != expected {
-		t.Fatalf("Hash error for %s. Got %s, expected %s", typ, hash, expected)
-	}
+	require.Equal(t, expected, resp.GetHash())
 }
 
 func TestServerHash(t *testing.T) {
 	for _, typ := range HASH_TYPES {
 		testServerHash(t, typ)
-	}
-}
-
-//---------------------------------------------------------------------------------
-
-func checkErrs(t *testing.T, errS string, err error) {
-	if err != nil {
-		t.Fatal(err)
-	}
-	if errS != "" {
-		t.Fatal(errS)
 	}
 }

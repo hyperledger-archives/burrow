@@ -30,7 +30,7 @@ func StartStandAloneServer(keysDir, host, port string, AllowBadFilePermissions b
 		return err
 	}
 	grpcServer := grpc.NewServer()
-	RegisterKeysServer(grpcServer, NewKeyStore(keysDir, AllowBadFilePermissions, logger))
+	RegisterKeysServer(grpcServer, NewKeyStore(keysDir, AllowBadFilePermissions))
 
 	go func() {
 		err = grpcServer.Serve(listen)

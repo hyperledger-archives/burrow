@@ -40,6 +40,8 @@ const (
 	CapturedLoggingSourceKey = "captured_logging_source"
 	// Top-level component (choose one) name
 	ComponentKey = "component"
+	// Tendermint component etc
+	Tendermint = "tendermint"
 	// Vector-valued scope
 	ScopeKey = "scope"
 	// Globally unique identifier persisting while a single instance (root process)

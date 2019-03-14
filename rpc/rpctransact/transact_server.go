@@ -2,6 +2,7 @@ package rpctransact
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -9,6 +10,9 @@ import (
 	"github.com/hyperledger/burrow/txs/payload"
 	"golang.org/x/net/context"
 )
+
+// This is probably silly
+const maxBroadcastSyncTimeout = time.Hour
 
 type transactServer struct {
 	transactor *execution.Transactor
@@ -23,19 +27,29 @@ func NewTransactServer(transactor *execution.Transactor, txCodec txs.Codec) Tran
 }
 
 func (ts *transactServer) BroadcastTxSync(ctx context.Context, param *TxEnvelopeParam) (*exec.TxExecution, error) {
+	const errHeader = "BroadcastTxSync():"
+	if param.Timeout == 0 {
+		param.Timeout = maxBroadcastSyncTimeout
+	}
+	ctx, cancel := context.WithTimeout(ctx, param.Timeout)
+	defer cancel()
 	txEnv := param.GetEnvelope(ts.transactor.BlockchainInfo.ChainID())
 	if txEnv == nil {
-		return nil, fmt.Errorf("no transaction envelope or payload provided")
+		return nil, fmt.Errorf("%s no transaction envelope or payload provided", errHeader)
 	}
 	return ts.transactor.BroadcastTxSync(ctx, txEnv)
 }
 
 func (ts *transactServer) BroadcastTxAsync(ctx context.Context, param *TxEnvelopeParam) (*txs.Receipt, error) {
+	const errHeader = "BroadcastTxAsync():"
+	if param.Timeout == 0 {
+		param.Timeout = maxBroadcastSyncTimeout
+	}
 	txEnv := param.GetEnvelope(ts.transactor.BlockchainInfo.ChainID())
 	if txEnv == nil {
-		return nil, fmt.Errorf("no transaction envelope or payload provided")
+		return nil, fmt.Errorf("%s no transaction envelope or payload provided", errHeader)
 	}
-	return ts.transactor.BroadcastTxAsync(txEnv)
+	return ts.transactor.BroadcastTxAsync(ctx, txEnv)
 }
 
 func (ts *transactServer) SignTx(ctx context.Context, param *TxEnvelopeParam) (*TxEnvelope, error) {

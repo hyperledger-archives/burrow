@@ -14,9 +14,7 @@ import (
 
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/structure"
-
-	hex "github.com/tmthrgd/go-hex"
+	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/scrypt"
 )
 
@@ -105,11 +103,10 @@ func IsValidKeyJson(j []byte) []byte {
 	return nil
 }
 
-func NewKeyStore(dir string, AllowBadFilePermissions bool, logger *logging.Logger) *KeyStore {
+func NewKeyStore(dir string, AllowBadFilePermissions bool) *KeyStore {
 	return &KeyStore{
 		keysDirPath:             dir,
 		AllowBadFilePermissions: AllowBadFilePermissions,
-		logger:                  logger.With(structure.ComponentKey, "keys").WithScope("NewKeyStore"),
 	}
 }
 
@@ -334,7 +331,6 @@ func (ks *KeyStore) GetKeyFile(dataDirPath string, keyAddr []byte) (fileContent 
 		return nil, err
 	}
 	if (uint32(fileInfo.Mode()) & 0077) != 0 {
-		ks.logger.InfoMsg("file should be accessible by user only", "file", filename)
 		if !ks.AllowBadFilePermissions {
 			return nil, fmt.Errorf("file %s should be accessible by user only", filename)
 		}

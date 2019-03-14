@@ -17,15 +17,14 @@ package bcm
 import (
 	"bytes"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/tendermint/tendermint/types"
 
-	"sync"
-
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	amino "github.com/tendermint/go-amino"
+	"github.com/tendermint/go-amino"
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
@@ -38,6 +37,7 @@ type BlockchainInfo interface {
 	LastBlockHeight() uint64
 	LastBlockTime() time.Time
 	LastCommitTime() time.Time
+	LastCommitDuration() time.Duration
 	LastBlockHash() []byte
 	AppHashAfterLastBlock() []byte
 	// Gets the BlockHash at a height (or nil if no BlockStore mounted or block could not be found)
@@ -56,6 +56,7 @@ type Blockchain struct {
 	lastBlockTime         time.Time
 	lastBlockHash         []byte
 	lastCommitTime        time.Time
+	lastCommitDuration    time.Duration
 	appHashAfterLastBlock []byte
 	blockStore            *BlockStore
 }
@@ -111,6 +112,7 @@ func GetSyncInfo(blockchain BlockchainInfo) *SyncInfo {
 		LatestAppHash:       blockchain.AppHashAfterLastBlock(),
 		LatestBlockTime:     blockchain.LastBlockTime(),
 		LatestBlockSeenTime: blockchain.LastCommitTime(),
+		LatestBlockDuration: blockchain.LastCommitDuration(),
 	}
 }
 
@@ -141,6 +143,7 @@ func (bc *Blockchain) CommitBlockAtHeight(blockTime time.Time, blockHash, appHas
 	if err != nil {
 		return err
 	}
+	bc.lastCommitDuration = blockTime.Sub(bc.lastBlockTime)
 	bc.lastBlockHeight = height
 	bc.lastBlockTime = blockTime
 	bc.lastBlockHash = blockHash
@@ -218,6 +221,12 @@ func (bc *Blockchain) LastCommitTime() time.Time {
 	return bc.lastCommitTime
 }
 
+func (bc *Blockchain) LastCommitDuration() time.Duration {
+	bc.RLock()
+	defer bc.RUnlock()
+	return bc.lastCommitDuration
+}
+
 func (bc *Blockchain) LastBlockHash() []byte {
 	bc.RLock()
 	defer bc.RUnlock()
@@ -243,6 +252,7 @@ func (bc *Blockchain) BlockHash(height uint64) []byte {
 	}
 	return header.Hash()
 }
+
 func (bc *Blockchain) GetBlockHeader(height uint64) (*types.Header, error) {
 	const errHeader = "GetBlockHeader():"
 	if bc == nil {
