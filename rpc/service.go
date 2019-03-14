@@ -68,7 +68,7 @@ func NewService(state acmstate.IterableStatsReader, nameReg names.IterableReader
 	}
 }
 
-func (s *Service) State() acmstate.IterableStatsReader {
+func (s *Service) Stats() acmstate.AccountStatsGetter {
 	return s.state
 }
 
@@ -296,7 +296,7 @@ func (s *Service) Blocks(minHeight, maxHeight int64) (*ResultBlocks, error) {
 	}
 
 	var blockMetas []*tmTypes.BlockMeta
-	for height := maxHeight; height >= minHeight; height-- {
+	for height := minHeight; height <= maxHeight; height++ {
 		blockMeta := s.nodeView.BlockStore().LoadBlockMeta(height)
 		blockMetas = append(blockMetas, blockMeta)
 	}
