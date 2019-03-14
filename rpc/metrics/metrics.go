@@ -12,7 +12,7 @@ var (
 
 	TimePerBlock = newDesc(
 		prometheus.BuildFQName("burrow", "chain", "block_time"),
-		"Summary metric of nanoseconds per block",
+		"Histogram metric of block duration",
 		[]string{"chain_id", "moniker"})
 
 	UnconfirmedTransactions = newDesc(
@@ -22,7 +22,7 @@ var (
 
 	TxPerBlock = newDesc(
 		prometheus.BuildFQName("burrow", "transactions", "per_block"),
-		"Summary metric of transactions per block",
+		"Histogram metric of transactions per block",
 		[]string{"chain_id", "moniker"})
 
 	TotalPeers = newDesc(

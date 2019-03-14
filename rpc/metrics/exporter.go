@@ -17,6 +17,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/tendermint/tendermint/types"
+
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
@@ -187,11 +189,11 @@ func (e *Exporter) gatherData() error {
 	if err != nil {
 		return err
 	}
-	err = e.getTxBuckets(blocks)
+	err = e.getTxBuckets(blocks.BlockMetas)
 	if err != nil {
 		return err
 	}
-	err = e.getBlockTimeBuckets(blocks)
+	err = e.getBlockTimeBuckets(blocks.BlockMetas)
 	if err != nil {
 		return err
 	}
@@ -264,15 +266,15 @@ func (e *Exporter) getBlocks() (*rpc.ResultBlocks, error) {
 }
 
 // Get transaction buckets
-func (e *Exporter) getTxBuckets(res *rpc.ResultBlocks) error {
+func (e *Exporter) getTxBuckets(blockMetas []*types.BlockMeta) error {
 	e.datum.TotalTxs = 0
 	e.datum.TxPerBlockBuckets = map[float64]uint64{}
-	if len(res.BlockMetas) == 0 {
+	if len(blockMetas) == 0 {
 		return nil
 	}
 	// Collect number of txs per block as an array of floats
-	txsPerBlock := make([]float64, len(res.BlockMetas))
-	for i, block := range res.BlockMetas {
+	txsPerBlock := make([]float64, len(blockMetas))
+	for i, block := range blockMetas {
 		txsPerBlock[i] = float64(block.Header.NumTxs)
 	}
 
@@ -280,17 +282,21 @@ func (e *Exporter) getTxBuckets(res *rpc.ResultBlocks) error {
 	return nil
 }
 
-func (e *Exporter) getBlockTimeBuckets(res *rpc.ResultBlocks) error {
+func (e *Exporter) getBlockTimeBuckets(blockMetas []*types.BlockMeta) error {
 	e.datum.TotalTime = 0
 	e.datum.TimePerBlockBuckets = map[float64]uint64{}
-	if len(res.BlockMetas) == 0 {
+	if len(blockMetas) < 2 {
 		return nil
 	}
-
-	blockDurations := make([]float64, len(res.BlockMetas)-1)
-	for i := 0; i < len(res.BlockMetas)-1; i++ {
-		timeBegan := res.BlockMetas[i].Header.Time
-		timeEnded := res.BlockMetas[i+1].Header.Time
+	if blockMetas[0].Header.Height == 1 {
+		// The LastBlockTime on the first block is the GenesisDoc time! We don't want this
+		// in the block duration statistics
+		return e.getBlockTimeBuckets(blockMetas[1:])
+	}
+	blockDurations := make([]float64, len(blockMetas)-1)
+	for i := 0; i < len(blockMetas)-1; i++ {
+		timeBegan := blockMetas[i].Header.Time
+		timeEnded := blockMetas[i+1].Header.Time
 		blockDurations[i] = timeEnded.Sub(timeBegan).Seconds()
 	}
 
@@ -317,7 +323,7 @@ func (e *Exporter) getAccountStats() {
 //
 // We return:
 //
-// cum oranges => cum people (with less than or equal to number of oranges)
+// upper bound number of oranges => cumulative number of people (with less than or equal to upper bound number of oranges)
 // 1 => 1
 // 4 => 2
 // 12 => 3
