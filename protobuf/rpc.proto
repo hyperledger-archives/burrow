@@ -23,7 +23,7 @@ message ResultStatus {
     bytes GenesisHash = 4 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
     tendermint.NodeInfo NodeInfo = 5;
     bcm.SyncInfo SyncInfo = 6;
+    // When catching up in fast sync
     bool CatchingUp = 8 [(gogoproto.jsontag) = ""];
     validator.Validator ValidatorInfo = 7;
-    // When catching up in fast sync
 }
