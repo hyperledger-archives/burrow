@@ -15,6 +15,7 @@ package metrics
 
 import (
 	"fmt"
+	"math"
 	"sort"
 
 	"github.com/tendermint/tendermint/types"
@@ -28,17 +29,22 @@ import (
 )
 
 const maxUnconfirmedTxsToFetch = 10000000000
+const significantFiguresForSeconds = 3
+
+type HistogramBuilder func(values []float64) (buckets map[float64]uint64, sum float64)
 
 // Exporter is used to store Metrics data and embeds the config struct.
 // This is done so that the relevant functions have easy access to the
 // user defined runtime configuration when the Collect method is called.
 type Exporter struct {
-	service          InfoService
-	datum            *Datum
-	chainID          string
-	validatorMoniker string
-	blockSampleSize  uint64
-	logger           *logging.Logger
+	service                      InfoService
+	datum                        *Datum
+	chainID                      string
+	validatorMoniker             string
+	blockSampleSize              uint64
+	txPerBlockHistogramBuilder   HistogramBuilder
+	timePerBlockHistogramBuilder HistogramBuilder
+	logger                       *logging.Logger
 }
 
 // Subset of rpc.Service
@@ -74,12 +80,14 @@ func NewExporter(service InfoService, blockSampleSize int, logger *logging.Logge
 		return nil, fmt.Errorf("NewExporter(): %v", err)
 	}
 	return &Exporter{
-		datum:            &Datum{},
-		service:          service,
-		chainID:          chainStatus.NodeInfo.Network,
-		validatorMoniker: chainStatus.NodeInfo.Moniker,
-		blockSampleSize:  uint64(blockSampleSize),
-		logger:           logger.With(structure.ComponentKey, "Metrics_Exporter"),
+		datum:                        &Datum{},
+		service:                      service,
+		chainID:                      chainStatus.NodeInfo.Network,
+		validatorMoniker:             chainStatus.NodeInfo.Moniker,
+		blockSampleSize:              uint64(blockSampleSize),
+		txPerBlockHistogramBuilder:   makeHistogramBuilder(identity),
+		timePerBlockHistogramBuilder: makeHistogramBuilder(significantFiguresRounder(significantFiguresForSeconds)),
+		logger:                       logger.With(structure.ComponentKey, "Metrics_Exporter"),
 	}, nil
 }
 
@@ -278,7 +286,7 @@ func (e *Exporter) getTxBuckets(blockMetas []*types.BlockMeta) error {
 		txsPerBlock[i] = float64(block.Header.NumTxs)
 	}
 
-	e.datum.TxPerBlockBuckets, e.datum.TotalTxs = buildHistogramBuckets(txsPerBlock)
+	e.datum.TxPerBlockBuckets, e.datum.TotalTxs = e.txPerBlockHistogramBuilder(txsPerBlock)
 	return nil
 }
 
@@ -300,7 +308,7 @@ func (e *Exporter) getBlockTimeBuckets(blockMetas []*types.BlockMeta) error {
 		blockDurations[i] = timeEnded.Sub(timeBegan).Seconds()
 	}
 
-	e.datum.TimePerBlockBuckets, e.datum.TotalTime = buildHistogramBuckets(blockDurations)
+	e.datum.TimePerBlockBuckets, e.datum.TotalTime = e.timePerBlockHistogramBuilder(blockDurations)
 	return nil
 }
 
@@ -310,10 +318,16 @@ func (e *Exporter) getAccountStats() {
 	e.datum.AccountsWithoutCode = float64(stats.AccountsWithoutCode)
 }
 
-// Takes a slice of values one for each entity in a sample, sorts it, and computes histogram buckets as
+// Returns a function that builds a histogram.
+//
+// The builder takes a slice of values one for each entity in a sample, sorts it, and computes histogram buckets as
 // a map from upper bounds (of values) to cumulative counts (of entities)
 // such that count-many entities have value less than or equal to each upper bound.
 // Returns this map and the sum of all values.
+//
+// The smoothing function can be used to round up the upper bounds of buckets so that generated buckets fall on rounder
+// more predictable values. This can make querying for a specific bucket easier but not strictly necessary since we can
+// use histogram_quantile function in promql to aggregate buckets without needing to know upper bounds ahead of time.
 //
 // For example if we have the collection (people are entities, numbers of oranges are values)
 //
@@ -329,16 +343,37 @@ func (e *Exporter) getAccountStats() {
 // 12 => 3
 //
 // and 17 for the sum
-func buildHistogramBuckets(vals []float64) (buckets map[float64]uint64, sum float64) {
-	buckets = make(map[float64]uint64)
-	sort.Slice(vals, func(i, j int) bool { return vals[i] < vals[j] })
+func makeHistogramBuilder(smooth func(float64) float64) HistogramBuilder {
+	return func(vals []float64) (buckets map[float64]uint64, sum float64) {
+		buckets = make(map[float64]uint64)
+		sort.Slice(vals, func(i, j int) bool { return vals[i] < vals[j] })
 
-	var count uint64
-	for _, upper := range vals {
-		count++
-		sum += upper
-		buckets[upper] = count
+		var count uint64
+		for _, upper := range vals {
+			count++
+			// Use unsmoothed value for sum so we get true value
+			sum += upper
+			// Use smoothed upper bound for buckets. Collisions here are fine since the count is cumulative so any
+			// earlier upper/count pairs that are overwritten will have their count captured in the overwriting count
+			buckets[smooth(upper)] = count
+		}
+		return buckets, sum
 	}
+}
 
-	return buckets, sum
+func identity(x float64) float64 {
+	return x
+}
+
+func significantFiguresRounder(n int) func(float64) float64 {
+	// exponent base 10 for this many sig figs
+	sfPow := float64(n - 1)
+	return func(x float64) float64 {
+		// Floor of exponent to take us to 1 sig fig
+		log10x := math.Floor(math.Log10(x))
+		// Power of 10 to scale us to n sig figs
+		fac := math.Pow(10, sfPow-log10x)
+		// Scale to n sig figs, drop digits to right of decimal point, then scale back
+		return math.Round(x*fac) / fac
+	}
 }

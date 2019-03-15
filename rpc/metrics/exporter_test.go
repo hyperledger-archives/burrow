@@ -67,15 +67,34 @@ func TestExporter_Collect_Histogram(t *testing.T) {
 	txPerBlockMetric := metrics[TxPerBlock.String()]
 	require.NotNil(t, txPerBlockMetric)
 	require.NotNil(t, txPerBlockMetric.Histogram)
-	verifyHistogram(t, txPerBlockMetric.Histogram, numTxsPerBlock)
+	verifyHistogram(t, txPerBlockMetric.Histogram, numTxsPerBlock, identity)
 
 	timePerBlockMetric := metrics[TimePerBlock.String()]
 	require.NotNil(t, timePerBlockMetric)
 	require.NotNil(t, timePerBlockMetric.Histogram)
-	verifyHistogram(t, timePerBlockMetric.Histogram, timePerBlock)
+	verifyHistogram(t, timePerBlockMetric.Histogram, timePerBlock, significantFiguresRounder(significantFiguresForSeconds))
 }
 
-func verifyHistogram(t *testing.T, histogram *io_prometheus_client.Histogram, values []float64) {
+func TestSignificantFigures(t *testing.T) {
+	f := significantFiguresRounder(3)
+	assert.Equal(t, float64(21400), f(21432))
+	assert.Equal(t, float64(2140), f(2143))
+	assert.Equal(t, float64(0.1), f(0.1))
+	assert.Equal(t, float64(0.123), f(0.123))
+	assert.Equal(t, float64(0.123), f(0.1234))
+	assert.Equal(t, float64(0.124), f(0.1235))
+	assert.Equal(t, float64(10), f(10))
+	assert.Equal(t, float64(100), f(100))
+	assert.Equal(t, float64(0.000344), f(0.00034363))
+	assert.Equal(t, float64(0.00123), f(0.001234))
+
+	f = significantFiguresRounder(1)
+	assert.Equal(t, float64(20000), f(21432))
+	assert.Equal(t, float64(0.00009), f(0.0000911123))
+}
+
+func verifyHistogram(t *testing.T, histogram *io_prometheus_client.Histogram, values []float64,
+	smooth func(float64) float64) {
 	buckets := histogram.Bucket
 	// Get cumulative totals for each bucket
 	counts := make([]int64, len(buckets))
@@ -85,7 +104,7 @@ func verifyHistogram(t *testing.T, histogram *io_prometheus_client.Histogram, va
 		sum += value
 		// Use the upper bounds to bin the value
 		for i, bucket := range buckets {
-			if value <= *bucket.UpperBound {
+			if smooth(value) <= *bucket.UpperBound {
 				counts[i] += 1
 			}
 		}
