@@ -84,8 +84,20 @@ func (conf *BurrowConfig) Kernel(ctx context.Context, restoreDump string) (*core
 		}
 	}
 
+	// find node key
+	var nodeKey *crypto.PrivateKey
+	for _, v := range conf.GenesisDoc.Validators {
+		if v.Address == *conf.ValidatorAddress && v.NodeAddress != nil {
+			k, err := keyStore.GetKey("", v.NodeAddress.Bytes())
+			if err == nil {
+				nodeKey = &k.PrivateKey
+			}
+			break
+		}
+	}
+
 	return core.NewKernel(ctx, keyClient, privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC,
-		conf.Keys, keyStore, exeOptions, conf.Tendermint.DefaultAuthorizedPeersProvider(), restoreDump, logger)
+		conf.Keys, keyStore, exeOptions, conf.Tendermint.DefaultAuthorizedPeersProvider(), restoreDump, nodeKey, logger)
 }
 
 func (conf *BurrowConfig) JSONString() string {
