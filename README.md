@@ -27,7 +27,7 @@ Hyperledger Burrow is a permissioned blockchain node that executes smart contrac
 
 ## Project Roadmap
 
-Project information generally updated on a quarterly basis can be found on the [Hyperledger Burrow Wiki](https://wiki.hyperledger.org/projects/burrow).
+Project information generally updated on a quarterly basis can be found on the [Hyperledger Burrow Wiki](https://wiki.hyperledger.org/display/burrow/Hyperledger+Burrow).
 
 ## Minimum requirements
 
