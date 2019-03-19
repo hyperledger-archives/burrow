@@ -50,6 +50,16 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 	MustDeclareReleases(
 		"",
 		``,
+		"0.24.6 - 2019-03-19",
+		`### Changed
+- [RPC] 'blocks' on info RPC now lists blocks in ascending rather than descending height order
+
+### Added
+- [CLI] Introduced burrow configure --test-burrow-configs for generation of multiple validator configs suitable for running on a single (or many) machines
+
+### Fixed
+- [Metrics] Fix histogram statistics by making counts cumulative 
+`,
 		"0.24.5 - 2019-03-14",
 		`### Changed
 - [Consensus] Tendermint timeouts configurable by a float factor from defaults and default change to 0.33 of Tendermint's default for smaller networks'
@@ -280,7 +290,7 @@ In addition to breaking changes associated with Tendermint (see their changelog)
 - Add BlockExplorer CLI for forensics
 - Expose reason for REVERT
 - Add last_block_info healthcheck endpoint to rpc/TM
-- 
+-
 #### Improvements
 - Implement checkpointing when saving application and blockchain state in commit - interrupted commit rolls burrow back to last block whereon it can catch up using Tendermint
 - Maintain separate read-only tree in state so that long-running RPC request cannot block writes
@@ -444,7 +454,7 @@ cadence.
   - Allow multiple event subscriptions from same host under rpc/tendermint
 
 
-- Tool changes  
+- Tool changes
   - Use glide instead of godeps for dependencies
 
 
