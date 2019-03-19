@@ -30,17 +30,18 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type ResultStatus struct {
-	ChainID              string                                        `protobuf:"bytes,1,opt,name=ChainID,proto3" json:"ChainID,omitempty"`
-	RunID                string                                        `protobuf:"bytes,2,opt,name=RunID,proto3" json:"RunID,omitempty"`
-	BurrowVersion        string                                        `protobuf:"bytes,3,opt,name=BurrowVersion,proto3" json:"BurrowVersion,omitempty"`
-	GenesisHash          github_com_hyperledger_burrow_binary.HexBytes `protobuf:"bytes,4,opt,name=GenesisHash,proto3,customtype=github.com/hyperledger/burrow/binary.HexBytes" json:"GenesisHash"`
-	NodeInfo             *tendermint.NodeInfo                          `protobuf:"bytes,5,opt,name=NodeInfo,proto3" json:"NodeInfo,omitempty"`
-	SyncInfo             *bcm.SyncInfo                                 `protobuf:"bytes,6,opt,name=SyncInfo,proto3" json:"SyncInfo,omitempty"`
-	CatchingUp           bool                                          `protobuf:"varint,8,opt,name=CatchingUp,proto3" json:""`
-	ValidatorInfo        *validator.Validator                          `protobuf:"bytes,7,opt,name=ValidatorInfo,proto3" json:"ValidatorInfo,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                                      `json:"-"`
-	XXX_unrecognized     []byte                                        `json:"-"`
-	XXX_sizecache        int32                                         `json:"-"`
+	ChainID       string                                        `protobuf:"bytes,1,opt,name=ChainID,proto3" json:"ChainID,omitempty"`
+	RunID         string                                        `protobuf:"bytes,2,opt,name=RunID,proto3" json:"RunID,omitempty"`
+	BurrowVersion string                                        `protobuf:"bytes,3,opt,name=BurrowVersion,proto3" json:"BurrowVersion,omitempty"`
+	GenesisHash   github_com_hyperledger_burrow_binary.HexBytes `protobuf:"bytes,4,opt,name=GenesisHash,proto3,customtype=github.com/hyperledger/burrow/binary.HexBytes" json:"GenesisHash"`
+	NodeInfo      *tendermint.NodeInfo                          `protobuf:"bytes,5,opt,name=NodeInfo,proto3" json:"NodeInfo,omitempty"`
+	SyncInfo      *bcm.SyncInfo                                 `protobuf:"bytes,6,opt,name=SyncInfo,proto3" json:"SyncInfo,omitempty"`
+	// When catching up in fast sync
+	CatchingUp           bool                 `protobuf:"varint,8,opt,name=CatchingUp,proto3" json:""`
+	ValidatorInfo        *validator.Validator `protobuf:"bytes,7,opt,name=ValidatorInfo,proto3" json:"ValidatorInfo,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
 }
 
 func (m *ResultStatus) Reset()         { *m = ResultStatus{} }
