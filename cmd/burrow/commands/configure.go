@@ -70,14 +70,14 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 		restoreDumpOpt := cmd.StringOpt("restore-dump", "", "Including AppHash for restored file")
 
-		testBurrows := cmd.BoolOpt("test-burrow-configs", false, "Write test configs for all the validators")
+		pool := cmd.BoolOpt("pool", false, "Write config files for all the validators called burrowNNN.toml")
 
 		cmd.Spec = "[--keys-url=<keys URL> | --keysdir=<keys directory>] " +
 			"[--config-template-in=<text template> --config-out=<output file>]... " +
 			"[--genesis-spec=<GenesisSpec file> | --genesis-doc=<GenesisDoc file>] " +
 			"[--separate-genesis-doc=<genesis JSON file>] [--chain-name=<chain name>] [--json] " +
 			"[--generate-node-keys] [--restore-dump=<dump file>] " +
-			"[--logging=<logging program>] [--describe-logging] [--debug] [--test-burrow-configs]"
+			"[--logging=<logging program>] [--describe-logging] [--debug] [--pool]"
 
 		configOpts := addConfigOptions(cmd)
 
@@ -131,7 +131,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					keyStore := keys.NewKeyStore(dir, conf.Keys.AllowBadFilePermissions)
 
 					keyClient := keys.NewLocalKeyClient(keyStore, logging.NewNoopLogger())
-					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient, *generateNodeKeys)
+					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient, *generateNodeKeys || *pool)
 					if err != nil {
 						output.Fatalf("Could not generate GenesisDoc from GenesisSpec using MockKeyClient: %v", err)
 					}
@@ -190,7 +190,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					if err != nil {
 						output.Fatalf("Could not create remote key client: %v", err)
 					}
-					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient, *generateNodeKeys)
+					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient, *generateNodeKeys || *pool)
 				}
 
 				if err != nil {
@@ -312,13 +312,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				output.Fatalf("could not update burrow config: %v", err)
 			}
 
-			if *jsonOutOpt {
-				output.Printf(conf.JSONString())
-			} else {
-				output.Printf(conf.TOMLString())
-			}
-
-			if *testBurrows && len(validators) > 0 {
+			if *pool && len(validators) > 0 {
 				for i, v := range validators {
 					if v.NodeAddress == nil {
 						continue
@@ -346,7 +340,12 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 					ioutil.WriteFile(fmt.Sprintf("burrow%03d.toml", i), []byte(conf.TOMLString()), 0644)
 				}
+			} else if *jsonOutOpt {
+				output.Printf(conf.JSONString())
+			} else {
+				output.Printf(conf.TOMLString())
 			}
+
 		}
 	}
 }
