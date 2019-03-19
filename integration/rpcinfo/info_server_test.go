@@ -129,8 +129,8 @@ func TestBlockchainInfo(t *testing.T) {
 			nBlocks, nBlocks, len(resp.BlockMetas))
 		// For the maximum number (default to 20) of retrieved block headers,
 		// check that they correctly chain to each other.
-		lastBlockHash := resp.BlockMetas[nMetaBlocks-1].Header.Hash()
-		for i := nMetaBlocks - 2; i >= 0; i-- {
+		lastBlockHash := resp.BlockMetas[0].Header.Hash()
+		for i := 1; i < nMetaBlocks-1; i++ {
 			// the blockhash in header of height h should be identical to the hash
 			// in the LastBlockID of the header of block height h+1.
 			assert.Equal(t, lastBlockHash, resp.BlockMetas[i].Header.LastBlockID.Hash,

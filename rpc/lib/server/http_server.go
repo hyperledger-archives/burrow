@@ -87,13 +87,15 @@ func RecoverAndLogHandler(handler http.Handler, logger *logging.Logger) http.Han
 			}
 
 			// Finally, log.
-			durationMS := time.Since(begin).Nanoseconds() / 1000000
+			duration := time.Since(begin)
 			if rww.Status == -1 {
 				rww.Status = 200
 			}
 			logger.InfoMsg("Served RPC HTTP response",
-				"method", r.Method, "url", r.URL,
-				"status", rww.Status, "duration", durationMS,
+				"method", r.Method,
+				"url", r.URL,
+				"status", rww.Status,
+				"duration", duration,
 				"remote_address", r.RemoteAddr,
 			)
 		}()

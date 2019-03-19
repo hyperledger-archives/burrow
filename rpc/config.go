@@ -32,7 +32,7 @@ type MetricsConfig struct {
 	Enabled         bool
 	ListenAddress   string
 	MetricsPath     string
-	BlockSampleSize uint64
+	BlockSampleSize int
 }
 
 func DefaultRPCConfig() *RPCConfig {
