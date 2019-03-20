@@ -69,27 +69,27 @@ type PersistedState struct {
 	GenesisDoc            genesis.GenesisDoc
 }
 
-func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc, logger *logging.Logger) (*Blockchain, error) {
+func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc, logger *logging.Logger) (bool, *Blockchain, error) {
 	logger = logger.WithScope("LoadOrNewBlockchain")
 	logger.InfoMsg("Trying to load blockchain state from database",
 		"database_key", stateKey)
 	bc, err := loadBlockchain(db)
 	if err != nil {
-		return nil, fmt.Errorf("error loading blockchain state from database: %v", err)
+		return false, nil, fmt.Errorf("error loading blockchain state from database: %v", err)
 	}
 	if bc != nil {
 		dbHash := bc.genesisDoc.Hash()
 		argHash := genesisDoc.Hash()
 		if !bytes.Equal(dbHash, argHash) {
-			return nil, fmt.Errorf("GenesisDoc passed to LoadOrNewBlockchain has hash: 0x%X, which does not "+
+			return false, nil, fmt.Errorf("GenesisDoc passed to LoadOrNewBlockchain has hash: 0x%X, which does not "+
 				"match the one found in database: 0x%X, database genesis:\n%v\npassed genesis:\n%v\n",
 				argHash, dbHash, bc.genesisDoc.JSONString(), genesisDoc.JSONString())
 		}
-		return bc, nil
+		return true, bc, nil
 	}
 
 	logger.InfoMsg("No existing blockchain state found in database, making new blockchain")
-	return NewBlockchain(db, genesisDoc), nil
+	return false, NewBlockchain(db, genesisDoc), nil
 }
 
 // Pointer to blockchain state initialised from genesis
@@ -150,6 +150,14 @@ func (bc *Blockchain) CommitBlockAtHeight(blockTime time.Time, blockHash, appHas
 	bc.appHashAfterLastBlock = appHash
 	bc.lastCommitTime = time.Now().UTC()
 	return nil
+}
+
+func (bc *Blockchain) CommitWithAppHash(appHash []byte) error {
+	bc.appHashAfterLastBlock = appHash
+	bc.Lock()
+	defer bc.Unlock()
+
+	return bc.save()
 }
 
 func (bc *Blockchain) save() error {

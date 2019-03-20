@@ -1508,7 +1508,7 @@ func makeUsers(n int) []acm.AddressableSigner {
 
 func newBlockchain(genesisDoc *genesis.GenesisDoc) *bcm.Blockchain {
 	testDB := dbm.NewDB("test", dbBackend, ".")
-	blockchain, _ := bcm.LoadOrNewBlockchain(testDB, testGenesisDoc, logger)
+	_, blockchain, _ := bcm.LoadOrNewBlockchain(testDB, testGenesisDoc, logger)
 	return blockchain
 }
 

@@ -98,7 +98,7 @@ func (kern *Kernel) LoadTendermintFromConfig(tmConf *tendermint.BurrowTendermint
 		}
 	}
 
-	tmGenesisDoc := tendermint.DeriveGenesisDoc(&genesisDoc)
+	tmGenesisDoc := tendermint.DeriveGenesisDoc(&genesisDoc, kern.Blockchain.AppHashAfterLastBlock())
 	heightValuer := log.Valuer(func() interface{} { return kern.Blockchain.LastBlockHeight() })
 	tmLogger := kern.Logger.With(structure.CallerKey, log.Caller(LoggingCallerDepth+1)).With("height", heightValuer)
 	kern.Node, err = tendermint.NewNode(tmConf.TendermintConfig(), privVal, tmGenesisDoc, app, metricsProvider, nodeKey, tmLogger)
