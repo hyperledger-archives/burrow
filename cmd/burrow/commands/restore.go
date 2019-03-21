@@ -37,8 +37,7 @@ func Restore(output Output) func(cmd *cli.Cmd) {
 
 			output.Logf("Using validator address: %s", *conf.ValidatorAddress)
 
-			tmConf := conf.Tendermint.TendermintConfig()
-			kern, err := core.NewKernel(tmConf.DBDir())
+			kern, err := core.NewKernel(conf.BurrowDir)
 			if err != nil {
 				output.Fatalf("could not create Burrow kernel: %v", err)
 			}

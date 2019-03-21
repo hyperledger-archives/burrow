@@ -20,6 +20,7 @@ type BurrowConfig struct {
 	ValidatorAddress    *crypto.Address `json:",omitempty" toml:",omitempty"`
 	ValidatorPassphrase *string         `json:",omitempty" toml:",omitempty"`
 	// From config file
+	BurrowDir  string
 	GenesisDoc *genesis.GenesisDoc                `json:",omitempty" toml:",omitempty"`
 	Tendermint *tendermint.BurrowTendermintConfig `json:",omitempty" toml:",omitempty"`
 	Execution  *execution.ExecutionConfig         `json:",omitempty" toml:",omitempty"`
@@ -30,6 +31,7 @@ type BurrowConfig struct {
 
 func DefaultBurrowConfig() *BurrowConfig {
 	return &BurrowConfig{
+		BurrowDir:  ".burrow",
 		Tendermint: tendermint.DefaultBurrowTendermintConfig(),
 		Keys:       keys.DefaultKeysConfig(),
 		RPC:        rpc.DefaultRPCConfig(),

@@ -66,8 +66,7 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 
 	var kern *core.Kernel
 	var err error
-	tmConf := testConfig.Tendermint.TendermintConfig()
-	if kern, err = core.NewKernel(tmConf.DBDir()); err != nil {
+	if kern, err = core.NewKernel(testConfig.BurrowDir); err != nil {
 		return nil, err
 	}
 
@@ -87,7 +86,7 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 	}
 
 	privVal := tendermint.NewPrivValidatorMemory(validatorAccount, validatorAccount)
-	if err := kern.LoadTendermintFromConfig(testConfig.Tendermint, privVal, nil); err != nil {
+	if err := kern.LoadTendermintFromConfig(testConfig.Tendermint, testConfig.BurrowDir, privVal, nil); err != nil {
 		return nil, err
 	}
 
@@ -173,9 +172,9 @@ func GetTCPLocalAddress() string {
 func NewTestConfig(genesisDoc *genesis.GenesisDoc) *config.BurrowConfig {
 	name := GetName()
 	cnf := config.DefaultBurrowConfig()
+	cnf.BurrowDir = fmt.Sprintf(".burrow_%s", name)
 	cnf.GenesisDoc = genesisDoc
 	cnf.Tendermint.Moniker = name
-	cnf.Tendermint.BurrowDir = fmt.Sprintf(".burrow_%s", name)
 	cnf.Tendermint.ListenAddress = GetTCPLocalAddress()
 	cnf.Tendermint.ExternalAddress = cnf.Tendermint.ListenAddress
 	cnf.RPC.GRPC.ListenAddress = GetLocalAddress()

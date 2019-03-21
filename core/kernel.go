@@ -83,6 +83,9 @@ type Kernel struct {
 
 // NewKernel initializes an empty kernel
 func NewKernel(dbDir string) (*Kernel, error) {
+	if dbDir == "" {
+		return nil, fmt.Errorf("Burrow requires a database directory")
+	}
 	runID, err := simpleuuid.NewTime(time.Now()) // Create a random ID based on start time
 	return &Kernel{
 		Logger:         logging.NewNoopLogger(),

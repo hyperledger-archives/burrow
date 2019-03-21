@@ -14,6 +14,7 @@ import (
 // are applicable, we may not allow some values to specified, or we may not allow some to be set independently.
 // So this serves as a layer of indirection over Tendermint's real config that we derive from ours.
 type BurrowTendermintConfig struct {
+	Enabled bool
 	// Initial peers we connect to for peer exchange
 	Seeds string
 	// Whether this node should crawl the network looking for new peers - disconnecting to peers after it has shared addresses
@@ -27,7 +28,6 @@ type BurrowTendermintConfig struct {
 	// Set false for private or local networks
 	AddrBookStrict bool
 	Moniker        string
-	BurrowDir      string
 	// Peers ID or address this node is authorize to sync with
 	AuthorizedPeers string
 	// EmptyBlocks mode and possible interval between empty blocks in seconds
@@ -41,9 +41,9 @@ type BurrowTendermintConfig struct {
 func DefaultBurrowTendermintConfig() *BurrowTendermintConfig {
 	tmDefaultConfig := tm_config.DefaultConfig()
 	return &BurrowTendermintConfig{
+		Enabled:                   true,
 		ListenAddress:             tmDefaultConfig.P2P.ListenAddress,
 		ExternalAddress:           tmDefaultConfig.P2P.ExternalAddress,
-		BurrowDir:                 ".burrow",
 		CreateEmptyBlocks:         tmDefaultConfig.Consensus.CreateEmptyBlocks,
 		CreateEmptyBlocksInterval: tmDefaultConfig.Consensus.CreateEmptyBlocksInterval,
 		// Takes proposal timeout to about a 1 second...
@@ -51,13 +51,13 @@ func DefaultBurrowTendermintConfig() *BurrowTendermintConfig {
 	}
 }
 
-func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
+func (btc *BurrowTendermintConfig) TendermintConfig(rootDir string) *tm_config.Config {
 	conf := tm_config.DefaultConfig()
 	// We expose Tendermint config as required, but try to give fewer levers to pull where possible
 	if btc != nil {
-		conf.RootDir = btc.BurrowDir
-		conf.Mempool.RootDir = btc.BurrowDir
-		conf.Consensus.RootDir = btc.BurrowDir
+		conf.RootDir = rootDir
+		conf.Mempool.RootDir = rootDir
+		conf.Consensus.RootDir = rootDir
 
 		// Consensus
 		conf.Consensus.CreateEmptyBlocks = btc.CreateEmptyBlocks
@@ -76,7 +76,7 @@ func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
 
 		// P2P
 		conf.Moniker = btc.Moniker
-		conf.P2P.RootDir = btc.BurrowDir
+		conf.P2P.RootDir = rootDir
 		conf.P2P.Seeds = btc.Seeds
 		conf.P2P.SeedMode = btc.SeedMode
 		conf.P2P.PersistentPeers = btc.PersistentPeers

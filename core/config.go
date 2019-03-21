@@ -53,7 +53,13 @@ func (kern *Kernel) LoadExecutionOptionsFromConfig(conf *execution.ExecutionConf
 }
 
 // LoadTendermintFromConfig loads our consensus engine into the kernel
-func (kern *Kernel) LoadTendermintFromConfig(tmConf *tendermint.BurrowTendermintConfig, privVal tmTypes.PrivValidator, validator *crypto.Address) (err error) {
+func (kern *Kernel) LoadTendermintFromConfig(tmConf *tendermint.BurrowTendermintConfig,
+	rootDir string, privVal tmTypes.PrivValidator, validator *crypto.Address) (err error) {
+
+	if tmConf == nil || !tmConf.Enabled {
+		return nil
+	}
+
 	if privVal == nil {
 		val, err := keys.AddressableSigner(kern.keyClient, *validator)
 		if err != nil {
@@ -67,6 +73,7 @@ func (kern *Kernel) LoadTendermintFromConfig(tmConf *tendermint.BurrowTendermint
 	}
 
 	authorizedPeersProvider := tmConf.DefaultAuthorizedPeersProvider()
+	kern.database.Stats()
 
 	kern.nodeInfo = fmt.Sprintf("Burrow_%s_%s_ValidatorID:%X", project.History.CurrentVersion().String(),
 		kern.Blockchain.ChainID(), privVal.GetPubKey().Address())
@@ -101,14 +108,13 @@ func (kern *Kernel) LoadTendermintFromConfig(tmConf *tendermint.BurrowTendermint
 	tmGenesisDoc := tendermint.DeriveGenesisDoc(&genesisDoc, kern.Blockchain.AppHashAfterLastBlock())
 	heightValuer := log.Valuer(func() interface{} { return kern.Blockchain.LastBlockHeight() })
 	tmLogger := kern.Logger.With(structure.CallerKey, log.Caller(LoggingCallerDepth+1)).With("height", heightValuer)
-	kern.Node, err = tendermint.NewNode(tmConf.TendermintConfig(), privVal, tmGenesisDoc, app, metricsProvider, nodeKey, tmLogger)
+	kern.Node, err = tendermint.NewNode(tmConf.TendermintConfig(rootDir), privVal, tmGenesisDoc, app, metricsProvider, nodeKey, tmLogger)
 	return err
 }
 
 // LoadKernelFromConfig builds and returns a Kernel based solely on the supplied configuration
 func LoadKernelFromConfig(conf *config.BurrowConfig) (*Kernel, error) {
-	tmConf := conf.Tendermint.TendermintConfig()
-	kern, err := NewKernel(tmConf.DBDir())
+	kern, err := NewKernel(conf.BurrowDir)
 	if err != nil {
 		return nil, fmt.Errorf("could not create initial kernel: %v", err)
 	}
@@ -129,7 +135,7 @@ func LoadKernelFromConfig(conf *config.BurrowConfig) (*Kernel, error) {
 		return nil, fmt.Errorf("could not load state: %v", err)
 	}
 
-	if err = kern.LoadTendermintFromConfig(conf.Tendermint, nil, conf.ValidatorAddress); err != nil {
+	if err = kern.LoadTendermintFromConfig(conf.Tendermint, conf.BurrowDir, nil, conf.ValidatorAddress); err != nil {
 		return nil, fmt.Errorf("could not configure Tendermint: %v", err)
 	}
 
