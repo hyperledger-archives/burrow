@@ -52,10 +52,15 @@ func (pf PublisherFunc) Publish(ctx context.Context, message interface{}, tags q
 	return pf(ctx, message, tags)
 }
 
+type SetLogger interface {
+	SetLogger(logger *logging.Logger)
+}
+
 type Emitter interface {
 	Subscribable
 	Publisher
 	process.Process
+	SetLogger
 }
 
 // The events struct has methods for working with events.
@@ -65,14 +70,17 @@ type emitter struct {
 	logger       *logging.Logger
 }
 
-func NewEmitter(logger *logging.Logger) Emitter {
+func NewEmitter() Emitter {
 	pubsubServer := pubsub.NewServer(pubsub.BufferCapacity(DefaultEventBufferCapacity))
 	pubsubServer.BaseService = *common.NewBaseService(nil, "Emitter", pubsubServer)
 	pubsubServer.Start()
 	return &emitter{
 		pubsubServer: pubsubServer,
-		logger:       logger.With(structure.ComponentKey, "Events"),
 	}
+}
+
+func (em *emitter) SetLogger(logger *logging.Logger) {
+	em.logger = logger.With(structure.ComponentKey, "Events")
 }
 
 // core.Server

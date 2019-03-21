@@ -1,17 +1,12 @@
 package config
 
 import (
-	"context"
-	"fmt"
-
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/consensus/tendermint"
-	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
-	"github.com/hyperledger/burrow/logging/lifecycle"
 	logging_config "github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/rpc"
 )
@@ -41,63 +36,6 @@ func DefaultBurrowConfig() *BurrowConfig {
 		Execution:  execution.DefaultExecutionConfig(),
 		Logging:    logging_config.DefaultNodeLoggingConfig(),
 	}
-}
-
-func (conf *BurrowConfig) Kernel(ctx context.Context, restoreDump string) (*core.Kernel, error) {
-	if conf.GenesisDoc == nil {
-		return nil, fmt.Errorf("no GenesisDoc defined in config, cannot make Kernel")
-	}
-	if conf.ValidatorAddress == nil {
-		return nil, fmt.Errorf("no validator address provided, cannot make Kernel")
-	}
-	logger, err := lifecycle.NewLoggerFromLoggingConfig(conf.Logging)
-	if err != nil {
-		return nil, fmt.Errorf("could not generate logger from logging config: %v", err)
-	}
-	var keyClient keys.KeyClient
-	var keyStore *keys.KeyStore
-	if conf.Keys.RemoteAddress != "" {
-		keyClient, err = keys.NewRemoteKeyClient(conf.Keys.RemoteAddress, logger)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		keyStore = keys.NewKeyStore(conf.Keys.KeysDirectory, conf.Keys.AllowBadFilePermissions)
-		keyClient = keys.NewLocalKeyClient(keyStore, logger)
-	}
-
-	val, err := keys.AddressableSigner(keyClient, *conf.ValidatorAddress)
-	if err != nil {
-		return nil, fmt.Errorf("could not get validator addressable from keys client: %v", err)
-	}
-	signer, err := keys.AddressableSigner(keyClient, val.GetAddress())
-	if err != nil {
-		return nil, err
-	}
-	privValidator := tendermint.NewPrivValidatorMemory(val, signer)
-
-	var exeOptions []execution.ExecutionOption
-	if conf.Execution != nil {
-		exeOptions, err = conf.Execution.ExecutionOptions()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// find node key
-	var nodeKey *crypto.PrivateKey
-	for _, v := range conf.GenesisDoc.Validators {
-		if v.Address == *conf.ValidatorAddress && v.NodeAddress != nil {
-			k, err := keyStore.GetKey("", v.NodeAddress.Bytes())
-			if err == nil {
-				nodeKey = &k.PrivateKey
-			}
-			break
-		}
-	}
-
-	return core.NewKernel(ctx, keyClient, privValidator, conf.GenesisDoc, conf.Tendermint.TendermintConfig(), conf.RPC,
-		conf.Keys, keyStore, exeOptions, conf.Tendermint.DefaultAuthorizedPeersProvider(), restoreDump, nodeKey, logger)
 }
 
 func (conf *BurrowConfig) JSONString() string {

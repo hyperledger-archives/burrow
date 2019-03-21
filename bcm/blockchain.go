@@ -24,7 +24,7 @@ import (
 
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/tendermint/go-amino"
+	amino "github.com/tendermint/go-amino"
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
@@ -204,6 +204,9 @@ func (bc *Blockchain) ChainID() string {
 }
 
 func (bc *Blockchain) LastBlockHeight() uint64 {
+	if bc == nil {
+		return 0
+	}
 	bc.RLock()
 	defer bc.RUnlock()
 	return bc.lastBlockHeight

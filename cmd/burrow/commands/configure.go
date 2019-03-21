@@ -331,7 +331,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					conf.ValidatorAddress = &v.Address
 					conf.Tendermint.PersistentPeers = seeds
 					conf.Tendermint.ListenAddress = fmt.Sprintf("tcp://127.0.0.1:%d", 26656+i)
-					conf.Tendermint.TendermintRoot = fmt.Sprintf("burrow%03d", i)
+					conf.Tendermint.BurrowDir = fmt.Sprintf("burrow%03d", i)
 					conf.RPC.Info.ListenAddress = fmt.Sprintf("tcp://127.0.0.1:%d", 26758+i)
 					conf.RPC.GRPC.ListenAddress = fmt.Sprintf("127.0.0.1:%d", 10997+i)
 					conf.RPC.Metrics.ListenAddress = fmt.Sprintf("tcp://127.0.0.1:%d", 9102+i)

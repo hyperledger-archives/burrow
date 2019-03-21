@@ -52,14 +52,12 @@ func TestMain(m *testing.M) {
 			return sink.SetTransform(logconfig.FilterTransform(logconfig.IncludeWhenAllMatch,
 				"total_validator")).SetOutput(logconfig.StdoutOutput())
 		})
-		//logconf = logconfig.New()
-		//logconf := logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
-		//	return sink.SetOutput(logconfig.FileOutput(fmt.Sprintf("burrow_%d.log", i)))
-		//})
-		kernels[i] = integration.TestKernel(acc, privateAccounts, testConfigs[i],
-			logconf)
-		err := kernels[i].Boot()
+		var err error
+		kernels[i], err = integration.TestKernel(acc, privateAccounts, testConfigs[i], logconf)
 		if err != nil {
+			panic(err)
+		}
+		if err = kernels[i].Boot(); err != nil {
 			panic(err)
 		}
 		// Sometimes better to not shutdown as logging errors on shutdown may obscure real issue

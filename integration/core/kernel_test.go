@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/governance"
 
 	"github.com/hyperledger/burrow/acm/balance"
@@ -20,8 +21,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/hyperledger/burrow/config"
-	"github.com/hyperledger/burrow/consensus/tendermint"
-	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/solidity"
@@ -30,14 +29,11 @@ import (
 	"github.com/hyperledger/burrow/integration/rpctest"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/keys/mock"
-	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	tmTypes "github.com/tendermint/tendermint/types"
 )
 
 var genesisDoc, privateAccounts, privateValidators = genesis.NewDeterministicGenesis(123).GenesisDoc(1, true, 1000, 1, true, 1000)
@@ -46,17 +42,12 @@ func TestBootThenShutdown(t *testing.T) {
 	_, cleanup := integration.EnterTestDirectory()
 	defer cleanup()
 	//logger, _ := lifecycle.NewStdErrLogger()
-	logger := logging.NewNoopLogger()
-	privValidator := tendermint.NewPrivValidatorMemory(privateValidators[0], privateValidators[0])
-	assert.NoError(t, bootWaitBlocksShutdown(t, privValidator, integration.NewTestConfig(genesisDoc), logger, nil))
+	assert.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], integration.NewTestConfig(genesisDoc), nil, nil))
 }
 
 func TestBootShutdownResume(t *testing.T) {
 	_, cleanup := integration.EnterTestDirectory()
 	defer cleanup()
-	//logger, _ := lifecycle.NewStdErrLogger()
-	logger := logging.NewNoopLogger()
-	privValidator := tendermint.NewPrivValidatorMemory(privateValidators[0], privateValidators[0])
 
 	testConfig := integration.NewTestConfig(genesisDoc)
 	i := uint64(0)
@@ -76,12 +67,12 @@ func TestBootShutdownResume(t *testing.T) {
 		return true
 	}
 	// First run
-	require.NoError(t, bootWaitBlocksShutdown(t, privValidator, testConfig, logger, blockChecker))
+	require.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], testConfig, nil, blockChecker))
 	// Resume and check we pick up where we left off
-	require.NoError(t, bootWaitBlocksShutdown(t, privValidator, testConfig, logger, blockChecker))
+	require.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], testConfig, nil, blockChecker))
 	// Resuming with mismatched genesis should fail
 	genesisDoc.Salt = []byte("foo")
-	assert.Error(t, bootWaitBlocksShutdown(t, privValidator, testConfig, logger, blockChecker))
+	assert.Error(t, bootWaitBlocksShutdown(t, privateValidators[0], testConfig, nil, blockChecker))
 }
 
 func TestLoggingSignals(t *testing.T) {
@@ -91,16 +82,14 @@ func TestLoggingSignals(t *testing.T) {
 	name := "capture"
 	buffer := 100
 	path := "foo.json"
-	logger, err := lifecycle.NewLoggerFromLoggingConfig(logconfig.New().
+	logging := logconfig.New().
 		Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
 			return sink.SetTransform(logconfig.CaptureTransform(name, buffer, false)).
 				SetOutput(logconfig.FileOutput(path).SetFormat(loggers.JSONFormat))
-		}))
-	require.NoError(t, err)
-	privValidator := tendermint.NewPrivValidatorMemory(privateValidators[0], privateValidators[0])
+		})
 	i := 0
 	gap := 1
-	assert.NoError(t, bootWaitBlocksShutdown(t, privValidator, integration.NewTestConfig(genesisDoc), logger,
+	assert.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], integration.NewTestConfig(genesisDoc), logging,
 		func(block *exec.BlockExecution) (cont bool) {
 			if i == gap {
 				// Send sync signal
@@ -127,24 +116,18 @@ func TestLoggingSignals(t *testing.T) {
 	assert.InEpsilon(t, buffer*2, n, 10)
 }
 
-func bootWaitBlocksShutdown(t testing.TB, privValidator tmTypes.PrivValidator, testConfig *config.BurrowConfig,
-	logger *logging.Logger, blockChecker func(block *exec.BlockExecution) (cont bool)) error {
+func bootWaitBlocksShutdown(t testing.TB, privValidator *acm.PrivateAccount, testConfig *config.BurrowConfig,
+	logging *logconfig.LoggingConfig, blockChecker func(block *exec.BlockExecution) (cont bool)) error {
 
-	keyStore := keys.NewKeyStore(keys.DefaultKeysDir, false)
-	keyClient := mock.NewKeyClient(privateAccounts...)
-	ctx := context.Background()
-	kern, err := core.NewKernel(ctx, keyClient, privValidator,
-		testConfig.GenesisDoc,
-		testConfig.Tendermint.TendermintConfig(),
-		testConfig.RPC,
-		testConfig.Keys,
-		keyStore, nil, testConfig.Tendermint.DefaultAuthorizedPeersProvider(), "", nil, logger)
+	kern, err := integration.TestKernel(privValidator, rpctest.PrivateAccounts, testConfig, logging)
 	if err != nil {
 		return err
 	}
 
-	err = kern.Boot()
-	if err != nil {
+	kern.SetKeyClient(mock.NewKeyClient(privateAccounts...))
+	kern.SetKeyStore(keys.NewKeyStore(keys.DefaultKeysDir, false))
+	ctx := context.Background()
+	if err = kern.Boot(); err != nil {
 		return err
 	}
 

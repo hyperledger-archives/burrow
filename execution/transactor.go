@@ -69,6 +69,10 @@ func NewTransactor(tip bcm.BlockchainInfo, subscribable event.Subscribable, memp
 	}
 }
 
+func SimCheckTx(tx tmTypes.Tx, cb func(*abciTypes.Response)) error {
+	return nil
+}
+
 func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelope) (*exec.TxExecution, error) {
 	// Sign unless already signed - note we must attempt signing before subscribing so we get accurate final TxHash
 	unlock, err := trans.MaybeSignTxMempool(txEnv)
@@ -207,7 +211,7 @@ func (trans *Transactor) SignTx(txEnv *txs.Envelope) (*txs.Envelope, error) {
 }
 
 func (trans *Transactor) CheckTxSyncRaw(ctx context.Context, txBytes []byte) (*txs.Receipt, error) {
-	responseCh := make(chan *abciTypes.Response, 1)
+	responseCh := make(chan *abciTypes.Response, 3)
 	err := trans.CheckTxAsyncRaw(txBytes, func(res *abciTypes.Response) {
 		responseCh <- res
 	})
