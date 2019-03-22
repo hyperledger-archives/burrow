@@ -22,10 +22,12 @@ func TestMain(m *testing.M) {
 	_, cleanup := integration.EnterTestDirectory()
 	defer cleanup()
 
-	kern = integration.TestKernel(inputAccount, privateAccounts, testConfig, nil)
-
-	err := kern.Boot()
+	var err error
+	kern, err = integration.TestKernel(inputAccount, privateAccounts, testConfig, nil)
 	if err != nil {
+		panic(err)
+	}
+	if err := kern.Boot(); err != nil {
 		panic(err)
 	}
 	// Sometimes better to not shutdown as logging errors on shutdown may obscure real issue

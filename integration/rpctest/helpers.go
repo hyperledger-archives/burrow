@@ -51,7 +51,7 @@ func NewQueryClient(t testing.TB, listenAddress string) rpcquery.QueryClient {
 	return rpcquery.NewQueryClient(conn)
 }
 
-func CommittedTxCount(t *testing.T, em event.Emitter) chan int {
+func CommittedTxCount(t *testing.T, em *event.Emitter) chan int {
 	var numTxs int64
 	emptyBlocks := 0
 	maxEmptyBlocks := 2

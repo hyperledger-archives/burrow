@@ -83,7 +83,7 @@ type executor struct {
 	nameRegCache     *names.Cache
 	proposalRegCache *proposal.Cache
 	validatorCache   *validator.Cache
-	publisher        event.Publisher
+	emitter          *event.Emitter
 	block            *exec.BlockExecution
 	logger           *logging.Logger
 	vmOptions        []func(*evm.VM)
@@ -108,11 +108,11 @@ var _ BatchExecutor = (*executor)(nil)
 func NewBatchChecker(backend ExecutorState, params Params, blockchain contexts.Blockchain, logger *logging.Logger,
 	options ...ExecutionOption) BatchExecutor {
 
-	return newExecutor("CheckCache", false, params, backend, blockchain, event.NewNoOpPublisher(),
+	return newExecutor("CheckCache", false, params, backend, blockchain, nil,
 		logger.WithScope("NewBatchExecutor"), options...)
 }
 
-func NewBatchCommitter(backend ExecutorState, params Params, blockchain contexts.Blockchain, emitter event.Publisher,
+func NewBatchCommitter(backend ExecutorState, params Params, blockchain contexts.Blockchain, emitter *event.Emitter,
 	logger *logging.Logger, options ...ExecutionOption) BatchCommitter {
 
 	return newExecutor("CommitCache", true, params, backend, blockchain, emitter,
@@ -121,7 +121,7 @@ func NewBatchCommitter(backend ExecutorState, params Params, blockchain contexts
 }
 
 func newExecutor(name string, runCall bool, params Params, backend ExecutorState, blockchain contexts.Blockchain,
-	publisher event.Publisher, logger *logging.Logger, options ...ExecutionOption) *executor {
+	emitter *event.Emitter, logger *logging.Logger, options ...ExecutionOption) *executor {
 	exe := &executor{
 		runCall:          runCall,
 		params:           params,
@@ -130,7 +130,7 @@ func newExecutor(name string, runCall bool, params Params, backend ExecutorState
 		nameRegCache:     names.NewCache(backend),
 		proposalRegCache: proposal.NewCache(backend),
 		validatorCache:   validator.NewCache(backend),
-		publisher:        publisher,
+		emitter:          emitter,
 		block: &exec.BlockExecution{
 			Height: blockchain.LastBlockHeight() + 1,
 		},
@@ -428,7 +428,7 @@ func (exe *executor) updateSignatories(txEnv *txs.Envelope) error {
 
 func (exe *executor) publishBlock(blockExecution *exec.BlockExecution) {
 	for _, txe := range blockExecution.TxExecutions {
-		publishErr := exe.publisher.Publish(context.Background(), txe, txe.Tagged())
+		publishErr := exe.emitter.Publish(context.Background(), txe, txe.Tagged())
 		if publishErr != nil {
 			exe.logger.InfoMsg("Error publishing TxExecution",
 				"height", blockExecution.Height,
@@ -436,7 +436,7 @@ func (exe *executor) publishBlock(blockExecution *exec.BlockExecution) {
 				structure.ErrorKey, publishErr)
 		}
 	}
-	publishErr := exe.publisher.Publish(context.Background(), blockExecution, blockExecution.Tagged())
+	publishErr := exe.emitter.Publish(context.Background(), blockExecution, blockExecution.Tagged())
 	if publishErr != nil {
 		exe.logger.InfoMsg("Error publishing BlockExecution",
 			"height", blockExecution.Height,

@@ -43,9 +43,12 @@ var clients = map[string]tmClient.RPCClient{
 func TestMain(m *testing.M) {
 	_, cleanup := integration.EnterTestDirectory()
 	defer cleanup()
-	kern = integration.TestKernel(rpctest.PrivateAccounts[0], rpctest.PrivateAccounts, testConfig, nil)
-	err := kern.Boot()
+	var err error
+	kern, err = integration.TestKernel(rpctest.PrivateAccounts[0], rpctest.PrivateAccounts, testConfig, nil)
 	if err != nil {
+		panic(err)
+	}
+	if err = kern.Boot(); err != nil {
 		panic(err)
 	}
 	// Sometimes better to not shutdown as logging errors on shutdown may obscure real issue

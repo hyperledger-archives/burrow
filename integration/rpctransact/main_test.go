@@ -36,7 +36,8 @@ var kern *core.Kernel
 func TestMain(m *testing.M) {
 	_, cleanup := integration.EnterTestDirectory()
 	defer cleanup()
-	kern = integration.TestKernel(rpctest.PrivateAccounts[0], rpctest.PrivateAccounts, testConfig,
+	var err error
+	kern, err = integration.TestKernel(rpctest.PrivateAccounts[0], rpctest.PrivateAccounts, testConfig,
 		logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
 			return sink
 			//return sink.SetOutput(logconfig.StderrOutput())
@@ -45,8 +46,10 @@ func TestMain(m *testing.M) {
 			//	SetTransform(logconfig.FilterTransform(logconfig.IncludeWhenAllMatch, "tag", "DebugOpcodes")).
 			//	SetOutput(logconfig.StdoutOutput().SetFormat("{{.message}}"))
 		}))
-	err := kern.Boot()
 	if err != nil {
+		panic(err)
+	}
+	if err := kern.Boot(); err != nil {
 		panic(err)
 	}
 	// Sometimes better to not shutdown as logging errors on shutdown may obscure real issue

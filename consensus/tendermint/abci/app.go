@@ -33,8 +33,6 @@ type App struct {
 	nodeInfo string
 	// State
 	blockchain              *bcm.Blockchain
-	checker                 execution.BatchExecutor
-	committer               execution.BatchCommitter
 	validators              Validators
 	checkTx                 func(txBytes []byte) abciTypes.ResponseCheckTx
 	deliverTx               func(txBytes []byte) abciTypes.ResponseCheckTx
@@ -44,8 +42,14 @@ type App struct {
 	block *abciTypes.RequestBeginBlock
 	// Function to use to fail gracefully from panic rather than letting Tendermint make us a zombie
 	panicFunc func(error)
-	// Logging
-	logger *logging.Logger
+	TxExecutor
+}
+
+type TxExecutor struct {
+	checker   execution.BatchExecutor
+	committer execution.BatchCommitter
+	txDecoder txs.Decoder
+	logger    *logging.Logger
 }
 
 // PeersFilterProvider provides current authorized nodes id and/or addresses
@@ -57,16 +61,23 @@ func NewApp(nodeInfo string, blockchain *bcm.Blockchain, validators Validators, 
 	committer execution.BatchCommitter, txDecoder txs.Decoder, authorizedPeersProvider PeersFilterProvider,
 	panicFunc func(error), logger *logging.Logger) *App {
 	return &App{
-		nodeInfo:                nodeInfo,
-		blockchain:              blockchain,
-		validators:              validators,
-		checker:                 checker,
-		committer:               committer,
-		checkTx:                 txExecutor("CheckTx", checker, txDecoder, logger.WithScope("CheckTx")),
-		deliverTx:               txExecutor("DeliverTx", committer, txDecoder, logger.WithScope("DeliverTx")),
+		nodeInfo:   nodeInfo,
+		blockchain: blockchain,
+		validators: validators,
+		TxExecutor: NewTxExecutor(nodeInfo, checker, committer, txDecoder,
+			logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App", "node_info", nodeInfo)),
 		authorizedPeersProvider: authorizedPeersProvider,
 		panicFunc:               panicFunc,
-		logger:                  logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App", "node_info", nodeInfo),
+	}
+}
+
+func NewTxExecutor(nodeInfo string, checker execution.BatchExecutor, committer execution.BatchCommitter,
+	txDecoder txs.Decoder, logger *logging.Logger) TxExecutor {
+	return TxExecutor{
+		checker,
+		committer,
+		txDecoder,
+		logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App", "node_info", nodeInfo),
 	}
 }
 
@@ -187,7 +198,7 @@ func (app *App) CheckTx(txBytes []byte) abciTypes.ResponseCheckTx {
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/CheckTx: %v\n%s", r, debug.Stack()))
 		}
 	}()
-	return app.checkTx(txBytes)
+	return app.TxExecutor.CheckTx(txBytes)
 }
 
 func (app *App) DeliverTx(txBytes []byte) abciTypes.ResponseDeliverTx {
@@ -196,7 +207,15 @@ func (app *App) DeliverTx(txBytes []byte) abciTypes.ResponseDeliverTx {
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/DeliverTx: %v\n%s", r, debug.Stack()))
 		}
 	}()
-	ctr := app.deliverTx(txBytes)
+	return app.TxExecutor.DeliverTx(txBytes)
+}
+
+func (txx TxExecutor) CheckTx(txBytes []byte) abciTypes.ResponseCheckTx {
+	return txx.execute("CheckTx", txx.checker, txBytes)
+}
+
+func (txx TxExecutor) DeliverTx(txBytes []byte) abciTypes.ResponseDeliverTx {
+	ctr := txx.execute("DeliverTx", txx.committer, txBytes)
 	// Currently these message types are identical, if they are ever different can map between
 	return abciTypes.ResponseDeliverTx{
 		Code:      ctr.Code,
@@ -209,51 +228,50 @@ func (app *App) DeliverTx(txBytes []byte) abciTypes.ResponseDeliverTx {
 	}
 }
 
-func txExecutor(name string, executor execution.BatchExecutor, txDecoder txs.Decoder,
-	logger *logging.Logger) func(txBytes []byte) abciTypes.ResponseCheckTx {
+func (txx TxExecutor) execute(name string, executor execution.BatchExecutor, txBytes []byte) abciTypes.ResponseCheckTx {
 	logf := func(format string, args ...interface{}) string {
 		return fmt.Sprintf("%s: "+format, append([]interface{}{name}, args...)...)
 	}
-	return func(txBytes []byte) abciTypes.ResponseCheckTx {
-		txEnv, err := txDecoder.DecodeTx(txBytes)
-		if err != nil {
-			logger.InfoMsg("Decoding error",
-				structure.ErrorKey, err)
-			return abciTypes.ResponseCheckTx{
-				Code: codes.EncodingErrorCode,
-				Log:  logf("Encoding error: %s", err),
-			}
-		}
 
-		txe, err := executor.Execute(txEnv)
-		if err != nil {
-			ex := errors.AsException(err)
-			logger.InfoMsg("Execution error",
-				structure.ErrorKey, err,
-				"tx_hash", txEnv.Tx.Hash())
-			return abciTypes.ResponseCheckTx{
-				Code: codes.TxExecutionErrorCode,
-				Log:  logf("Could not execute transaction: %s, error: %v", txEnv, ex.Exception),
-			}
-		}
-
-		bs, err := txe.Receipt.Encode()
-		if err != nil {
-			return abciTypes.ResponseCheckTx{
-				Code: codes.EncodingErrorCode,
-				Log:  logf("Could not serialise receipt: %s", err),
-			}
-		}
-		logger.InfoMsg("Execution success",
-			"tx_hash", txe.TxHash,
-			"contract_address", txe.Receipt.ContractAddress,
-			"creates_contract", txe.Receipt.CreatesContract)
+	txEnv, err := txx.txDecoder.DecodeTx(txBytes)
+	if err != nil {
+		txx.logger.InfoMsg("Decoding error",
+			structure.ErrorKey, err)
 		return abciTypes.ResponseCheckTx{
-			Code: codes.TxExecutionSuccessCode,
-			Log:  logf("Execution success - TxExecution in data"),
-			Data: bs,
+			Code: codes.EncodingErrorCode,
+			Log:  logf("Encoding error: %s", err),
 		}
 	}
+
+	txe, err := executor.Execute(txEnv)
+	if err != nil {
+		ex := errors.AsException(err)
+		txx.logger.InfoMsg("Execution error",
+			structure.ErrorKey, err,
+			"tx_hash", txEnv.Tx.Hash())
+		return abciTypes.ResponseCheckTx{
+			Code: codes.TxExecutionErrorCode,
+			Log:  logf("Could not execute transaction: %s, error: %v", txEnv, ex.Exception),
+		}
+	}
+
+	bs, err := txe.Receipt.Encode()
+	if err != nil {
+		return abciTypes.ResponseCheckTx{
+			Code: codes.EncodingErrorCode,
+			Log:  logf("Could not serialise receipt: %s", err),
+		}
+	}
+	txx.logger.InfoMsg("Execution success",
+		"tx_hash", txe.TxHash,
+		"contract_address", txe.Receipt.ContractAddress,
+		"creates_contract", txe.Receipt.CreatesContract)
+	return abciTypes.ResponseCheckTx{
+		Code: codes.TxExecutionSuccessCode,
+		Log:  logf("Execution success - TxExecution in data"),
+		Data: bs,
+	}
+
 }
 
 func (app *App) EndBlock(reqEndBlock abciTypes.RequestEndBlock) abciTypes.ResponseEndBlock {

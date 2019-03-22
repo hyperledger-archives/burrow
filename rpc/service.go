@@ -367,7 +367,7 @@ func (s *Service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error
 func Status(blockchain bcm.BlockchainInfo, validators validator.History, nodeView *tendermint.NodeView, blockTimeWithin,
 	blockSeenTimeWithin string) (*ResultStatus, error) {
 	publicKey := nodeView.ValidatorPublicKey()
-	address := publicKey.GetAddress()
+	address := nodeView.ValidatorAddress()
 	power, err := validators.Validators(0).Power(address)
 	if err != nil {
 		return nil, err

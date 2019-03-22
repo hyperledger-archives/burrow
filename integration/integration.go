@@ -15,7 +15,6 @@
 package integration
 
 import (
-	"context"
 	"encoding/binary"
 	"fmt"
 	"io/ioutil"
@@ -36,7 +35,6 @@ import (
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys/mock"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/lifecycle"
 	lConfig "github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/permission"
 )
@@ -63,37 +61,37 @@ var node uint64 = 0
 
 // We use this to wrap tests
 func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.PrivateAccount,
-	testConfig *config.BurrowConfig, loggingConfig *lConfig.LoggingConfig) *core.Kernel {
+	testConfig *config.BurrowConfig, loggingConfig *lConfig.LoggingConfig) (*core.Kernel, error) {
 	fmt.Println("Creating integration test Kernel...")
 
-	logger := logging.NewNoopLogger()
+	var kern *core.Kernel
+	var err error
+	if kern, err = core.NewKernel(testConfig.BurrowDir); err != nil {
+		return nil, err
+	}
+
+	kern.SetLogger(logging.NewNoopLogger())
 	if loggingConfig != nil {
-		var err error
-		// Change config as needed
-		logger, err = lifecycle.NewLoggerFromLoggingConfig(loggingConfig)
+		err := kern.LoadLoggerFromConfig(loggingConfig)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
 
-	privValidator := tendermint.NewPrivValidatorMemory(validatorAccount, validatorAccount)
-	keyClient := mock.NewKeyClient(keysAccounts...)
-	kernel, err := core.NewKernel(context.Background(), keyClient, privValidator,
-		testConfig.GenesisDoc,
-		testConfig.Tendermint.TendermintConfig(),
-		testConfig.RPC,
-		testConfig.Keys,
-		nil,
-		[]execution.ExecutionOption{execution.VMOptions(evm.DebugOpcodes)},
-		testConfig.Tendermint.DefaultAuthorizedPeersProvider(),
-		"",
-		nil,
-		logger)
-	if err != nil {
-		panic(err)
+	kern.SetKeyClient(mock.NewKeyClient(keysAccounts...))
+	kern.AddExecutionOptions([]execution.ExecutionOption{execution.VMOptions(evm.DebugOpcodes)}...)
+
+	if err := kern.LoadState(testConfig.GenesisDoc); err != nil {
+		return nil, err
 	}
 
-	return kernel
+	privVal := tendermint.NewPrivValidatorMemory(validatorAccount, validatorAccount)
+	if err := kern.LoadTendermintFromConfig(testConfig.Tendermint, testConfig.BurrowDir, privVal, nil); err != nil {
+		return nil, err
+	}
+
+	kern.AddProcesses(core.DefaultServices(kern, testConfig.RPC, testConfig.Keys)...)
+	return kern, nil
 }
 
 func EnterTestDirectory() (testDir string, cleanup func()) {
@@ -174,9 +172,9 @@ func GetTCPLocalAddress() string {
 func NewTestConfig(genesisDoc *genesis.GenesisDoc) *config.BurrowConfig {
 	name := GetName()
 	cnf := config.DefaultBurrowConfig()
+	cnf.BurrowDir = fmt.Sprintf(".burrow_%s", name)
 	cnf.GenesisDoc = genesisDoc
 	cnf.Tendermint.Moniker = name
-	cnf.Tendermint.TendermintRoot = fmt.Sprintf(".burrow_%s", name)
 	cnf.Tendermint.ListenAddress = GetTCPLocalAddress()
 	cnf.Tendermint.ExternalAddress = cnf.Tendermint.ListenAddress
 	cnf.RPC.GRPC.ListenAddress = GetLocalAddress()

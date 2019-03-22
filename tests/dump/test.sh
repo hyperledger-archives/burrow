@@ -65,7 +65,8 @@ echo "------------------------------------"
 
 $burrow_bin configure -m BurrowTestRestoreNode -n "Restored Chain" -g genesis-original.json -w genesis.json --restore-dump dump.json > burrow.toml
 
-$burrow_bin start --restore-dump dump.json 2>> burrow.log &
+$burrow_bin restore dump.json
+$burrow_bin start 2>> burrow.log &
 burrow_pid=$!
 sleep 13
 

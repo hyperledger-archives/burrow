@@ -19,7 +19,9 @@ const (
 func TestApp_QueryAuthorizedPeers(t *testing.T) {
 	var panicked bool
 	app := &App{
-		logger: logging.NewNoopLogger(),
+		TxExecutor: TxExecutor{
+			logger: logging.NewNoopLogger(),
+		},
 		panicFunc: func(e error) {
 			panicked = true
 		},

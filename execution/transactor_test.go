@@ -38,8 +38,8 @@ import (
 func TestTransactor_BroadcastTxSync(t *testing.T) {
 	chainID := "TestChain"
 	bc := &bcm.Blockchain{}
-	logger := logging.NewNoopLogger()
-	evc := event.NewEmitter(logger)
+	evc := event.NewEmitter()
+	evc.SetLogger(logging.NewNoopLogger())
 	txCodec := txs.NewAminoCodec()
 	privAccount := acm.GeneratePrivateAccountFromSecret("frogs")
 	tx := &payload.CallTx{

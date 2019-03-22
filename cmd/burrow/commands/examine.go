@@ -21,7 +21,7 @@ func Examine(output Output) func(cmd *cli.Cmd) {
 			if err != nil {
 				output.Fatalf("Could not obtain config: %v", err)
 			}
-			tmConf := conf.Tendermint.TendermintConfig()
+			tmConf := conf.Tendermint.TendermintConfig(conf.BurrowDir)
 
 			explorer = bcm.NewBlockExplorer(db.DBBackendType(tmConf.DBBackend), tmConf.DBDir())
 		}
