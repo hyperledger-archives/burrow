@@ -23,17 +23,17 @@ type Provider interface {
 
 type executionEventsServer struct {
 	eventsProvider Provider
-	subscribable   event.Subscribable
+	emitter        *event.Emitter
 	tip            bcm.BlockchainInfo
 	logger         *logging.Logger
 }
 
-func NewExecutionEventsServer(eventsProvider Provider, subscribable event.Subscribable,
+func NewExecutionEventsServer(eventsProvider Provider, emitter *event.Emitter,
 	tip bcm.BlockchainInfo, logger *logging.Logger) ExecutionEventsServer {
 
 	return &executionEventsServer{
 		eventsProvider: eventsProvider,
-		subscribable:   subscribable,
+		emitter:        emitter,
 		tip:            tip,
 		logger:         logger.WithScope("NewExecutionEventsServer"),
 	}
@@ -51,11 +51,11 @@ func (ees *executionEventsServer) Tx(ctx context.Context, request *TxRequest) (*
 		return nil, fmt.Errorf("transaction with hash %v not found in state", request.TxHash)
 	}
 	subID := event.GenSubID()
-	out, err := ees.subscribable.Subscribe(ctx, subID, exec.QueryForTxExecution(request.TxHash), SubscribeBufferSize)
+	out, err := ees.emitter.Subscribe(ctx, subID, exec.QueryForTxExecution(request.TxHash), SubscribeBufferSize)
 	if err != nil {
 		return nil, err
 	}
-	defer ees.subscribable.UnsubscribeAll(ctx, subID)
+	defer ees.emitter.UnsubscribeAll(ctx, subID)
 	for msg := range out {
 		select {
 		case <-ctx.Done():
@@ -171,12 +171,12 @@ func (ees *executionEventsServer) subscribeBlockExecution(ctx context.Context,
 	// Otherwise we need to begin streaming blocks as they are produced
 	subID := event.GenSubID()
 	// Subscribe to BlockExecution events
-	out, err := ees.subscribable.Subscribe(ctx, subID, exec.QueryForBlockExecution(), SubscribeBufferSize)
+	out, err := ees.emitter.Subscribe(ctx, subID, exec.QueryForBlockExecution(), SubscribeBufferSize)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		err = ees.subscribable.UnsubscribeAll(context.Background(), subID)
+		err = ees.emitter.UnsubscribeAll(context.Background(), subID)
 		for range out {
 			// flush
 		}

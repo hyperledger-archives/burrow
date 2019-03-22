@@ -59,7 +59,7 @@ const (
 // Kernel is the root structure of Burrow
 type Kernel struct {
 	// Expose these public-facing interfaces to allow programmatic extension of the Kernel by other projects
-	Emitter        event.Emitter
+	Emitter        *event.Emitter
 	Service        *rpc.Service
 	Launchers      []process.Launcher
 	State          *state.State

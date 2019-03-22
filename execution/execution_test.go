@@ -1588,7 +1588,7 @@ func makeExecutor(state *state.State) *testExecutor {
 	return &testExecutor{
 		Blockchain: blockchain,
 		executor: newExecutor("makeExecutorCache", true, ParamsFromGenesis(testGenesisDoc), state,
-			blockchain, event.NewNoOpPublisher(), logger),
+			blockchain, nil, logger),
 	}
 }
 

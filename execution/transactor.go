@@ -48,29 +48,25 @@ const (
 // concurrent within a new block window.
 type Transactor struct {
 	BlockchainInfo  bcm.BlockchainInfo
-	Subscribable    event.Subscribable
+	Emitter         *event.Emitter
 	MempoolAccounts *Accounts
 	checkTxAsync    func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error
 	txEncoder       txs.Encoder
 	logger          *logging.Logger
 }
 
-func NewTransactor(tip bcm.BlockchainInfo, subscribable event.Subscribable, mempoolAccounts *Accounts,
+func NewTransactor(tip bcm.BlockchainInfo, emitter *event.Emitter, mempoolAccounts *Accounts,
 	checkTxAsync func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error, txEncoder txs.Encoder,
 	logger *logging.Logger) *Transactor {
 
 	return &Transactor{
 		BlockchainInfo:  tip,
-		Subscribable:    subscribable,
+		Emitter:         emitter,
 		MempoolAccounts: mempoolAccounts,
 		checkTxAsync:    checkTxAsync,
 		txEncoder:       txEncoder,
 		logger:          logger.With(structure.ComponentKey, "Transactor"),
 	}
-}
-
-func SimCheckTx(tx tmTypes.Tx, cb func(*abciTypes.Response)) error {
-	return nil
 }
 
 func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelope) (*exec.TxExecution, error) {
@@ -84,12 +80,12 @@ func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelop
 	// Subscribe before submitting to mempool
 	txHash := txEnv.Tx.Hash()
 	subID := event.GenSubID()
-	out, err := trans.Subscribable.Subscribe(ctx, subID, exec.QueryForTxExecution(txHash), SubscribeBufferSize)
+	out, err := trans.Emitter.Subscribe(ctx, subID, exec.QueryForTxExecution(txHash), SubscribeBufferSize)
 	if err != nil {
 		// We do not want to hold the lock with a defer so we must
 		return nil, err
 	}
-	defer trans.Subscribable.UnsubscribeAll(context.Background(), subID)
+	defer trans.Emitter.UnsubscribeAll(context.Background(), subID)
 	// Push Tx to mempool
 	checkTxReceipt, err := trans.CheckTxSync(ctx, txEnv)
 	unlock()
