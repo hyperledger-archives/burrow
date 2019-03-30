@@ -1,12 +1,14 @@
+BurrowDir = ".burrow"
+
 [Tendermint]
   Seeds = ""
   PersistentPeers = ""
   ListenAddress = "tcp://0.0.0.0:36656"
   ExternalAddress = ""
   Moniker = "BurrowIntegrationTestNode"
-  TendermintRoot = ".burrow"
 
 [Execution]
+  TimeoutFactor = 0.33
 
 [Keys]
   GRPCServiceEnabled = true
@@ -23,7 +25,7 @@
     ListenAddress = "tcp://127.0.0.1:7060"
   [RPC.GRPC]
     Enabled = true
-    ListenAddress = "127.0.0.1:20997"
+    ListenAddress = "tcp://127.0.0.1:20997"
   [RPC.Metrics]
     Enabled = false
     ListenAddress = "tcp://127.0.0.1:10102"

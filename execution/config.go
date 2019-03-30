@@ -14,6 +14,11 @@ const (
 )
 
 type ExecutionConfig struct {
+	// This parameter scales the default Tendermint timeouts. A value of 1 gives the Tendermint defaults designed to
+	// work for 100 node + public network. Smaller networks should be able to sustain lower values.
+	// When running in no-consensus mode (Tendermint.Enabled = false) this scales the block duration with 1.0 meaning 1 second
+	// and 0 meaning commit immediately
+	TimeoutFactor            float64
 	CallStackMaxDepth        uint64
 	DataStackInitialCapacity uint64
 	DataStackMaxDepth        uint64
@@ -25,6 +30,7 @@ func DefaultExecutionConfig() *ExecutionConfig {
 		CallStackMaxDepth:        0, // Unlimited by default
 		DataStackInitialCapacity: evm.DataStackInitialCapacity,
 		DataStackMaxDepth:        0, // Unlimited by default
+		TimeoutFactor:            0.33,
 	}
 }
 

@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hyperledger/burrow/consensus/tendermint/codes"
 	"github.com/hyperledger/burrow/logging"
+
+	"github.com/hyperledger/burrow/consensus/tendermint/codes"
 	"github.com/stretchr/testify/assert"
 	"github.com/tendermint/tendermint/abci/types"
 	abciTypes "github.com/tendermint/tendermint/abci/types"
@@ -19,9 +20,6 @@ const (
 func TestApp_QueryAuthorizedPeers(t *testing.T) {
 	var panicked bool
 	app := &App{
-		TxExecutor: TxExecutor{
-			logger: logging.NewNoopLogger(),
-		},
 		panicFunc: func(e error) {
 			panicked = true
 		},
@@ -29,6 +27,7 @@ func TestApp_QueryAuthorizedPeers(t *testing.T) {
 		authorizedPeersProvider: func() ([]string, []string) {
 			return []string{}, []string{}
 		},
+		logger: logging.NewNoopLogger(),
 	}
 
 	// When authorized node query is raised with any node id

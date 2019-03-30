@@ -107,10 +107,7 @@ func (ctx *CallContext) Precheck() (*acm.Account, *acm.Account, error) {
 }
 
 func (ctx *CallContext) Check(inAcc *acm.Account, value uint64) error {
-	// The mempool does not call txs until
-	// the proposer determines the order of txs.
-	// So mempool will skip the actual .Call(),
-	// and only deduct from the caller's balance.
+	// TODO: ummm I think this should be in precheck. Also precheck updates accoutn, this entire function should probably go.
 	inAcc.Balance -= value
 	err := ctx.StateWriter.UpdateAccount(inAcc)
 	if err != nil {
@@ -182,7 +179,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 	ctx.Logger.Trace.Log("callee", callee)
 
 	txHash := ctx.txe.Envelope.Tx.Hash()
-	logger := ctx.Logger.With("tx_hash", txHash)
+	logger := ctx.Logger.With(structure.TxHashKey, txHash)
 	vmach := evm.NewVM(params, caller, txHash, logger, ctx.VMOptions...)
 	ret, exception := vmach.Call(txCache, ctx.txe, caller, callee, code, ctx.tx.Data, value, &gas)
 	if exception != nil {

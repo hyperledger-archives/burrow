@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -25,24 +26,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hyperledger/burrow/genesis"
-	"github.com/hyperledger/burrow/keys"
-	"github.com/hyperledger/burrow/txs"
-
-	"github.com/hyperledger/burrow/execution/state"
-
 	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint"
-	"github.com/hyperledger/burrow/consensus/tendermint/abci"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/state"
+	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/process"
 	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/txs"
 	"github.com/streadway/simpleuuid"
-	abciTypes "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/blockchain"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	tmTypes "github.com/tendermint/tendermint/types"
@@ -71,12 +69,14 @@ type Kernel struct {
 	database       dbm.DB
 	txCodec        txs.Codec
 	exeOptions     []execution.ExecutionOption
-	exeChecker     execution.BatchExecutor
-	exeCommitter   execution.BatchCommitter
+	checker        execution.BatchExecutor
+	committer      execution.BatchCommitter
 	keyClient      keys.KeyClient
 	keyStore       *keys.KeyStore
 	nodeInfo       string
 	processes      map[string]process.Process
+	listeners      map[string]net.Listener
+	timeoutFactor  float64
 	shutdownNotify chan struct{}
 	shutdownOnce   sync.Once
 }
@@ -92,6 +92,7 @@ func NewKernel(dbDir string) (*Kernel, error) {
 		RunID:          runID,
 		Emitter:        event.NewEmitter(),
 		processes:      make(map[string]process.Process),
+		listeners:      make(map[string]net.Listener),
 		shutdownNotify: make(chan struct{}),
 		txCodec:        txs.NewAminoCodec(),
 		database:       dbm.NewDB(BurrowDBName, dbm.GoLevelDBBackend, dbDir),
@@ -144,8 +145,8 @@ func (kern *Kernel) LoadState(genesisDoc *genesis.GenesisDoc) (err error) {
 	kern.Logger.InfoMsg("State loading successful")
 
 	params := execution.ParamsFromGenesis(genesisDoc)
-	kern.exeChecker = execution.NewBatchChecker(kern.State, params, kern.Blockchain, kern.Logger)
-	kern.exeCommitter = execution.NewBatchCommitter(kern.State, params, kern.Blockchain, kern.Emitter, kern.Logger, kern.exeOptions...)
+	kern.checker = execution.NewBatchChecker(kern.State, params, kern.Blockchain, kern.Logger)
+	kern.committer = execution.NewBatchCommitter(kern.State, params, kern.Blockchain, kern.Emitter, kern.Logger, kern.exeOptions...)
 	return nil
 }
 
@@ -191,9 +192,11 @@ func (kern *Kernel) LoadDump(genesisDoc *genesis.GenesisDoc, restoreFile string)
 }
 
 // GetNodeView builds and returns a wrapper of our tendermint node
-func (kern *Kernel) GetNodeView() (nodeView *tendermint.NodeView, err error) {
-	nodeView, err = tendermint.NewNodeView(kern.Node, kern.txCodec, kern.RunID)
-	return nodeView, err
+func (kern *Kernel) GetNodeView() (*tendermint.NodeView, error) {
+	if kern.Node == nil {
+		return nil, nil
+	}
+	return tendermint.NewNodeView(kern.Node, kern.txCodec, kern.RunID)
 }
 
 // AddExecutionOptions extends our execution options
@@ -216,59 +219,21 @@ func (kern *Kernel) SetKeyStore(store *keys.KeyStore) {
 	kern.keyStore = store
 }
 
-// LoadTransactor builds the thing that helps us communicate with Tendermint if enabled
-// otherwise in no-consensus mode we can run and one tx per block
-func (kern *Kernel) LoadTransactor() (err error) {
-	nodeView, err := kern.GetNodeView()
+// Generates an in-memory Tendermint PrivValidator (suitable for passing to LoadTendermintFromConfig)
+func (kern *Kernel) PrivValidator(validator crypto.Address) (tmTypes.PrivValidator, error) {
+	val, err := keys.AddressableSigner(kern.keyClient, validator)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("could not get validator addressable from keys client: %v", err)
 	}
-
-	accountState := kern.State
-	nameRegState := kern.State
-	kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, kern.State, nodeView, kern.Logger)
-
-	if kern.Node == nil {
-		checkTx := func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error {
-			exec := abci.NewTxExecutor(kern.nodeInfo, kern.exeChecker, kern.exeCommitter, kern.txCodec, kern.Logger.WithScope("CheckTx"))
-			ctr := exec.CheckTx(tx)
-			dtr := exec.DeliverTx(tx)
-			appHash, err := kern.exeCommitter.Commit(nil)
-			if err != nil {
-				return err
-			}
-
-			if err := kern.Blockchain.CommitBlock(time.Now(), nil, appHash); err != nil {
-				return err
-			}
-
-			cb(abciTypes.ToResponseCheckTx(ctr))
-			cb(abciTypes.ToResponseDeliverTx(dtr))
-			cb(abciTypes.ToResponseCommit(abciTypes.ResponseCommit{
-				Data: appHash,
-			}))
-
-			return nil
-		}
-
-		kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter,
-			execution.NewAccounts(kern.exeChecker, kern.keyClient, AccountsRingMutexCount),
-			checkTx, kern.txCodec, kern.Logger)
-	} else {
-		kern.Blockchain.SetBlockStore(bcm.NewBlockStore(nodeView.BlockStore()))
-		kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter,
-			execution.NewAccounts(kern.exeChecker, kern.keyClient, AccountsRingMutexCount),
-			kern.Node.MempoolReactor().Mempool.CheckTx, kern.txCodec, kern.Logger)
+	signer, err := keys.AddressableSigner(kern.keyClient, val.GetAddress())
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	return tendermint.NewPrivValidatorMemory(val, signer), nil
 }
 
 // Boot the kernel starting Tendermint and RPC layers
 func (kern *Kernel) Boot() (err error) {
-	// by loading the transactor here we can be sure to boot with the latest nodeView
-	if err = kern.LoadTransactor(); err != nil {
-		return err
-	}
 	for _, launcher := range kern.Launchers {
 		if launcher.Enabled {
 			srvr, err := launcher.Launch()
@@ -293,6 +258,39 @@ func (kern *Kernel) Panic(err error) {
 func (kern *Kernel) WaitForShutdown() {
 	// Supports multiple goroutines waiting for shutdown since channel is closed
 	<-kern.shutdownNotify
+}
+
+func (kern *Kernel) registerListener(name string, listener net.Listener) error {
+	_, ok := kern.listeners[name]
+	if ok {
+		return fmt.Errorf("registerListener(): listener '%s' already registered", name)
+	}
+	kern.listeners[name] = listener
+	return nil
+}
+
+func (kern *Kernel) GRPCListenAddress() net.Addr {
+	l, ok := kern.listeners[GRPCProcessName]
+	if !ok {
+		return nil
+	}
+	return l.Addr()
+}
+
+func (kern *Kernel) InfoListenAddress() net.Addr {
+	l, ok := kern.listeners[InfoProcessName]
+	if !ok {
+		return nil
+	}
+	return l.Addr()
+}
+
+func (kern *Kernel) MetricsListenAddress() net.Addr {
+	l, ok := kern.listeners[MetricsProcessName]
+	if !ok {
+		return nil
+	}
+	return l.Addr()
 }
 
 // Supervise kernel once booted

@@ -36,6 +36,8 @@ const (
 	MessageKey = "message"
 	// Error key
 	ErrorKey = "error"
+	// Tx hash key
+	TxHashKey = "tx_hash"
 	// Captured logging source (like tendermint_log15, stdlib_log)
 	CapturedLoggingSourceKey = "captured_logging_source"
 	// Top-level component (choose one) name

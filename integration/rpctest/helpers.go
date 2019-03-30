@@ -2,12 +2,10 @@ package rpctest
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/integration"
@@ -51,36 +49,7 @@ func NewQueryClient(t testing.TB, listenAddress string) rpcquery.QueryClient {
 	return rpcquery.NewQueryClient(conn)
 }
 
-func CommittedTxCount(t *testing.T, em *event.Emitter) chan int {
-	var numTxs int64
-	emptyBlocks := 0
-	maxEmptyBlocks := 2
-	outCh := make(chan int)
-	subID := event.GenSubID()
-	ch, err := em.Subscribe(context.Background(), subID, exec.QueryForBlockExecution(), 1)
-	require.NoError(t, err)
-
-	go func() {
-		defer em.UnsubscribeAll(context.Background(), subID)
-		for msg := range ch {
-			be := msg.(*exec.BlockExecution)
-			if be.Header.NumTxs == 0 {
-				emptyBlocks++
-			} else {
-				emptyBlocks = 0
-			}
-			if emptyBlocks > maxEmptyBlocks {
-				break
-			}
-			numTxs += be.Header.NumTxs
-			fmt.Printf("Total TXs committed at block %v: %v (+%v)\n", be.Height, numTxs, be.Header.NumTxs)
-		}
-		outCh <- int(numTxs)
-	}()
-	return outCh
-}
-
-func CreateContract(t testing.TB, cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte) *exec.TxExecution {
+func CreateContract(cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte) (*exec.TxExecution, error) {
 	txe, err := cli.CallTxSync(context.Background(), &payload.CallTx{
 		Input: &payload.TxInput{
 			Address: inputAddress,
@@ -91,13 +60,13 @@ func CreateContract(t testing.TB, cli rpctransact.TransactClient, inputAddress c
 		Fee:      2,
 		GasLimit: 10000,
 	})
-	require.NoError(t, err)
-	require.NotNil(t, txe.TxHeader)
-	return txe
+	if err != nil {
+		return nil, err
+	}
+	return txe, nil
 }
 
-func CallContract(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address,
-	data []byte) *exec.TxExecution {
+func CallContract(cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address, data []byte) (*exec.TxExecution, error) {
 	txe, err := cli.CallTxSync(context.Background(), &payload.CallTx{
 		Input: &payload.TxInput{
 			Address: inputAddress,
@@ -108,9 +77,10 @@ func CallContract(t testing.TB, cli rpctransact.TransactClient, inputAddress, co
 		Fee:      2,
 		GasLimit: 1000000,
 	})
-	require.NoError(t, err)
-	require.NotNil(t, txe.TxHeader)
-	return txe
+	if err != nil {
+		return nil, err
+	}
+	return txe, nil
 }
 
 func UpdateName(t testing.TB, cli rpctransact.TransactClient, inputAddress crypto.Address, name, data string,

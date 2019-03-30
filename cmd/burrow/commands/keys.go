@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 
 	"github.com/hyperledger/burrow/deployment"
@@ -18,7 +19,6 @@ import (
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys"
-	"github.com/hyperledger/burrow/logging/lifecycle"
 	"google.golang.org/grpc"
 )
 
@@ -64,20 +64,21 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 			}
 
 			cmd.Action = func() {
-				logger, err := lifecycle.NewLoggerFromLoggingConfig(conf.Logging)
-				if err != nil {
-					output.Fatalf("could not generate logger from logging config: %v", err)
-				}
-
 				conf.Keys.AllowBadFilePermissions = *badPerm
 
 				if *keysDir != "" {
 					conf.Keys.KeysDirectory = *keysDir
 				}
 
-				err = keys.StartStandAloneServer(conf.Keys.KeysDirectory, *keysHost, *keysPort, conf.Keys.AllowBadFilePermissions, logger)
+				server := keys.StandAloneServer(conf.Keys.KeysDirectory, conf.Keys.AllowBadFilePermissions)
+				address := fmt.Sprintf("%s:%s", *keysHost, *keysPort)
+				listener, err := net.Listen("tcp", address)
 				if err != nil {
-					output.Fatalf("Failed to start server: %v", err)
+					output.Fatalf("Could not listen on %s: %v", address, err)
+				}
+				err = server.Serve(listener)
+				if err != nil {
+					output.Fatalf("Keys server terminated with error: %v", err)
 				}
 			}
 		})

@@ -39,17 +39,15 @@ import (
 var genesisDoc, privateAccounts, privateValidators = genesis.NewDeterministicGenesis(123).GenesisDoc(1, true, 1000, 1, true, 1000)
 
 func TestBootThenShutdown(t *testing.T) {
-	_, cleanup := integration.EnterTestDirectory()
+	conf, cleanup := integration.NewTestConfig(genesisDoc)
 	defer cleanup()
 	//logger, _ := lifecycle.NewStdErrLogger()
-	assert.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], integration.NewTestConfig(genesisDoc), nil, nil))
+	assert.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], conf, nil, nil))
 }
 
 func TestBootShutdownResume(t *testing.T) {
-	_, cleanup := integration.EnterTestDirectory()
+	testConfig, cleanup := integration.NewTestConfig(genesisDoc)
 	defer cleanup()
-
-	testConfig := integration.NewTestConfig(genesisDoc)
 	i := uint64(0)
 	// asserts we get a consecutive run of blocks
 	blockChecker := func(block *exec.BlockExecution) bool {
@@ -76,9 +74,8 @@ func TestBootShutdownResume(t *testing.T) {
 }
 
 func TestLoggingSignals(t *testing.T) {
-	//cleanup := integration.EnterTestDirectory()
-	//defer cleanup()
-	integration.EnterTestDirectory()
+	conf, cleanup := integration.NewTestConfig(genesisDoc)
+	defer cleanup()
 	name := "capture"
 	buffer := 100
 	path := "foo.json"
@@ -89,7 +86,7 @@ func TestLoggingSignals(t *testing.T) {
 		})
 	i := 0
 	gap := 1
-	assert.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], integration.NewTestConfig(genesisDoc), logging,
+	assert.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], conf, logging,
 		func(block *exec.BlockExecution) (cont bool) {
 			if i == gap {
 				// Send sync signal
@@ -132,7 +129,7 @@ func bootWaitBlocksShutdown(t testing.TB, privValidator *acm.PrivateAccount, tes
 	}
 
 	inputAddress := privateAccounts[0].GetAddress()
-	tcli := rpctest.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
+	tcli := rpctest.NewTransactClient(t, kern.GRPCListenAddress().String())
 
 	stopCh := make(chan struct{})
 	// Catch first error only

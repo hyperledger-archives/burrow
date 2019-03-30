@@ -14,6 +14,7 @@
 package metrics
 
 import (
+	"net"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -25,7 +26,7 @@ import (
 	"github.com/hyperledger/burrow/rpc/lib/server"
 )
 
-func StartServer(service *rpc.Service, pattern, listenAddress string, blockSampleSize int,
+func StartServer(service *rpc.Service, pattern string, listener net.Listener, blockSampleSize int,
 	logger *logging.Logger) (*http.Server, error) {
 
 	// instantiate metrics and variables we do not expect to change during runtime
@@ -41,7 +42,7 @@ func StartServer(service *rpc.Service, pattern, listenAddress string, blockSampl
 	mux := http.NewServeMux()
 	mux.Handle(pattern, server.RecoverAndLogHandler(promhttp.Handler(), logger))
 
-	srv, err := server.StartHTTPServer(listenAddress, mux, logger)
+	srv, err := server.StartHTTPServer(listener, mux, logger)
 	if err != nil {
 		return nil, err
 	}

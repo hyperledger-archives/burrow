@@ -19,19 +19,19 @@ import (
 )
 
 func TestPostgresSynchronizeDB(t *testing.T) {
-	testSynchronizeDB(t, test.PostgresVentConfig())
+	testSynchronizeDB(t, test.PostgresVentConfig(""))
 }
 
 func TestPostgresCleanDB(t *testing.T) {
-	testCleanDB(t, test.PostgresVentConfig())
+	testCleanDB(t, test.PostgresVentConfig(""))
 }
 
 func TestPostgresSetBlock(t *testing.T) {
-	testSetBlock(t, test.PostgresVentConfig())
+	testSetBlock(t, test.PostgresVentConfig(""))
 }
 
 func TestPostgresBlockNotification(t *testing.T) {
-	cfg := test.PostgresVentConfig()
+	cfg := test.PostgresVentConfig("")
 	db, closeDB := test.NewTestDB(t, cfg)
 	defer closeDB()
 

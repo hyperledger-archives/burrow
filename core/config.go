@@ -5,8 +5,8 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/config"
+	"github.com/hyperledger/burrow/consensus/abci"
 	"github.com/hyperledger/burrow/consensus/tendermint"
-	"github.com/hyperledger/burrow/consensus/tendermint/abci"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/keys"
@@ -48,37 +48,25 @@ func (kern *Kernel) LoadExecutionOptionsFromConfig(conf *execution.ExecutionConf
 			return err
 		}
 		kern.exeOptions = exeOptions
+		kern.timeoutFactor = conf.TimeoutFactor
 	}
 	return nil
 }
 
 // LoadTendermintFromConfig loads our consensus engine into the kernel
-func (kern *Kernel) LoadTendermintFromConfig(tmConf *tendermint.BurrowTendermintConfig,
-	rootDir string, privVal tmTypes.PrivValidator, validator *crypto.Address) (err error) {
-
-	if tmConf == nil || !tmConf.Enabled {
+func (kern *Kernel) LoadTendermintFromConfig(conf *config.BurrowConfig, privVal tmTypes.PrivValidator) (err error) {
+	if conf.Tendermint == nil || !conf.Tendermint.Enabled {
 		return nil
 	}
 
-	if privVal == nil {
-		val, err := keys.AddressableSigner(kern.keyClient, *validator)
-		if err != nil {
-			return fmt.Errorf("could not get validator addressable from keys client: %v", err)
-		}
-		signer, err := keys.AddressableSigner(kern.keyClient, val.GetAddress())
-		if err != nil {
-			return err
-		}
-		privVal = tendermint.NewPrivValidatorMemory(val, signer)
-	}
-
-	authorizedPeersProvider := tmConf.DefaultAuthorizedPeersProvider()
+	authorizedPeersProvider := conf.Tendermint.DefaultAuthorizedPeersProvider()
 	kern.database.Stats()
 
 	kern.nodeInfo = fmt.Sprintf("Burrow_%s_%s_ValidatorID:%X", project.History.CurrentVersion().String(),
 		kern.Blockchain.ChainID(), privVal.GetPubKey().Address())
-	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, kern.State, kern.exeChecker, kern.exeCommitter, kern.txCodec, authorizedPeersProvider,
-		kern.Panic, kern.Logger)
+
+	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, kern.State, kern.checker, kern.committer, kern.txCodec,
+		authorizedPeersProvider, kern.Panic, kern.Logger)
 
 	// We could use this to provide/register our own metrics (though this will register them with us). Unfortunately
 	// Tendermint currently ignores the metrics passed unless its own server is turned on.
@@ -108,7 +96,7 @@ func (kern *Kernel) LoadTendermintFromConfig(tmConf *tendermint.BurrowTendermint
 	tmGenesisDoc := tendermint.DeriveGenesisDoc(&genesisDoc, kern.Blockchain.AppHashAfterLastBlock())
 	heightValuer := log.Valuer(func() interface{} { return kern.Blockchain.LastBlockHeight() })
 	tmLogger := kern.Logger.With(structure.CallerKey, log.Caller(LoggingCallerDepth+1)).With("height", heightValuer)
-	kern.Node, err = tendermint.NewNode(tmConf.TendermintConfig(rootDir), privVal, tmGenesisDoc, app, metricsProvider, nodeKey, tmLogger)
+	kern.Node, err = tendermint.NewNode(conf.TendermintConfig(), privVal, tmGenesisDoc, app, metricsProvider, nodeKey, tmLogger)
 	return err
 }
 
@@ -123,22 +111,35 @@ func LoadKernelFromConfig(conf *config.BurrowConfig) (*Kernel, error) {
 		return nil, fmt.Errorf("could not configure logger: %v", err)
 	}
 
-	if err = kern.LoadKeysFromConfig(conf.Keys); err != nil {
+	err = kern.LoadKeysFromConfig(conf.Keys)
+	if err != nil {
 		return nil, fmt.Errorf("could not configure keys: %v", err)
 	}
 
-	if err = kern.LoadExecutionOptionsFromConfig(conf.Execution); err != nil {
+	err = kern.LoadExecutionOptionsFromConfig(conf.Execution)
+	if err != nil {
 		return nil, fmt.Errorf("could not add execution options: %v", err)
 	}
 
-	if err = kern.LoadState(conf.GenesisDoc); err != nil {
+	err = kern.LoadState(conf.GenesisDoc)
+	if err != nil {
 		return nil, fmt.Errorf("could not load state: %v", err)
 	}
 
-	if err = kern.LoadTendermintFromConfig(conf.Tendermint, conf.BurrowDir, nil, conf.ValidatorAddress); err != nil {
+	if conf.ValidatorAddress == nil {
+		return nil, fmt.Errorf("ValidatorAddress must be set")
+	}
+
+	privVal, err := kern.PrivValidator(*conf.ValidatorAddress)
+	if err != nil {
+		return nil, fmt.Errorf("could not form PrivValidator from ValidatorAddress: %v", err)
+	}
+
+	err = kern.LoadTendermintFromConfig(conf, privVal)
+	if err != nil {
 		return nil, fmt.Errorf("could not configure Tendermint: %v", err)
 	}
 
-	kern.AddProcesses(DefaultServices(kern, conf.RPC, conf.Keys)...)
+	kern.AddProcesses(DefaultProcessLaunchers(kern, conf.RPC, conf.Keys)...)
 	return kern, nil
 }

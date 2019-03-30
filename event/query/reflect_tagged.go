@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 )
 
 type ReflectTagged struct {
@@ -40,7 +41,7 @@ func ReflectTags(value interface{}, fieldNames ...string) (*ReflectTagged, error
 	}
 	ty := rv.Elem().Type()
 	// Try our global cache on types
-	if rt, ok := cacheGet(ty, fieldNames); ok {
+	if rt, ok := cache.get(ty, fieldNames); ok {
 		rt.rv = rv
 		return rt, nil
 	}
@@ -77,7 +78,7 @@ func ReflectTags(value interface{}, fieldNames ...string) (*ReflectTagged, error
 		}
 	}
 	// Cache the registration
-	cachePut(ty, rt, fieldNames)
+	cache.put(ty, rt, fieldNames)
 	return rt, nil
 }
 
@@ -106,23 +107,34 @@ func (rt *ReflectTagged) Len() int {
 	return len(rt.keys)
 }
 
-// Avoid the need to iterate over reflected type each time we need a reflect tagged
-var reflectTaggedCache = make(map[reflect.Type]map[string]ReflectTagged)
+type reflectTaggedCache struct {
+	sync.Mutex
+	rts map[reflect.Type]map[string]ReflectTagged
+}
 
-func cacheGet(ty reflect.Type, keys []string) (*ReflectTagged, bool) {
-	if _, ok := reflectTaggedCache[ty]; ok {
+// Avoid the need to iterate over reflected type each time we need a reflect tagged
+var cache = &reflectTaggedCache{
+	rts: make(map[reflect.Type]map[string]ReflectTagged),
+}
+
+func (c *reflectTaggedCache) get(ty reflect.Type, keys []string) (*ReflectTagged, bool) {
+	c.Lock()
+	defer c.Unlock()
+	if _, ok := c.rts[ty]; ok {
 		key := strings.Join(keys, ",")
-		if rt, ok := reflectTaggedCache[ty][key]; ok {
+		if rt, ok := c.rts[ty][key]; ok {
 			return &rt, true
 		}
 	}
 	return nil, false
 }
 
-func cachePut(ty reflect.Type, rt *ReflectTagged, fieldNames []string) {
-	if _, ok := reflectTaggedCache[ty]; !ok {
-		reflectTaggedCache[ty] = make(map[string]ReflectTagged)
+func (c *reflectTaggedCache) put(ty reflect.Type, rt *ReflectTagged, fieldNames []string) {
+	c.Lock()
+	defer c.Unlock()
+	if _, ok := c.rts[ty]; !ok {
+		c.rts[ty] = make(map[string]ReflectTagged)
 	}
 	key := strings.Join(fieldNames, ",")
-	reflectTaggedCache[ty][key] = *rt
+	c.rts[ty][key] = *rt
 }
