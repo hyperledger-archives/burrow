@@ -91,6 +91,10 @@ func (cb *cacheBatch) Write() {
 	cb.cache.WriteTo(cb.backend)
 }
 
+func (cb *cacheBatch) Close() {
+	cb.Close()
+}
+
 func (cb *cacheBatch) WriteSync() {
 	cb.Write()
 }

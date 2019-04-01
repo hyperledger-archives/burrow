@@ -97,3 +97,7 @@ func (pb *prefixBatch) Write() {
 func (pb *prefixBatch) WriteSync() {
 	pb.batch.WriteSync()
 }
+
+func (pb *prefixBatch) Close() {
+	pb.batch.Close()
+}

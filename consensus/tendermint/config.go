@@ -70,10 +70,6 @@ func (btc *BurrowTendermintConfig) TendermintConfig(rootDir string) *tm_config.C
 		conf.Consensus.TimeoutPrecommit = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPrecommit)
 		conf.Consensus.TimeoutPrecommitDelta = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPrecommitDelta)
 		conf.Consensus.TimeoutCommit = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutCommit)
-		// This is the smallest increment we can use to get a strictly increasing sequence of block time - we set it low to avoid skew
-		// if the BlockTimeIota is longer than the average block time
-		conf.Consensus.BlockTimeIota = time.Nanosecond
-
 		// P2P
 		conf.Moniker = btc.Moniker
 		conf.P2P.RootDir = rootDir

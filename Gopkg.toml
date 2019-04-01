@@ -13,15 +13,13 @@
     name = "github.com/tendermint/tmlibs"
     non-go = false
 
-[[constraint]]
+[[override]]
   name = "github.com/tendermint/tendermint"
-  source = "github.com/silasdavis/tendermint"
-  # Until Tendermint remove go-ethereum
-  version = "v0.30.1-libsecp256k1"
+  version = "v0.31.2"
 
-[[constraint]]
+[[override]]
   name = "github.com/tendermint/iavl"
-  version = "=0.12.1"
+  version = "=0.12.2"
 
 # Allow only patch releases for serialization libraries (from Tendermint)
 [[override]]
