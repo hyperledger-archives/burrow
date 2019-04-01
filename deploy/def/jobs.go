@@ -254,6 +254,8 @@ type Build struct {
 	// the name of the file (or the last one deployed if there are no matching names; not the "last"
 	// one deployed" strategy is non-deterministic and should not be used).
 	Instance string `mapstructure:"instance" json:"instance" yaml:"instance" toml:"instance"`
+	// (Optional) Path to store an extra copy of the bin file
+	Store string `mapstructure:"store" json:"store" yaml:"store" toml:"store"`
 }
 
 func (job *Build) Validate() error {
@@ -296,6 +298,8 @@ type Deploy struct {
 	Sequence string `mapstructure:"sequence" json:"sequence" yaml:"sequence" toml:"sequence"`
 	// (Optional) todo
 	Variables []*abi.Variable
+	// (Optional) Path to store an extra copy of the bin file
+	Store string `mapstructure:"store" json:"store" yaml:"store" toml:"store"`
 }
 
 func (job *Deploy) Validate() error {

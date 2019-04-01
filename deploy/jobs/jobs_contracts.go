@@ -38,7 +38,7 @@ func BuildJob(build *def.Build, deployScript *def.Playbook, resp *compilers.Resp
 		logger.InfoMsg("Error compiling contracts", "Language error", resp.Error)
 		return "", fmt.Errorf("%v", resp.Error)
 	} else if resp.Warning != "" {
-		logger.InfoMsg("Warnign during contraction compilation", "warning", resp.Warning)
+		logger.InfoMsg("Warning during contraction compilation", "warning", resp.Warning)
 	}
 
 	// Save
@@ -73,6 +73,16 @@ func BuildJob(build *def.Build, deployScript *def.Playbook, resp *compilers.Resp
 		err = res.Contract.Save(binP, fmt.Sprintf("%s.bin", res.Objectname))
 		if err != nil {
 			return "", err
+		}
+
+		if build.Store != "" {
+			dir := filepath.Dir(build.Store)
+			file := filepath.Base(build.Store)
+
+			err = res.Contract.Save(dir, file)
+			if err != nil {
+				return "", err
+			}
 		}
 	}
 
@@ -323,6 +333,16 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 	err := contract.Save(script.BinPath, fmt.Sprintf("%s.bin", contractName))
 	if err != nil {
 		return nil, err
+	}
+
+	if deploy.Store != "" {
+		dir := filepath.Dir(deploy.Store)
+		file := filepath.Base(deploy.Store)
+
+		err = contract.Save(dir, file)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	err = contract.Link(libs)
