@@ -24,11 +24,11 @@ func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, script *def.
 	var data string
 	var packedBytes []byte
 	if query.Bin != "" {
-		packedBytes, _, err = abi.EncodeFunctionCallFromFile(query.Bin, script.BinPath, query.Function, queryDataArray...)
+		packedBytes, _, err = abi.EncodeFunctionCallFromFile(query.Bin, script.BinPath, query.Function, logger, queryDataArray...)
 		data = hex.EncodeToString(packedBytes)
 	}
 	if query.Bin == "" || err != nil {
-		packedBytes, _, err = abi.EncodeFunctionCallFromFile(query.Destination, script.BinPath, query.Function, queryDataArray...)
+		packedBytes, _, err = abi.EncodeFunctionCallFromFile(query.Destination, script.BinPath, query.Function, logger, queryDataArray...)
 		data = hex.EncodeToString(packedBytes)
 	}
 	if err != nil {
@@ -51,13 +51,13 @@ func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, script *def.
 		logger.TraceMsg("Decoding Raw Result",
 			"return", hex.EncodeUpperToString(txe.Result.Return),
 			"Abi", query.Bin)
-		query.Variables, err = abi.DecodeFunctionReturnFromFile(query.Bin, script.BinPath, query.Function, txe.Result.Return)
+		query.Variables, err = abi.DecodeFunctionReturnFromFile(query.Bin, script.BinPath, query.Function, txe.Result.Return, logger)
 	}
 	if query.Bin == "" || err != nil {
 		logger.TraceMsg("Decoding Raw Result",
 			"return", hex.EncodeUpperToString(txe.Result.Return),
 			"Abi", query.Destination)
-		query.Variables, err = abi.DecodeFunctionReturnFromFile(query.Destination, script.BinPath, query.Function, txe.Result.Return)
+		query.Variables, err = abi.DecodeFunctionReturnFromFile(query.Destination, script.BinPath, query.Function, txe.Result.Return, logger)
 	}
 	if err != nil {
 		return "", nil, err

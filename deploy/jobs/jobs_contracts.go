@@ -149,7 +149,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 			if err != nil {
 				return nil, nil, err
 			}
-			packedBytes, _, err := abi.EncodeFunctionCall(string(contract.Abi), "", callDataArray...)
+			packedBytes, _, err := abi.EncodeFunctionCall(string(contract.Abi), "", logger, callDataArray...)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -356,7 +356,7 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 		if err != nil {
 			return nil, err
 		}
-		packedBytes, _, err := abi.EncodeFunctionCall(string(compilersResponse.Contract.Abi), "", callDataArray...)
+		packedBytes, _, err := abi.EncodeFunctionCall(string(compilersResponse.Contract.Abi), "", logger, callDataArray...)
 		if err != nil {
 			return nil, err
 		}
@@ -404,11 +404,11 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 	var funcSpec *abi.FunctionSpec
 	logger.TraceMsg("Looking for ABI in", "path", deployScript.BinPath, "bin", call.Bin, "dest", call.Destination)
 	if call.Bin != "" {
-		packedBytes, funcSpec, err = abi.EncodeFunctionCallFromFile(call.Bin, deployScript.BinPath, call.Function, callDataArray...)
+		packedBytes, funcSpec, err = abi.EncodeFunctionCallFromFile(call.Bin, deployScript.BinPath, call.Function, logger, callDataArray...)
 		callData = hex.EncodeToString(packedBytes)
 	}
 	if call.Bin == "" || err != nil {
-		packedBytes, funcSpec, err = abi.EncodeFunctionCallFromFile(call.Destination, deployScript.BinPath, call.Function, callDataArray...)
+		packedBytes, funcSpec, err = abi.EncodeFunctionCallFromFile(call.Destination, deployScript.BinPath, call.Function, logger, callDataArray...)
 		callData = hex.EncodeToString(packedBytes)
 	}
 	if err != nil {
@@ -480,10 +480,10 @@ func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, playbook *d
 		logger.TraceMsg("Decoding Raw Result", "return", hex.EncodeUpperToString(txe.Result.Return))
 
 		if call.Bin != "" {
-			call.Variables, err = abi.DecodeFunctionReturnFromFile(call.Bin, playbook.BinPath, call.Function, txe.Result.Return)
+			call.Variables, err = abi.DecodeFunctionReturnFromFile(call.Bin, playbook.BinPath, call.Function, txe.Result.Return, logger)
 		}
 		if call.Bin == "" || err != nil {
-			call.Variables, err = abi.DecodeFunctionReturnFromFile(call.Destination, playbook.BinPath, call.Function, txe.Result.Return)
+			call.Variables, err = abi.DecodeFunctionReturnFromFile(call.Destination, playbook.BinPath, call.Function, txe.Result.Return, logger)
 		}
 		if err != nil {
 			return "", nil, err
