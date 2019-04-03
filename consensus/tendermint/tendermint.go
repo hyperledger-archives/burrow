@@ -95,6 +95,10 @@ func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc, appHash []byte) *tmT
 		}
 	}
 	consensusParams := tmTypes.DefaultConsensusParams()
+	// This is the smallest increment we can use to get a strictly increasing sequence
+	// of block time - we set it low to avoid skew
+	// if the BlockTimeIota is longer than the average block time
+	consensusParams.Block.TimeIotaMs = 1
 
 	return &tmTypes.GenesisDoc{
 		ChainID:         burrowGenesisDoc.ChainID(),

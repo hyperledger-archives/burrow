@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/rpc/core"
+	rpctypes "github.com/tendermint/tendermint/rpc/lib/types"
 )
 
 func TestAlterValidators(t *testing.T) {
@@ -62,7 +63,7 @@ func TestAlterValidators(t *testing.T) {
 	rpctest.WaitNBlocks(t, ecli, 5)
 	height := int64(kernels[0].Blockchain.LastBlockHeight())
 	kernels[0].Node.ConfigureRPC()
-	tmVals, err := core.Validators(&height)
+	tmVals, err := core.Validators(&rpctypes.Context{}, &height)
 	require.NoError(t, err)
 	vsOut = validator.NewTrimSet()
 

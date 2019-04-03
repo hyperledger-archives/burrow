@@ -14,8 +14,8 @@
   name = "github.com/OneOfOne/xxhash"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "456a93f5dffea9f90d34d67b03b144f12a8125cc"
-  version = "v1.2.4"
+  revision = "c1e3185f167680b62832a0a11938a04b1ab265fc"
+  version = "v1.2.5"
 
 [[projects]]
   branch = "master"
@@ -163,7 +163,7 @@
   version = "v1.2.1"
 
 [[projects]]
-  digest = "1:03e14cff610a8a58b774e36bd337fa979482be86aab01be81fb8bbd6d0f07fc8"
+  digest = "1:2d0636a8c490d2272dd725db26f74a537111b99b9dbdda0d8b98febe63702aa4"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -173,8 +173,8 @@
     "ptypes/timestamp",
   ]
   pruneopts = "NUT"
-  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
-  version = "v1.1.0"
+  revision = "b5d812f8a3706043e23a9cd5babf2e5423744d30"
+  version = "v1.3.1"
 
 [[projects]]
   digest = "1:7f114b78210bf5b75f307fc97cff293633c835bab1e0ea8a744a44b39c042dfe"
@@ -395,17 +395,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0a2e604afa3cbf53a1ddade2f240ee8472eded98856dd8c7cfbfea392ddbbfc7"
+  digest = "1:7813f698f171bd7132b123364433e1b0362f7fdb4ed7f4a20df595a4c2410f8a"
   name = "github.com/prometheus/procfs"
-  packages = [
-    ".",
-    "internal/util",
-    "iostats",
-    "nfs",
-    "xfs",
-  ]
+  packages = ["."]
   pruneopts = "NUT"
-  revision = "bbced9601137e764853b2fad7ec3e2dc4c504e02"
+  revision = "af7bedc223fba51343f25a6fa7aba84355d0357a"
 
 [[projects]]
   digest = "1:7c522337040d4ec9a136cd9d64fe4677ee1d3eae4a7f8831c2108f9bec43fa48"
@@ -423,23 +417,23 @@
   version = "v1.6.0"
 
 [[projects]]
-  digest = "1:e256b859ab89f005f2f639f5ed9807d0873d9135e27c6382f419b840ff9abe71"
+  digest = "1:bb9033d47c116ea3b981ff159bdef73df8351b0b9700da2066339b97211b1bf0"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "e1e72e9de974bd926e5c56f83753fba2df402ce5"
-  version = "v1.3.0"
+  revision = "dae0fa8d5b0c810a8ab733fbd5510c7cae84eca4"
+  version = "v1.4.0"
 
 [[projects]]
-  digest = "1:90cf76d709ce9b057e7d75bd245bf7c1242d21ba4f908fb22c7a2a96d1dcc0ca"
+  digest = "1:6792bb72ea0e7112157d02e4e175cd421b43d004a853f56316a19beca6e0c074"
   name = "github.com/spf13/afero"
   packages = [
     ".",
     "mem",
   ]
   pruneopts = "NUT"
-  revision = "f4711e4db9e9a1d3887343acb72b2bbfc2f686f5"
-  version = "v1.2.1"
+  revision = "588a75ec4f32903aa5e39a2619ba6a4631e28424"
+  version = "v1.2.2"
 
 [[projects]]
   digest = "1:c5e6b121ef3d2043505edaf4c80e5a008cec2513dc8804795eb0479d1555bcf7"
@@ -450,12 +444,12 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:f29f83301ed096daed24a90f4af591b7560cb14b9cc3e1827abbf04db7269ab5"
+  digest = "1:3d72352adb74e79d6d5a43d6f51bfd2d0bd0c9b5f3c00cf5a4b1636d8d3b9d92"
   name = "github.com/spf13/jwalterweatherman"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "4a4406e478ca629068e7768fc33f3f044173c0a6"
-  version = "v1.0.0"
+  revision = "94f6ae3ed3bceceafa716478c5fbf8d29ca601a1"
+  version = "v1.1.0"
 
 [[projects]]
   digest = "1:9d8420bbf131d1618bde6530af37c3799340d3762cc47210c1d9532a4c3a2779"
@@ -466,12 +460,12 @@
   version = "v1.0.3"
 
 [[projects]]
-  digest = "1:e11ca20a245c80885b5777d7918a2a57d464556f3f1a61be5524e3972eea7ca2"
+  digest = "1:60c6a70caa4381d3bb6c0211b634e1d5288b01dff882501353bf328fde40b375"
   name = "github.com/spf13/viper"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "6d33b5a963d922d182c91e8a1c88d81fd150cfd4"
-  version = "v1.3.1"
+  revision = "9e56dacc08fbbf8c9ee2dbc717553c758ce42bc9"
+  version = "v1.3.2"
 
 [[projects]]
   branch = "master"
@@ -522,15 +516,15 @@
   version = "v0.14.1"
 
 [[projects]]
-  digest = "1:899fcac906fb5576d0bb0269d4bbd001ccb5053c824eea7627fcd0df0ad84da3"
+  digest = "1:80e4c17f1359b415b21ffbfb746184177694c2c1a0f27ced5182dd9916a81413"
   name = "github.com/tendermint/iavl"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "ac7c35c12e8633a1e9fd0b52a00b900b40f32cd3"
-  version = "v0.12.1"
+  revision = "2f35d309e69ffec33c044a910acd9e8d739eb095"
+  version = "v0.12.2"
 
 [[projects]]
-  digest = "1:9c6fd56a7c1c277576d6e5ebc2c6c26907f034b306707e4fe379377f1685c054"
+  digest = "1:c80a042083e66cfc833f9cea8559306da6d0fc5ee93121cddeb2b321eff2fd37"
   name = "github.com/tendermint/tendermint"
   packages = [
     "abci/client",
@@ -583,9 +577,8 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "df304d2276b731f2f924e93ef176337951bb5f27"
-  source = "github.com/silasdavis/tendermint"
-  version = "v0.30.1"
+  revision = "79e9f205782f1adb94b4150561e414280115cf4e"
+  version = "v0.31.2"
 
 [[projects]]
   branch = "master"
@@ -601,7 +594,7 @@
   name = "github.com/tmthrgd/go-hex"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "14226a535f434c12dbb6c0a0a59e40716f1534b4"
+  revision = "0bdcb15db6317286e8e8cbf89787c034d6707d7c"
 
 [[projects]]
   branch = "master"
@@ -676,7 +669,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:06016ff94d4b63a5d59477d44567a8baab8d9f0b1f7c7e226fc5870cffdf2d07"
+  digest = "1:9d3e228e937aed4a979a079e439c84b988c532da439e4f13158c002ca338eb68"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -684,7 +677,7 @@
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "a34e9553db1e492c9a76e60db2296ae7e5fbb772"
+  revision = "9eb1bfa1ce65ae8a6ff3114b0aaf9a41a6cf3560"
 
 [[projects]]
   digest = "1:e7071ed636b5422cc51c0e3a6cebc229d6c9fffc528814b519a980641422d619"
@@ -711,14 +704,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:077c1c599507b3b3e9156d17d36e1e61928ee9b53a5b420f10f28ebd4a0b275c"
+  digest = "1:c3076e7defee87de1236f1814beb588f40a75544c60121e6eb38b3b3721783e2"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "NUT"
-  revision = "4f5b463f9597cbe0dd13a6a2cd4f85e788d27508"
+  revision = "f467c93bbac2133ff463e1f93d18d8f9f3f04451"
 
 [[projects]]
-  digest = "1:f2df7088cd31687fdce0f2eee853682416bf1e70baa487094913e3881f1f12f8"
+  digest = "1:f9fe1989f8278a0976fadf27490720c7708c056a11ab7a7ad3d282ff26f28e9a"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -754,8 +747,8 @@
     "tap",
   ]
   pruneopts = "NUT"
-  revision = "2fdaae294f38ed9a121193c51ec99fecd3b13eb7"
-  version = "v1.19.0"
+  revision = "3507fb8e1a5ad030303c106fef3a47c9fdad16ad"
+  version = "v1.19.1"
 
 [[projects]]
   digest = "1:18108594151654e9e696b27b181b953f9a90b16bf14d253dd1b397b025a1487f"
@@ -827,6 +820,7 @@
     "github.com/tendermint/tendermint/proxy",
     "github.com/tendermint/tendermint/rpc/core",
     "github.com/tendermint/tendermint/rpc/core/types",
+    "github.com/tendermint/tendermint/rpc/lib/types",
     "github.com/tendermint/tendermint/state",
     "github.com/tendermint/tendermint/types",
     "github.com/tendermint/tendermint/types/time",
