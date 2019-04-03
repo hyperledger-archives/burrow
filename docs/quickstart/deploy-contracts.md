@@ -247,7 +247,7 @@ You have to install [solc binary](https://solidity.readthedocs.io/en/v0.4.21/ins
 From inside that directory, we are ready to deploy.
 
 ```bash
-burrow deploy --address F71831847564B7008AD30DD56336D9C42787CF63
+burrow deploy --address F71831847564B7008AD30DD56336D9C42787CF63 deploy.yaml
 ```
 
 where you should replace the `--address` field with the `ValidatorAddress` at the top of your `burrow.toml`.

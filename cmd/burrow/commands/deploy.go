@@ -33,7 +33,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 		defaultOutputOpt := cmd.StringOpt("o output", def.DefaultOutputFile,
 			"filename for playbook output file. by default, this name will reflect the playbook passed")
 
-		playbooksOpt := cmd.StringsArg("FILE", []string{"deploy.yaml"},
+		playbooksOpt := cmd.StringsArg("FILE", []string{},
 			"path to playbook file which deploy should run. if also using the --dir flag, give the relative path to playbooks file, which should be in the same directory")
 
 		defaultSetsOpt := cmd.StringsOpt("e set", []string{},
@@ -73,7 +73,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 		cmd.Spec = "[--chain=<host:port>] [--keys=<host:port>] [--mempool-signing] [--dir=<root directory>] " +
 			"[--output=<output file>] [--set=<KEY=VALUE>]... [--bin-path=<path>] [--gas=<gas>] " +
 			"[--jobs=<concurrent playbooks>] [--address=<address>] [--fee=<fee>] [--amount=<amount>] " +
-			"[--verbose] [--debug] [--timeout=<timeout>] [--proposal-create|--proposal-verify|--proposal-create] [FILE...]"
+			"[--verbose] [--debug] [--timeout=<timeout>] [--proposal-create|--proposal-verify|--proposal-create] FILE..."
 
 		cmd.Action = func() {
 			args := new(def.DeployArgs)

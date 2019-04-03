@@ -140,8 +140,7 @@ func replaceBlockVariable(toReplace string, client *def.Client, logger *logging.
 
 	blockHeight, err := GetBlockHeight(client, logger)
 	block := itoaU64(blockHeight)
-	logger.TraceMsg("Currnt height is",
-		"block", block)
+	logger.TraceMsg("Current height", "height", block)
 	if err != nil {
 		return "", err
 	}
