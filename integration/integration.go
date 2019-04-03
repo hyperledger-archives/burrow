@@ -98,7 +98,7 @@ func EnterTestDirectory() (testDir string, cleanup func()) {
 	var err error
 	testDir, err = ioutil.TempDir("", scratchDir)
 	if err != nil {
-		panic(fmt.Errorf("couldnot make temp dir for integration tests: %v", err))
+		panic(fmt.Errorf("could not make temp dir for integration tests: %v", err))
 	}
 	// If you need to expect dirs
 	//testDir := scratchDir

@@ -6,12 +6,12 @@ import (
 	"path"
 
 	"github.com/hyperledger/burrow/deploy/compile"
+	"github.com/hyperledger/burrow/logging"
 )
 
 func main() {
 	for _, solfile := range os.Args[1:] {
-		resp, err := compile.Compile(solfile, false, nil)
-
+		resp, err := compile.Compile(solfile, false, "", nil, logging.NewNoopLogger())
 		if err != nil {
 			fmt.Printf("failed compile solidity: %v\n", err)
 			os.Exit(1)

@@ -3,6 +3,7 @@ package jobs
 import (
 	"fmt"
 
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs/payload"
 
 	"github.com/hyperledger/burrow/crypto"
@@ -11,7 +12,7 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/abi"
 )
 
-func FormulateUpdateAccountJob(gov *def.UpdateAccount, account string, client *def.Client) (*payload.GovTx, []*abi.Variable, error) {
+func FormulateUpdateAccountJob(gov *def.UpdateAccount, account string, client *def.Client, logger *logging.Logger) (*payload.GovTx, []*abi.Variable, error) {
 	gov.Source = useDefault(gov.Source, account)
 	perms := make([]string, len(gov.Permissions))
 
@@ -29,7 +30,7 @@ func FormulateUpdateAccountJob(gov *def.UpdateAccount, account string, client *d
 	newAccountMatch := def.NewKeyRegex.FindStringSubmatch(gov.Target)
 	if len(newAccountMatch) > 0 {
 		keyName, curveType := def.KeyNameCurveType(newAccountMatch)
-		publicKey, err := client.CreateKey(keyName, curveType)
+		publicKey, err := client.CreateKey(keyName, curveType, logger)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not create key for new account: %v", err)
 		}
@@ -41,7 +42,7 @@ func FormulateUpdateAccountJob(gov *def.UpdateAccount, account string, client *d
 		arg.PublicKey = gov.Target
 	}
 
-	tx, err := client.UpdateAccount(arg)
+	tx, err := client.UpdateAccount(arg, logger)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -49,13 +50,13 @@ func FormulateUpdateAccountJob(gov *def.UpdateAccount, account string, client *d
 	return tx, util.Variables(arg), nil
 }
 
-func UpdateAccountJob(gov *def.UpdateAccount, account string, tx *payload.GovTx, client *def.Client) error {
-	txe, err := client.SignAndBroadcast(tx)
+func UpdateAccountJob(gov *def.UpdateAccount, account string, tx *payload.GovTx, client *def.Client, logger *logging.Logger) error {
+	txe, err := client.SignAndBroadcast(tx, logger)
 	if err != nil {
-		return util.ChainErrorHandler(account, err)
+		return util.ChainErrorHandler(account, err, logger)
 	}
 
-	util.ReadTxSignAndBroadcast(txe, err)
+	util.ReadTxSignAndBroadcast(txe, err, logger)
 	if err != nil {
 		return err
 	}

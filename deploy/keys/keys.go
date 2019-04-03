@@ -7,7 +7,6 @@ import (
 
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
-	log "github.com/sirupsen/logrus"
 )
 
 type LocalKeyClient struct {
@@ -55,7 +54,7 @@ func InitKeyClient(keysUrl string) (*LocalKeyClient, error) {
 // host - search for keys on the host
 // container - search for keys on the container
 // quiet - don't print output, just return the list you find
-func (keys *LocalKeyClient) ListKeys(keysPath string, quiet bool) ([]string, error) {
+func (keys *LocalKeyClient) ListKeys(keysPath string, quiet bool, logger *logging.Logger) ([]string, error) {
 	var result []string
 	addrs, err := ioutil.ReadDir(keysPath)
 	if err != nil {
@@ -66,16 +65,10 @@ func (keys *LocalKeyClient) ListKeys(keysPath string, quiet bool) ([]string, err
 	}
 	if !quiet {
 		if len(addrs) == 0 {
-			log.Warn("No keys found on host")
+			logger.InfoMsg("No keys found on host")
 		} else {
 			// First key.
-			log.WithField("=>", result[0]).Warn("The keys on your host kind marmot")
-			// Subsequent keys.
-			if len(result) > 1 {
-				for _, addr := range result[1:] {
-					log.WithField("=>", addr).Warn()
-				}
-			}
+			logger.InfoMsg("The keys on host", result)
 		}
 	}
 

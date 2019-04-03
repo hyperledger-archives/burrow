@@ -8,7 +8,7 @@ import (
 
 	"github.com/hyperledger/burrow/deploy/compile"
 	"github.com/hyperledger/burrow/execution/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/hyperledger/burrow/logging"
 )
 
 // Variable exist to unpack return values into, so have both the return
@@ -39,13 +39,13 @@ var RevertAbi *AbiSpec
 // must match the function being called.
 // Returns the ABI encoded function call, whether the function is constant according
 // to the ABI (which means it does not modified contract state)
-func EncodeFunctionCallFromFile(abiFileName, abiPath, funcName string, args ...interface{}) ([]byte, *FunctionSpec, error) {
-	abiSpecBytes, err := readAbi(abiPath, abiFileName)
+func EncodeFunctionCallFromFile(abiFileName, abiPath, funcName string, logger *logging.Logger, args ...interface{}) ([]byte, *FunctionSpec, error) {
+	abiSpecBytes, err := readAbi(abiPath, abiFileName, logger)
 	if err != nil {
 		return []byte{}, nil, err
 	}
 
-	return EncodeFunctionCall(abiSpecBytes, funcName, args...)
+	return EncodeFunctionCall(abiSpecBytes, funcName, logger, args...)
 }
 
 // EncodeFunctionCall ABI encodes a function call based on ABI in string abiData
@@ -56,28 +56,28 @@ func EncodeFunctionCallFromFile(abiFileName, abiPath, funcName string, args ...i
 // must match the function being called.
 // Returns the ABI encoded function call, whether the function is constant according
 // to the ABI (which means it does not modified contract state)
-func EncodeFunctionCall(abiData, funcName string, args ...interface{}) ([]byte, *FunctionSpec, error) {
-	log.WithField("=>", abiData).Debug("ABI Specification (Formulate)")
-	log.WithFields(log.Fields{
-		"function":  funcName,
-		"arguments": fmt.Sprintf("%v", args),
-	}).Debug("Packing Call via ABI")
+func EncodeFunctionCall(abiData, funcName string, logger *logging.Logger, args ...interface{}) ([]byte, *FunctionSpec, error) {
+	logger.TraceMsg("Packing Call via ABI",
+		"spec", abiData,
+		"function", funcName,
+		"arguments", fmt.Sprintf("%v", args),
+	)
 
 	abiSpec, err := ReadAbiSpec([]byte(abiData))
 	if err != nil {
-		log.WithFields(log.Fields{
-			"abi":   abiData,
-			"error": err.Error(),
-		}).Error("Failed to decode abi spec")
+		logger.InfoMsg("Failed to decode abi spec",
+			"abi", abiData,
+			"error", err.Error(),
+		)
 		return nil, nil, err
 	}
 
 	packedBytes, funcSpec, err := abiSpec.Pack(funcName, args...)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"abi":   abiData,
-			"error": err.Error(),
-		}).Error("Failed to encode abi spec")
+		logger.InfoMsg("Failed to encode abi spec",
+			"abi", abiData,
+			"error", err.Error(),
+		)
 		return nil, nil, err
 	}
 
@@ -85,12 +85,12 @@ func EncodeFunctionCall(abiData, funcName string, args ...interface{}) ([]byte, 
 }
 
 // DecodeFunctionReturnFromFile ABI decodes the return value from a contract function call.
-func DecodeFunctionReturnFromFile(abiLocation, binPath, funcName string, resultRaw []byte) ([]*Variable, error) {
-	abiSpecBytes, err := readAbi(binPath, abiLocation)
+func DecodeFunctionReturnFromFile(abiLocation, binPath, funcName string, resultRaw []byte, logger *logging.Logger) ([]*Variable, error) {
+	abiSpecBytes, err := readAbi(binPath, abiLocation, logger)
 	if err != nil {
 		return nil, err
 	}
-	log.WithField("=>", abiSpecBytes).Debug("ABI Specification (Decode)")
+	logger.TraceMsg("ABI Specification (Decode)", "spec", abiSpecBytes)
 
 	// Unpack the result
 	return DecodeFunctionReturn(abiSpecBytes, funcName, resultRaw)
@@ -143,17 +143,17 @@ func DecodeFunctionReturn(abiData, name string, data []byte) ([]*Variable, error
 	return vars, nil
 }
 
-func readAbi(root, contract string) (string, error) {
+func readAbi(root, contract string, logger *logging.Logger) (string, error) {
 	p := path.Join(root, stripHex(contract))
 	if _, err := os.Stat(p); err != nil {
-		log.WithField("abifile", p).Debug("Tried, not found")
+		logger.TraceMsg("abifile not found", "tried", p)
 		p = path.Join(root, stripHex(contract)+".bin")
 		if _, err = os.Stat(p); err != nil {
-			log.WithField("abifile", p).Debug("Tried, not found")
+			logger.TraceMsg("abifile not found", "tried", p)
 			return "", fmt.Errorf("Abi doesn't exist for =>\t%s", p)
 		}
 	}
-	log.WithField("abifile", p).Debug("Found ABI")
+	logger.TraceMsg("Found ABI file", "path", p)
 	sol, err := compile.LoadSolidityContract(p)
 	if err != nil {
 		return "", err

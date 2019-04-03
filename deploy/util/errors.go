@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/hyperledger/burrow/deploy/def"
-	log "github.com/sirupsen/logrus"
+	"github.com/hyperledger/burrow/logging"
 )
 
 func Exit(err error) {
@@ -17,18 +17,10 @@ func Exit(err error) {
 	os.Exit(status)
 }
 
-func IfExit(err error) {
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-}
-
-func ChainErrorHandler(account string, err error) error {
-	log.WithFields(log.Fields{
-		"defAddr": account,
-		"rawErr":  err,
-	}).Error("")
+func ChainErrorHandler(account string, err error, logger *logging.Logger) error {
+	logger.InfoMsg("There has been an error talking to your Burrow chain",
+		"defAddr", account,
+		"rawErr", err)
 
 	return fmt.Errorf(`
 There has been an error talking to your Burrow chain using account %s.
@@ -38,22 +30,20 @@ There has been an error talking to your Burrow chain using account %s.
 `, account, err)
 }
 
-func ABIErrorHandler(err error, call *def.Call, query *def.QueryContract) error {
+func ABIErrorHandler(err error, call *def.Call, query *def.QueryContract, logger *logging.Logger) error {
 	switch {
 	case call != nil:
-		log.WithFields(log.Fields{
-			"data":   call.Data,
-			"bin":    call.Bin,
-			"dest":   call.Destination,
-			"rawErr": err,
-		}).Error("ABI Error")
+		logger.InfoMsg("ABI Error",
+			"data", call.Data,
+			"bin", call.Bin,
+			"dest", call.Destination,
+			"rawErr", err)
 	case query != nil:
-		log.WithFields(log.Fields{
-			"data":   query.Data,
-			"bin":    query.Bin,
-			"dest":   query.Destination,
-			"rawErr": err,
-		}).Error("ABI Error")
+		logger.InfoMsg("ABI Error",
+			"data", call.Data,
+			"bin", call.Bin,
+			"dest", call.Destination,
+			"rawErr", err)
 	}
 
 	return fmt.Errorf(`

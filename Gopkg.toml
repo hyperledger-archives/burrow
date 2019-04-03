@@ -15,7 +15,7 @@
 
 [[override]]
   name = "github.com/tendermint/tendermint"
-  version = "v0.31.2"
+  version = "=v0.31.2"
 
 [[override]]
   name = "github.com/tendermint/iavl"

@@ -10,10 +10,9 @@ import (
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/proposals"
 	"github.com/hyperledger/burrow/deploy/util"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func getAcccountSequence(seq string, addressStr string, seqCache *acmstate.Cache) (string, error) {
@@ -33,8 +32,8 @@ func getAcccountSequence(seq string, addressStr string, seqCache *acmstate.Cache
 	return fmt.Sprintf("%d", acc.Sequence), err
 }
 
-func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playbook, client *def.Client, seqCache *acmstate.Cache) error {
-	script := def.Playbook{Jobs: jobs, Account: useDefault(prop.Source, parentScript.Account), Parent: parentScript}
+func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playbook, client *def.Client, seqCache *acmstate.Cache, logger *logging.Logger) error {
+	script := def.Playbook{Jobs: jobs, Account: useDefault(prop.Source, parentScript.Account), Parent: parentScript, BinPath: parentScript.BinPath}
 
 	for _, job := range script.Jobs {
 		load, err := job.Payload()
@@ -42,7 +41,7 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 			return fmt.Errorf("could not get Job payload: %v", load)
 		}
 
-		err = util.PreProcessFields(load, do, &script, client)
+		err = util.PreProcessFields(load, do, &script, client, logger)
 		if err != nil {
 			return err
 		}
@@ -54,34 +53,34 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 
 		switch load.(type) {
 		case *def.Meta:
-			announceProposalJob(job.Name, "Meta")
+			announceProposalJob(job.Name, "Meta", logger)
 			// load the package
-			err = recurseJobs(proposeBatch, job.Meta.Playbook.Jobs, prop, do, &script, client, seqCache)
+			err = recurseJobs(proposeBatch, job.Meta.Playbook.Jobs, prop, do, &script, client, seqCache, logger)
 			if err != nil {
 				return err
 			}
 
 		case *def.UpdateAccount:
-			announceProposalJob(job.Name, "UpdateAccount")
+			announceProposalJob(job.Name, "UpdateAccount", logger)
 			job.UpdateAccount.Source = useDefault(job.UpdateAccount.Source, script.Account)
 			job.UpdateAccount.Sequence, err = getAcccountSequence(job.UpdateAccount.Sequence, job.UpdateAccount.Source, seqCache)
 			if err != nil {
 				return err
 			}
-			tx, _, err := FormulateUpdateAccountJob(job.UpdateAccount, script.Account, client)
+			tx, _, err := FormulateUpdateAccountJob(job.UpdateAccount, script.Account, client, logger)
 			if err != nil {
 				return err
 			}
 			proposeBatch.Txs = append(proposeBatch.Txs, &payload.Any{GovTx: tx})
 
 		case *def.RegisterName:
-			announceProposalJob(job.Name, "RegisterName")
+			announceProposalJob(job.Name, "RegisterName", logger)
 			job.RegisterName.Source = useDefault(job.RegisterName.Source, script.Account)
 			job.RegisterName.Sequence, err = getAcccountSequence(job.RegisterName.Sequence, job.RegisterName.Source, seqCache)
 			if err != nil {
 				return err
 			}
-			txs, err := FormulateRegisterNameJob(job.RegisterName, do, script.Account, client)
+			txs, err := FormulateRegisterNameJob(job.RegisterName, do, &script, client, logger)
 			if err != nil {
 				return err
 			}
@@ -89,25 +88,25 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 				proposeBatch.Txs = append(proposeBatch.Txs, &payload.Any{NameTx: tx})
 			}
 		case *def.Call:
-			announceProposalJob(job.Name, "Call")
+			announceProposalJob(job.Name, "Call", logger)
 			job.Call.Source = useDefault(job.Call.Source, script.Account)
 			job.Call.Sequence, err = getAcccountSequence(job.Call.Sequence, job.Call.Source, seqCache)
 			if err != nil {
 				return err
 			}
-			tx, err := FormulateCallJob(job.Call, do, &script, client)
+			tx, err := FormulateCallJob(job.Call, do, &script, client, logger)
 			if err != nil {
 				return err
 			}
 			proposeBatch.Txs = append(proposeBatch.Txs, &payload.Any{CallTx: tx})
 		case *def.Deploy:
-			announceProposalJob(job.Name, "Deploy")
+			announceProposalJob(job.Name, "Deploy", logger)
 			job.Deploy.Source = useDefault(job.Deploy.Source, script.Account)
 			job.Deploy.Sequence, err = getAcccountSequence(job.Deploy.Sequence, job.Deploy.Source, seqCache)
 			if err != nil {
 				return err
 			}
-			deployTxs, _, err := FormulateDeployJob(job.Deploy, do, &script, client, job.Intermediate)
+			deployTxs, _, err := FormulateDeployJob(job.Deploy, do, &script, client, job.Intermediate, logger)
 			if err != nil {
 				return err
 			}
@@ -125,36 +124,36 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 			}
 			job.Result = deployAddress.String()
 		case *def.Permission:
-			announceProposalJob(job.Name, "Permission")
+			announceProposalJob(job.Name, "Permission", logger)
 			job.Permission.Source = useDefault(job.Permission.Source, script.Account)
 			job.Permission.Sequence, err = getAcccountSequence(job.Permission.Sequence, job.Permission.Source, seqCache)
 			if err != nil {
 				return err
 			}
-			tx, err := FormulatePermissionJob(job.Permission, script.Account, client)
+			tx, err := FormulatePermissionJob(job.Permission, script.Account, client, logger)
 			if err != nil {
 				return err
 			}
 			proposeBatch.Txs = append(proposeBatch.Txs, &payload.Any{PermsTx: tx})
 		case *def.Send:
-			announceProposalJob(job.Name, "Send")
+			announceProposalJob(job.Name, "Send", logger)
 			job.Send.Source = useDefault(job.Send.Source, script.Account)
 			job.Send.Sequence, err = getAcccountSequence(job.Send.Sequence, job.Send.Source, seqCache)
 			if err != nil {
 				return err
 			}
-			tx, err := FormulateSendJob(job.Send, script.Account, client)
+			tx, err := FormulateSendJob(job.Send, script.Account, client, logger)
 			if err != nil {
 				return err
 			}
 			proposeBatch.Txs = append(proposeBatch.Txs, &payload.Any{SendTx: tx})
 		case *def.QueryContract:
-			announceProposalJob(job.Name, "Query Contract")
-			log.Warnf("Query Contract jobs are IGNORED in proposals")
+			announceProposalJob(job.Name, "Query Contract", logger)
+			logger.InfoMsg("Query Contract jobs are IGNORED in proposals")
 
 		case *def.Assert:
-			announceProposalJob(job.Name, "Assert")
-			log.Warnf("Assert jobs are IGNORED in proposals")
+			announceProposalJob(job.Name, "Assert", logger)
+			logger.InfoMsg("Assert jobs are IGNORED in proposals")
 		default:
 			return fmt.Errorf("jobs %s illegal job type for proposal", job.Name)
 		}
@@ -163,19 +162,19 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 	return nil
 }
 
-func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playbook, client *def.Client) (string, error) {
+func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playbook, client *def.Client, logger *logging.Logger) (string, error) {
 	var proposeBatch payload.BatchTx
 
 	seqCache := acmstate.NewCache(client)
 
-	err := recurseJobs(&proposeBatch, prop.Jobs, prop, do, parentScript, client, seqCache)
+	err := recurseJobs(&proposeBatch, prop.Jobs, prop, do, parentScript, client, seqCache, logger)
 	if err != nil {
 		return "", err
 	}
 
 	proposal := payload.Proposal{Name: prop.Name, Description: prop.Description, BatchTx: &proposeBatch}
 
-	proposalInput, err := client.TxInput(prop.ProposalAddress, "", prop.ProposalSequence, false)
+	proposalInput, err := client.TxInput(prop.ProposalAddress, "", prop.ProposalSequence, false, logger)
 	if err != nil {
 		return "", err
 	}
@@ -184,66 +183,69 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playb
 
 	var proposalTx *payload.ProposalTx
 	if do.ProposeVerify {
-		ballot, err := client.GetProposal(proposalHash)
+		ballot, err := client.GetProposal(proposalHash, logger)
 		if err != nil {
-			log.Warnf("Proposal could NOT be verified, error %v", err)
+			logger.InfoMsg("Proposal could NOT be verified", "error", err)
 			return "", err
 		}
 
-		err = proposals.ProposalExpired(ballot.Proposal, client)
+		err = proposals.ProposalExpired(ballot.Proposal, client, logger)
 		if err != nil {
-			log.Warnf("Proposal verify FAILED: %v", err)
+			logger.InfoMsg("Proposal verify FAILED", "error", err)
 			return "", err
 		}
 
-		log.Warnf("Proposal VERIFY SUCCESSFUL")
-		log.Warnf("Proposal has %d votes:", len(ballot.Votes))
+		voteAddresses := make([]string, 0, len(ballot.Votes))
 		for _, v := range ballot.Votes {
-			log.Warnf("\t%s\n", v.Address)
+			voteAddresses = append(voteAddresses, v.Address.String())
 		}
+
+		logger.InfoMsg("Proposal VERIFY SUCCESSFUL",
+			"votes count", len(ballot.Votes),
+			"votes", voteAddresses)
 
 		return "", err
 	} else if do.ProposeVote {
-		ballot, err := client.GetProposal(proposalHash)
+		ballot, err := client.GetProposal(proposalHash, logger)
 		if err != nil {
-			log.Warnf("Proposal could not be found: %v", err)
+			logger.InfoMsg("Proposal could not be found", "error", err)
 			return "", err
 		}
 
-		err = proposals.ProposalExpired(ballot.Proposal, client)
+		err = proposals.ProposalExpired(ballot.Proposal, client, logger)
 		if err != nil {
-			log.Warnf("Proposal error: %v", err)
+			logger.InfoMsg("Proposal error", "error", err)
 			return "", err
 		}
 
 		// proposal is there and current, let's vote for it
-		input, err := client.TxInput(parentScript.Account, "", prop.Sequence, true)
+		input, err := client.TxInput(parentScript.Account, "", prop.Sequence, true, logger)
 		if err != nil {
 			return "", err
 		}
 
-		log.Warnf("Voting for proposal with hash: %x\n", proposalHash)
+		logger.InfoMsg("Voting for proposal", "hash", proposalHash)
 
 		h := binary.HexBytes(proposalHash)
 		proposalTx = &payload.ProposalTx{ProposalHash: &h, VotingWeight: 1, Input: input}
 	} else if do.ProposeCreate {
-		input, err := client.TxInput(useDefault(prop.Source, parentScript.Account), "", prop.Sequence, true)
+		input, err := client.TxInput(useDefault(prop.Source, parentScript.Account), "", prop.Sequence, true, logger)
 		if err != nil {
 			return "", err
 		}
-		log.Warnf("Creating Proposal with hash: %x\n", proposalHash)
+		logger.InfoMsg("Creating Proposal", "hash", proposalHash)
 
 		bs, _ := json.Marshal(proposal)
-		log.Debugf("Proposal json: %s\n", string(bs))
+		logger.TraceMsg("Proposal json", "json", string(bs))
 		proposalTx = &payload.ProposalTx{VotingWeight: 1, Input: input, Proposal: &proposal}
 	} else {
-		log.Errorf("please specify one of --proposal-create, --proposal-vote, --proposal-verify")
+		logger.InfoMsg("please specify one of --proposal-create, --proposal-vote, --proposal-verify")
 		return "", nil
 	}
 
-	txe, err := client.SignAndBroadcast(proposalTx)
+	txe, err := client.SignAndBroadcast(proposalTx, logger)
 	if err != nil {
-		var err = util.ChainErrorHandler(proposalTx.Input.Address.String(), err)
+		var err = util.ChainErrorHandler(proposalTx.Input.Address.String(), err, logger)
 		return "", err
 	}
 

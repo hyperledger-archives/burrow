@@ -1,20 +1,21 @@
 package jobs
 
 import (
-	"encoding/hex"
 	"fmt"
 	"strconv"
+
+	hex "github.com/tmthrgd/go-hex"
 
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
 	"github.com/hyperledger/burrow/execution/evm/abi"
-	log "github.com/sirupsen/logrus"
+	"github.com/hyperledger/burrow/logging"
 )
 
-func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, script *def.Playbook, client *def.Client) (string, []*abi.Variable, error) {
+func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, script *def.Playbook, client *def.Client, logger *logging.Logger) (string, []*abi.Variable, error) {
 	var queryDataArray []interface{}
 	var err error
-	query.Function, queryDataArray, err = util.PreProcessInputData(query.Function, query.Data, do, script, client, false)
+	query.Function, queryDataArray, err = util.PreProcessInputData(query.Function, query.Data, do, script, client, false, logger)
 	if err != nil {
 		return "", nil, err
 	}
@@ -23,15 +24,15 @@ func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, script *def.
 	var data string
 	var packedBytes []byte
 	if query.Bin != "" {
-		packedBytes, _, err = abi.EncodeFunctionCallFromFile(query.Bin, do.BinPath, query.Function, queryDataArray...)
+		packedBytes, _, err = abi.EncodeFunctionCallFromFile(query.Bin, script.BinPath, query.Function, logger, queryDataArray...)
 		data = hex.EncodeToString(packedBytes)
 	}
 	if query.Bin == "" || err != nil {
-		packedBytes, _, err = abi.EncodeFunctionCallFromFile(query.Destination, do.BinPath, query.Function, queryDataArray...)
+		packedBytes, _, err = abi.EncodeFunctionCallFromFile(query.Destination, script.BinPath, query.Function, logger, queryDataArray...)
 		data = hex.EncodeToString(packedBytes)
 	}
 	if err != nil {
-		var err = util.ABIErrorHandler(err, nil, query)
+		var err = util.ABIErrorHandler(err, nil, query, logger)
 		return "", nil, err
 	}
 
@@ -40,97 +41,96 @@ func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, script *def.
 		Input:   query.Source,
 		Address: query.Destination,
 		Data:    data,
-	})
+	}, logger)
 	if err != nil {
 		return "", nil, err
 	}
 
 	// Formally process the return
-	log.WithField("res", txe.Result.Return).Debug("Decoding Raw Result")
 	if query.Bin != "" {
-		log.WithField("abi", query.Bin).Debug()
-		query.Variables, err = abi.DecodeFunctionReturnFromFile(query.Bin, do.BinPath, query.Function, txe.Result.Return)
+		logger.TraceMsg("Decoding Raw Result",
+			"return", hex.EncodeUpperToString(txe.Result.Return),
+			"Abi", query.Bin)
+		query.Variables, err = abi.DecodeFunctionReturnFromFile(query.Bin, script.BinPath, query.Function, txe.Result.Return, logger)
 	}
 	if query.Bin == "" || err != nil {
-		log.WithField("abi", query.Destination).Debug()
-		query.Variables, err = abi.DecodeFunctionReturnFromFile(query.Destination, do.BinPath, query.Function, txe.Result.Return)
+		logger.TraceMsg("Decoding Raw Result",
+			"return", hex.EncodeUpperToString(txe.Result.Return),
+			"Abi", query.Destination)
+		query.Variables, err = abi.DecodeFunctionReturnFromFile(query.Destination, script.BinPath, query.Function, txe.Result.Return, logger)
 	}
 	if err != nil {
 		return "", nil, err
 	}
 
-	result2 := util.GetReturnValue(query.Variables)
+	result2 := util.GetReturnValue(query.Variables, logger)
 	// Finalize
 	if result2 != "" {
-		log.WithField("=>", result2).Warn("Return Value")
+		logger.InfoMsg("Return Value", "value", result2)
 	} else {
-		log.Debug("No return.")
+		logger.InfoMsg("No return.")
 	}
 	return result2, query.Variables, nil
 }
 
-func QueryAccountJob(query *def.QueryAccount, client *def.Client) (string, error) {
+func QueryAccountJob(query *def.QueryAccount, client *def.Client, logger *logging.Logger) (string, error) {
 	// Perform Query
 	arg := fmt.Sprintf("%s:%s", query.Account, query.Field)
-	log.WithField("=>", arg).Info("Querying Account")
+	logger.InfoMsg("Query Account", "argument", arg)
 
-	result, err := util.AccountsInfo(query.Account, query.Field, client)
+	result, err := util.AccountsInfo(query.Account, query.Field, client, logger)
 	if err != nil {
 		return "", err
 	}
 
 	// Result
 	if result != "" {
-		log.WithField("=>", result).Warn("Return Value")
+		logger.InfoMsg("Return Value", "value", result)
 	} else {
-		log.Debug("No return.")
+		logger.InfoMsg("No return.")
 	}
 	return result, nil
 }
 
-func QueryNameJob(query *def.QueryName, client *def.Client) (string, error) {
+func QueryNameJob(query *def.QueryName, client *def.Client, logger *logging.Logger) (string, error) {
 	// Peform query
-	log.WithFields(log.Fields{
-		"name":  query.Name,
-		"field": query.Field,
-	}).Info("Querying")
-	result, err := util.NamesInfo(query.Name, query.Field, client)
+	logger.InfoMsg("Querying",
+		"name", query.Name,
+		"field", query.Field)
+	result, err := util.NamesInfo(query.Name, query.Field, client, logger)
 	if err != nil {
 		return "", err
 	}
 
 	if result != "" {
-		log.WithField("=>", result).Warn("Return Value")
+		logger.InfoMsg("Return Value", "result", result)
 	} else {
-		log.Debug("No return.")
+		logger.InfoMsg("No return.")
 	}
 	return result, nil
 }
 
-func QueryValsJob(query *def.QueryVals, client *def.Client) (interface{}, error) {
-	log.WithField("=>", query.Query).Info("Querying Vals")
-	result, err := util.ValidatorsInfo(query.Query, client)
+func QueryValsJob(query *def.QueryVals, client *def.Client, logger *logging.Logger) (interface{}, error) {
+	logger.InfoMsg("Querying Vals", "query", query.Query)
+	result, err := util.ValidatorsInfo(query.Query, client, logger)
 	if err != nil {
 		return "", fmt.Errorf("error querying validators with jq-style query %s: %v", query.Query, err)
 	}
 
 	if result != nil {
-		log.WithField("=>", result).Warn("Return Value")
+		logger.InfoMsg("Return Value", "result", result)
 	} else {
-		log.Debug("No return.")
+		logger.InfoMsg("No return.")
 	}
 	return result, nil
 }
 
-func AssertJob(assertion *def.Assert) (string, error) {
-	var result string
-
+func AssertJob(assertion *def.Assert, logger *logging.Logger) (string, error) {
 	// Switch on relation
-	log.WithFields(log.Fields{
-		"key":      assertion.Key,
-		"relation": assertion.Relation,
-		"value":    assertion.Value,
-	}).Info("Assertion =>")
+	logger.InfoMsg("Assertion",
+		"key", assertion.Key,
+		"relation", assertion.Relation,
+		"value", assertion.Value)
 
 	switch assertion.Relation {
 	case "==", "eq":
@@ -140,15 +140,15 @@ func AssertJob(assertion *def.Assert) (string, error) {
 		log.Debug("UTF8?: ", utf8.RuneCountInString(assertion.Key))
 		log.Debug("UTF8?: ", utf8.RuneCountInString(assertion.Value))*/
 		if assertion.Key == assertion.Value {
-			return assertPass("==", assertion.Key, assertion.Value)
+			return assertPass("==", assertion.Key, assertion.Value, logger)
 		} else {
-			return assertFail("==", assertion.Key, assertion.Value)
+			return assertFail("==", assertion.Key, assertion.Value, logger)
 		}
 	case "!=", "ne":
 		if assertion.Key != assertion.Value {
-			return assertPass("!=", assertion.Key, assertion.Value)
+			return assertPass("!=", assertion.Key, assertion.Value, logger)
 		} else {
-			return assertFail("!=", assertion.Key, assertion.Value)
+			return assertFail("!=", assertion.Key, assertion.Value, logger)
 		}
 	case ">", "gt":
 		k, v, err := bulkConvert(assertion.Key, assertion.Value)
@@ -156,9 +156,9 @@ func AssertJob(assertion *def.Assert) (string, error) {
 			return convFail()
 		}
 		if k > v {
-			return assertPass(">", assertion.Key, assertion.Value)
+			return assertPass(">", assertion.Key, assertion.Value, logger)
 		} else {
-			return assertFail(">", assertion.Key, assertion.Value)
+			return assertFail(">", assertion.Key, assertion.Value, logger)
 		}
 	case ">=", "ge":
 		k, v, err := bulkConvert(assertion.Key, assertion.Value)
@@ -166,9 +166,9 @@ func AssertJob(assertion *def.Assert) (string, error) {
 			return convFail()
 		}
 		if k >= v {
-			return assertPass(">=", assertion.Key, assertion.Value)
+			return assertPass(">=", assertion.Key, assertion.Value, logger)
 		} else {
-			return assertFail(">=", assertion.Key, assertion.Value)
+			return assertFail(">=", assertion.Key, assertion.Value, logger)
 		}
 	case "<", "lt":
 		k, v, err := bulkConvert(assertion.Key, assertion.Value)
@@ -176,9 +176,9 @@ func AssertJob(assertion *def.Assert) (string, error) {
 			return convFail()
 		}
 		if k < v {
-			return assertPass("<", assertion.Key, assertion.Value)
+			return assertPass("<", assertion.Key, assertion.Value, logger)
 		} else {
-			return assertFail("<", assertion.Key, assertion.Value)
+			return assertFail("<", assertion.Key, assertion.Value, logger)
 		}
 	case "<=", "le":
 		k, v, err := bulkConvert(assertion.Key, assertion.Value)
@@ -186,15 +186,13 @@ func AssertJob(assertion *def.Assert) (string, error) {
 			return convFail()
 		}
 		if k <= v {
-			return assertPass("<=", assertion.Key, assertion.Value)
+			return assertPass("<=", assertion.Key, assertion.Value, logger)
 		} else {
-			return assertFail("<=", assertion.Key, assertion.Value)
+			return assertFail("<=", assertion.Key, assertion.Value, logger)
 		}
 	default:
 		return "", fmt.Errorf("Error: Bad assert relation: \"%s\" is not a valid relation. See documentation for more information.", assertion.Relation)
 	}
-
-	return result, nil
 }
 
 func bulkConvert(key, value string) (int, int, error) {
@@ -209,13 +207,19 @@ func bulkConvert(key, value string) (int, int, error) {
 	return k, v, nil
 }
 
-func assertPass(typ, key, val string) (string, error) {
-	log.WithField("=>", fmt.Sprintf("%s %s %s", key, typ, val)).Warn("Assertion Succeeded")
+func assertPass(typ, key, val string, logger *logging.Logger) (string, error) {
+	logger.InfoMsg("Assertion Succeeded",
+		"operation", typ,
+		"key", key,
+		"value", val)
 	return "passed", nil
 }
 
-func assertFail(typ, key, val string) (string, error) {
-	log.WithField("=>", fmt.Sprintf("%s %s %s", key, typ, val)).Warn("Assertion Failed")
+func assertFail(typ, key, val string, logger *logging.Logger) (string, error) {
+	logger.InfoMsg("Assertion Failed",
+		"operation", typ,
+		"key", key,
+		"value", val)
 	return "failed", fmt.Errorf("assertion failed")
 }
 

@@ -6,24 +6,24 @@ import (
 	"strings"
 
 	"github.com/hyperledger/burrow/deploy/def"
+	"github.com/hyperledger/burrow/logging"
 
 	"encoding/json"
 
 	"github.com/elgs/gojq"
 	"github.com/hyperledger/burrow/acm/validator"
-	log "github.com/sirupsen/logrus"
 )
 
-func GetBlockHeight(client *def.Client) (latestBlockHeight uint64, err error) {
-	stat, err := client.Status()
+func GetBlockHeight(client *def.Client, logger *logging.Logger) (latestBlockHeight uint64, err error) {
+	stat, err := client.Status(logger)
 	if err != nil {
 		return 0, err
 	}
 	return stat.SyncInfo.LatestBlockHeight, nil
 }
 
-func AccountsInfo(account, field string, client *def.Client) (string, error) {
-	address, err := client.GetKeyAddress(account)
+func AccountsInfo(account, field string, client *def.Client, logger *logging.Logger) (string, error) {
+	address, err := client.GetKeyAddress(account, logger)
 	if err != nil {
 		return "", err
 	}
@@ -41,12 +41,12 @@ func AccountsInfo(account, field string, client *def.Client) (string, error) {
 	}
 	jq, err := gojq.NewStringQuery(string(bs))
 	if err == nil {
-		log.Warn("Attempting jq query")
+		logger.InfoMsg("Attempting jq query")
 		res, err := jq.Query(field)
 		if err == nil {
 			return fmt.Sprintf("%v", res), nil
 		} else {
-			log.Debugf("Got error from jq query: %v trying legacy query (probably fine)...", err)
+			logger.TraceMsg("Got error from jq query: %v trying legacy query (probably fine)...", "error", fmt.Sprintf("%v", err))
 		}
 	}
 
@@ -75,8 +75,8 @@ func AccountsInfo(account, field string, client *def.Client) (string, error) {
 	return s, nil
 }
 
-func NamesInfo(name, field string, client *def.Client) (string, error) {
-	entry, err := client.GetName(name)
+func NamesInfo(name, field string, client *def.Client, logger *logging.Logger) (string, error) {
+	entry, err := client.GetName(name, logger)
 	if err != nil {
 		return "", err
 	}
@@ -95,10 +95,10 @@ func NamesInfo(name, field string, client *def.Client) (string, error) {
 	}
 }
 
-func ValidatorsInfo(query string, client *def.Client) (interface{}, error) {
+func ValidatorsInfo(query string, client *def.Client, logger *logging.Logger) (interface{}, error) {
 	// Currently there is no notion of 'unbonding validators' we can revisit what should go here or whether this deserves
 	// to exist as a job
-	validatorSet, err := client.GetValidatorSet()
+	validatorSet, err := client.GetValidatorSet(logger)
 	if err != nil {
 		return nil, err
 	}

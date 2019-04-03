@@ -3,11 +3,12 @@ package proposals
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hyperledger/burrow/deploy/def"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
-	log "github.com/sirupsen/logrus"
 )
 
 type ProposalState int
@@ -57,14 +58,15 @@ func ProposalStateFromString(s string) (ProposalState, error) {
 	return ALL, fmt.Errorf("Unknown proposal state %s", s)
 }
 
-func ListProposals(client *def.Client, reqState ProposalState) {
-	props, err := client.ListProposals(reqState == PROPOSED)
+func ListProposals(args *def.DeployArgs, reqState ProposalState, logger *logging.Logger) error {
+	client := def.NewClient(args.Chain, args.KeysService, args.MempoolSign, time.Duration(args.Timeout)*time.Second)
+
+	props, err := client.ListProposals(reqState == PROPOSED, logger)
 	if err != nil {
-		log.Warnf("Failed to list proposals: %v", err)
-		return
+		return err
 	}
 
-	for i, prop := range props {
+	for _, prop := range props {
 		var state string
 		switch prop.Ballot.ProposalState {
 		case payload.Ballot_FAILED:
@@ -72,7 +74,7 @@ func ListProposals(client *def.Client, reqState ProposalState) {
 		case payload.Ballot_EXECUTED:
 			state = "EXECUTED"
 		case payload.Ballot_PROPOSED:
-			if ProposalExpired(prop.Ballot.Proposal, client) != nil {
+			if ProposalExpired(prop.Ballot.Proposal, client, logger) != nil {
 				state = "EXPIRED"
 			} else {
 				state = "PROPOSED"
@@ -83,17 +85,18 @@ func ListProposals(client *def.Client, reqState ProposalState) {
 			continue
 		}
 
-		log.WithFields(log.Fields{
-			"ProposalHash": fmt.Sprintf("%x", prop.Hash),
-			"Name":         prop.Ballot.Proposal.Name,
-			"Description":  prop.Ballot.Proposal.Description,
-			"State":        state,
-			"Votes":        len(prop.Ballot.GetVotes()),
-		}).Warnf("Proposal %d", i)
+		logger.InfoMsg("Proposal",
+			"ProposalHash", fmt.Sprintf("%x", prop.Hash),
+			"Name", prop.Ballot.Proposal.Name,
+			"Description", prop.Ballot.Proposal.Description,
+			"State", state,
+			"Votes", len(prop.Ballot.GetVotes()))
 	}
+
+	return nil
 }
 
-func ProposalExpired(proposal *payload.Proposal, client *def.Client) error {
+func ProposalExpired(proposal *payload.Proposal, client *def.Client, logger *logging.Logger) error {
 	for _, input := range proposal.BatchTx.Inputs {
 		acc, err := client.GetAccount(input.Address)
 		if err != nil {
