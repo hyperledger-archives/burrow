@@ -48,7 +48,7 @@ import (
 
 const (
 	CooldownTime           = 1000 * time.Millisecond
-	ServerShutdownTimeout  = 1000 * time.Millisecond
+	ServerShutdownTimeout  = 5000 * time.Millisecond
 	LoggingCallerDepth     = 5
 	AccountsRingMutexCount = 100
 	BurrowDBName           = "burrow_state"
@@ -328,10 +328,10 @@ func (kern *Kernel) Shutdown(ctx context.Context) (err error) {
 		// Shutdown servers in reverse order to boot
 		for i := len(kern.Launchers) - 1; i >= 0; i-- {
 			name := kern.Launchers[i].Name
-			srvr, ok := kern.processes[name]
+			proc, ok := kern.processes[name]
 			if ok {
 				logger.InfoMsg("Shutting down server", "server_name", name)
-				sErr := srvr.Shutdown(ctx)
+				sErr := proc.Shutdown(ctx)
 				if sErr != nil {
 					logger.InfoMsg("Failed to shutdown server",
 						"server_name", name,

@@ -42,13 +42,19 @@ import (
 )
 
 const (
-	ChainName  = "Integration_Test_Chain"
-	scratchDir = "test_scratch"
+	ChainName         = "Integration_Test_Chain"
+	scratchDir        = "test_scratch"
+	runningInCIEnvVar = "CI"
 )
 
 // Enable logger output during tests
 
 var node uint64 = 0
+
+func RunningInCI() bool {
+	_, ok := os.LookupEnv(runningInCIEnvVar)
+	return ok
+}
 
 func NoConsensus(conf *config.BurrowConfig) {
 	conf.Tendermint.Enabled = false

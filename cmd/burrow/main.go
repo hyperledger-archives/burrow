@@ -11,10 +11,10 @@ import (
 )
 
 func main() {
-	// Print informational output to Stderr
-	err := burrow(stdOutput()).Run(os.Args)
+	output := defaultOutput()
+	err := burrow(output).Run(os.Args)
 	if err != nil {
-		panic(err)
+		output.Fatalf("%v", err)
 	}
 }
 
@@ -68,7 +68,7 @@ func burrow(output commands.Output) *cli.Cli {
 	return app
 }
 
-func stdOutput() *output {
+func defaultOutput() *output {
 	return &output{
 		PrintfFunc: func(format string, args ...interface{}) {
 			fmt.Fprintf(os.Stdout, format+"\n", args...)

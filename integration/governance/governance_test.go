@@ -34,6 +34,24 @@ import (
 	rpctypes "github.com/tendermint/tendermint/rpc/lib/types"
 )
 
+type foo struct {
+	i int
+}
+
+func (f *foo) Speak() {
+	fmt.Println(f.i)
+}
+
+func TestDefer(t *testing.T) {
+	var foos []*foo
+	for i := 0; i < 10; i++ {
+		foos = append(foos, &foo{i})
+	}
+	for i := 0; i < 10; i++ {
+		defer foos[i].Speak()
+	}
+}
+
 func TestGovernance(t *testing.T) {
 	privateAccounts := integration.MakePrivateAccounts(10) // make keys
 	genesisDoc := integration.TestGenesisDoc(privateAccounts)
@@ -57,10 +75,13 @@ func TestGovernance(t *testing.T) {
 
 		kernels[i], err = integration.TestKernel(acc, privateAccounts, testConfig, logconf)
 		require.NoError(t, err)
+
 		err = l.Close()
 		require.NoError(t, err)
+
 		err = kernels[i].Boot()
 		require.NoError(t, err)
+
 		defer kernels[i].Shutdown(context.Background())
 	}
 
@@ -99,6 +120,8 @@ func TestGovernance(t *testing.T) {
 
 			// Remove validator from chain
 			_, err = govSync(tcli, governance.AlterPowerTx(inputAddress, account(3), 0))
+			require.NoError(t, err)
+
 			// Mirror in our check set
 			changePower(vs, 3, 0)
 			vsOut = getValidatorSet(t, qcli)
