@@ -44,6 +44,7 @@ See the [install instructions](docs/INSTALL.md).
 1. [Send transactions](docs/quickstart/send-transactions.md) - how to communicate with your Burrow chain
 1. [Deploy contracts](docs/quickstart/deploy-contracts.md) - interact with the Ethereum Virtual Machine
 1. [Multiple validators](docs/quickstart/multiple-validators.md) - advanced consensus setup
+1. [Add validators](docs/quickstart/add-validators.md) - bonding a new party
 1. [Seed nodes](docs/quickstart/seed-nodes.md) - add new node dynamically
 1. [Kubernetes](https://github.com/helm/charts/tree/master/stable/burrow) - bootstraps a burrow network on a Kubernetes cluster
 
