@@ -104,12 +104,20 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution, p payload.Payload)
 
 	// Good!
 	inAcc.Balance -= value
+	err = inAcc.SubtractFromBalance(value)
+	if err != nil {
+		return errors.ErrorCodef(errors.ErrorCodeInsufficientFunds,
+			"Input account does not have sufficient balance to cover input amount: %v", ctx.tx.Input)
+	}
+	err = ctx.StateWriter.UpdateAccount(inAcc)
 	if err != nil {
 		return err
 	}
-	ctx.StateWriter.UpdateAccount(inAcc)
 	if permAcc != nil {
-		ctx.StateWriter.UpdateAccount(permAcc)
+		err = ctx.StateWriter.UpdateAccount(permAcc)
+		if err != nil {
+			return err
+		}
 	}
 
 	txe.Input(ctx.tx.Input.Address, nil)

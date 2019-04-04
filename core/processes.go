@@ -98,7 +98,7 @@ func NoConsensusLauncher(kern *Kernel) process.Launcher {
 			// TimeoutFactor scales in units of seconds
 			blockDuration := time.Duration(kern.timeoutFactor * float64(time.Second))
 			//proc := abci.NewProcess(kern.checker, kern.committer, kern.Blockchain, kern.txCodec, blockDuration, kern.Panic)
-			proc := abci.NewProcess(kern.committer, kern.txCodec, blockDuration, kern.Panic)
+			proc := abci.NewProcess(kern.committer, kern.Blockchain, kern.txCodec, blockDuration, kern.Panic)
 			// Provide execution accounts against backend state since we will commit immediately
 			accounts := execution.NewAccounts(kern.committer, kern.keyClient, AccountsRingMutexCount)
 			// Elide consensus and use a CheckTx function that immediately commits any valid transaction

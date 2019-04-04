@@ -62,10 +62,10 @@ func (kern *Kernel) LoadTendermintFromConfig(conf *config.BurrowConfig, privVal 
 	authorizedPeersProvider := conf.Tendermint.DefaultAuthorizedPeersProvider()
 	kern.database.Stats()
 
-	kern.nodeInfo = fmt.Sprintf("Burrow_%s_%s_ValidatorID:%X", project.History.CurrentVersion().String(),
+	kern.info = fmt.Sprintf("Burrow_%s_%s_ValidatorID:%X", project.History.CurrentVersion().String(),
 		kern.Blockchain.ChainID(), privVal.GetPubKey().Address())
 
-	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, kern.State, kern.checker, kern.committer, kern.txCodec,
+	app := abci.NewApp(kern.info, kern.Blockchain, kern.State, kern.checker, kern.committer, kern.txCodec,
 		authorizedPeersProvider, kern.Panic, kern.Logger)
 
 	// We could use this to provide/register our own metrics (though this will register them with us). Unfortunately

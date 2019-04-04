@@ -34,24 +34,6 @@ import (
 	rpctypes "github.com/tendermint/tendermint/rpc/lib/types"
 )
 
-type foo struct {
-	i int
-}
-
-func (f *foo) Speak() {
-	fmt.Println(f.i)
-}
-
-func TestDefer(t *testing.T) {
-	var foos []*foo
-	for i := 0; i < 10; i++ {
-		foos = append(foos, &foo{i})
-	}
-	for i := 0; i < 10; i++ {
-		defer foos[i].Speak()
-	}
-}
-
 func TestGovernance(t *testing.T) {
 	privateAccounts := integration.MakePrivateAccounts(10) // make keys
 	genesisDoc := integration.TestGenesisDoc(privateAccounts)
@@ -59,8 +41,10 @@ func TestGovernance(t *testing.T) {
 	genesisDoc.Accounts[4].Permissions = permission.NewAccountPermissions(permission.Send | permission.Call)
 
 	for i, acc := range privateAccounts {
-		testConfig, cleanup := integration.NewTestConfig(genesisDoc)
-		defer cleanup()
+		// FIXME: some combination of cleanup and shutdown seems to make tests fail on CI
+		//testConfig, cleanup := integration.NewTestConfig(genesisDoc)
+		testConfig, _ := integration.NewTestConfig(genesisDoc)
+		//defer cleanup()
 
 		logconf := logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
 			return sink.SetTransform(logconfig.FilterTransform(logconfig.IncludeWhenAllMatch,
@@ -82,7 +66,7 @@ func TestGovernance(t *testing.T) {
 		err = kernels[i].Boot()
 		require.NoError(t, err)
 
-		defer kernels[i].Shutdown(context.Background())
+		defer integration.Shutdown(kernels[i])
 	}
 
 	time.Sleep(1 * time.Second)
@@ -128,7 +112,8 @@ func TestGovernance(t *testing.T) {
 			assertValidatorsEqual(t, vs, vsOut)
 
 			// Now check Tendermint
-			rpctest.WaitNBlocks(t, ecli, 5)
+			err = rpctest.WaitNBlocks(ecli, 6)
+			require.NoError(t, err)
 			height := int64(kernels[0].Blockchain.LastBlockHeight())
 			kernels[0].Node.ConfigureRPC()
 			tmVals, err := tmcore.Validators(&rpctypes.Context{}, &height)
@@ -146,7 +131,8 @@ func TestGovernance(t *testing.T) {
 		t.Run("WaitBlocks", func(t *testing.T) {
 			grpcAddress := kernels[0].GRPCListenAddress().String()
 			ecli := rpctest.NewExecutionEventsClient(t, grpcAddress)
-			rpctest.WaitNBlocks(t, ecli, 2)
+			err := rpctest.WaitNBlocks(ecli, 2)
+			require.NoError(t, err)
 		})
 
 		t.Run("AlterValidatorsTooQuickly", func(t *testing.T) {

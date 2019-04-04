@@ -208,12 +208,7 @@ func (st *State) AddToBalance(address crypto.Address, amount uint64) {
 	if acc == nil {
 		return
 	}
-	if binary.IsUint64SumOverflow(acc.Balance, amount) {
-		st.PushError(errors.ErrorCodef(errors.ErrorCodeIntegerOverflow,
-			"uint64 overflow: attempt to add %v to the balance of %s", amount, address))
-		return
-	}
-	acc.Balance += amount
+	st.PushError(acc.AddToBalance(amount))
 	st.updateAccount(acc)
 }
 
@@ -222,13 +217,7 @@ func (st *State) SubtractFromBalance(address crypto.Address, amount uint64) {
 	if acc == nil {
 		return
 	}
-	if amount > acc.Balance {
-		st.PushError(errors.ErrorCodef(errors.ErrorCodeInsufficientBalance,
-			"insufficient funds: attempt to subtract %v from the balance of %s",
-			amount, acc.Address))
-		return
-	}
-	acc.Balance -= amount
+	st.PushError(acc.SubtractFromBalance(amount))
 	st.updateAccount(acc)
 }
 
@@ -237,7 +226,7 @@ func (st *State) SetPermission(address crypto.Address, permFlag permission.PermF
 	if acc == nil {
 		return
 	}
-	acc.Permissions.Base.Set(permFlag, value)
+	st.PushError(acc.Permissions.Base.Set(permFlag, value))
 	st.updateAccount(acc)
 }
 
@@ -246,7 +235,7 @@ func (st *State) UnsetPermission(address crypto.Address, permFlag permission.Per
 	if acc == nil {
 		return
 	}
-	acc.Permissions.Base.Unset(permFlag)
+	st.PushError(acc.Permissions.Base.Unset(permFlag))
 	st.updateAccount(acc)
 }
 

@@ -96,7 +96,7 @@ func validateOutputs(outs []*payload.TxOutput) (uint64, error) {
 	return total, nil
 }
 
-func adjustByInputs(accs map[crypto.Address]*acm.Account, ins []*payload.TxInput, logger *logging.Logger) error {
+func adjustByInputs(accs map[crypto.Address]*acm.Account, ins []*payload.TxInput) error {
 	for _, in := range ins {
 		acc := accs[in.Address]
 		if acc == nil {
@@ -106,7 +106,10 @@ func adjustByInputs(accs map[crypto.Address]*acm.Account, ins []*payload.TxInput
 			return fmt.Errorf("adjustByInputs() expects sufficient funds but account %s only has balance %v and "+
 				"we are deducting %v", in.Address, acc.Balance, in.Amount)
 		}
-		acc.Balance -= in.Amount
+		err := acc.SubtractFromBalance(in.Amount)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -118,7 +121,10 @@ func adjustByOutputs(accs map[crypto.Address]*acm.Account, outs []*payload.TxOut
 			return fmt.Errorf("adjustByOutputs() expects account in accounts, but account %s not found",
 				out.Address)
 		}
-		acc.Balance += out.Amount
+		err := acc.AddToBalance(out.Amount)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

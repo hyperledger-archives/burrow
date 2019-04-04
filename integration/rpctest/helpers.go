@@ -151,11 +151,16 @@ func GetStorage(t *testing.T, client infoclient.RPCClient, addr crypto.Address, 
 	return resp
 }
 
-func WaitNBlocks(t testing.TB, ecli rpcevents.ExecutionEventsClient, n int) {
+func WaitNBlocks(ecli rpcevents.ExecutionEventsClient, n int) (rerr error) {
 	stream, err := ecli.Stream(context.Background(), &rpcevents.BlocksRequest{
 		BlockRange: rpcevents.NewBlockRange(rpcevents.LatestBound(), rpcevents.StreamBound()),
 	})
-	defer require.NoError(t, stream.CloseSend())
+	if err != nil {
+		return err
+	}
+	defer func() {
+		rerr = stream.CloseSend()
+	}()
 	var ev *exec.StreamEvent
 	for err == nil && n > 0 {
 		ev, err = stream.Recv()
@@ -163,5 +168,8 @@ func WaitNBlocks(t testing.TB, ecli rpcevents.ExecutionEventsClient, n int) {
 			n--
 		}
 	}
-	require.NoError(t, err)
+	if err != nil {
+		return err
+	}
+	return
 }

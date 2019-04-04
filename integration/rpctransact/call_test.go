@@ -11,13 +11,14 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/crypto/sha3"
+	"github.com/hyperledger/burrow/execution/errors"
+	"github.com/hyperledger/burrow/execution/evm/abi"
+
 	"github.com/hyperledger/burrow/integration"
 
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/execution/errors"
-	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -38,8 +39,15 @@ func TestCallTx(t *testing.T) {
 
 func TestCallTxNoConsensus(t *testing.T) {
 	kern, shutdown := integration.RunNode(t, rpctest.GenesisDoc, rpctest.PrivateAccounts, integration.NoConsensus)
-	defer shutdown()
 	t.Parallel()
+	defer shutdown()
+	testCallTx(t, kern, rpctest.NewTransactClient(t, kern.GRPCListenAddress().String()))
+}
+
+func TestCallTxNoConsensusCommitImmediately(t *testing.T) {
+	kern, shutdown := integration.RunNode(t, rpctest.GenesisDoc, rpctest.PrivateAccounts, integration.NoConsensus, integration.CommitImmediately)
+	t.Parallel()
+	defer shutdown()
 	testCallTx(t, kern, rpctest.NewTransactClient(t, kern.GRPCListenAddress().String()))
 }
 

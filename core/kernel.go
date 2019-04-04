@@ -73,7 +73,7 @@ type Kernel struct {
 	committer      execution.BatchCommitter
 	keyClient      keys.KeyClient
 	keyStore       *keys.KeyStore
-	nodeInfo       string
+	info           string
 	processes      map[string]process.Process
 	listeners      map[string]net.Listener
 	timeoutFactor  float64
@@ -249,9 +249,8 @@ func (kern *Kernel) Boot() (err error) {
 }
 
 func (kern *Kernel) Panic(err error) {
-	fmt.Fprintf(os.Stderr, "%s: Kernel shutting down due to panic: %v", kern.nodeInfo, err)
-	kern.Shutdown(context.Background())
-	os.Exit(1)
+	fmt.Fprintf(os.Stderr, "%v: shutting down due to panic: %v", kern, err)
+	kern.ShutdownAndExit()
 }
 
 // Wait for a graceful shutdown
@@ -293,6 +292,10 @@ func (kern *Kernel) MetricsListenAddress() net.Addr {
 	return l.Addr()
 }
 
+func (kern *Kernel) String() string {
+	return fmt.Sprintf("Kernel[%s]", kern.info)
+}
+
 // Supervise kernel once booted
 func (kern *Kernel) supervise() {
 	// perform disaster restarts of the kernel; rejoining the network as if we were a new node.
@@ -305,16 +308,33 @@ func (kern *Kernel) supervise() {
 	for {
 		select {
 		case <-reloadCh:
-			kern.Logger.Reload()
+			err := kern.Logger.Reload()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v: could not reload logger: %v", kern, err)
+			}
 		case <-syncCh:
-			kern.Logger.Sync()
+			err := kern.Logger.Sync()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v: could not sync logger: %v", kern, err)
+			}
 		case sig := <-shutdownCh:
 			kern.Logger.InfoMsg(fmt.Sprintf("Caught %v signal so shutting down", sig),
 				"signal", sig.String())
-			kern.Shutdown(context.Background())
+			kern.ShutdownAndExit()
 			return
 		}
 	}
+}
+
+func (kern *Kernel) ShutdownAndExit() {
+	ctx, cancel := context.WithTimeout(context.Background(), ServerShutdownTimeout)
+	defer cancel()
+	err := kern.Shutdown(ctx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v: error shutting down: %v", kern, err)
+		os.Exit(1)
+	}
+	os.Exit(0)
 }
 
 // Shutdown stops the kernel allowing for a graceful shutdown of components in order
@@ -323,8 +343,6 @@ func (kern *Kernel) Shutdown(ctx context.Context) (err error) {
 		logger := kern.Logger.WithScope("Shutdown")
 		logger.InfoMsg("Attempting graceful shutdown...")
 		logger.InfoMsg("Shutting down servers")
-		ctx, cancel := context.WithTimeout(ctx, ServerShutdownTimeout)
-		defer cancel()
 		// Shutdown servers in reverse order to boot
 		for i := len(kern.Launchers) - 1; i >= 0; i-- {
 			name := kern.Launchers[i].Name
@@ -343,6 +361,7 @@ func (kern *Kernel) Shutdown(ctx context.Context) (err error) {
 			}
 		}
 		logger.InfoMsg("Shutdown complete")
+		// Best effort
 		structure.Sync(kern.Logger.Info)
 		structure.Sync(kern.Logger.Trace)
 		// We don't want to wait for them, but yielding for a cooldown Let other goroutines flush

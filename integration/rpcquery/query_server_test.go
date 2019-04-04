@@ -112,7 +112,8 @@ func TestQueryServer(t *testing.T) {
 		qcli := rpctest.NewQueryClient(t, kern.GRPCListenAddress().String())
 		ecli := rpctest.NewExecutionEventsClient(t, kern.GRPCListenAddress().String())
 		height := 1
-		rpctest.WaitNBlocks(t, ecli, 1)
+		err := rpctest.WaitNBlocks(ecli, 1)
+		require.NoError(t, err)
 		header, err := qcli.GetBlockHeader(context.Background(), &rpcquery.GetBlockParam{Height: uint64(height)})
 		require.NoError(t, err)
 		assert.Equal(t, kern.Blockchain.ChainID(), header.ChainID)
@@ -132,7 +133,7 @@ func receiveNames(t testing.TB, qcli rpcquery.QueryClient, query string) []*name
 		entries = append(entries, entry)
 		entry, err = stream.Recv()
 	}
-	if err != nil && err != io.EOF {
+	if err != io.EOF {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	return entries

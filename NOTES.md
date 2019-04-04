@@ -1,9 +1,15 @@
 ### Changed
-- [RPC] 'blocks' on info RPC now lists blocks in ascending rather than descending height order
+- [Tendermint] Upgraded to 0.31.2
+- [IAVL] upgraded to 0.12.2
+- [Config] Tendermint.TimeoutFactor moved to Execution.TimeoutFactor (and reused for NoConsensus mode)
+- [Kernel] Refactored and various exported methods changed
 
 ### Added
-- [CLI] Introduced burrow configure --pool for generation of multiple validator configs suitable for running on a single (or many) machines
+- [CLI] Burrow deploy can now run multiple burrow deploy files (aka playbooks) and run them in parallel
+- [Consensus] Now possible to run Burrow without Tendermint in 'NoConsensus' mode by setting Tendermint.Enabled = false  for faster local testing. Execution.TimeoutFactor can be used to control how regularly Burrow commits (and is used 
 
 ### Fixed
-- [Metrics] Fix histogram statistics by making counts cumulative 
+- [Execution] Fixed uint64 underflow (when subtracting fee from balance) not protected against in CallContext
+- [Tests] Various concurrency issues fixed in tests and execution tests parallelised
+
 

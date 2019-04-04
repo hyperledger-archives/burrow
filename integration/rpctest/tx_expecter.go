@@ -13,7 +13,11 @@ import (
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 )
 
-const maximumDurationWithoutProgress = time.Second
+const (
+	maximumDurationWithoutProgress = 5 * time.Second
+	subscriptionBuffer             = event.DefaultEventBufferCapacity + 1
+	logCommits                     = false
+)
 
 type TxExpecter struct {
 	sync.Mutex
@@ -36,7 +40,7 @@ type TxExpecter struct {
 func ExpectTxs(emitter *event.Emitter, name string) *TxExpecter {
 	exp := &TxExpecter{
 		emitter:    emitter,
-		subID:      event.GenSubID(),
+		subID:      fmt.Sprintf("%s_%s", name, event.GenSubID()),
 		name:       name,
 		all:        make(map[string]struct{}),
 		expected:   make(map[string]struct{}),
@@ -72,7 +76,7 @@ func (exp *TxExpecter) AssertCommitted(t testing.TB) *rpcevents.BlockRange {
 	}
 	exp.asserted = true
 	if exp.reconcile() {
-		return exp.blockRange
+		close(exp.succeeded)
 	}
 	exp.Unlock()
 	defer exp.close()
@@ -80,6 +84,7 @@ func (exp *TxExpecter) AssertCommitted(t testing.TB) *rpcevents.BlockRange {
 	for err == nil {
 		select {
 		case <-exp.succeeded:
+			fmt.Printf("%s: Successfully committed %d txs\n", exp.name, len(exp.all))
 			return exp.blockRange
 		case <-time.After(maximumDurationWithoutProgress):
 			err = exp.assertMakingProgress()
@@ -91,20 +96,22 @@ func (exp *TxExpecter) AssertCommitted(t testing.TB) *rpcevents.BlockRange {
 
 func (exp *TxExpecter) listen() {
 	numTxs := 0
-	ch, err := exp.emitter.Subscribe(context.Background(), exp.subID, exec.QueryForBlockExecution(), 1)
+	ch, err := exp.emitter.Subscribe(context.Background(), exp.subID, exec.QueryForBlockExecution(), subscriptionBuffer)
 	if err != nil {
 		panic(fmt.Errorf("ExpectTxs(): could not subscribe to blocks: %v", err))
 	}
 	close(exp.ready)
-	defer exp.close()
 	for msg := range ch {
 		be := msg.(*exec.BlockExecution)
 		blockTxs := len(be.TxExecutions)
 		numTxs += blockTxs
-		fmt.Printf("%s: Total TXs committed at block %v: %v (+%v)\n", exp.name, be.GetHeight(), numTxs, blockTxs)
+		if logCommits {
+			fmt.Printf("%s: Total TXs committed at block %v: %v (+%v)\n", exp.name, be.GetHeight(), numTxs, blockTxs)
+		}
 		for _, txe := range be.TxExecutions {
 			// Return if this is the last expected transaction (and we are finished expecting)
 			if exp.receive(txe) {
+				close(exp.succeeded)
 				return
 			}
 		}
@@ -114,11 +121,11 @@ func (exp *TxExpecter) listen() {
 func (exp *TxExpecter) close() {
 	exp.Lock()
 	defer exp.Unlock()
-	if !exp.closed() {
-		close(exp.succeeded)
-		exp.emitter.UnsubscribeAll(context.Background(), exp.subID)
-		exp.subID = ""
+	err := exp.emitter.UnsubscribeAll(context.Background(), exp.subID)
+	if err != nil {
+		fmt.Printf("TxExpecter could not unsubscribe: %v\n", err)
 	}
+	exp.subID = ""
 }
 
 func (exp *TxExpecter) closed() bool {
@@ -165,7 +172,7 @@ func (exp *TxExpecter) assertMakingProgress() error {
 	if total < exp.previousTotal {
 		return nil
 	}
-	committed := total - len(exp.all)
+	committed := len(exp.all) - total
 	committedString := "none"
 	if committed != 0 {
 		committedString = fmt.Sprintf("only %d", committed)

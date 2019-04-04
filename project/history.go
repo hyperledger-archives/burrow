@@ -49,7 +49,25 @@ func FullVersion() string {
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases(
 		"",
-		``,
+		`### Added
+- [CLI] Introduced burrow configure --pool for generation of multiple validator configs suitable for running on a single (or many) machines
+`,
+		"0.25.0 - 2019-04-05",
+		`### Changed
+- [Tendermint] Upgraded to 0.31.2
+- [IAVL] upgraded to 0.12.2
+- [Config] Tendermint.TimeoutFactor moved to Execution.TimeoutFactor (and reused for NoConsensus mode)
+- [Kernel] Refactored and various exported methods changed
+
+### Added
+- [CLI] Burrow deploy can now run multiple burrow deploy files (aka playbooks) and run them in parallel
+- [Consensus] Now possible to run Burrow without Tendermint in 'NoConsensus' mode by setting Tendermint.Enabled = false  for faster local testing. Execution.TimeoutFactor can be used to control how regularly Burrow commits (and is used 
+
+### Fixed
+- [Execution] Fixed uint64 underflow (when subtracting fee from balance) not protected against in CallContext
+- [Tests] Various concurrency issues fixed in tests and execution tests parallelised
+
+`,
 		"0.24.6 - 2019-03-19",
 		`### Changed
 - [RPC] 'blocks' on info RPC now lists blocks in ascending rather than descending height order

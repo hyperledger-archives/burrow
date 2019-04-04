@@ -42,32 +42,29 @@ import (
 )
 
 const (
-	ChainName         = "Integration_Test_Chain"
-	scratchDir        = "test_scratch"
-	runningInCIEnvVar = "CI"
+	ChainName  = "Integration_Test_Chain"
+	scratchDir = "test_scratch"
 )
 
 // Enable logger output during tests
 
 var node uint64 = 0
 
-func RunningInCI() bool {
-	_, ok := os.LookupEnv(runningInCIEnvVar)
-	return ok
-}
-
 func NoConsensus(conf *config.BurrowConfig) {
 	conf.Tendermint.Enabled = false
 }
 
+func CommitImmediately(conf *config.BurrowConfig) {
+	conf.Execution.TimeoutFactor = 0
+}
+
 func RunNode(t testing.TB, genesisDoc *genesis.GenesisDoc, privateAccounts []*acm.PrivateAccount,
 	options ...func(*config.BurrowConfig)) (kern *core.Kernel, shutdown func()) {
+
 	var err error
 	var loggingConfig *logconfig.LoggingConfig
-	testConfig, cleanup := NewTestConfig(genesisDoc)
-	for _, opt := range options {
-		opt(testConfig)
-	}
+
+	testConfig, cleanup := NewTestConfig(genesisDoc, options...)
 	// Uncomment for log output from tests
 	//loggingConfig = logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
 	//	return sink.SetOutput(logconfig.StderrOutput())
@@ -78,12 +75,14 @@ func RunNode(t testing.TB, genesisDoc *genesis.GenesisDoc, privateAccounts []*ac
 	require.NoError(t, err)
 	// Sometimes better to not shutdown as logging errors on shutdown may obscure real issue
 	return kern, func() {
-		kern.Shutdown(context.Background())
+		Shutdown(kern)
 		cleanup()
 	}
 }
 
-func NewTestConfig(genesisDoc *genesis.GenesisDoc) (conf *config.BurrowConfig, cleanup func()) {
+func NewTestConfig(genesisDoc *genesis.GenesisDoc,
+	options ...func(*config.BurrowConfig)) (conf *config.BurrowConfig, cleanup func()) {
+
 	nodeNumber := atomic.AddUint64(&node, 1)
 	name := fmt.Sprintf("node_%03d", nodeNumber)
 	conf = config.DefaultBurrowConfig()
@@ -98,8 +97,13 @@ func NewTestConfig(genesisDoc *genesis.GenesisDoc) (conf *config.BurrowConfig, c
 	conf.RPC.GRPC.ListenAddress = localhostFreePort
 	conf.RPC.Metrics.ListenAddress = localhostFreePort
 	conf.RPC.Info.ListenAddress = localhostFreePort
-	conf.Execution.TimeoutFactor = 0.3
+	conf.Execution.TimeoutFactor = 0.5
 	conf.Execution.VMOptions = []execution.VMOption{execution.DebugOpcodes}
+	for _, opt := range options {
+		if opt != nil {
+			opt(conf)
+		}
+	}
 	return conf, cleanup
 }
 
@@ -184,4 +188,13 @@ func MakePrivateAccounts(n int) []*acm.PrivateAccount {
 		accounts[i] = acm.GeneratePrivateAccountFromSecret("mysecret" + strconv.Itoa(i))
 	}
 	return accounts
+}
+
+func Shutdown(kern *core.Kernel) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	err := kern.Shutdown(ctx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error shutting down test kernel %v: %v", kern, err)
+	}
 }
