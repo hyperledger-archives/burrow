@@ -75,23 +75,28 @@ func (exp *TxExpecter) AssertCommitted(t testing.TB) *rpcevents.BlockRange {
 		panic(fmt.Errorf("cannot call AssertCommitted more than once"))
 	}
 	exp.asserted = true
-	if exp.reconcile() {
-		close(exp.succeeded)
-	}
+	succeeded := exp.reconcile()
 	exp.Unlock()
 	defer exp.close()
+	if succeeded {
+		return exp.Pass()
+	}
 	var err error
 	for err == nil {
 		select {
 		case <-exp.succeeded:
-			fmt.Printf("%s: Successfully committed %d txs\n", exp.name, len(exp.all))
-			return exp.blockRange
+			return exp.Pass()
 		case <-time.After(maximumDurationWithoutProgress):
 			err = exp.assertMakingProgress()
 		}
 	}
 	t.Fatal(err)
 	return nil
+}
+
+func (exp *TxExpecter) Pass() *rpcevents.BlockRange {
+	fmt.Printf("%s: Successfully committed %d txs\n", exp.name, len(exp.all))
+	return exp.blockRange
 }
 
 func (exp *TxExpecter) listen() {
