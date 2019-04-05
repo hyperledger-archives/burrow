@@ -43,9 +43,11 @@ func worker(playbooks <-chan playbookWork, results chan<- playbookResult, args *
 					fname)
 			}
 
-			logger := logging.NewLogger(log.NewLogfmtLogger(&logBuf))
-			if !args.Debug {
-				logger.Trace = log.NewNopLogger()
+			if args.Jobs != 1 {
+				logger = logging.NewLogger(log.NewLogfmtLogger(&logBuf))
+				if !args.Debug {
+					logger.Trace = log.NewNopLogger()
+				}
 			}
 
 			// Load the package if it doesn't exist
