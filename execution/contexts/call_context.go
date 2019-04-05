@@ -39,7 +39,7 @@ func (ctx *CallContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 	if err != nil {
 		return err
 	}
-	// That the fee less than the input amount is checked by Precheck
+	// That the fee less than the input amount is checked by Precheck to be greater than or equal to fee
 	value := ctx.tx.Input.Amount - ctx.tx.Fee
 
 	if ctx.RunCall {
@@ -56,18 +56,21 @@ func (ctx *CallContext) Precheck() (*acm.Account, *acm.Account, error) {
 		return nil, nil, err
 	}
 	if inAcc == nil {
-		ctx.Logger.InfoMsg("Cannot find input account",
-			"tx_input", ctx.tx.Input)
-		return nil, nil, errors.ErrorCodeInvalidAddress
+		return nil, nil, errors.ErrorCodef(errors.ErrorCodeInvalidAddress,
+			"Cannot find input account: %v", ctx.tx.Input)
 	}
 
 	if ctx.tx.Input.Amount < ctx.tx.Fee {
-		ctx.Logger.InfoMsg("Sender did not send enough to cover the fee",
-			"tx_input", ctx.tx.Input)
-		return nil, nil, errors.ErrorCodeInsufficientFunds
+		return nil, nil, errors.ErrorCodef(errors.ErrorCodeInsufficientFunds,
+			"Send did not send enough to cover the fee: %v", ctx.tx.Input)
 	}
 
-	inAcc.Balance -= ctx.tx.Fee
+	// Fees are handle by the CallContext, values transfers (i.e. balances) are handled in the VM (or in Check())
+	err = inAcc.SubtractFromBalance(ctx.tx.Fee)
+	if err != nil {
+		return nil, nil, errors.ErrorCodef(errors.ErrorCodeInsufficientFunds,
+			"Input account does not have sufficient balance to cover input amount: %v", ctx.tx.Input)
+	}
 
 	// Calling a nil destination is defined as requesting contract creation
 	createContract := ctx.tx.Address == nil
@@ -107,12 +110,12 @@ func (ctx *CallContext) Precheck() (*acm.Account, *acm.Account, error) {
 }
 
 func (ctx *CallContext) Check(inAcc *acm.Account, value uint64) error {
-	// The mempool does not call txs until
-	// the proposer determines the order of txs.
-	// So mempool will skip the actual .Call(),
-	// and only deduct from the caller's balance.
-	inAcc.Balance -= value
-	err := ctx.StateWriter.UpdateAccount(inAcc)
+	// We do a trial balance subtraction here
+	err := inAcc.SubtractFromBalance(value)
+	if err != nil {
+		return err
+	}
+	err = ctx.StateWriter.UpdateAccount(inAcc)
 	if err != nil {
 		return err
 	}
@@ -182,7 +185,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 	ctx.Logger.Trace.Log("callee", callee)
 
 	txHash := ctx.txe.Envelope.Tx.Hash()
-	logger := ctx.Logger.With("tx_hash", txHash)
+	logger := ctx.Logger.With(structure.TxHashKey, txHash)
 	vmach := evm.NewVM(params, caller, txHash, logger, ctx.VMOptions...)
 	ret, exception := vmach.Call(txCache, ctx.txe, caller, callee, code, ctx.tx.Data, value, &gas)
 	if exception != nil {

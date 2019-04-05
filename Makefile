@@ -1,7 +1,12 @@
 # ----------------------------------------------------------
 # REQUIREMENTS
 
-# - go installed locally
+# - Go 1.12
+# - Make
+# - jq
+# - find
+# - bash
+# - protoc (for rebuilding protobuf files)
 
 # ----------------------------------------------------------
 
@@ -24,7 +29,7 @@ CI_IMAGE="hyperledger/burrow:ci"
 ### Formatting, linting and vetting
 
 # check the code for style standards; currently enforces go formatting.
-# display output first, then check for success	
+# display output first, then check for success
 .PHONY: check
 check:
 	@echo "Checking code for formatting style compliance."
@@ -44,7 +49,7 @@ fmt:
 	@gofmt -l -w ${GOFILES_NOVENDOR}
 
 # lint installs golint and prints recommendations for coding style.
-lint: 
+lint:
 	@echo "Running lint checks."
 	go get -u github.com/golang/lint/golint
 	@for file in $(GOFILES_NOVENDOR); do \
@@ -193,7 +198,7 @@ test_integration_no_postgres: test_keys test_deploy test_integration_vent test_r
 	@go test -v -tags integration ./integration/...
 
 .PHONY: test_deploy
-test_deploy: bin/solc
+test_deploy: bin/solc build_burrow
 	@tests/scripts/bin_wrapper.sh tests/deploy.sh
 
 bin/solc: ./tests/scripts/deps/solc.sh

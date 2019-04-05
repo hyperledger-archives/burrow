@@ -48,6 +48,12 @@ type Executor interface {
 	Execute(txEnv *txs.Envelope) (*exec.TxExecution, error)
 }
 
+type ExecutorFunc func(txEnv *txs.Envelope) (*exec.TxExecution, error)
+
+func (f ExecutorFunc) Execute(txEnv *txs.Envelope) (*exec.TxExecution, error) {
+	return f(txEnv)
+}
+
 type ExecutorState interface {
 	Update(updater func(ws state.Updatable) error) (hash []byte, version int64, err error)
 	names.Reader
@@ -206,7 +212,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 	logger := exe.logger.WithScope("executor.Execute(tx txs.Tx)").With(
 		"height", exe.block.Height,
 		"run_call", exe.runCall,
-		"tx_hash", txEnv.Tx.Hash())
+		structure.TxHashKey, txEnv.Tx.Hash())
 
 	logger.InfoMsg("Executing transaction", "tx", txEnv.String())
 
@@ -432,7 +438,7 @@ func (exe *executor) publishBlock(blockExecution *exec.BlockExecution) {
 		if publishErr != nil {
 			exe.logger.InfoMsg("Error publishing TxExecution",
 				"height", blockExecution.Height,
-				"tx_hash", txe.TxHash,
+				structure.TxHashKey, txe.TxHash,
 				structure.ErrorKey, publishErr)
 		}
 	}

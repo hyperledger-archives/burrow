@@ -16,7 +16,7 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/txs"
-	abciTypes "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/abci/types"
 )
 
 type Validators interface {
@@ -34,18 +34,14 @@ type App struct {
 	// State
 	blockchain              *bcm.Blockchain
 	validators              Validators
-	checkTx                 func(txBytes []byte) abciTypes.ResponseCheckTx
-	deliverTx               func(txBytes []byte) abciTypes.ResponseCheckTx
+	checkTx                 func(txBytes []byte) types.ResponseCheckTx
+	deliverTx               func(txBytes []byte) types.ResponseCheckTx
 	mempoolLocker           sync.Locker
 	authorizedPeersProvider PeersFilterProvider
 	// We need to cache these from BeginBlock for when we need actually need it in Commit
-	block *abciTypes.RequestBeginBlock
+	block *types.RequestBeginBlock
 	// Function to use to fail gracefully from panic rather than letting Tendermint make us a zombie
 	panicFunc func(error)
-	TxExecutor
-}
-
-type TxExecutor struct {
 	checker   execution.BatchExecutor
 	committer execution.BatchCommitter
 	txDecoder txs.Decoder
@@ -55,29 +51,22 @@ type TxExecutor struct {
 // PeersFilterProvider provides current authorized nodes id and/or addresses
 type PeersFilterProvider func() (authorizedPeersID []string, authorizedPeersAddress []string)
 
-var _ abciTypes.Application = &App{}
+var _ types.Application = &App{}
 
 func NewApp(nodeInfo string, blockchain *bcm.Blockchain, validators Validators, checker execution.BatchExecutor,
 	committer execution.BatchCommitter, txDecoder txs.Decoder, authorizedPeersProvider PeersFilterProvider,
 	panicFunc func(error), logger *logging.Logger) *App {
 	return &App{
-		nodeInfo:   nodeInfo,
-		blockchain: blockchain,
-		validators: validators,
-		TxExecutor: NewTxExecutor(nodeInfo, checker, committer, txDecoder,
-			logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App", "node_info", nodeInfo)),
+		nodeInfo:                nodeInfo,
+		blockchain:              blockchain,
+		validators:              validators,
+		checker:                 checker,
+		committer:               committer,
+		txDecoder:               txDecoder,
 		authorizedPeersProvider: authorizedPeersProvider,
 		panicFunc:               panicFunc,
-	}
-}
-
-func NewTxExecutor(nodeInfo string, checker execution.BatchExecutor, committer execution.BatchCommitter,
-	txDecoder txs.Decoder, logger *logging.Logger) TxExecutor {
-	return TxExecutor{
-		checker,
-		committer,
-		txDecoder,
-		logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App", "node_info", nodeInfo),
+		logger: logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App",
+			"node_info", nodeInfo),
 	}
 }
 
@@ -88,8 +77,8 @@ func (app *App) SetMempoolLocker(mempoolLocker sync.Locker) {
 	app.mempoolLocker = mempoolLocker
 }
 
-func (app *App) Info(info abciTypes.RequestInfo) abciTypes.ResponseInfo {
-	return abciTypes.ResponseInfo{
+func (app *App) Info(info types.RequestInfo) types.ResponseInfo {
+	return types.ResponseInfo{
 		Data:             app.nodeInfo,
 		Version:          project.History.CurrentVersion().String(),
 		LastBlockHeight:  int64(app.blockchain.LastBlockHeight()),
@@ -97,13 +86,13 @@ func (app *App) Info(info abciTypes.RequestInfo) abciTypes.ResponseInfo {
 	}
 }
 
-func (app *App) SetOption(option abciTypes.RequestSetOption) (respSetOption abciTypes.ResponseSetOption) {
+func (app *App) SetOption(option types.RequestSetOption) (respSetOption types.ResponseSetOption) {
 	respSetOption.Log = "SetOption not supported"
 	respSetOption.Code = codes.UnsupportedRequestCode
 	return
 }
 
-func (app *App) Query(reqQuery abciTypes.RequestQuery) (respQuery abciTypes.ResponseQuery) {
+func (app *App) Query(reqQuery types.RequestQuery) (respQuery types.ResponseQuery) {
 	defer func() {
 		if r := recover(); r != nil {
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/Query: %v\n%s", r, debug.Stack()))
@@ -119,7 +108,7 @@ func (app *App) Query(reqQuery abciTypes.RequestQuery) (respQuery abciTypes.Resp
 	return
 }
 
-func (app *App) InitChain(chain abciTypes.RequestInitChain) (respInitChain abciTypes.ResponseInitChain) {
+func (app *App) InitChain(chain types.RequestInitChain) (respInitChain types.ResponseInitChain) {
 	defer func() {
 		if r := recover(); r != nil {
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/InitChain: %v\n%s", r, debug.Stack()))
@@ -136,7 +125,7 @@ func (app *App) InitChain(chain abciTypes.RequestInitChain) (respInitChain abciT
 	}
 	for _, v := range chain.Validators {
 		pk, err := crypto.PublicKeyFromABCIPubKey(v.GetPubKey())
-		err = app.checkValidatorMatches(currentSet, abciTypes.Validator{Address: pk.GetAddress().Bytes(), Power: v.Power})
+		err = app.checkValidatorMatches(currentSet, types.Validator{Address: pk.GetAddress().Bytes(), Power: v.Power})
 		if err != nil {
 			panic(err)
 		}
@@ -145,7 +134,7 @@ func (app *App) InitChain(chain abciTypes.RequestInitChain) (respInitChain abciT
 	return
 }
 
-func (app *App) BeginBlock(block abciTypes.RequestBeginBlock) (respBeginBlock abciTypes.ResponseBeginBlock) {
+func (app *App) BeginBlock(block types.RequestBeginBlock) (respBeginBlock types.ResponseBeginBlock) {
 	app.block = &block
 	defer func() {
 		if r := recover(); r != nil {
@@ -176,7 +165,7 @@ func (app *App) BeginBlock(block abciTypes.RequestBeginBlock) (respBeginBlock ab
 	return
 }
 
-func (app *App) checkValidatorMatches(ours validator.Reader, v abciTypes.Validator) error {
+func (app *App) checkValidatorMatches(ours validator.Reader, v types.Validator) error {
 	address, err := crypto.AddressFromBytes(v.Address)
 	if err != nil {
 		return err
@@ -192,90 +181,54 @@ func (app *App) checkValidatorMatches(ours validator.Reader, v abciTypes.Validat
 	return nil
 }
 
-func (app *App) CheckTx(txBytes []byte) abciTypes.ResponseCheckTx {
+func (app *App) CheckTx(txBytes []byte) types.ResponseCheckTx {
+	const logHeader = "CheckTx"
 	defer func() {
 		if r := recover(); r != nil {
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/CheckTx: %v\n%s", r, debug.Stack()))
 		}
 	}()
-	return app.TxExecutor.CheckTx(txBytes)
+
+	checkTx := ExecuteTx(logHeader, app.checker, app.txDecoder, txBytes)
+
+	logger := WithTags(app.logger, checkTx.Tags)
+
+	if checkTx.Code == codes.TxExecutionSuccessCode {
+		logger.InfoMsg("Execution success")
+	} else {
+		logger.InfoMsg("Execution error",
+			"code", checkTx.Code,
+			"log", checkTx.Log)
+	}
+
+	return checkTx
 }
 
-func (app *App) DeliverTx(txBytes []byte) abciTypes.ResponseDeliverTx {
+func (app *App) DeliverTx(txBytes []byte) types.ResponseDeliverTx {
+	const logHeader = "DeliverTx"
 	defer func() {
 		if r := recover(); r != nil {
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/DeliverTx: %v\n%s", r, debug.Stack()))
 		}
 	}()
-	return app.TxExecutor.DeliverTx(txBytes)
+
+	checkTx := ExecuteTx(logHeader, app.committer, app.txDecoder, txBytes)
+
+	logger := WithTags(app.logger, checkTx.Tags)
+
+	if checkTx.Code == codes.TxExecutionSuccessCode {
+		logger.InfoMsg("Execution success")
+	} else {
+		logger.InfoMsg("Execution error",
+			"code", checkTx.Code,
+			"log", checkTx.Log)
+	}
+
+	return DeliverTxFromCheckTx(checkTx)
 }
 
-func (txx TxExecutor) CheckTx(txBytes []byte) abciTypes.ResponseCheckTx {
-	return txx.execute("CheckTx", txx.checker, txBytes)
-}
-
-func (txx TxExecutor) DeliverTx(txBytes []byte) abciTypes.ResponseDeliverTx {
-	ctr := txx.execute("DeliverTx", txx.committer, txBytes)
-	// Currently these message types are identical, if they are ever different can map between
-	return abciTypes.ResponseDeliverTx{
-		Code:      ctr.Code,
-		Log:       ctr.Log,
-		Data:      ctr.Data,
-		Tags:      ctr.Tags,
-		GasUsed:   ctr.GasUsed,
-		GasWanted: ctr.GasWanted,
-		Info:      ctr.Info,
-	}
-}
-
-func (txx TxExecutor) execute(name string, executor execution.BatchExecutor, txBytes []byte) abciTypes.ResponseCheckTx {
-	logf := func(format string, args ...interface{}) string {
-		return fmt.Sprintf("%s: "+format, append([]interface{}{name}, args...)...)
-	}
-
-	txEnv, err := txx.txDecoder.DecodeTx(txBytes)
-	if err != nil {
-		txx.logger.InfoMsg("Decoding error",
-			structure.ErrorKey, err)
-		return abciTypes.ResponseCheckTx{
-			Code: codes.EncodingErrorCode,
-			Log:  logf("Encoding error: %s", err),
-		}
-	}
-
-	txe, err := executor.Execute(txEnv)
-	if err != nil {
-		ex := errors.AsException(err)
-		txx.logger.InfoMsg("Execution error",
-			structure.ErrorKey, err,
-			"tx_hash", txEnv.Tx.Hash())
-		return abciTypes.ResponseCheckTx{
-			Code: codes.TxExecutionErrorCode,
-			Log:  logf("Could not execute transaction: %s, error: %v", txEnv, ex.Exception),
-		}
-	}
-
-	bs, err := txe.Receipt.Encode()
-	if err != nil {
-		return abciTypes.ResponseCheckTx{
-			Code: codes.EncodingErrorCode,
-			Log:  logf("Could not serialise receipt: %s", err),
-		}
-	}
-	txx.logger.InfoMsg("Execution success",
-		"tx_hash", txe.TxHash,
-		"contract_address", txe.Receipt.ContractAddress,
-		"creates_contract", txe.Receipt.CreatesContract)
-	return abciTypes.ResponseCheckTx{
-		Code: codes.TxExecutionSuccessCode,
-		Log:  logf("Execution success - TxExecution in data"),
-		Data: bs,
-	}
-
-}
-
-func (app *App) EndBlock(reqEndBlock abciTypes.RequestEndBlock) abciTypes.ResponseEndBlock {
-	var validatorUpdates []abciTypes.ValidatorUpdate
+func (app *App) EndBlock(reqEndBlock types.RequestEndBlock) types.ResponseEndBlock {
+	var validatorUpdates []types.ValidatorUpdate
 	defer func() {
 		if r := recover(); r != nil {
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/EndBlock: %v\n%s", r, debug.Stack()))
@@ -284,7 +237,7 @@ func (app *App) EndBlock(reqEndBlock abciTypes.RequestEndBlock) abciTypes.Respon
 	err := app.validators.ValidatorChanges(BurrowValidatorDelayInBlocks).IterateValidators(func(id crypto.Addressable, power *big.Int) error {
 		app.logger.InfoMsg("Updating validator power", "validator_address", id.GetAddress(),
 			"new_power", power)
-		validatorUpdates = append(validatorUpdates, abciTypes.ValidatorUpdate{
+		validatorUpdates = append(validatorUpdates, types.ValidatorUpdate{
 			PubKey: id.GetPublicKey().ABCIPubKey(),
 			// Must ensure power fits in an int64 during execution
 			Power: power.Int64(),
@@ -294,12 +247,12 @@ func (app *App) EndBlock(reqEndBlock abciTypes.RequestEndBlock) abciTypes.Respon
 	if err != nil {
 		panic(err)
 	}
-	return abciTypes.ResponseEndBlock{
+	return types.ResponseEndBlock{
 		ValidatorUpdates: validatorUpdates,
 	}
 }
 
-func (app *App) Commit() abciTypes.ResponseCommit {
+func (app *App) Commit() types.ResponseCommit {
 	defer func() {
 		if r := recover(); r != nil {
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/Commit: %v\n%s", r, debug.Stack()))
@@ -359,7 +312,7 @@ func (app *App) Commit() abciTypes.ResponseCommit {
 	}
 	app.logger.InfoMsg("Committed block")
 
-	return abciTypes.ResponseCommit{
+	return types.ResponseCommit{
 		Data: appHash,
 	}
 }

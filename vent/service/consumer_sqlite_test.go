@@ -4,22 +4,40 @@ package service_test
 
 import (
 	"testing"
+	"time"
+
+	"github.com/hyperledger/burrow/integration"
+	"github.com/hyperledger/burrow/integration/rpctest"
 
 	"github.com/hyperledger/burrow/vent/test"
 )
 
 func TestSqliteConsumer(t *testing.T) {
-	testConsumer(t, test.SqliteVentConfig())
-}
+	privateAccounts := rpctest.PrivateAccounts
+	kern, shutdown := integration.RunNode(t, rpctest.GenesisDoc, rpctest.PrivateAccounts)
+	defer shutdown()
+	inputAddress := privateAccounts[0].GetAddress()
+	grpcAddress := kern.GRPCListenAddress().String()
+	tcli := test.NewTransactClient(t, grpcAddress)
 
-func TestSqliteInvalidUTF8(t *testing.T) {
-	testInvalidUTF8(t, test.SqliteVentConfig())
-}
+	t.Parallel()
+	time.Sleep(2 * time.Second)
 
-func TestSqliteDeleteEvent(t *testing.T) {
-	testDeleteEvent(t, test.SqliteVentConfig())
-}
+	t.Run("Group", func(t *testing.T) {
+		t.Run("Consume", func(t *testing.T) {
+			testConsumer(t, test.SqliteVentConfig(grpcAddress), tcli, inputAddress)
+		})
 
-func TestSqliteResume(t *testing.T) {
-	testResume(t, test.SqliteVentConfig())
+		t.Run("SqliteInvalidUTF8", func(t *testing.T) {
+			testInvalidUTF8(t, test.SqliteVentConfig(grpcAddress), tcli, inputAddress)
+		})
+
+		t.Run("SqliteDeleteEvent", func(t *testing.T) {
+			testDeleteEvent(t, test.SqliteVentConfig(grpcAddress), tcli, inputAddress)
+		})
+
+		t.Run("SqliteResume", func(t *testing.T) {
+			testResume(t, test.SqliteVentConfig(grpcAddress))
+		})
+	})
 }

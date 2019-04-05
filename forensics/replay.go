@@ -5,6 +5,7 @@ package forensics
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/hyperledger/burrow/storage"
 
 	"github.com/hyperledger/burrow/execution/state"
@@ -43,7 +44,7 @@ func (recap *ReplayCapture) String() string {
 func NewReplay(dbDir string, genesisDoc *genesis.GenesisDoc, logger *logging.Logger) *Replay {
 	//burrowDB := core.NewBurrowDB(dbDir)
 	// Avoid writing through to underlying DB
-	burrowDB := storage.NewCacheDB(core.NewBurrowDB(dbDir))
+	burrowDB := storage.NewCacheDB(dbm.NewDB(core.BurrowDBName, dbm.GoLevelDBBackend, dbDir))
 	return &Replay{
 		explorer:   bcm.NewBlockExplorer(dbm.LevelDBBackend, dbDir),
 		burrowDB:   burrowDB,
@@ -54,7 +55,7 @@ func NewReplay(dbDir string, genesisDoc *genesis.GenesisDoc, logger *logging.Log
 }
 
 func (re *Replay) LatestBlockchain() (*bcm.Blockchain, error) {
-	blockchain, err := bcm.LoadOrNewBlockchain(re.burrowDB, re.genesisDoc, re.logger)
+	_, blockchain, err := bcm.LoadOrNewBlockchain(re.burrowDB, re.genesisDoc, re.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +97,7 @@ func (re *Replay) Block(height uint64) (*ReplayCapture, error) {
 
 	// Get our commit machinery
 	committer := execution.NewBatchCommitter(st, execution.ParamsFromGenesis(re.genesisDoc), re.blockchain,
-		event.NewNoOpPublisher(), re.logger)
+		event.NewEmitter(), re.logger)
 
 	var txe *exec.TxExecution
 	var execErr error
@@ -172,7 +173,7 @@ func (re *Replay) Blocks(startHeight, endHeight uint64) ([]*ReplayCapture, error
 
 		// Get our commit machinery
 		committer := execution.NewBatchCommitter(st, execution.ParamsFromGenesis(re.genesisDoc), re.blockchain,
-			event.NewNoOpPublisher(), re.logger)
+			event.NewEmitter(), re.logger)
 
 		var txe *exec.TxExecution
 		var execErr error

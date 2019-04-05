@@ -7,8 +7,9 @@ import (
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
-	logging_config "github.com/hyperledger/burrow/logging/logconfig"
+	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/rpc"
+	tmConfig "github.com/tendermint/tendermint/config"
 )
 
 const DefaultBurrowConfigTOMLFileName = "burrow.toml"
@@ -26,7 +27,7 @@ type BurrowConfig struct {
 	Execution  *execution.ExecutionConfig         `json:",omitempty" toml:",omitempty"`
 	Keys       *keys.KeysConfig                   `json:",omitempty" toml:",omitempty"`
 	RPC        *rpc.RPCConfig                     `json:",omitempty" toml:",omitempty"`
-	Logging    *logging_config.LoggingConfig      `json:",omitempty" toml:",omitempty"`
+	Logging    *logconfig.LoggingConfig           `json:",omitempty" toml:",omitempty"`
 }
 
 func DefaultBurrowConfig() *BurrowConfig {
@@ -36,8 +37,12 @@ func DefaultBurrowConfig() *BurrowConfig {
 		Keys:       keys.DefaultKeysConfig(),
 		RPC:        rpc.DefaultRPCConfig(),
 		Execution:  execution.DefaultExecutionConfig(),
-		Logging:    logging_config.DefaultNodeLoggingConfig(),
+		Logging:    logconfig.DefaultNodeLoggingConfig(),
 	}
+}
+
+func (conf *BurrowConfig) TendermintConfig() *tmConfig.Config {
+	return conf.Tendermint.Config(conf.BurrowDir, conf.Execution.TimeoutFactor)
 }
 
 func (conf *BurrowConfig) JSONString() string {

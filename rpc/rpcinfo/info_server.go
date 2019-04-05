@@ -15,6 +15,7 @@
 package rpcinfo
 
 import (
+	"net"
 	"net/http"
 
 	"github.com/hyperledger/burrow/logging"
@@ -23,14 +24,14 @@ import (
 	"github.com/hyperledger/burrow/rpc/lib/server"
 )
 
-func StartServer(service *rpc.Service, pattern, listenAddress string, logger *logging.Logger) (*http.Server, error) {
+func StartServer(service *rpc.Service, pattern string, listener net.Listener, logger *logging.Logger) (*http.Server, error) {
 	logger = logger.With(structure.ComponentKey, "RPC_Info")
 	routes := GetRoutes(service, logger)
 	mux := http.NewServeMux()
 	wm := server.NewWebsocketManager(routes, logger)
 	mux.HandleFunc(pattern, wm.WebsocketHandler)
 	server.RegisterRPCFuncs(mux, routes, logger)
-	srv, err := server.StartHTTPServer(listenAddress, mux, logger)
+	srv, err := server.StartHTTPServer(listener, mux, logger)
 	if err != nil {
 		return nil, err
 	}

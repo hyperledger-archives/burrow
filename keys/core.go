@@ -14,7 +14,7 @@ const (
 	DefaultPort     = "10997"
 	DefaultHashType = "sha256"
 	DefaultKeysDir  = ".keys"
-	TestPort        = "7674"
+	TestPort        = "0"
 )
 
 func returnDataDir(dir string) (string, error) {

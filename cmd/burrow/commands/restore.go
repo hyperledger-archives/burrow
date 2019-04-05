@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"context"
-
 	"github.com/hyperledger/burrow/core"
 	cli "github.com/jawher/mow.cli"
 )
@@ -50,7 +48,7 @@ func Restore(output Output) func(cmd *cli.Cmd) {
 				output.Fatalf("could not create Burrow kernel: %v", err)
 			}
 
-			kern.Shutdown(context.Background())
+			kern.ShutdownAndExit()
 		}
 	}
 }

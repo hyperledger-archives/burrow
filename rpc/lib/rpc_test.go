@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/process"
+
 	"github.com/go-kit/kit/log/term"
 	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/hyperledger/burrow/rpc/lib/client"
@@ -117,7 +119,11 @@ func setup() {
 	wm := server.NewWebsocketManager(Routes, logger, server.ReadWait(5*time.Second), server.PingPeriod(1*time.Second))
 	mux.HandleFunc(websocketEndpoint, wm.WebsocketHandler)
 	go func() {
-		_, err := server.StartHTTPServer(tcpAddr, mux, tcpLogger)
+		l, err := process.ListenerFromAddress(tcpAddr)
+		if err != nil {
+			panic(err)
+		}
+		_, err = server.StartHTTPServer(l, mux, tcpLogger)
 		if err != nil {
 			panic(err)
 		}
@@ -129,7 +135,11 @@ func setup() {
 	wm = server.NewWebsocketManager(Routes, logger)
 	mux2.HandleFunc(websocketEndpoint, wm.WebsocketHandler)
 	go func() {
-		_, err := server.StartHTTPServer(unixAddr, mux2, unixLogger)
+		l, err := process.ListenerFromAddress(unixAddr)
+		if err != nil {
+			panic(err)
+		}
+		_, err = server.StartHTTPServer(l, mux2, unixLogger)
 		if err != nil {
 			panic(err)
 		}

@@ -122,7 +122,7 @@ func (trans *Transactor) BroadcastTxAsync(ctx context.Context, txEnv *txs.Envelo
 // various mempool operations (managed by Tendermint) including mempool Reap, Commit, and recheckTx.
 func (trans *Transactor) CheckTxSync(ctx context.Context, txEnv *txs.Envelope) (*txs.Receipt, error) {
 	trans.logger.Trace.Log("method", "CheckTxSync",
-		"tx_hash", txEnv.Tx.Hash(),
+		structure.TxHashKey, txEnv.Tx.Hash(),
 		"tx", txEnv.String())
 	// Sign unless already signed
 	unlock, err := trans.MaybeSignTxMempool(txEnv)
@@ -153,7 +153,6 @@ func (trans *Transactor) MaybeSignTxMempool(txEnv *txs.Envelope) (UnlockFunc, er
 		}
 		// Hash will have change since we signed
 		txEnv.Tx.Rehash()
-
 		// Make this idempotent for defer
 		var once sync.Once
 		return func() { once.Do(unlock) }, nil

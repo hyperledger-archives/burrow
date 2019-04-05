@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hyperledger/burrow/consensus/tendermint/abci"
-	tm_config "github.com/tendermint/tendermint/config"
+	"github.com/hyperledger/burrow/consensus/abci"
+	tmConfig "github.com/tendermint/tendermint/config"
 )
 
 // Burrow's view on Tendermint's config. Since we operate as a Tendermint harness not all configuration values
@@ -33,26 +33,21 @@ type BurrowTendermintConfig struct {
 	// EmptyBlocks mode and possible interval between empty blocks in seconds
 	CreateEmptyBlocks         bool
 	CreateEmptyBlocksInterval time.Duration
-	// This parameter scales the default Tendermint timeouts. A value of 1 gives the Tendermint defaults designed to
-	// work for 100 node + public network. Smaller networks should be able to sustain lower values.
-	TimeoutFactor float64
 }
 
 func DefaultBurrowTendermintConfig() *BurrowTendermintConfig {
-	tmDefaultConfig := tm_config.DefaultConfig()
+	tmDefaultConfig := tmConfig.DefaultConfig()
 	return &BurrowTendermintConfig{
 		Enabled:                   true,
 		ListenAddress:             tmDefaultConfig.P2P.ListenAddress,
 		ExternalAddress:           tmDefaultConfig.P2P.ExternalAddress,
 		CreateEmptyBlocks:         tmDefaultConfig.Consensus.CreateEmptyBlocks,
 		CreateEmptyBlocksInterval: tmDefaultConfig.Consensus.CreateEmptyBlocksInterval,
-		// Takes proposal timeout to about a 1 second...
-		TimeoutFactor: 0.33,
 	}
 }
 
-func (btc *BurrowTendermintConfig) TendermintConfig(rootDir string) *tm_config.Config {
-	conf := tm_config.DefaultConfig()
+func (btc *BurrowTendermintConfig) Config(rootDir string, timeoutFactor float64) *tmConfig.Config {
+	conf := tmConfig.DefaultConfig()
 	// We expose Tendermint config as required, but try to give fewer levers to pull where possible
 	if btc != nil {
 		conf.RootDir = rootDir
@@ -63,13 +58,14 @@ func (btc *BurrowTendermintConfig) TendermintConfig(rootDir string) *tm_config.C
 		conf.Consensus.CreateEmptyBlocks = btc.CreateEmptyBlocks
 		conf.Consensus.CreateEmptyBlocksInterval = btc.CreateEmptyBlocksInterval
 		// Assume Tendermint has some mutually consistent values, assume scaling them linearly makes sense
-		conf.Consensus.TimeoutPropose = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPropose)
-		conf.Consensus.TimeoutProposeDelta = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutProposeDelta)
-		conf.Consensus.TimeoutPrevote = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPrevote)
-		conf.Consensus.TimeoutPrevoteDelta = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPrevoteDelta)
-		conf.Consensus.TimeoutPrecommit = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPrecommit)
-		conf.Consensus.TimeoutPrecommitDelta = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPrecommitDelta)
-		conf.Consensus.TimeoutCommit = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutCommit)
+		conf.Consensus.TimeoutPropose = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutPropose)
+		conf.Consensus.TimeoutProposeDelta = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutProposeDelta)
+		conf.Consensus.TimeoutPrevote = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutPrevote)
+		conf.Consensus.TimeoutPrevoteDelta = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutPrevoteDelta)
+		conf.Consensus.TimeoutPrecommit = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutPrecommit)
+		conf.Consensus.TimeoutPrecommitDelta = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutPrecommitDelta)
+		conf.Consensus.TimeoutCommit = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutCommit)
+
 		// P2P
 		conf.Moniker = btc.Moniker
 		conf.P2P.RootDir = rootDir

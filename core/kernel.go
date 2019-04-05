@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -25,24 +26,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hyperledger/burrow/genesis"
-	"github.com/hyperledger/burrow/keys"
-	"github.com/hyperledger/burrow/txs"
-
-	"github.com/hyperledger/burrow/execution/state"
-
 	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint"
-	"github.com/hyperledger/burrow/consensus/tendermint/abci"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/state"
+	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/process"
 	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/txs"
 	"github.com/streadway/simpleuuid"
-	abciTypes "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/blockchain"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	tmTypes "github.com/tendermint/tendermint/types"
@@ -50,7 +48,7 @@ import (
 
 const (
 	CooldownTime           = 1000 * time.Millisecond
-	ServerShutdownTimeout  = 1000 * time.Millisecond
+	ServerShutdownTimeout  = 5000 * time.Millisecond
 	LoggingCallerDepth     = 5
 	AccountsRingMutexCount = 100
 	BurrowDBName           = "burrow_state"
@@ -71,12 +69,14 @@ type Kernel struct {
 	database       dbm.DB
 	txCodec        txs.Codec
 	exeOptions     []execution.ExecutionOption
-	exeChecker     execution.BatchExecutor
-	exeCommitter   execution.BatchCommitter
+	checker        execution.BatchExecutor
+	committer      execution.BatchCommitter
 	keyClient      keys.KeyClient
 	keyStore       *keys.KeyStore
-	nodeInfo       string
+	info           string
 	processes      map[string]process.Process
+	listeners      map[string]net.Listener
+	timeoutFactor  float64
 	shutdownNotify chan struct{}
 	shutdownOnce   sync.Once
 }
@@ -92,6 +92,7 @@ func NewKernel(dbDir string) (*Kernel, error) {
 		RunID:          runID,
 		Emitter:        event.NewEmitter(),
 		processes:      make(map[string]process.Process),
+		listeners:      make(map[string]net.Listener),
 		shutdownNotify: make(chan struct{}),
 		txCodec:        txs.NewAminoCodec(),
 		database:       dbm.NewDB(BurrowDBName, dbm.GoLevelDBBackend, dbDir),
@@ -144,8 +145,8 @@ func (kern *Kernel) LoadState(genesisDoc *genesis.GenesisDoc) (err error) {
 	kern.Logger.InfoMsg("State loading successful")
 
 	params := execution.ParamsFromGenesis(genesisDoc)
-	kern.exeChecker = execution.NewBatchChecker(kern.State, params, kern.Blockchain, kern.Logger)
-	kern.exeCommitter = execution.NewBatchCommitter(kern.State, params, kern.Blockchain, kern.Emitter, kern.Logger, kern.exeOptions...)
+	kern.checker = execution.NewBatchChecker(kern.State, params, kern.Blockchain, kern.Logger)
+	kern.committer = execution.NewBatchCommitter(kern.State, params, kern.Blockchain, kern.Emitter, kern.Logger, kern.exeOptions...)
 	return nil
 }
 
@@ -191,9 +192,11 @@ func (kern *Kernel) LoadDump(genesisDoc *genesis.GenesisDoc, restoreFile string)
 }
 
 // GetNodeView builds and returns a wrapper of our tendermint node
-func (kern *Kernel) GetNodeView() (nodeView *tendermint.NodeView, err error) {
-	nodeView, err = tendermint.NewNodeView(kern.Node, kern.txCodec, kern.RunID)
-	return nodeView, err
+func (kern *Kernel) GetNodeView() (*tendermint.NodeView, error) {
+	if kern.Node == nil {
+		return nil, nil
+	}
+	return tendermint.NewNodeView(kern.Node, kern.txCodec, kern.RunID)
 }
 
 // AddExecutionOptions extends our execution options
@@ -216,59 +219,21 @@ func (kern *Kernel) SetKeyStore(store *keys.KeyStore) {
 	kern.keyStore = store
 }
 
-// LoadTransactor builds the thing that helps us communicate with Tendermint if enabled
-// otherwise in no-consensus mode we can run and one tx per block
-func (kern *Kernel) LoadTransactor() (err error) {
-	nodeView, err := kern.GetNodeView()
+// Generates an in-memory Tendermint PrivValidator (suitable for passing to LoadTendermintFromConfig)
+func (kern *Kernel) PrivValidator(validator crypto.Address) (tmTypes.PrivValidator, error) {
+	val, err := keys.AddressableSigner(kern.keyClient, validator)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("could not get validator addressable from keys client: %v", err)
 	}
-
-	accountState := kern.State
-	nameRegState := kern.State
-	kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, kern.State, nodeView, kern.Logger)
-
-	if kern.Node == nil {
-		checkTx := func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error {
-			exec := abci.NewTxExecutor(kern.nodeInfo, kern.exeChecker, kern.exeCommitter, kern.txCodec, kern.Logger.WithScope("CheckTx"))
-			ctr := exec.CheckTx(tx)
-			dtr := exec.DeliverTx(tx)
-			appHash, err := kern.exeCommitter.Commit(nil)
-			if err != nil {
-				return err
-			}
-
-			if err := kern.Blockchain.CommitBlock(time.Now(), nil, appHash); err != nil {
-				return err
-			}
-
-			cb(abciTypes.ToResponseCheckTx(ctr))
-			cb(abciTypes.ToResponseDeliverTx(dtr))
-			cb(abciTypes.ToResponseCommit(abciTypes.ResponseCommit{
-				Data: appHash,
-			}))
-
-			return nil
-		}
-
-		kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter,
-			execution.NewAccounts(kern.exeChecker, kern.keyClient, AccountsRingMutexCount),
-			checkTx, kern.txCodec, kern.Logger)
-	} else {
-		kern.Blockchain.SetBlockStore(bcm.NewBlockStore(nodeView.BlockStore()))
-		kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter,
-			execution.NewAccounts(kern.exeChecker, kern.keyClient, AccountsRingMutexCount),
-			kern.Node.MempoolReactor().Mempool.CheckTx, kern.txCodec, kern.Logger)
+	signer, err := keys.AddressableSigner(kern.keyClient, val.GetAddress())
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	return tendermint.NewPrivValidatorMemory(val, signer), nil
 }
 
 // Boot the kernel starting Tendermint and RPC layers
 func (kern *Kernel) Boot() (err error) {
-	// by loading the transactor here we can be sure to boot with the latest nodeView
-	if err = kern.LoadTransactor(); err != nil {
-		return err
-	}
 	for _, launcher := range kern.Launchers {
 		if launcher.Enabled {
 			srvr, err := launcher.Launch()
@@ -284,15 +249,51 @@ func (kern *Kernel) Boot() (err error) {
 }
 
 func (kern *Kernel) Panic(err error) {
-	fmt.Fprintf(os.Stderr, "%s: Kernel shutting down due to panic: %v", kern.nodeInfo, err)
-	kern.Shutdown(context.Background())
-	os.Exit(1)
+	fmt.Fprintf(os.Stderr, "%v: shutting down due to panic: %v", kern, err)
+	kern.ShutdownAndExit()
 }
 
 // Wait for a graceful shutdown
 func (kern *Kernel) WaitForShutdown() {
 	// Supports multiple goroutines waiting for shutdown since channel is closed
 	<-kern.shutdownNotify
+}
+
+func (kern *Kernel) registerListener(name string, listener net.Listener) error {
+	_, ok := kern.listeners[name]
+	if ok {
+		return fmt.Errorf("registerListener(): listener '%s' already registered", name)
+	}
+	kern.listeners[name] = listener
+	return nil
+}
+
+func (kern *Kernel) GRPCListenAddress() net.Addr {
+	l, ok := kern.listeners[GRPCProcessName]
+	if !ok {
+		return nil
+	}
+	return l.Addr()
+}
+
+func (kern *Kernel) InfoListenAddress() net.Addr {
+	l, ok := kern.listeners[InfoProcessName]
+	if !ok {
+		return nil
+	}
+	return l.Addr()
+}
+
+func (kern *Kernel) MetricsListenAddress() net.Addr {
+	l, ok := kern.listeners[MetricsProcessName]
+	if !ok {
+		return nil
+	}
+	return l.Addr()
+}
+
+func (kern *Kernel) String() string {
+	return fmt.Sprintf("Kernel[%s]", kern.info)
 }
 
 // Supervise kernel once booted
@@ -307,16 +308,33 @@ func (kern *Kernel) supervise() {
 	for {
 		select {
 		case <-reloadCh:
-			kern.Logger.Reload()
+			err := kern.Logger.Reload()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v: could not reload logger: %v", kern, err)
+			}
 		case <-syncCh:
-			kern.Logger.Sync()
+			err := kern.Logger.Sync()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v: could not sync logger: %v", kern, err)
+			}
 		case sig := <-shutdownCh:
 			kern.Logger.InfoMsg(fmt.Sprintf("Caught %v signal so shutting down", sig),
 				"signal", sig.String())
-			kern.Shutdown(context.Background())
+			kern.ShutdownAndExit()
 			return
 		}
 	}
+}
+
+func (kern *Kernel) ShutdownAndExit() {
+	ctx, cancel := context.WithTimeout(context.Background(), ServerShutdownTimeout)
+	defer cancel()
+	err := kern.Shutdown(ctx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v: error shutting down: %v", kern, err)
+		os.Exit(1)
+	}
+	os.Exit(0)
 }
 
 // Shutdown stops the kernel allowing for a graceful shutdown of components in order
@@ -325,15 +343,13 @@ func (kern *Kernel) Shutdown(ctx context.Context) (err error) {
 		logger := kern.Logger.WithScope("Shutdown")
 		logger.InfoMsg("Attempting graceful shutdown...")
 		logger.InfoMsg("Shutting down servers")
-		ctx, cancel := context.WithTimeout(ctx, ServerShutdownTimeout)
-		defer cancel()
 		// Shutdown servers in reverse order to boot
 		for i := len(kern.Launchers) - 1; i >= 0; i-- {
 			name := kern.Launchers[i].Name
-			srvr, ok := kern.processes[name]
+			proc, ok := kern.processes[name]
 			if ok {
 				logger.InfoMsg("Shutting down server", "server_name", name)
-				sErr := srvr.Shutdown(ctx)
+				sErr := proc.Shutdown(ctx)
 				if sErr != nil {
 					logger.InfoMsg("Failed to shutdown server",
 						"server_name", name,
@@ -345,6 +361,7 @@ func (kern *Kernel) Shutdown(ctx context.Context) (err error) {
 			}
 		}
 		logger.InfoMsg("Shutdown complete")
+		// Best effort
 		structure.Sync(kern.Logger.Info)
 		structure.Sync(kern.Logger.Trace)
 		// We don't want to wait for them, but yielding for a cooldown Let other goroutines flush

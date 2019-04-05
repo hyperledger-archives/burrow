@@ -21,9 +21,6 @@ type NodeView struct {
 }
 
 func NewNodeView(tmNode *Node, txDecoder txs.Decoder, runID simpleuuid.UUID) (*NodeView, error) {
-	if tmNode == nil {
-		return nil, nil
-	}
 	publicKey, err := crypto.PublicKeyFromTendermintPubKey(tmNode.PrivValidator().GetPubKey())
 	if err != nil {
 		return nil, err

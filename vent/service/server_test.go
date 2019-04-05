@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/execution/evm/abi"
+	"github.com/hyperledger/burrow/integration"
+	"github.com/hyperledger/burrow/integration/rpctest"
 	"github.com/hyperledger/burrow/vent/config"
 	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/service"
@@ -22,54 +24,62 @@ import (
 )
 
 func TestServer(t *testing.T) {
-	// run consumer to listen to events
-	cfg := config.DefaultVentConfig()
+	kern, shutdown := integration.RunNode(t, rpctest.GenesisDoc, rpctest.PrivateAccounts)
+	defer shutdown()
+	t.Parallel()
 
-	// create test db
-	_, closeDB := test.NewTestDB(t, cfg)
-	defer closeDB()
+	t.Run("Group", func(t *testing.T) {
+		t.Run("Run", func(t *testing.T) {
+			// run consumer to listen to events
+			cfg := config.DefaultVentConfig()
 
-	cfg.SpecFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_example.json"}
-	cfg.AbiFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/EventsTest.abi"}
-	cfg.GRPCAddr = testConfig.RPC.GRPC.ListenAddress
+			// create test db
+			_, closeDB := test.NewTestDB(t, cfg)
+			defer closeDB()
 
-	log := logger.NewLogger(cfg.LogLevel)
-	consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
+			cfg.SpecFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_example.json"}
+			cfg.AbiFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/EventsTest.abi"}
+			cfg.GRPCAddr = kern.GRPCListenAddress().String()
 
-	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, false)
-	abiSpec, err := abi.LoadPath(cfg.AbiFileOrDirs...)
+			log := logger.NewLogger(cfg.LogLevel)
+			consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
 
-	var wg sync.WaitGroup
+			projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, false)
+			abiSpec, err := abi.LoadPath(cfg.AbiFileOrDirs...)
 
-	wg.Add(1)
-	go func() {
-		err := consumer.Run(projection, abiSpec, true)
-		require.NoError(t, err)
+			var wg sync.WaitGroup
 
-		wg.Done()
-	}()
+			wg.Add(1)
+			go func() {
+				err := consumer.Run(projection, abiSpec, true)
+				require.NoError(t, err)
 
-	time.Sleep(2 * time.Second)
+				wg.Done()
+			}()
 
-	// setup test server
-	server := service.NewServer(cfg, log, consumer)
+			time.Sleep(2 * time.Second)
 
-	httpServer := httptest.NewServer(server)
-	defer httpServer.Close()
+			// setup test server
+			server := service.NewServer(cfg, log, consumer)
 
-	// call health endpoint should return OK
-	healthURL := fmt.Sprintf("%s/health", httpServer.URL)
+			httpServer := httptest.NewServer(server)
+			defer httpServer.Close()
 
-	resp, err := http.Get(healthURL)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+			// call health endpoint should return OK
+			healthURL := fmt.Sprintf("%s/health", httpServer.URL)
 
-	// shutdown consumer and wait for its end
-	consumer.Shutdown()
-	wg.Wait()
+			resp, err := http.Get(healthURL)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	// call health endpoint again should return error
-	resp, err = http.Get(healthURL)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
+			// shutdown consumer and wait for its end
+			consumer.Shutdown()
+			wg.Wait()
+
+			// call health endpoint again should return error
+			resp, err = http.Get(healthURL)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
+		})
+	})
 }

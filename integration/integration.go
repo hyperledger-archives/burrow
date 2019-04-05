@@ -15,26 +15,28 @@
 package integration
 
 import (
-	"encoding/binary"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"runtime"
+	"path"
 	"strconv"
 	"sync/atomic"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/core"
-	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution"
-	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys/mock"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/logconfig"
 	lConfig "github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/permission"
 )
@@ -46,27 +48,72 @@ const (
 
 // Enable logger output during tests
 
-// Starting point for assigning range of ports for tests
-// Start at unprivileged port (hoping for the best)
-const startingPort uint16 = 1024
-
-// For each port claimant assign a bucket
-const startingPortSeparation uint16 = 10
-const startingPortBuckets = 1000
-
-// Mutable port to assign to next claimant
-var port = uint32(startingPort)
-
 var node uint64 = 0
+
+func NoConsensus(conf *config.BurrowConfig) {
+	conf.Tendermint.Enabled = false
+}
+
+func CommitImmediately(conf *config.BurrowConfig) {
+	conf.Execution.TimeoutFactor = 0
+}
+
+func RunNode(t testing.TB, genesisDoc *genesis.GenesisDoc, privateAccounts []*acm.PrivateAccount,
+	options ...func(*config.BurrowConfig)) (kern *core.Kernel, shutdown func()) {
+
+	var err error
+	var loggingConfig *logconfig.LoggingConfig
+
+	testConfig, cleanup := NewTestConfig(genesisDoc, options...)
+	// Uncomment for log output from tests
+	//loggingConfig = logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
+	//	return sink.SetOutput(logconfig.StderrOutput())
+	//})
+	kern, err = TestKernel(privateAccounts[0], privateAccounts, testConfig, loggingConfig)
+	require.NoError(t, err)
+	err = kern.Boot()
+	require.NoError(t, err)
+	// Sometimes better to not shutdown as logging errors on shutdown may obscure real issue
+	return kern, func() {
+		Shutdown(kern)
+		cleanup()
+	}
+}
+
+func NewTestConfig(genesisDoc *genesis.GenesisDoc,
+	options ...func(*config.BurrowConfig)) (conf *config.BurrowConfig, cleanup func()) {
+
+	nodeNumber := atomic.AddUint64(&node, 1)
+	name := fmt.Sprintf("node_%03d", nodeNumber)
+	conf = config.DefaultBurrowConfig()
+	testDir, cleanup := EnterTestDirectory()
+	conf.BurrowDir = path.Join(testDir, fmt.Sprintf(".burrow_%s", name))
+	conf.GenesisDoc = genesisDoc
+	conf.Tendermint.Moniker = name
+	conf.Keys.RemoteAddress = ""
+	// Assign run of ports
+	const localhostFreePort = "tcp://localhost:0"
+	conf.Tendermint.ListenAddress = localhostFreePort
+	conf.RPC.GRPC.ListenAddress = localhostFreePort
+	conf.RPC.Metrics.ListenAddress = localhostFreePort
+	conf.RPC.Info.ListenAddress = localhostFreePort
+	conf.Execution.TimeoutFactor = 0.5
+	conf.Execution.VMOptions = []execution.VMOption{execution.DebugOpcodes}
+	for _, opt := range options {
+		if opt != nil {
+			opt(conf)
+		}
+	}
+	return conf, cleanup
+}
 
 // We use this to wrap tests
 func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.PrivateAccount,
 	testConfig *config.BurrowConfig, loggingConfig *lConfig.LoggingConfig) (*core.Kernel, error) {
 	fmt.Println("Creating integration test Kernel...")
 
-	var kern *core.Kernel
-	var err error
-	if kern, err = core.NewKernel(testConfig.BurrowDir); err != nil {
+	kern, err := core.NewKernel(testConfig.BurrowDir)
+	if err != nil {
 		return nil, err
 	}
 
@@ -79,18 +126,25 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 	}
 
 	kern.SetKeyClient(mock.NewKeyClient(keysAccounts...))
-	kern.AddExecutionOptions([]execution.ExecutionOption{execution.VMOptions(evm.DebugOpcodes)}...)
 
-	if err := kern.LoadState(testConfig.GenesisDoc); err != nil {
+	err = kern.LoadExecutionOptionsFromConfig(testConfig.Execution)
+	if err != nil {
+		return nil, err
+	}
+
+	err = kern.LoadState(testConfig.GenesisDoc)
+	if err != nil {
 		return nil, err
 	}
 
 	privVal := tendermint.NewPrivValidatorMemory(validatorAccount, validatorAccount)
-	if err := kern.LoadTendermintFromConfig(testConfig.Tendermint, testConfig.BurrowDir, privVal, nil); err != nil {
+
+	err = kern.LoadTendermintFromConfig(testConfig, privVal)
+	if err != nil {
 		return nil, err
 	}
 
-	kern.AddProcesses(core.DefaultServices(kern, testConfig.RPC, testConfig.Keys)...)
+	kern.AddProcesses(core.DefaultProcessLaunchers(kern, testConfig.RPC, testConfig.Keys)...)
 	return kern, nil
 }
 
@@ -100,7 +154,7 @@ func EnterTestDirectory() (testDir string, cleanup func()) {
 	if err != nil {
 		panic(fmt.Errorf("could not make temp dir for integration tests: %v", err))
 	}
-	// If you need to expect dirs
+	// If you need to inspectdirs
 	//testDir := scratchDir
 	os.RemoveAll(testDir)
 	os.MkdirAll(testDir, 0777)
@@ -136,50 +190,11 @@ func MakePrivateAccounts(n int) []*acm.PrivateAccount {
 	return accounts
 }
 
-// Some helpers for setting Burrow's various ports in non-colliding ranges for tests
-func ClaimPorts() uint16 {
-	_, file, _, _ := runtime.Caller(1)
-	startIndex := uint16(binary.LittleEndian.Uint16(sha3.Sha3([]byte(file)))) % startingPortBuckets
-	newPort := startingPort + startIndex*startingPortSeparation
-	// In case overflow
-	if newPort < startingPort {
-		newPort += startingPort
+func Shutdown(kern *core.Kernel) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	err := kern.Shutdown(ctx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error shutting down test kernel %v: %v", kern, err)
 	}
-	if !atomic.CompareAndSwapUint32(&port, uint32(startingPort), uint32(newPort)) {
-		panic("GetPort() called before ClaimPorts() or ClaimPorts() called twice")
-	}
-	return uint16(atomic.LoadUint32(&port))
-}
-
-func GetPort() uint16 {
-	return uint16(atomic.AddUint32(&port, 1))
-}
-
-// Gets an name based on an incrementing counter for running multiple nodes
-func GetName() string {
-	nodeNumber := atomic.AddUint64(&node, 1)
-	return fmt.Sprintf("node_%03d", nodeNumber)
-}
-
-func GetLocalAddress() string {
-	return fmt.Sprintf("127.0.0.1:%v", GetPort())
-}
-
-func GetTCPLocalAddress() string {
-	return fmt.Sprintf("tcp://127.0.0.1:%v", GetPort())
-}
-
-func NewTestConfig(genesisDoc *genesis.GenesisDoc) *config.BurrowConfig {
-	name := GetName()
-	cnf := config.DefaultBurrowConfig()
-	cnf.BurrowDir = fmt.Sprintf(".burrow_%s", name)
-	cnf.GenesisDoc = genesisDoc
-	cnf.Tendermint.Moniker = name
-	cnf.Tendermint.ListenAddress = GetTCPLocalAddress()
-	cnf.Tendermint.ExternalAddress = cnf.Tendermint.ListenAddress
-	cnf.RPC.GRPC.ListenAddress = GetLocalAddress()
-	cnf.RPC.Metrics.ListenAddress = GetTCPLocalAddress()
-	cnf.RPC.Info.ListenAddress = GetTCPLocalAddress()
-	cnf.Keys.RemoteAddress = ""
-	return cnf
 }
