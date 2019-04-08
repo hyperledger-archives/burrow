@@ -554,13 +554,15 @@ func logEvents(txe *exec.TxExecution, client *def.Client, logger *logging.Logger
 		}
 
 		if err := abi.UnpackEvent(&evAbi, eventLog.Topics, eventLog.Data, vals...); err == nil {
-			fields := []string{"name", evAbi.Name}
+			var fields []interface{}
+			fields = append(fields, "name")
+			fields = append(fields, evAbi.Name)
 			for i := range vals {
 				fields = append(fields, evAbi.Inputs[i].Name)
 				val := vals[i].(*string)
 				fields = append(fields, *val)
 			}
-			logger.InfoMsg("EVM Event", fields)
+			logger.InfoMsg("EVM Event", fields...)
 		}
 	}
 }
