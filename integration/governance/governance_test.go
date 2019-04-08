@@ -259,6 +259,23 @@ func TestGovernance(t *testing.T) {
 			assert.Contains(t, err.Error(), "invalid sequence")
 		})
 	})
+
+	// tendermint AddPeer() runs asynchronously and needs to complete before we shutdown, else we get an exception like
+	// goroutine 2181 [running]:
+	// runtime/debug.Stack(0x12786c0, 0xc000085d70, 0xc000085c50)
+	// /home/sean/go1.12.1/src/runtime/debug/stack.go:24 +0x9d
+	// github.com/hyperledger/burrow/vendor/github.com/tendermint/tendermint/libs/db.(*GoLevelDB).Get(0xc005c5b318, 0xc01fd71840, 0x5, 0x8, 0x5, 0x8, 0x5)
+	// /home/sean/go/src/github.com/hyperledger/burrow/vendor/github.com/tendermint/tendermint/libs/db/go_level_db.go:57 +0xaf
+	// github.com/hyperledger/burrow/vendor/github.com/tendermint/tendermint/blockchain.(*BlockStore).LoadSeenCommit(0xc00bfd6120, 0x12, 0xc002b85c90)
+	// /home/sean/go/src/github.com/hyperledger/burrow/vendor/github.com/tendermint/tendermint/blockchain/store.go:128 +0xf2
+	// github.com/hyperledger/burrow/vendor/github.com/tendermint/tendermint/consensus.(*ConsensusState).LoadCommit(0xc002b85c00, 0x12, 0x0)
+	// /home/sean/go/src/github.com/hyperledger/burrow/vendor/github.com/tendermint/tendermint/consensus/state.go:273 +0xb2
+	// github.com/hyperledger/burrow/vendor/github.com/tendermint/tendermint/consensus.(*ConsensusReactor).queryMaj23Routine(0xc0008ec680, 0x12ad1a0, 0xc010f79800, 0xc009119520)
+	// /home/sean/go/src/github.com/hyperledger/burrow/vendor/github.com/tendermint/tendermint/consensus/reactor.go:789 +0x291
+	// created by github.com/hyperledger/burrow/vendor/github.com/tendermint/tendermint/consensus.(*ConsensusReactor).AddPeer
+	// /home/sean/go/src/github.com/hyperledger/burrow/vendor/github.com/tendermint/tendermint/consensus/reactor.go:171 +0x23a
+
+	time.Sleep(4 * time.Second)
 }
 
 // Helpers
