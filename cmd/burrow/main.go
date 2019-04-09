@@ -11,10 +11,10 @@ import (
 )
 
 func main() {
-	// Print informational output to Stderr
-	err := burrow(stdOutput()).Run(os.Args)
+	output := defaultOutput()
+	err := burrow(output).Run(os.Args)
 	if err != nil {
-		panic(err)
+		output.Fatalf("%v", err)
 	}
 }
 
@@ -59,13 +59,16 @@ func burrow(output commands.Output) *cli.Cli {
 	app.Command("vent", "Start the Vent EVM event and blocks consumer service to populated databases from smart contracts",
 		commands.Vent(output))
 
-	app.Command("dump", "Dump and restore chain",
+	app.Command("dump", "Dump chain state to backup",
 		commands.Dump(output))
+
+	app.Command("restore", "Restore new chain from backup",
+		commands.Restore(output))
 
 	return app
 }
 
-func stdOutput() *output {
+func defaultOutput() *output {
 	return &output{
 		PrintfFunc: func(format string, args ...interface{}) {
 			fmt.Fprintf(os.Stdout, format+"\n", args...)

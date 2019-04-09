@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
@@ -27,44 +26,29 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tendermint/tendermint/version"
-
-	hex "github.com/tmthrgd/go-hex"
-
-	"github.com/hyperledger/burrow/project"
-
-	"github.com/hyperledger/burrow/execution/state"
-
 	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint"
-	"github.com/hyperledger/burrow/consensus/tendermint/abci"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/process"
 	"github.com/hyperledger/burrow/rpc"
-	"github.com/hyperledger/burrow/rpc/metrics"
-	"github.com/hyperledger/burrow/rpc/rpcdump"
-	"github.com/hyperledger/burrow/rpc/rpcevents"
-	"github.com/hyperledger/burrow/rpc/rpcinfo"
-	"github.com/hyperledger/burrow/rpc/rpcquery"
-	"github.com/hyperledger/burrow/rpc/rpctransact"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/streadway/simpleuuid"
-	tmConfig "github.com/tendermint/tendermint/config"
+	"github.com/tendermint/tendermint/blockchain"
 	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/node"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
 const (
 	CooldownTime           = 1000 * time.Millisecond
-	ServerShutdownTimeout  = 1000 * time.Millisecond
+	ServerShutdownTimeout  = 5000 * time.Millisecond
 	LoggingCallerDepth     = 5
 	AccountsRingMutexCount = 100
 	BurrowDBName           = "burrow_state"
@@ -73,300 +57,183 @@ const (
 // Kernel is the root structure of Burrow
 type Kernel struct {
 	// Expose these public-facing interfaces to allow programmatic extension of the Kernel by other projects
-	Emitter    event.Emitter
-	Service    *rpc.Service
-	Launchers  []process.Launcher
-	State      *state.State
-	Blockchain *bcm.Blockchain
-	Node       *tendermint.Node
-	Transactor *execution.Transactor
-	// Time-based UUID randomly generated each time Burrow is started
-	RunID          simpleuuid.UUID
+	Emitter        *event.Emitter
+	Service        *rpc.Service
+	Launchers      []process.Launcher
+	State          *state.State
+	Blockchain     *bcm.Blockchain
+	Node           *tendermint.Node
+	Transactor     *execution.Transactor
+	RunID          simpleuuid.UUID // Time-based UUID randomly generated each time Burrow is started
 	Logger         *logging.Logger
-	nodeInfo       string
+	database       dbm.DB
+	txCodec        txs.Codec
+	exeOptions     []execution.ExecutionOption
+	checker        execution.BatchExecutor
+	committer      execution.BatchCommitter
+	keyClient      keys.KeyClient
+	keyStore       *keys.KeyStore
+	info           string
 	processes      map[string]process.Process
+	listeners      map[string]net.Listener
+	timeoutFactor  float64
 	shutdownNotify chan struct{}
 	shutdownOnce   sync.Once
 }
 
-func NewBurrowDB(dbDir string) dbm.DB {
-	return dbm.NewDB(BurrowDBName, dbm.GoLevelDBBackend, dbDir)
+// NewKernel initializes an empty kernel
+func NewKernel(dbDir string) (*Kernel, error) {
+	if dbDir == "" {
+		return nil, fmt.Errorf("Burrow requires a database directory")
+	}
+	runID, err := simpleuuid.NewTime(time.Now()) // Create a random ID based on start time
+	return &Kernel{
+		Logger:         logging.NewNoopLogger(),
+		RunID:          runID,
+		Emitter:        event.NewEmitter(),
+		processes:      make(map[string]process.Process),
+		listeners:      make(map[string]net.Listener),
+		shutdownNotify: make(chan struct{}),
+		txCodec:        txs.NewAminoCodec(),
+		database:       dbm.NewDB(BurrowDBName, dbm.GoLevelDBBackend, dbDir),
+	}, err
 }
 
-func NewKernel(ctx context.Context, keyClient keys.KeyClient, privValidator tmTypes.PrivValidator,
-	genesisDoc *genesis.GenesisDoc, tmConf *tmConfig.Config, rpcConfig *rpc.RPCConfig, keyConfig *keys.KeysConfig,
-	keyStore *keys.KeyStore, exeOptions []execution.ExecutionOption, authorizedPeersProvider abci.PeersFilterProvider, restore string, nodeKey *crypto.PrivateKey, logger *logging.Logger) (*Kernel, error) {
-
-	var err error
-	kern := &Kernel{
-		processes:      make(map[string]process.Process),
-		shutdownNotify: make(chan struct{}),
-	}
-	// Create a random ID based on start time
-	kern.RunID, err = simpleuuid.NewTime(time.Now())
-
-	logger = logger.WithScope("NewKernel()").With(structure.TimeKey, log.DefaultTimestampUTC,
-		structure.RunId, kern.RunID.String())
-	tendermintLogger := logger.With(structure.CallerKey, log.Caller(LoggingCallerDepth+1))
-	kern.Logger = logger.WithInfo(structure.CallerKey, log.Caller(LoggingCallerDepth))
-	stateDB := NewBurrowDB(tmConf.DBDir())
-
-	kern.Blockchain, err = bcm.LoadOrNewBlockchain(stateDB, genesisDoc, kern.Logger)
-	if err != nil {
-		return nil, fmt.Errorf("error creating or loading blockchain state: %v", err)
-	}
-
+// SetLogger initializes the kernel with the provided logger
+func (kern *Kernel) SetLogger(logger *logging.Logger) {
+	logger = logger.WithScope("NewKernel()").With(structure.TimeKey,
+		log.DefaultTimestampUTC, structure.RunId, kern.RunID.String())
 	heightValuer := log.Valuer(func() interface{} { return kern.Blockchain.LastBlockHeight() })
-	kern.Logger = kern.Logger.With("height", heightValuer)
-	tendermintLogger = tendermintLogger.With("height", heightValuer)
+	kern.Logger = logger.WithInfo(structure.CallerKey, log.Caller(LoggingCallerDepth)).With("height", heightValuer)
+	kern.Emitter.SetLogger(logger)
+}
 
-	// These should be in sync unless we are at the genesis block
-	if kern.Blockchain.LastBlockHeight() > 0 {
-		kern.Logger.InfoMsg("Loading application state")
-		kern.State, err = state.LoadState(stateDB, execution.VersionAtHeight(kern.Blockchain.LastBlockHeight()))
+// LoadState starts from scratch or previous chain
+func (kern *Kernel) LoadState(genesisDoc *genesis.GenesisDoc) (err error) {
+	var existing bool
+	existing, kern.Blockchain, err = bcm.LoadOrNewBlockchain(kern.database, genesisDoc, kern.Logger)
+	if err != nil {
+		return fmt.Errorf("error creating or loading blockchain state: %v", err)
+	}
+
+	if existing {
+		kern.Logger.InfoMsg("Loading application state", "height", kern.Blockchain.LastBlockHeight())
+		kern.State, err = state.LoadState(kern.database, execution.VersionAtHeight(kern.Blockchain.LastBlockHeight()))
 		if err != nil {
-			return nil, fmt.Errorf("could not load persisted execution state at hash 0x%X: %v",
+			return fmt.Errorf("could not load persisted execution state at hash 0x%X: %v",
 				kern.Blockchain.AppHashAfterLastBlock(), err)
 		}
+
 		if !bytes.Equal(kern.State.Hash(), kern.Blockchain.AppHashAfterLastBlock()) {
-			return nil, fmt.Errorf("state and blockchain disagree on hash for block at height %d: "+
+			return fmt.Errorf("state and blockchain disagree on app hash at height %d: "+
 				"state gives %X, blockchain gives %X", kern.Blockchain.LastBlockHeight(),
 				kern.State.Hash(), kern.Blockchain.AppHashAfterLastBlock())
 		}
-		if restore != "" {
-			return nil, fmt.Errorf("Cannot restore onto existing chain; don't give --restore-dump argument")
-		}
+
 	} else {
-		kern.State, err = state.MakeGenesisState(stateDB, genesisDoc)
+		kern.Logger.InfoMsg("Creating new application state from genesis")
+		kern.State, err = state.MakeGenesisState(kern.database, genesisDoc)
 		if err != nil {
-			return nil, fmt.Errorf("could not build genesis state: %v", err)
+			return fmt.Errorf("could not build genesis state: %v", err)
 		}
 
-		if restore != "" {
-			if len(genesisDoc.AppHash) == 0 {
-				return nil, fmt.Errorf("AppHash is required when restoring chain")
-			}
-
-			reader, err := state.NewFileDumpReader(restore)
-			if err != nil {
-				return nil, err
-			}
-
-			err = kern.State.LoadDump(reader)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		err = kern.State.InitialCommit()
-		if err != nil {
-			return nil, err
-		}
-
-		if len(genesisDoc.AppHash) != 0 {
-			if !bytes.Equal(genesisDoc.AppHash, kern.State.Hash()) {
-				return nil, fmt.Errorf("AppHash does not match, got AppHash 0x%X expected 0x%s. Is the correct --restore-dump specified?", kern.State.Hash(), genesisDoc.AppHash.String())
-			}
+		if err = kern.State.InitialCommit(); err != nil {
+			return err
 		}
 	}
 
 	kern.Logger.InfoMsg("State loading successful")
 
-	txCodec := txs.NewAminoCodec()
-	tmGenesisDoc := tendermint.DeriveGenesisDoc(genesisDoc)
 	params := execution.ParamsFromGenesis(genesisDoc)
-	checker := execution.NewBatchChecker(kern.State, params, kern.Blockchain, kern.Logger)
+	kern.checker = execution.NewBatchChecker(kern.State, params, kern.Blockchain, kern.Logger)
+	kern.committer = execution.NewBatchCommitter(kern.State, params, kern.Blockchain, kern.Emitter, kern.Logger, kern.exeOptions...)
+	return nil
+}
 
-	kern.Emitter = event.NewEmitter(kern.Logger)
-	committer := execution.NewBatchCommitter(kern.State, params, kern.Blockchain, kern.Emitter, kern.Logger, exeOptions...)
+// LoadDump restores chain state from the given dump file
+func (kern *Kernel) LoadDump(genesisDoc *genesis.GenesisDoc, restoreFile string) (err error) {
+	if _, kern.Blockchain, err = bcm.LoadOrNewBlockchain(kern.database, genesisDoc, kern.Logger); err != nil {
+		return fmt.Errorf("error creating or loading blockchain state: %v", err)
+	}
+	kern.Blockchain.SetBlockStore(bcm.NewBlockStore(blockchain.NewBlockStore(kern.database)))
 
-	kern.nodeInfo = fmt.Sprintf("Burrow_%s_%s_ValidatorID:%X", project.History.CurrentVersion().String(),
-		genesisDoc.ChainID(), privValidator.GetPubKey().Address())
-	app := abci.NewApp(kern.nodeInfo, kern.Blockchain, kern.State, checker, committer, txCodec, authorizedPeersProvider,
-		kern.Panic, logger)
-	// We could use this to provide/register our own metrics (though this will register them with us). Unfortunately
-	// Tendermint currently ignores the metrics passed unless its own server is turned on.
-	metricsProvider := node.DefaultMetricsProvider(&tmConfig.InstrumentationConfig{
-		Prometheus:           false,
-		PrometheusListenAddr: "",
-	})
-	kern.Node, err = tendermint.NewNode(tmConf, privValidator, tmGenesisDoc, app, metricsProvider, nodeKey, tendermintLogger)
+	if kern.State, err = state.MakeGenesisState(kern.database, genesisDoc); err != nil {
+		return fmt.Errorf("could not build genesis state: %v", err)
+	}
+
+	if len(genesisDoc.AppHash) == 0 {
+		return fmt.Errorf("AppHash is required when restoring chain")
+	}
+
+	reader, err := state.NewFileDumpReader(restoreFile)
+	if err != nil {
+		return err
+	}
+
+	if err = kern.State.LoadDump(reader); err != nil {
+		return err
+	}
+
+	if err = kern.State.InitialCommit(); err != nil {
+		return err
+	}
+
+	if !bytes.Equal(kern.State.Hash(), kern.Blockchain.GenesisDoc().AppHash) {
+		return fmt.Errorf("Restore produced a different apphash expect 0x%x got 0x%x",
+			kern.Blockchain.GenesisDoc().AppHash, kern.State.Hash())
+	}
+	err = kern.Blockchain.CommitWithAppHash(kern.State.Hash())
+	if err != nil {
+		return fmt.Errorf("Unable to commit %v", err)
+	}
+
+	kern.Logger.InfoMsg("State restore successful: %d", kern.Blockchain.LastBlockHeight())
+	return nil
+}
+
+// GetNodeView builds and returns a wrapper of our tendermint node
+func (kern *Kernel) GetNodeView() (*tendermint.NodeView, error) {
+	if kern.Node == nil {
+		return nil, nil
+	}
+	return tendermint.NewNodeView(kern.Node, kern.txCodec, kern.RunID)
+}
+
+// AddExecutionOptions extends our execution options
+func (kern *Kernel) AddExecutionOptions(opts ...execution.ExecutionOption) {
+	kern.exeOptions = append(kern.exeOptions, opts...)
+}
+
+// AddProcesses extends the services that we launch at boot
+func (kern *Kernel) AddProcesses(pl ...process.Launcher) {
+	kern.Launchers = append(kern.Launchers, pl...)
+}
+
+// SetKeyClient explicitly sets the key client
+func (kern *Kernel) SetKeyClient(client keys.KeyClient) {
+	kern.keyClient = client
+}
+
+// SetKeyStore explicitly sets the key store
+func (kern *Kernel) SetKeyStore(store *keys.KeyStore) {
+	kern.keyStore = store
+}
+
+// Generates an in-memory Tendermint PrivValidator (suitable for passing to LoadTendermintFromConfig)
+func (kern *Kernel) PrivValidator(validator crypto.Address) (tmTypes.PrivValidator, error) {
+	val, err := keys.AddressableSigner(kern.keyClient, validator)
+	if err != nil {
+		return nil, fmt.Errorf("could not get validator addressable from keys client: %v", err)
+	}
+	signer, err := keys.AddressableSigner(kern.keyClient, val.GetAddress())
 	if err != nil {
 		return nil, err
 	}
-
-	kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter,
-		execution.NewAccounts(checker, keyClient, AccountsRingMutexCount),
-		kern.Node.MempoolReactor().Mempool.CheckTx, txCodec, kern.Logger)
-
-	nameRegState := kern.State
-	proposalRegState := kern.State
-	accountState := kern.State
-	nodeView, err := tendermint.NewNodeView(kern.Node, txCodec, kern.RunID)
-	if err != nil {
-		return nil, err
-	}
-	kern.Blockchain.SetBlockStore(bcm.NewBlockStore(nodeView.BlockStore()))
-	kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, kern.State, nodeView, kern.Logger)
-
-	kern.Launchers = []process.Launcher{
-		{
-			Name:    "Profiling Server",
-			Enabled: rpcConfig.Profiler.Enabled,
-			Launch: func() (process.Process, error) {
-				debugServer := &http.Server{
-					Addr: ":6060",
-				}
-				go func() {
-					err := debugServer.ListenAndServe()
-					if err != nil {
-						kern.Logger.InfoMsg("Error from pprof debug server", structure.ErrorKey, err)
-					}
-				}()
-				return debugServer, nil
-			},
-		},
-		{
-			Name:    "Database",
-			Enabled: true,
-			Launch: func() (process.Process, error) {
-				// Just close database
-				return process.ShutdownFunc(func(ctx context.Context) error {
-					stateDB.Close()
-					return nil
-				}), nil
-			},
-		},
-		{
-			Name:    "Tendermint",
-			Enabled: true,
-			Launch: func() (process.Process, error) {
-				err := kern.Node.Start()
-				if err != nil {
-					return nil, fmt.Errorf("error starting Tendermint node: %v", err)
-				}
-				return process.ShutdownFunc(func(ctx context.Context) error {
-					err := kern.Node.Stop()
-					// Close tendermint database connections using our wrapper
-					defer kern.Node.Close()
-					if err != nil {
-						return err
-					}
-					select {
-					case <-ctx.Done():
-						return ctx.Err()
-					case <-kern.Node.Quit():
-						kern.Logger.InfoMsg("Tendermint Node has quit, closing DB connections...")
-						return nil
-					}
-					return err
-				}), nil
-			},
-		},
-		// Run announcer after Tendermint so it can get some details
-		{
-			Name:    "Startup Announcer",
-			Enabled: true,
-			Launch: func() (process.Process, error) {
-				info := kern.Node.NodeInfo()
-
-				start := time.Now()
-				logger := kern.Logger.With(
-					"launch_time", start,
-					"burrow_version", project.FullVersion(),
-					"tendermint_version", version.TMCoreSemVer,
-					"validator_address", privValidator.GetPubKey().Address(),
-					"node_id", string(info.ID()),
-					"net_address", info.NetAddress().String(),
-					"genesis_app_hash", genesisDoc.AppHash.String(),
-					"genesis_hash", hex.EncodeUpperToString(genesisDoc.Hash()),
-				)
-
-				err := logger.InfoMsg("Burrow is launching. We have marmot-off.", "announce", "startup")
-				return process.ShutdownFunc(func(ctx context.Context) error {
-					stop := time.Now()
-					return logger.InfoMsg("Burrow is shutting down. Prepare for re-entrancy.",
-						"announce", "shutdown",
-						"shutdown_time", stop,
-						"elapsed_run_time", stop.Sub(start).String())
-				}), err
-			},
-		},
-		{
-			Name:    "RPC/info",
-			Enabled: rpcConfig.Info.Enabled,
-			Launch: func() (process.Process, error) {
-				server, err := rpcinfo.StartServer(kern.Service, "/websocket", rpcConfig.Info.ListenAddress, kern.Logger)
-				if err != nil {
-					return nil, err
-				}
-				return server, nil
-			},
-		},
-		{
-			Name:    "RPC/metrics",
-			Enabled: rpcConfig.Metrics.Enabled,
-			Launch: func() (process.Process, error) {
-				server, err := metrics.StartServer(kern.Service, rpcConfig.Metrics.MetricsPath,
-					rpcConfig.Metrics.ListenAddress, rpcConfig.Metrics.BlockSampleSize, kern.Logger)
-				if err != nil {
-					return nil, err
-				}
-				return server, nil
-			},
-		},
-		{
-			Name:    "RPC/GRPC",
-			Enabled: rpcConfig.GRPC.Enabled,
-			Launch: func() (process.Process, error) {
-				listen, err := net.Listen("tcp", rpcConfig.GRPC.ListenAddress)
-				if err != nil {
-					return nil, err
-				}
-
-				grpcServer := rpc.NewGRPCServer(kern.Logger)
-				var ks *keys.KeyStore
-				if keyStore != nil {
-					ks = keyStore
-				}
-
-				if keyConfig.GRPCServiceEnabled {
-					if keyStore == nil {
-						ks = keys.NewKeyStore(keyConfig.KeysDirectory, keyConfig.AllowBadFilePermissions)
-					}
-					keys.RegisterKeysServer(grpcServer, ks)
-				}
-
-				rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(kern.State, nameRegState, proposalRegState,
-					kern.Blockchain, kern.State, nodeView, kern.Logger))
-
-				rpctransact.RegisterTransactServer(grpcServer, rpctransact.NewTransactServer(kern.Transactor, txCodec))
-
-				rpcevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer(kern.State,
-					kern.Emitter, kern.Blockchain, kern.Logger))
-
-				rpcdump.RegisterDumpServer(grpcServer, rpcdump.NewDumpServer(kern.State,
-					kern.Blockchain, nodeView, kern.Logger))
-
-				// Provides metadata about services registered
-				//reflection.Register(grpcServer)
-
-				go grpcServer.Serve(listen)
-
-				return process.ShutdownFunc(func(ctx context.Context) error {
-					grpcServer.Stop()
-					// listener is closed for us
-					return nil
-				}), nil
-			},
-		},
-	}
-
-	return kern, nil
+	return tendermint.NewPrivValidatorMemory(val, signer), nil
 }
 
 // Boot the kernel starting Tendermint and RPC layers
-func (kern *Kernel) Boot() error {
+func (kern *Kernel) Boot() (err error) {
 	for _, launcher := range kern.Launchers {
 		if launcher.Enabled {
 			srvr, err := launcher.Launch()
@@ -382,15 +249,51 @@ func (kern *Kernel) Boot() error {
 }
 
 func (kern *Kernel) Panic(err error) {
-	fmt.Fprintf(os.Stderr, "%s: Kernel shutting down due to panic: %v", kern.nodeInfo, err)
-	kern.Shutdown(context.Background())
-	os.Exit(1)
+	fmt.Fprintf(os.Stderr, "%v: shutting down due to panic: %v", kern, err)
+	kern.ShutdownAndExit()
 }
 
 // Wait for a graceful shutdown
 func (kern *Kernel) WaitForShutdown() {
 	// Supports multiple goroutines waiting for shutdown since channel is closed
 	<-kern.shutdownNotify
+}
+
+func (kern *Kernel) registerListener(name string, listener net.Listener) error {
+	_, ok := kern.listeners[name]
+	if ok {
+		return fmt.Errorf("registerListener(): listener '%s' already registered", name)
+	}
+	kern.listeners[name] = listener
+	return nil
+}
+
+func (kern *Kernel) GRPCListenAddress() net.Addr {
+	l, ok := kern.listeners[GRPCProcessName]
+	if !ok {
+		return nil
+	}
+	return l.Addr()
+}
+
+func (kern *Kernel) InfoListenAddress() net.Addr {
+	l, ok := kern.listeners[InfoProcessName]
+	if !ok {
+		return nil
+	}
+	return l.Addr()
+}
+
+func (kern *Kernel) MetricsListenAddress() net.Addr {
+	l, ok := kern.listeners[MetricsProcessName]
+	if !ok {
+		return nil
+	}
+	return l.Addr()
+}
+
+func (kern *Kernel) String() string {
+	return fmt.Sprintf("Kernel[%s]", kern.info)
 }
 
 // Supervise kernel once booted
@@ -405,33 +308,48 @@ func (kern *Kernel) supervise() {
 	for {
 		select {
 		case <-reloadCh:
-			kern.Logger.Reload()
+			err := kern.Logger.Reload()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v: could not reload logger: %v", kern, err)
+			}
 		case <-syncCh:
-			kern.Logger.Sync()
+			err := kern.Logger.Sync()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v: could not sync logger: %v", kern, err)
+			}
 		case sig := <-shutdownCh:
 			kern.Logger.InfoMsg(fmt.Sprintf("Caught %v signal so shutting down", sig),
 				"signal", sig.String())
-			kern.Shutdown(context.Background())
+			kern.ShutdownAndExit()
 			return
 		}
 	}
 }
 
-// Stop the kernel allowing for a graceful shutdown of components in order
+func (kern *Kernel) ShutdownAndExit() {
+	ctx, cancel := context.WithTimeout(context.Background(), ServerShutdownTimeout)
+	defer cancel()
+	err := kern.Shutdown(ctx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v: error shutting down: %v", kern, err)
+		os.Exit(1)
+	}
+	os.Exit(0)
+}
+
+// Shutdown stops the kernel allowing for a graceful shutdown of components in order
 func (kern *Kernel) Shutdown(ctx context.Context) (err error) {
 	kern.shutdownOnce.Do(func() {
 		logger := kern.Logger.WithScope("Shutdown")
 		logger.InfoMsg("Attempting graceful shutdown...")
 		logger.InfoMsg("Shutting down servers")
-		ctx, cancel := context.WithTimeout(ctx, ServerShutdownTimeout)
-		defer cancel()
 		// Shutdown servers in reverse order to boot
 		for i := len(kern.Launchers) - 1; i >= 0; i-- {
 			name := kern.Launchers[i].Name
-			srvr, ok := kern.processes[name]
+			proc, ok := kern.processes[name]
 			if ok {
 				logger.InfoMsg("Shutting down server", "server_name", name)
-				sErr := srvr.Shutdown(ctx)
+				sErr := proc.Shutdown(ctx)
 				if sErr != nil {
 					logger.InfoMsg("Failed to shutdown server",
 						"server_name", name,
@@ -443,6 +361,7 @@ func (kern *Kernel) Shutdown(ctx context.Context) (err error) {
 			}
 		}
 		logger.InfoMsg("Shutdown complete")
+		// Best effort
 		structure.Sync(kern.Logger.Info)
 		structure.Sync(kern.Logger.Trace)
 		// We don't want to wait for them, but yielding for a cooldown Let other goroutines flush

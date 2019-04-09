@@ -6,14 +6,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hyperledger/burrow/consensus/tendermint/abci"
-	tm_config "github.com/tendermint/tendermint/config"
+	"github.com/hyperledger/burrow/consensus/abci"
+	tmConfig "github.com/tendermint/tendermint/config"
 )
 
 // Burrow's view on Tendermint's config. Since we operate as a Tendermint harness not all configuration values
 // are applicable, we may not allow some values to specified, or we may not allow some to be set independently.
 // So this serves as a layer of indirection over Tendermint's real config that we derive from ours.
 type BurrowTendermintConfig struct {
+	Enabled bool
 	// Initial peers we connect to for peer exchange
 	Seeds string
 	// Whether this node should crawl the network looking for new peers - disconnecting to peers after it has shared addresses
@@ -27,57 +28,47 @@ type BurrowTendermintConfig struct {
 	// Set false for private or local networks
 	AddrBookStrict bool
 	Moniker        string
-	TendermintRoot string
 	// Peers ID or address this node is authorize to sync with
 	AuthorizedPeers string
-
 	// EmptyBlocks mode and possible interval between empty blocks in seconds
 	CreateEmptyBlocks         bool
 	CreateEmptyBlocksInterval time.Duration
-	// This parameter scales the default Tendermint timeouts. A value of 1 gives the Tendermint defaults designed to
-	// work for 100 node + public network. Smaller networks should be able to sustain lower values.
-	TimeoutFactor float64
 }
 
 func DefaultBurrowTendermintConfig() *BurrowTendermintConfig {
-	tmDefaultConfig := tm_config.DefaultConfig()
+	tmDefaultConfig := tmConfig.DefaultConfig()
 	return &BurrowTendermintConfig{
+		Enabled:                   true,
 		ListenAddress:             tmDefaultConfig.P2P.ListenAddress,
 		ExternalAddress:           tmDefaultConfig.P2P.ExternalAddress,
-		TendermintRoot:            ".burrow",
 		CreateEmptyBlocks:         tmDefaultConfig.Consensus.CreateEmptyBlocks,
 		CreateEmptyBlocksInterval: tmDefaultConfig.Consensus.CreateEmptyBlocksInterval,
-		// Takes proposal timeout to about a 1 second...
-		TimeoutFactor: 0.33,
 	}
 }
 
-func (btc *BurrowTendermintConfig) TendermintConfig() *tm_config.Config {
-	conf := tm_config.DefaultConfig()
+func (btc *BurrowTendermintConfig) Config(rootDir string, timeoutFactor float64) *tmConfig.Config {
+	conf := tmConfig.DefaultConfig()
 	// We expose Tendermint config as required, but try to give fewer levers to pull where possible
 	if btc != nil {
-		conf.RootDir = btc.TendermintRoot
-		conf.Mempool.RootDir = btc.TendermintRoot
-		conf.Consensus.RootDir = btc.TendermintRoot
+		conf.RootDir = rootDir
+		conf.Mempool.RootDir = rootDir
+		conf.Consensus.RootDir = rootDir
 
 		// Consensus
 		conf.Consensus.CreateEmptyBlocks = btc.CreateEmptyBlocks
 		conf.Consensus.CreateEmptyBlocksInterval = btc.CreateEmptyBlocksInterval
 		// Assume Tendermint has some mutually consistent values, assume scaling them linearly makes sense
-		conf.Consensus.TimeoutPropose = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPropose)
-		conf.Consensus.TimeoutProposeDelta = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutProposeDelta)
-		conf.Consensus.TimeoutPrevote = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPrevote)
-		conf.Consensus.TimeoutPrevoteDelta = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPrevoteDelta)
-		conf.Consensus.TimeoutPrecommit = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPrecommit)
-		conf.Consensus.TimeoutPrecommitDelta = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutPrecommitDelta)
-		conf.Consensus.TimeoutCommit = scaleTimeout(btc.TimeoutFactor, conf.Consensus.TimeoutCommit)
-		// This is the smallest increment we can use to get a strictly increasing sequence of block time - we set it low to avoid skew
-		// if the BlockTimeIota is longer than the average block time
-		conf.Consensus.BlockTimeIota = time.Nanosecond
+		conf.Consensus.TimeoutPropose = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutPropose)
+		conf.Consensus.TimeoutProposeDelta = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutProposeDelta)
+		conf.Consensus.TimeoutPrevote = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutPrevote)
+		conf.Consensus.TimeoutPrevoteDelta = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutPrevoteDelta)
+		conf.Consensus.TimeoutPrecommit = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutPrecommit)
+		conf.Consensus.TimeoutPrecommitDelta = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutPrecommitDelta)
+		conf.Consensus.TimeoutCommit = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutCommit)
 
 		// P2P
 		conf.Moniker = btc.Moniker
-		conf.P2P.RootDir = btc.TendermintRoot
+		conf.P2P.RootDir = rootDir
 		conf.P2P.Seeds = btc.Seeds
 		conf.P2P.SeedMode = btc.SeedMode
 		conf.P2P.PersistentPeers = btc.PersistentPeers

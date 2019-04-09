@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -124,7 +125,7 @@ func TestPacker(t *testing.T) {
 		},
 	} {
 		t.Log(test.args)
-		if output, _, err := EncodeFunctionCall(test.ABI, test.name, test.args...); err != nil {
+		if output, _, err := EncodeFunctionCall(test.ABI, test.name, logging.NewNoopLogger(), test.args...); err != nil {
 			t.Error("Unexpected error in ", test.name, ": ", err)
 		} else {
 			if !bytes.Equal(output[4:], test.expectedOutput) {

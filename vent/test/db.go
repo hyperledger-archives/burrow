@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"syscall"
 	"testing"
@@ -62,18 +63,29 @@ func NewTestDB(t *testing.T, cfg *config.VentConfig) (*sqldb.SQLDB, func()) {
 	}
 }
 
-func SqliteVentConfig() *config.VentConfig {
+func SqliteVentConfig(grpcAddress string) *config.VentConfig {
 	cfg := config.DefaultVentConfig()
-	cfg.DBURL = fmt.Sprintf("./test_%s.sqlite", randString(10))
+	file, err := ioutil.TempFile("", "vent.sqlite")
+	if err != nil {
+		panic(err)
+	}
+	err = file.Close()
+	if err != nil {
+		panic(err)
+	}
+
+	cfg.DBURL = file.Name()
 	cfg.DBAdapter = types.SQLiteDB
+	cfg.GRPCAddr = grpcAddress
 	return cfg
 }
 
-func PostgresVentConfig() *config.VentConfig {
+func PostgresVentConfig(grpcAddress string) *config.VentConfig {
 	cfg := config.DefaultVentConfig()
 	cfg.DBSchema = fmt.Sprintf("test_%s", randString(10))
 	cfg.DBAdapter = types.PostgresDB
 	cfg.DBURL = config.DefaultPostgresDBURL
+	cfg.GRPCAddr = grpcAddress
 	return cfg
 }
 

@@ -48,20 +48,20 @@ const (
 // concurrent within a new block window.
 type Transactor struct {
 	BlockchainInfo  bcm.BlockchainInfo
-	Subscribable    event.Subscribable
+	Emitter         *event.Emitter
 	MempoolAccounts *Accounts
 	checkTxAsync    func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error
 	txEncoder       txs.Encoder
 	logger          *logging.Logger
 }
 
-func NewTransactor(tip bcm.BlockchainInfo, subscribable event.Subscribable, mempoolAccounts *Accounts,
+func NewTransactor(tip bcm.BlockchainInfo, emitter *event.Emitter, mempoolAccounts *Accounts,
 	checkTxAsync func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error, txEncoder txs.Encoder,
 	logger *logging.Logger) *Transactor {
 
 	return &Transactor{
 		BlockchainInfo:  tip,
-		Subscribable:    subscribable,
+		Emitter:         emitter,
 		MempoolAccounts: mempoolAccounts,
 		checkTxAsync:    checkTxAsync,
 		txEncoder:       txEncoder,
@@ -80,12 +80,12 @@ func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelop
 	// Subscribe before submitting to mempool
 	txHash := txEnv.Tx.Hash()
 	subID := event.GenSubID()
-	out, err := trans.Subscribable.Subscribe(ctx, subID, exec.QueryForTxExecution(txHash), SubscribeBufferSize)
+	out, err := trans.Emitter.Subscribe(ctx, subID, exec.QueryForTxExecution(txHash), SubscribeBufferSize)
 	if err != nil {
 		// We do not want to hold the lock with a defer so we must
 		return nil, err
 	}
-	defer trans.Subscribable.UnsubscribeAll(context.Background(), subID)
+	defer trans.Emitter.UnsubscribeAll(context.Background(), subID)
 	// Push Tx to mempool
 	checkTxReceipt, err := trans.CheckTxSync(ctx, txEnv)
 	unlock()
@@ -122,7 +122,7 @@ func (trans *Transactor) BroadcastTxAsync(ctx context.Context, txEnv *txs.Envelo
 // various mempool operations (managed by Tendermint) including mempool Reap, Commit, and recheckTx.
 func (trans *Transactor) CheckTxSync(ctx context.Context, txEnv *txs.Envelope) (*txs.Receipt, error) {
 	trans.logger.Trace.Log("method", "CheckTxSync",
-		"tx_hash", txEnv.Tx.Hash(),
+		structure.TxHashKey, txEnv.Tx.Hash(),
 		"tx", txEnv.String())
 	// Sign unless already signed
 	unlock, err := trans.MaybeSignTxMempool(txEnv)
@@ -153,7 +153,6 @@ func (trans *Transactor) MaybeSignTxMempool(txEnv *txs.Envelope) (UnlockFunc, er
 		}
 		// Hash will have change since we signed
 		txEnv.Tx.Rehash()
-
 		// Make this idempotent for defer
 		var once sync.Once
 		return func() { once.Do(unlock) }, nil
@@ -207,7 +206,7 @@ func (trans *Transactor) SignTx(txEnv *txs.Envelope) (*txs.Envelope, error) {
 }
 
 func (trans *Transactor) CheckTxSyncRaw(ctx context.Context, txBytes []byte) (*txs.Receipt, error) {
-	responseCh := make(chan *abciTypes.Response, 1)
+	responseCh := make(chan *abciTypes.Response, 3)
 	err := trans.CheckTxAsyncRaw(txBytes, func(res *abciTypes.Response) {
 		responseCh <- res
 	})

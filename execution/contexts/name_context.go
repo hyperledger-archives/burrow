@@ -164,9 +164,11 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 		"account", inAcc.Address,
 		"old_sequence", inAcc.Sequence,
 		"new_sequence", inAcc.Sequence+1)
-	inAcc.Balance -= value
+
+	err = inAcc.SubtractFromBalance(value)
 	if err != nil {
-		return err
+		return errors.ErrorCodef(errors.ErrorCodeInsufficientFunds,
+			"Input account does not have sufficient balance to cover input amount: %v", ctx.tx.Input)
 	}
 	err = ctx.StateWriter.UpdateAccount(inAcc)
 	if err != nil {

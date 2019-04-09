@@ -6,47 +6,55 @@ import (
 	"path/filepath"
 
 	"github.com/hyperledger/burrow/deploy/def"
-	log "github.com/sirupsen/logrus"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/spf13/viper"
 )
 
-func LoadPlaybook(fileName string, args *def.DeployArgs) (*def.Playbook, error) {
-	return loadPlaybook(fileName, args, nil)
+func LoadPlaybook(fileName string, args *def.DeployArgs, logger *logging.Logger) (*def.Playbook, error) {
+	return loadPlaybook(fileName, args, nil, logger)
 }
 
-func loadPlaybook(fileName string, args *def.DeployArgs, parent *def.Playbook) (*def.Playbook, error) {
-	log.Info("Loading monax Jobs Definition File.")
+func loadPlaybook(fileName string, args *def.DeployArgs, parent *def.Playbook, logger *logging.Logger) (*def.Playbook, error) {
+	logger.InfoMsg("Loading Playbook File.")
 	playbook := new(def.Playbook)
 	deployJobs := viper.New()
 
-	if parent == nil {
-		playbook.Path = args.Path
-		playbook.BinPath = args.BinPath
-	} else {
-		// if subYAMLPath does not exist, try YAMLPath relative to do.Path
+	if parent != nil {
+		// if subYAMLPath does not exist, try YAMLPath relative to paremt.Path
 		if _, err := os.Stat(fileName); os.IsNotExist(err) {
 			fileName = filepath.Join(parent.Path, fileName)
-			log.WithField("=>", fileName).Info("Trying YAMLPath relative to do.Path")
+			logger.InfoMsg("Trying Playbook relative to Path", "filename", fileName, "path", parent.Path)
 		}
+	}
 
-		playbook.Path = filepath.Dir(fileName)
-		playbook.BinPath = filepath.Join(playbook.Path, filepath.Base(parent.BinPath))
+	playbook.Filename = fileName
+	playbook.Path = filepath.Dir(fileName)
+
+	if args.BinPath == "[dir]/bin" {
+		playbook.BinPath = filepath.Join(playbook.Path, "bin")
+	} else {
+		playbook.BinPath = args.BinPath
+	}
+
+	if _, err := os.Stat(playbook.BinPath); os.IsNotExist(err) {
+		if err := os.Mkdir(playbook.BinPath, 0775); err != nil {
+			return nil, err
+		}
 	}
 
 	// setup file
 	abs, err := filepath.Abs(fileName)
 	if err != nil {
-		return nil, fmt.Errorf("sorry, the marmots were unable to find the absolute path to the monax jobs file")
+		return nil, fmt.Errorf("sorry, the marmots were unable to find the absolute path to the playbook file")
 	}
 
-	dir := filepath.Dir(abs)
 	base := filepath.Base(abs)
 	extName := filepath.Ext(base)
 	bName := base[:len(base)-len(extName)]
-	log.WithFields(log.Fields{
-		"path": dir,
-		"name": bName,
-	}).Debug("Loading jobs file")
+	logger.InfoMsg("Loading playbook file",
+		"path", playbook.Path,
+		"filename", playbook.Filename,
+	)
 
 	deployJobs.SetConfigType("yaml")
 	deployJobs.SetConfigName(bName)
@@ -57,12 +65,12 @@ func loadPlaybook(fileName string, args *def.DeployArgs, parent *def.Playbook) (
 	}
 	// load file
 	if err := deployJobs.ReadConfig(r); err != nil {
-		return nil, fmt.Errorf("Sorry, the marmots were unable to load the monax jobs file. Please check your path: %v", err)
+		return nil, fmt.Errorf("Sorry, the marmots were unable to load the playbook file. Please check your path: %v", err)
 	}
 
 	// marshall file
 	if err := deployJobs.UnmarshalExact(playbook); err != nil {
-		return nil, fmt.Errorf(`Sorry, the marmots could not figure that monax jobs file out.
+		return nil, fmt.Errorf(`Sorry, the marmots could not figure that playbook file out.
 			Please check that your deploy.yaml is properly formatted: %v`, err)
 	}
 
@@ -74,7 +82,7 @@ func loadPlaybook(fileName string, args *def.DeployArgs, parent *def.Playbook) (
 
 	for _, job := range playbook.Jobs {
 		if job.Meta != nil {
-			metaPlaybook, err := loadPlaybook(job.Meta.File, args, playbook)
+			metaPlaybook, err := loadPlaybook(job.Meta.File, args, playbook, logger)
 			if err != nil {
 				return nil, err
 			}
@@ -94,7 +102,7 @@ func loadPlaybook(fileName string, args *def.DeployArgs, parent *def.Playbook) (
 		if job.Proposal != nil {
 			for _, job := range job.Proposal.Jobs {
 				if job.Meta != nil {
-					metaPlaybook, err := loadPlaybook(job.Meta.File, args, playbook)
+					metaPlaybook, err := loadPlaybook(job.Meta.File, args, playbook, logger)
 					if err != nil {
 						return nil, err
 					}

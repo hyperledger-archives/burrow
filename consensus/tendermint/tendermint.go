@@ -5,7 +5,7 @@ import (
 	"path"
 
 	"github.com/hyperledger/burrow/binary"
-	"github.com/hyperledger/burrow/consensus/tendermint/abci"
+	"github.com/hyperledger/burrow/consensus/abci"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
@@ -85,7 +85,7 @@ func NewNode(conf *config.Config, privValidator tmTypes.PrivValidator, genesisDo
 	return nde, nil
 }
 
-func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tmTypes.GenesisDoc {
+func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc, appHash []byte) *tmTypes.GenesisDoc {
 	validators := make([]tmTypes.GenesisValidator, len(burrowGenesisDoc.Validators))
 	for i, validator := range burrowGenesisDoc.Validators {
 		validators[i] = tmTypes.GenesisValidator{
@@ -95,12 +95,16 @@ func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc) *tmTypes.GenesisDoc 
 		}
 	}
 	consensusParams := tmTypes.DefaultConsensusParams()
+	// This is the smallest increment we can use to get a strictly increasing sequence
+	// of block time - we set it low to avoid skew
+	// if the BlockTimeIota is longer than the average block time
+	consensusParams.Block.TimeIotaMs = 1
 
 	return &tmTypes.GenesisDoc{
 		ChainID:         burrowGenesisDoc.ChainID(),
 		GenesisTime:     burrowGenesisDoc.GenesisTime,
 		Validators:      validators,
-		AppHash:         burrowGenesisDoc.Hash(),
+		AppHash:         appHash,
 		ConsensusParams: consensusParams,
 	}
 }

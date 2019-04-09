@@ -2,8 +2,9 @@ package process
 
 import (
 	"context"
+	"fmt"
 	"net"
-	"sync"
+	"strings"
 )
 
 // Copies the signature from http.Server's graceful shutdown method
@@ -23,29 +24,25 @@ type Launcher struct {
 	Launch  func() (Process, error)
 }
 
-type listenersServer struct {
-	sync.Mutex
-	listeners map[net.Listener]struct{}
-}
-
-// Providers a Process implementation from Listeners that are closed on shutdown
-func FromListeners(listeners ...net.Listener) Process {
-	lns := make(map[net.Listener]struct{}, len(listeners))
-	for _, l := range listeners {
-		lns[l] = struct{}{}
+func ListenerFromAddress(listenAddress string) (net.Listener, error) {
+	const errHeader = "ListenerFromAddress():"
+	parts := strings.Split(listenAddress, "://")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("%s expects a fully qualified listen address like 'tcp://localhost:12345' but got '%s'",
+			errHeader, listenAddress)
 	}
-	return &listenersServer{
-		listeners: lns,
+	scheme := parts[0]
+	address := parts[1]
+	switch scheme {
+	case "unix", "tcp":
+	case "":
+		scheme = "tcp"
+	default:
+		return nil, fmt.Errorf("%s did not recognise protocol %s in address '%s'", errHeader, scheme, listenAddress)
 	}
-}
-
-func (ls *listenersServer) Shutdown(ctx context.Context) error {
-	var err error
-	for ln := range ls.listeners {
-		if cerr := ln.Close(); cerr != nil && err == nil {
-			err = cerr
-		}
-		delete(ls.listeners, ln)
+	listener, err := net.Listen(scheme, address)
+	if err != nil {
+		return nil, fmt.Errorf("%s %v", errHeader, err)
 	}
-	return err
+	return listener, nil
 }

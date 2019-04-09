@@ -18,6 +18,8 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/hyperledger/burrow/execution/errors"
+
 	amino "github.com/tendermint/go-amino"
 
 	"github.com/hyperledger/burrow/binary"
@@ -41,6 +43,24 @@ func NewAccountFromSecret(secret string) *Account {
 
 func (acc *Account) GetAddress() crypto.Address {
 	return acc.Address
+}
+
+func (acc *Account) AddToBalance(amount uint64) error {
+	if binary.IsUint64SumOverflow(acc.Balance, amount) {
+		return errors.ErrorCodef(errors.ErrorCodeIntegerOverflow,
+			"uint64 overflow: attempt to add %v to the balance of %s", amount, acc.Address)
+	}
+	acc.Balance += amount
+	return nil
+}
+
+func (acc *Account) SubtractFromBalance(amount uint64) error {
+	if amount > acc.Balance {
+		return errors.ErrorCodef(errors.ErrorCodeInsufficientBalance,
+			"insufficient funds: attempt to subtract %v from the balance of %s", amount, acc.Address)
+	}
+	acc.Balance -= amount
+	return nil
 }
 
 ///---- Serialisation methods

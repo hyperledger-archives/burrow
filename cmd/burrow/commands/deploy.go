@@ -1,17 +1,17 @@
 package commands
 
 import (
-	"bytes"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/go-kit/kit/log"
 	pkgs "github.com/hyperledger/burrow/deploy"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/proposals"
-	"github.com/hyperledger/burrow/deploy/util"
+	"github.com/hyperledger/burrow/logging"
 	cli "github.com/jawher/mow.cli"
-	log "github.com/sirupsen/logrus"
 )
 
 // 15 seconds is like a long time man
@@ -19,7 +19,7 @@ const defaultChainTimeout = 15 * time.Second
 
 func Deploy(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
-		chainUrlOpt := cmd.StringOpt("u chain-url", "127.0.0.1:10997", "chain-url to be used in IP:PORT format")
+		chainOpt := cmd.StringOpt("u chain", "127.0.0.1:10997", "chain to be used in IP:PORT format")
 
 		signerOpt := cmd.StringOpt("s keys", "",
 			"IP:PORT of Burrow GRPC service which jobs should or otherwise transaction submitted unsigned for mempool signing in Burrow")
@@ -31,10 +31,10 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 		pathOpt := cmd.StringOpt("i dir", "", "root directory of app (will use pwd by default)")
 
 		defaultOutputOpt := cmd.StringOpt("o output", def.DefaultOutputFile,
-			"filename for jobs output file. by default, this name will reflect the name passed in on the optional [--file]")
+			"filename for playbook output file. by default, this name will reflect the playbook passed")
 
-		yamlPathOpt := cmd.StringOpt("f file", "deploy.yaml",
-			"path to package file which jobs should use. if also using the --dir flag, give the relative path to jobs file, which should be in the same directory")
+		playbooksOpt := cmd.StringsArg("FILE", []string{},
+			"path to playbook file which deploy should run. if also using the --dir flag, give the relative path to playbooks file, which should be in the same directory")
 
 		defaultSetsOpt := cmd.StringsOpt("e set", []string{},
 			"default sets to use; operates the same way as the [set] jobs, only before the jobs file is ran (and after default address")
@@ -45,8 +45,8 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 		defaultGasOpt := cmd.StringOpt("g gas", "1111111111",
 			"default gas to use; can be overridden for any single job")
 
-		jobsOpt := cmd.IntOpt("j jobs", 2,
-			"default number of concurrent solidity compilers to run")
+		jobsOpt := cmd.IntOpt("j jobs", 1,
+			"default number of concurrent playbooks to run if multiple are specified")
 
 		addressOpt := cmd.StringOpt("a address", "",
 			"default address to use; operates the same way as the [account] job, only before the deploy file is ran")
@@ -70,8 +70,13 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 
 		proposalList := cmd.StringOpt("list-proposals state", "", "List proposals, either all, executed, expired, or current")
 
+		cmd.Spec = "[--chain=<host:port>] [--keys=<host:port>] [--mempool-signing] [--dir=<root directory>] " +
+			"[--output=<output file>] [--set=<KEY=VALUE>]... [--bin-path=<path>] [--gas=<gas>] " +
+			"[--jobs=<concurrent playbooks>] [--address=<address>] [--fee=<fee>] [--amount=<amount>] " +
+			"[--verbose] [--debug] [--timeout=<timeout>] [--proposal-create|--proposal-verify|--proposal-create] FILE..."
+
 		cmd.Action = func() {
-			do := new(def.DeployArgs)
+			args := new(def.DeployArgs)
 
 			if *proposalVerify && *proposalVote {
 				output.Fatalf("Cannot combine --proposal-verify and --proposal-vote")
@@ -84,87 +89,51 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 				}
 			}
 
-			do.Path = *pathOpt
-			do.DefaultOutput = *defaultOutputOpt
-			do.YAMLPath = *yamlPathOpt
-			do.DefaultSets = *defaultSetsOpt
-			do.BinPath = *binPathOpt
-			do.DefaultGas = *defaultGasOpt
-			do.Address = *addressOpt
-			do.DefaultFee = *defaultFeeOpt
-			do.DefaultAmount = *defaultAmountOpt
-			do.Verbose = *verboseOpt
-			do.Debug = *debugOpt
-			do.Jobs = *jobsOpt
-			do.ProposeVerify = *proposalVerify
-			do.ProposeVote = *proposalVote
-			do.ProposeCreate = *proposalCreate
-			log.SetFormatter(new(PlainFormatter))
-			log.SetLevel(log.WarnLevel)
-			if do.Verbose {
-				log.SetLevel(log.InfoLevel)
-			} else if do.Debug {
-				log.SetLevel(log.DebugLevel)
-			}
-			client := def.NewClient(*chainUrlOpt, *signerOpt, *mempoolSigningOpt, time.Duration(*timeoutSecondsOpt)*time.Second)
+			args.Chain = *chainOpt
+			args.KeysService = *signerOpt
+			args.MempoolSign = *mempoolSigningOpt
+			args.Timeout = *timeoutSecondsOpt
+			args.Path = *pathOpt
+			args.DefaultOutput = *defaultOutputOpt
+			args.DefaultSets = *defaultSetsOpt
+			args.BinPath = *binPathOpt
+			args.DefaultGas = *defaultGasOpt
+			args.Address = *addressOpt
+			args.DefaultFee = *defaultFeeOpt
+			args.DefaultAmount = *defaultAmountOpt
+			args.Verbose = *verboseOpt
+			args.Debug = *debugOpt
+			args.Jobs = *jobsOpt
+			args.ProposeVerify = *proposalVerify
+			args.ProposeVote = *proposalVote
+			args.ProposeCreate = *proposalCreate
+			stderrLogger := log.NewLogfmtLogger(os.Stderr)
+			logger := logging.NewLogger(stderrLogger)
 			handleTerm()
+
+			if !*debugOpt {
+				logger.Trace = log.NewNopLogger()
+			}
 
 			if *proposalList != "" {
 				state, err := proposals.ProposalStateFromString(*proposalList)
 				if err != nil {
 					output.Fatalf(err.Error())
 				}
-				proposals.ListProposals(client, state)
+				err = proposals.ListProposals(args, state, logger)
+				if err != nil {
+					output.Fatalf(err.Error())
+				}
 			} else {
-				util.IfExit(pkgs.RunPackage(do, client))
+				failures, err := pkgs.RunPlaybooks(args, *playbooksOpt, logger)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, err)
+					os.Exit(1)
+				}
+				if failures > 0 {
+					os.Exit(failures)
+				}
 			}
 		}
 	}
-}
-
-type PlainFormatter struct{}
-
-func (f *PlainFormatter) Format(entry *log.Entry) ([]byte, error) {
-	var b *bytes.Buffer
-	keys := make([]string, 0, len(entry.Data))
-	for k := range entry.Data {
-		keys = append(keys, k)
-	}
-
-	if entry.Buffer != nil {
-		b = entry.Buffer
-	} else {
-		b = &bytes.Buffer{}
-	}
-
-	f.appendMessage(b, entry.Message)
-	for _, key := range keys {
-		f.appendMessageData(b, key, entry.Data[key])
-	}
-
-	b.WriteByte('\n')
-	return b.Bytes(), nil
-}
-
-func (f *PlainFormatter) appendMessage(b *bytes.Buffer, message string) {
-	fmt.Fprintf(b, "%-44s", message)
-}
-
-func (f *PlainFormatter) appendMessageData(b *bytes.Buffer, key string, value interface{}) {
-	switch key {
-	case "":
-		b.WriteString("=> ")
-	case "=>":
-		b.WriteString(key)
-		b.WriteByte(' ')
-	default:
-		b.WriteString(key)
-		b.WriteString(" => ")
-	}
-	stringVal, ok := value.(string)
-	if !ok {
-		stringVal = fmt.Sprint(value)
-	}
-	b.WriteString(stringVal)
-	b.WriteString(" ")
 }

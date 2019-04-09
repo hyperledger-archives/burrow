@@ -81,6 +81,9 @@ func (s *Service) ChainID() string {
 }
 
 func (s *Service) UnconfirmedTxs(maxTxs int64) (*ResultUnconfirmedTxs, error) {
+	if s.nodeView == nil {
+		return nil, fmt.Errorf("cannot list unconfirmed transactions because NodeView not mounted")
+	}
 	// Get all transactions for now
 	transactions, err := s.nodeView.MempoolTransactions(int(maxTxs))
 	if err != nil {
@@ -113,6 +116,9 @@ func (s *Service) ChainIdentifiers() (*ResultChainId, error) {
 }
 
 func (s *Service) Peers() []core_types.Peer {
+	if s.nodeView == nil {
+		return nil
+	}
 	p2pPeers := s.nodeView.Peers().List()
 	peers := make([]core_types.Peer, len(p2pPeers))
 	for i, peer := range p2pPeers {
@@ -127,6 +133,9 @@ func (s *Service) Peers() []core_types.Peer {
 }
 
 func (s *Service) Network() (*ResultNetwork, error) {
+	if s.nodeView == nil {
+		return nil, fmt.Errorf("cannot return network info because NodeView not mounted")
+	}
 	var listeners []string
 	peers := s.Peers()
 	return &ResultNetwork{
@@ -198,10 +207,13 @@ func (s *Service) DumpStorage(address crypto.Address) (*ResultDumpStorage, error
 		return nil, fmt.Errorf("UnknownAddress: %X", address)
 	}
 	var storageItems []StorageItem
-	s.state.IterateStorage(address, func(key, value binary.Word256) error {
+	err = s.state.IterateStorage(address, func(key, value binary.Word256) error {
 		storageItems = append(storageItems, StorageItem{Key: key.UnpadLeft(), Value: value.UnpadLeft()})
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 	return &ResultDumpStorage{
 		StorageItems: storageItems,
 	}, nil
@@ -216,13 +228,11 @@ func (s *Service) AccountHumanReadable(address crypto.Address) (*ResultAccountHu
 		return &ResultAccountHumanReadable{}, nil
 	}
 	tokens, err := acc.Code.Tokens()
-	if acc == nil {
-		return &ResultAccountHumanReadable{}, nil
+	if err != nil {
+		return nil, err
 	}
 	perms := permission.BasePermissionsToStringList(acc.Permissions.Base)
-	if acc == nil {
-		return &ResultAccountHumanReadable{}, nil
-	}
+
 	return &ResultAccountHumanReadable{
 		Account: &AccountHumanReadable{
 			Address:     acc.GetAddress(),
@@ -271,6 +281,9 @@ func (s *Service) Names(predicate func(*names.Entry) bool) (*ResultNames, error)
 }
 
 func (s *Service) Block(height uint64) (*ResultBlock, error) {
+	if s.nodeView == nil {
+		return nil, fmt.Errorf("NodeView is not mounted so cannot pull Tendermint blocks")
+	}
 	return &ResultBlock{
 		Block:     &Block{s.nodeView.BlockStore().LoadBlock(int64(height))},
 		BlockMeta: &BlockMeta{s.nodeView.BlockStore().LoadBlockMeta(int64(height))},
@@ -283,6 +296,9 @@ func (s *Service) Block(height uint64) (*ResultBlock, error) {
 // Passing 0 for maxHeight sets the upper height of the range to the current
 // blockchain height.
 func (s *Service) Blocks(minHeight, maxHeight int64) (*ResultBlocks, error) {
+	if s.nodeView == nil {
+		return nil, fmt.Errorf("NodeView is not mounted so cannot pull Tendermint blocks")
+	}
 	latestHeight := int64(s.blockchain.LastBlockHeight())
 
 	if minHeight < 1 {
@@ -309,7 +325,7 @@ func (s *Service) Blocks(minHeight, maxHeight int64) (*ResultBlocks, error) {
 
 func (s *Service) Validators() (*ResultValidators, error) {
 	var validators []*validator.Validator
-	s.validators.Validators(0).IterateValidators(func(id crypto.Addressable, power *big.Int) error {
+	err := s.validators.Validators(0).IterateValidators(func(id crypto.Addressable, power *big.Int) error {
 		address := id.GetAddress()
 		validators = append(validators, &validator.Validator{
 			Address:   &address,
@@ -318,6 +334,9 @@ func (s *Service) Validators() (*ResultValidators, error) {
 		})
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 	return &ResultValidators{
 		BlockHeight:         s.blockchain.LastBlockHeight(),
 		BondedValidators:    validators,
@@ -326,6 +345,9 @@ func (s *Service) Validators() (*ResultValidators, error) {
 }
 
 func (s *Service) ConsensusState() (*ResultConsensusState, error) {
+	if s.nodeView == nil {
+		return nil, fmt.Errorf("cannot pull ConsensusState because NodeView not mounted")
+	}
 	peers := s.nodeView.Peers().List()
 	peerStates := make([]core_types.PeerStateInfo, len(peers))
 	for i, peer := range peers {
@@ -366,12 +388,6 @@ func (s *Service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error
 
 func Status(blockchain bcm.BlockchainInfo, validators validator.History, nodeView *tendermint.NodeView, blockTimeWithin,
 	blockSeenTimeWithin string) (*ResultStatus, error) {
-	publicKey := nodeView.ValidatorPublicKey()
-	address := publicKey.GetAddress()
-	power, err := validators.Validators(0).Power(address)
-	if err != nil {
-		return nil, err
-	}
 	res := &ResultStatus{
 		ChainID:       blockchain.ChainID(),
 		RunID:         nodeView.RunID().String(),
@@ -380,11 +396,18 @@ func Status(blockchain bcm.BlockchainInfo, validators validator.History, nodeVie
 		NodeInfo:      nodeView.NodeInfo(),
 		SyncInfo:      bcm.GetSyncInfo(blockchain),
 		CatchingUp:    nodeView.IsFastSyncing(),
-		ValidatorInfo: &validator.Validator{
+	}
+	if nodeView != nil {
+		address := nodeView.ValidatorAddress()
+		power, err := validators.Validators(0).Power(address)
+		if err != nil {
+			return nil, err
+		}
+		res.ValidatorInfo = &validator.Validator{
 			Address:   &address,
-			PublicKey: publicKey,
+			PublicKey: nodeView.ValidatorPublicKey(),
 			Power:     power.Uint64(),
-		},
+		}
 	}
 
 	now := time.Now()

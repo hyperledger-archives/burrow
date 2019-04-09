@@ -239,8 +239,8 @@ type PackageDeploy struct {
 
 type Build struct {
 	// (Required) the filepath to the contract file. this should be relative to the current path **or**
-	// relative to the contracts path established via the --contracts-path flag or the $EPM_CONTRACTS_PATH
-	// environment variable. If contract has a "bin" file extension then it will not be sent to the
+	// relative to the contracts path established via the --dir.
+	// If contract has a "bin" file extension then it will not be sent to the
 	// compilers but rather will just be sent to the chain. Note, if you use a "call" job after deploying
 	// a binary contract then you will be **required** to utilize an abi field in the call job.
 	Contract string `mapstructure:"contract" json:"contract" yaml:"contract" toml:"contract"`
@@ -254,6 +254,8 @@ type Build struct {
 	// the name of the file (or the last one deployed if there are no matching names; not the "last"
 	// one deployed" strategy is non-deterministic and should not be used).
 	Instance string `mapstructure:"instance" json:"instance" yaml:"instance" toml:"instance"`
+	// (Optional) Path to store an extra copy of the bin file
+	Store string `mapstructure:"store" json:"store" yaml:"store" toml:"store"`
 }
 
 func (job *Build) Validate() error {
@@ -267,8 +269,8 @@ type Deploy struct {
 	// public key for the account must be available to burrow keys)
 	Source string `mapstructure:"source" json:"source" yaml:"source" toml:"source"`
 	// (Required) the filepath to the contract file. this should be relative to the current path **or**
-	// relative to the contracts path established via the --contracts-path flag or the $EPM_CONTRACTS_PATH
-	// environment variable. If contract has a "bin" file extension then it will not be sent to the
+	// relative to the contracts path established via the --dir.
+	// If contract has a "bin" file extension then it will not be sent to the
 	// compilers but rather will just be sent to the chain. Note, if you use a "call" job after deploying
 	// a binary contract then you will be **required** to utilize an abi field in the call job.
 	Contract string `mapstructure:"contract" json:"contract" yaml:"contract" toml:"contract"`
@@ -296,6 +298,8 @@ type Deploy struct {
 	Sequence string `mapstructure:"sequence" json:"sequence" yaml:"sequence" toml:"sequence"`
 	// (Optional) todo
 	Variables []*abi.Variable
+	// (Optional) Path to store an extra copy of the bin file
+	Store string `mapstructure:"store" json:"store" yaml:"store" toml:"store"`
 }
 
 func (job *Deploy) Validate() error {

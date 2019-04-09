@@ -8,28 +8,15 @@ import (
 	"net"
 	"net/http"
 	"runtime/debug"
-	"strings"
 	"time"
 
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/rpc/lib/types"
-	"github.com/pkg/errors"
 )
 
-func StartHTTPServer(listenAddr string, handler http.Handler, logger *logging.Logger) (*http.Server, error) {
-	var proto, addr string
-	parts := strings.SplitN(listenAddr, "://", 2)
-	if len(parts) != 2 {
-		return nil, errors.Errorf("Invalid listening address %s (use fully formed addresses, including the tcp:// or unix:// prefix)", listenAddr)
-	}
-	proto, addr = parts[0], parts[1]
-
-	logger.InfoMsg("Starting RPC HTTP server", "listen_address", listenAddr)
-	listener, err := net.Listen(proto, addr)
-	if err != nil {
-		return nil, errors.Errorf("Failed to listen on %v: %v", listenAddr, err)
-	}
+func StartHTTPServer(listener net.Listener, handler http.Handler, logger *logging.Logger) (*http.Server, error) {
+	logger.InfoMsg("Starting RPC HTTP server", "listen_address", listener.Addr().String())
 
 	server := &http.Server{Handler: RecoverAndLogHandler(handler, logger)}
 
@@ -37,6 +24,7 @@ func StartHTTPServer(listenAddr string, handler http.Handler, logger *logging.Lo
 		err := server.Serve(listener)
 		logger.TraceMsg("RPC HTTP server stopped", structure.ErrorKey, err)
 	}()
+
 	return server, nil
 }
 

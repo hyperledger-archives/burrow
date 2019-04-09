@@ -6,16 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash"
-	"net"
 	"strings"
 
-	"os"
-	"os/signal"
-	"syscall"
-
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/logging"
-	hex "github.com/tmthrgd/go-hex"
+	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ripemd160"
 	"google.golang.org/grpc"
 )
@@ -24,21 +18,10 @@ import (
 // all cli commands pass through the http KeyStore
 // the KeyStore process also maintains the unlocked accounts
 
-func StartStandAloneServer(keysDir, host, port string, AllowBadFilePermissions bool, logger *logging.Logger) (err error) {
-	listen, err := net.Listen("tcp", host+":"+port)
-	if err != nil {
-		return err
-	}
+func StandAloneServer(keysDir string, AllowBadFilePermissions bool) *grpc.Server {
 	grpcServer := grpc.NewServer()
 	RegisterKeysServer(grpcServer, NewKeyStore(keysDir, AllowBadFilePermissions))
-
-	go func() {
-		err = grpcServer.Serve(listen)
-	}()
-	sigs := make(chan os.Signal)
-	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
-	<-sigs
-	return
+	return grpcServer
 }
 
 //------------------------------------------------------------------------

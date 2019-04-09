@@ -2,8 +2,8 @@
 # ----------------------------------------------------------
 # PURPOSE
 
-# This is the test manager for monax jobs. It will run the testing
-# sequence for monax jobs referencing test fixtures in this tests directory.
+# This is the test manager for playbooks. It will run the testing
+# sequence for playbooks referencing test fixtures in this tests directory.
 
 # ----------------------------------------------------------
 # REQUIREMENTS

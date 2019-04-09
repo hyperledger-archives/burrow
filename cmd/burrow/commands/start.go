@@ -1,8 +1,7 @@
 package commands
 
 import (
-	"context"
-
+	"github.com/hyperledger/burrow/core"
 	cli "github.com/jawher/mow.cli"
 )
 
@@ -11,11 +10,9 @@ func Start(output Output) func(cmd *cli.Cmd) {
 		genesisOpt := cmd.StringOpt("g genesis", "",
 			"Use the specified genesis JSON file rather than a key in the main config, use - to read from STDIN")
 
-		configOpt := cmd.StringOpt("c config", "", "Use the a specified burrow config file")
+		configOpt := cmd.StringOpt("c config", "", "Use the specified burrow config file")
 
-		restoreDumpOpt := cmd.StringOpt("restore-dump", "", "Restore new chain from backup")
-
-		cmd.Spec = "[--config=<config file>] [--genesis=<genesis json file>] [--restore-dump=<burrow dump file>]"
+		cmd.Spec = "[--config=<config file>] [--genesis=<genesis json file>]"
 
 		configOpts := addConfigOptions(cmd)
 
@@ -36,16 +33,12 @@ func Start(output Output) func(cmd *cli.Cmd) {
 
 			output.Logf("Using validator address: %s", *conf.ValidatorAddress)
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
-			kern, err := conf.Kernel(ctx, *restoreDumpOpt)
+			kern, err := core.LoadKernelFromConfig(conf)
 			if err != nil {
-				output.Fatalf("could not create Burrow kernel: %v", err)
+				output.Fatalf("could not configure Burrow kernel: %v", err)
 			}
 
-			err = kern.Boot()
-			if err != nil {
+			if err = kern.Boot(); err != nil {
 				output.Fatalf("could not boot Burrow kernel: %v", err)
 			}
 

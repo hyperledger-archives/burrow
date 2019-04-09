@@ -26,10 +26,13 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 		filename := cmd.StringArg("FILE", "", "Save dump here")
 		useJSON := cmd.BoolOpt("j json", false, "Output in json")
 
+		timeoutOpt := cmd.IntOpt("t timeout", 10, "GRPC timeout in seconds (default 10)")
+		timeout := time.Duration(*timeoutOpt)
+
 		s := state.NewState(db.NewMemDB())
 
 		cmd.Action = func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
 			defer cancel()
 
 			var opts []grpc.DialOption

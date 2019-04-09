@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/rpc/rpctransact"
+
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/vent/config"
 	"github.com/hyperledger/burrow/vent/logger"
@@ -20,26 +23,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testConsumer(t *testing.T, cfg *config.VentConfig) {
-	tCli := test.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	create := test.CreateContract(t, tCli, inputAccount.GetAddress())
+func testConsumer(t *testing.T, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
+	create := test.CreateContract(t, tcli, inputAddress)
 
 	// generate events
 	name := "TestEvent1"
 	description := "Description of TestEvent1"
-	txeA := test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
+	txeA := test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
 
 	name = "TestEvent2"
 	description = "Description of TestEvent2"
-	test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
+	test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
 
 	name = "TestEvent3"
 	description = "Description of TestEvent3"
-	test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
+	test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
 
 	name = "TestEvent4"
 	description = "Description of TestEvent4"
-	txeB := test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
+	txeB := test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
 
 	// create test db
 	db, closeDB := test.NewTestDB(t, cfg)
@@ -89,9 +91,8 @@ func testConsumer(t *testing.T, cfg *config.VentConfig) {
 	require.NoError(t, err)
 }
 
-func testDeleteEvent(t *testing.T, cfg *config.VentConfig) {
-	tCli := test.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	create := test.CreateContract(t, tCli, inputAccount.GetAddress())
+func testDeleteEvent(t *testing.T, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
+	create := test.CreateContract(t, tcli, inputAddress)
 
 	// create test db
 	db, closeDB := test.NewTestDB(t, cfg)
@@ -103,7 +104,7 @@ func testDeleteEvent(t *testing.T, cfg *config.VentConfig) {
 	// Add a test event
 	name := "TestEventForDeletion"
 	description := "to be deleted"
-	txeAdd := test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
+	txeAdd := test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
 
 	// Spin the consumer
 	runConsumer(t, cfg)
@@ -121,7 +122,7 @@ func testDeleteEvent(t *testing.T, cfg *config.VentConfig) {
 	require.Equal(t, "UpdateTestEvents", tblData[0].RowData["_eventname"].(string))
 
 	// Now emit a deletion event for that table
-	test.CallRemoveEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name)
+	test.CallRemoveEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name)
 	runConsumer(t, cfg)
 
 	eventData, err = db.GetBlock(txeAdd.Height)
@@ -154,9 +155,8 @@ func testResume(t *testing.T, cfg *config.VentConfig) {
 	}
 }
 
-func testInvalidUTF8(t *testing.T, cfg *config.VentConfig) {
-	tCli := test.NewTransactClient(t, testConfig.RPC.GRPC.ListenAddress)
-	create := test.CreateContract(t, tCli, inputAccount.GetAddress())
+func testInvalidUTF8(t *testing.T, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
+	create := test.CreateContract(t, tcli, inputAddress)
 
 	// The code point for ó is less than 255 but needs two unicode bytes - it's value expressed as a single byte
 	// is in the private use area so is invalid.
@@ -165,7 +165,7 @@ func testInvalidUTF8(t *testing.T, cfg *config.VentConfig) {
 	// generate events
 	name := service.BadStringToHexFunction(goodString)
 	description := "Description of TestEvent1"
-	test.CallAddEvent(t, tCli, inputAccount.GetAddress(), create.Receipt.ContractAddress, name, description)
+	test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
 
 	// create test db
 	_, closeDB := test.NewTestDB(t, cfg)
@@ -186,7 +186,6 @@ func newConsumer(t *testing.T, cfg *config.VentConfig) *service.Consumer {
 
 	cfg.SpecFileOrDirs = []string{path.Join(testDir, "sqlsol_example.json")}
 	cfg.AbiFileOrDirs = []string{path.Join(testDir, "EventsTest.abi")}
-	cfg.GRPCAddr = testConfig.RPC.GRPC.ListenAddress
 	cfg.DBBlockTx = true
 
 	log := logger.NewLogger(cfg.LogLevel)

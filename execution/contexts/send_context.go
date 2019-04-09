@@ -56,7 +56,7 @@ func (ctx *SendContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 	}
 
 	// Good! Adjust accounts
-	err = adjustByInputs(accounts, ctx.tx.Inputs, ctx.Logger)
+	err = adjustByInputs(accounts, ctx.tx.Inputs)
 	if err != nil {
 		return err
 	}

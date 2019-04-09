@@ -14,7 +14,8 @@ import (
 )
 
 func TestEmitter(t *testing.T) {
-	em := NewEmitter(logging.NewNoopLogger())
+	em := NewEmitter()
+	em.SetLogger(logging.NewNoopLogger())
 	ctx := context.Background()
 
 	out, err := em.Subscribe(ctx, "TestEmitter", query.NewBuilder().AndStrictlyGreaterThan("foo", 10), 1)
@@ -37,7 +38,8 @@ func TestEmitter(t *testing.T) {
 }
 
 func TestOrdering(t *testing.T) {
-	em := NewEmitter(logging.NewNoopLogger())
+	em := NewEmitter()
+	em.SetLogger(logging.NewNoopLogger())
 	ctx := context.Background()
 
 	out1, err := em.Subscribe(ctx, "TestOrdering1", query.NewBuilder().AndEquals("foo", "bar"), 10)

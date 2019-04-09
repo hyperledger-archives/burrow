@@ -18,19 +18,8 @@ type ServerConfig struct {
 	ListenAddress string
 }
 
-type ProfilerConfig struct {
-	Enabled       bool
-	ListenAddress string
-}
-
-type GRPCConfig struct {
-	Enabled       bool
-	ListenAddress string
-}
-
 type MetricsConfig struct {
-	Enabled         bool
-	ListenAddress   string
+	ServerConfig
 	MetricsPath     string
 	BlockSampleSize int
 }
@@ -54,7 +43,7 @@ func DefaultInfoConfig() *ServerConfig {
 func DefaultGRPCConfig() *ServerConfig {
 	return &ServerConfig{
 		Enabled:       true,
-		ListenAddress: fmt.Sprintf("%s:10997", localhost),
+		ListenAddress: fmt.Sprintf("tcp://%s:10997", localhost),
 	}
 }
 
@@ -67,8 +56,10 @@ func DefaultProfilerConfig() *ServerConfig {
 
 func DefaultMetricsConfig() *MetricsConfig {
 	return &MetricsConfig{
-		Enabled:         false,
-		ListenAddress:   fmt.Sprintf("tcp://%s:9102", localhost),
+		ServerConfig: ServerConfig{
+			Enabled:       false,
+			ListenAddress: fmt.Sprintf("tcp://%s:9102", localhost),
+		},
 		MetricsPath:     "/metrics",
 		BlockSampleSize: 100,
 	}
