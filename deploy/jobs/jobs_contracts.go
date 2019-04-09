@@ -45,7 +45,7 @@ func BuildJob(build *def.Build, deployScript *def.Playbook, resp *compilers.Resp
 	binP := build.BinPath
 	if binP == "" {
 		binP = deployScript.BinPath
-
+	} else {
 		if _, err := os.Stat(binP); os.IsNotExist(err) {
 			if err := os.Mkdir(binP, 0775); err != nil {
 				return "", err
@@ -78,6 +78,12 @@ func BuildJob(build *def.Build, deployScript *def.Playbook, resp *compilers.Resp
 		if build.Store != "" {
 			dir := filepath.Dir(build.Store)
 			file := filepath.Base(build.Store)
+
+			if _, err := os.Stat(dir); os.IsNotExist(err) {
+				if err := os.Mkdir(dir, 0775); err != nil {
+					return "", err
+				}
+			}
 
 			err = res.Contract.Save(dir, file)
 			if err != nil {
