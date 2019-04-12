@@ -49,11 +49,13 @@ From the generated `.burrow_init.toml `file, create new files for each node, and
 
 #### Seed node `.burrow_seed.toml` modified line from `.burrow_init.toml`
 ```toml
+BurrowDir = ".burrow_seed_0"
+
 [Tendermint]
   SeedMode = true
-  ListenAddress = "tcp://0.0.0.0:10000"
+  ListenHost = "0.0.0.0"
+  ListenPort = "10000"
   Moniker = "seed_node_0"
-  TendermintRoot = ".burrow_seed_0"
 
 [Execution]
 
@@ -66,7 +68,8 @@ From the generated `.burrow_init.toml `file, create new files for each node, and
 [RPC]
   [RPC.Info]
     Enabled = true
-    ListenAddress = "tcp://127.0.0.1:10001"
+    ListenHost = "127.0.0.1"
+    ListenPort = "10001"
   [RPC.Profiler]
     Enabled = false
   [RPC.GRPC]
@@ -78,13 +81,15 @@ From the generated `.burrow_init.toml `file, create new files for each node, and
 #### Validator 1 node `.burrow_val0.toml` modified line from `.burrow_init.toml`
 
 ```toml
+BurrowDir = ".burrow_node0"
+
 [Tendermint]
   Seeds = "PUT_HERE_SEED_NODE_ID@LISTEN_EXTERNAL_ADDRESS"
   SeedMode = false
   PersistentPeers = ""
-  ListenAddress = "tcp://0.0.0.0:20000"
+  ListenHost = "0.0.0.0"
+  ListenPort = "20000"
   Moniker = "val_node_0"
-  TendermintRoot = ".burrow_node0"
 
 [Execution]
 
@@ -97,12 +102,14 @@ From the generated `.burrow_init.toml `file, create new files for each node, and
 [RPC]
   [RPC.Info]
     Enabled = true
-    ListenAddress = "tcp://127.0.0.1:20001"
+    ListenHost = "127.0.0.1"
+    ListenPort = "20001"
   [RPC.Profiler]
     Enabled = false
   [RPC.GRPC]
     Enabled = true
-    ListenAddress = "127.0.0.1:20002"
+    ListenHost = "127.0.0.1"
+    ListenPort = "20002"
   [RPC.Metrics]
     Enabled = false
 ```
@@ -110,13 +117,15 @@ From the generated `.burrow_init.toml `file, create new files for each node, and
 #### Validator 2 node `.burrow_val1.toml` modified line from `.burrow_init.toml`
 
 ```toml
+BurrowDir = ".burrow_node1"
+
 [Tendermint]
   Seeds = "PUT_HERE_SEED_NODE_ID@LISTEN_EXTERNAL_ADDRESS"
   SeedMode = false
   PersistentPeers = ""
-  ListenAddress = "tcp://0.0.0.0:30000"
+  ListenHost = "0.0.0.0"
+  ListenPort = "30000"
   Moniker = "val_node_1"
-  TendermintRoot = ".burrow_node1"
 
 [Execution]
 
@@ -129,12 +138,14 @@ From the generated `.burrow_init.toml `file, create new files for each node, and
 [RPC]
   [RPC.Info]
     Enabled = true
-    ListenAddress = "tcp://127.0.0.1:30001"
+    ListenHost = "127.0.0.1"
+    ListenPort = "30001"
   [RPC.Profiler]
     Enabled = false
   [RPC.GRPC]
     Enabled = true
-    ListenAddress = "127.0.0.1:30002"
+    ListenHost = "127.0.0.1"
+    ListenPort = "30002"
   [RPC.Metrics]
     Enabled = false
 ```
@@ -143,13 +154,15 @@ From the generated `.burrow_init.toml `file, create new files for each node, and
 #### Validator 3 node `.burrow_val2.toml` modified line from `.burrow_init.toml`
 
 ```toml
+BurrowDir = ".burrow_node2"
+
 [Tendermint]
   Seeds = "PUT_HERE_SEED_NODE_ID@LISTEN_EXTERNAL_ADDRESS"
   SeedMode = false
   PersistentPeers = ""
-  ListenAddress = "tcp://0.0.0.0:40000"
+  ListenHost = "0.0.0.0"
+  ListenPort = "40000"
   Moniker = "val_node_2"
-  TendermintRoot = ".burrow_node2"
 
 [Execution]
 
@@ -162,12 +175,14 @@ From the generated `.burrow_init.toml `file, create new files for each node, and
 [RPC]
   [RPC.Info]
     Enabled = true
-    ListenAddress = "tcp://127.0.0.1:40001"
+    ListenHost = "127.0.0.1"
+    ListenPort = "40001"
   [RPC.Profiler]
     Enabled = false
   [RPC.GRPC]
     Enabled = true
-    ListenAddress = "127.0.0.1:40002"
+    ListenHost = "127.0.0.1"
+    ListenPort = "40002"
   [RPC.Metrics]
     Enabled = false
 ```

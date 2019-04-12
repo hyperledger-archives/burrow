@@ -237,7 +237,7 @@ NOTES.md: project/history.go project/cmd/notes/main.go
 docs: CHANGELOG.md NOTES.md
 
 # Tag the current HEAD commit with the current release defined in
-# ./release/release.go
+# ./project/history.go
 .PHONY: tag_release
 tag_release: test check CHANGELOG.md NOTES.md build
 	@scripts/tag_release.sh
