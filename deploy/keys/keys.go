@@ -13,14 +13,7 @@ type LocalKeyClient struct {
 	keys.KeyClient
 }
 
-const DefaultKeysHost = "localhost"
-const DefaultKeysPort = "10997"
-
 var keysTimeout = 5 * time.Second
-
-func DefaultKeysURL() string {
-	return fmt.Sprintf("%s:%s", DefaultKeysHost, DefaultKeysPort)
-}
 
 // Returns an initialized key client to a docker container
 // running the keys server

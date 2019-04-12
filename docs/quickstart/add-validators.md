@@ -22,7 +22,7 @@ Let's generate the config and keys for a new validator account. As this node wil
 ```bash
 burrow spec -v1 | burrow configure -s- --json > burrow-new.json
 NEW_VALIDATOR=$(jq -r '.GenesisDoc.Accounts[0].PublicKey.PublicKey' burrow-new.json)
-jq 'del(.GenesisDoc)' burrow-new.json | jq ".Tendermint.PersistentPeers=\"$PERSISTENT_PEER\"" | jq '.RPC.Info.Enabled=false' | jq '.RPC.GRPC.Enabled=false' | jq '.Tendermint.ListenAddress="tcp://0.0.0.0:25565"' > burrow003.json 
+jq 'del(.GenesisDoc)' burrow-new.json | jq ".Tendermint.PersistentPeers=\"$PERSISTENT_PEER\"" | jq '.RPC.Info.Enabled=false' | jq '.RPC.GRPC.Enabled=false' | jq '.Tendermint.ListenPort="25565"' > burrow003.json 
 ```
 
 Copy the following script into `deploy.yaml`:

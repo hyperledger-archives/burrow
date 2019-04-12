@@ -12,6 +12,8 @@ func Restore(output Output) func(cmd *cli.Cmd) {
 
 		configOpt := cmd.StringOpt("c config", "", "Use the specified burrow config file")
 
+		silentOpt := cmd.BoolOpt("s silent", false, "If state already exists don't throw error")
+
 		filename := cmd.StringArg("FILE", "", "Restore from this dump")
 
 		cmd.Spec = "[--config=<config file>] [--genesis=<genesis json file>] [FILE]"
@@ -44,7 +46,7 @@ func Restore(output Output) func(cmd *cli.Cmd) {
 				output.Fatalf("could not create Burrow kernel: %v", err)
 			}
 
-			if err = kern.LoadDump(conf.GenesisDoc, *filename); err != nil {
+			if err = kern.LoadDump(conf.GenesisDoc, *filename, *silentOpt); err != nil {
 				output.Fatalf("could not create Burrow kernel: %v", err)
 			}
 

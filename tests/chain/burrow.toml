@@ -3,7 +3,8 @@ BurrowDir = ".burrow"
 [Tendermint]
   Seeds = ""
   PersistentPeers = ""
-  ListenAddress = "tcp://0.0.0.0:36656"
+  ListenHost = "0.0.0.0"
+  ListenPort = "36656"
   ExternalAddress = ""
   Moniker = "BurrowIntegrationTestNode"
 
@@ -19,16 +20,20 @@ BurrowDir = ".burrow"
 [RPC]
   [RPC.TM]
     Enabled = true
-    ListenAddress = "tcp://127.0.0.1:36658"
+    ListenHost = "127.0.0.1"
+    ListenPort = "36658"
   [RPC.Profiler]
     Enabled = false
-    ListenAddress = "tcp://127.0.0.1:7060"
+    ListenHost = "127.0.0.1"
+    ListenPort = "7060"
   [RPC.GRPC]
     Enabled = true
-    ListenAddress = "tcp://127.0.0.1:20997"
+    ListenHost = "127.0.0.1"
+    ListenPort = "20997"
   [RPC.Metrics]
     Enabled = false
-    ListenAddress = "tcp://127.0.0.1:10102"
+    ListenAddress = "127.0.0.1"
+    ListenPort = "10102"
     MetricsPath = "/metrics"
     BlockSampleSize = 100
 
