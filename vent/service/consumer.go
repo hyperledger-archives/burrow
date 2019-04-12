@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
+
+	"github.com/hyperledger/burrow/rpc"
 
 	"github.com/hyperledger/burrow/execution/exec"
 
@@ -29,6 +32,13 @@ type Consumer struct {
 	GRPCConnection *grpc.ClientConn
 	// external events channel used for when vent is leveraged as a library
 	EventsChannel chan types.EventData
+	Status
+}
+
+// Status announcement
+type Status struct {
+	LastProcessedHeight uint64
+	Burrow              rpc.ResultStatus
 }
 
 // NewConsumer constructs a new consumer configuration.
@@ -104,6 +114,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 		defer func() {
 			close(doneCh)
 		}()
+		go c.announceEvery(doneCh)
 
 		c.Log.Info("msg", "Getting last processed block number from SQL log table")
 
@@ -205,10 +216,15 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 		if c.Closing {
 			return io.EOF
 		}
-		c.Log.Debug("msg", "Block received", "height", blockExecution.Height, "num_txs", len(blockExecution.TxExecutions))
 
 		// set new block number
 		fromBlock := blockExecution.Height
+
+		defer func() {
+			c.Status.LastProcessedHeight = fromBlock
+		}()
+
+		c.Log.Debug("msg", "Block received", "height", blockExecution.Height, "num_txs", len(blockExecution.TxExecutions))
 
 		// create a fresh new structure to store block data at this height
 		blockData := sqlsol.NewBlockData(fromBlock)
@@ -332,4 +348,42 @@ func (c *Consumer) Shutdown() {
 	c.Log.Info("msg", "Shutting down vent consumer...")
 	c.Closing = true
 	c.GRPCConnection.Close()
+}
+
+func (c *Consumer) updateStatus(qcli rpcquery.QueryClient) {
+	stat, err := qcli.Status(context.Background(), &rpcquery.StatusParam{})
+	if err != nil {
+		c.Log.Error("msg", "could not get blockchain status", "err", err)
+	}
+	c.Status.Burrow = *stat
+}
+
+func (c *Consumer) statusMessage() []interface{} {
+	var catchUpRatio float64
+	if c.Burrow.SyncInfo.LatestBlockHeight > 0 {
+		catchUpRatio = float64(c.LastProcessedHeight) / float64(c.Burrow.SyncInfo.LatestBlockHeight)
+	}
+	return []interface{}{
+		"msg", "status",
+		"last_processed_height", c.LastProcessedHeight,
+		"burrow_latest_block_height", c.Burrow.SyncInfo.LatestBlockHeight,
+		"fraction_caught_up", catchUpRatio,
+	}
+}
+
+func (c *Consumer) announceEvery(doneCh <-chan struct{}) {
+	if c.Config.AnnounceEvery != 0 {
+		qcli := rpcquery.NewQueryClient(c.GRPCConnection)
+		ticker := time.NewTicker(c.Config.AnnounceEvery)
+		for {
+			select {
+			case <-ticker.C:
+				c.updateStatus(qcli)
+				c.Log.Info(c.statusMessage()...)
+			case <-doneCh:
+				ticker.Stop()
+				return
+			}
+		}
+	}
 }
