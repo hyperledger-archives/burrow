@@ -22,7 +22,7 @@ func NewServer(cfg *config.VentConfig, log *logger.Logger, consumer *Consumer) *
 	// setup handlers
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/health", healthHandler(log, consumer))
+	mux.HandleFunc("/health", healthHandler(consumer))
 
 	return &Server{
 		Config:   cfg,
@@ -63,7 +63,7 @@ func (s *Server) Shutdown() {
 	s.stopCh <- true
 }
 
-func healthHandler(log *logger.Logger, consumer *Consumer) func(resp http.ResponseWriter, req *http.Request) {
+func healthHandler(consumer *Consumer) func(resp http.ResponseWriter, req *http.Request) {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		err := consumer.Health()
 		if err != nil {
@@ -71,7 +71,5 @@ func healthHandler(log *logger.Logger, consumer *Consumer) func(resp http.Respon
 		} else {
 			resp.WriteHeader(http.StatusOK)
 		}
-
-		log.Info("msg", "GET /health", "err", err)
 	}
 }

@@ -3,7 +3,6 @@ package exec
 import (
 	"io"
 )
-
 type EventStream interface {
 	Recv() (*StreamEvent, error)
 }

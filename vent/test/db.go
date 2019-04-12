@@ -86,6 +86,7 @@ func PostgresVentConfig(grpcAddress string) *config.VentConfig {
 	cfg.DBAdapter = types.PostgresDB
 	cfg.DBURL = config.DefaultPostgresDBURL
 	cfg.GRPCAddr = grpcAddress
+	cfg.AnnounceEvery = time.Millisecond * 100
 	return cfg
 }
 
