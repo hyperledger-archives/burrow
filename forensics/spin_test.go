@@ -1,3 +1,5 @@
+// +build forensics
+
 package forensics
 
 import (

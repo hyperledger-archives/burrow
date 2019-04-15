@@ -9,7 +9,6 @@ const (
 	ActionRead        DBAction = "READ"
 	ActionCreateTable DBAction = "CREATE"
 	ActionAlterTable  DBAction = "ALTER"
-	ActionInitialize  DBAction = "_INITIALIZE_VENT"
 )
 
 // EventData contains data for each block of events

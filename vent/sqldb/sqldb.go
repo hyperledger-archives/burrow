@@ -63,7 +63,7 @@ func NewSQLDB(connection types.SQLConnection) (*SQLDB, error) {
 	sysTables := db.getSysTablesDefinition()
 
 	// IMPORTANT: DO NOT CHANGE TABLE CREATION ORDER (1)
-	if err = db.createTable(sysTables[types.SQLDictionaryTableName], string(types.ActionInitialize)); err != nil {
+	if err = db.createTable(sysTables[types.SQLDictionaryTableName], true); err != nil {
 		if !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeDuplicatedTable) {
 			db.Log.Info("msg", "Error creating Dictionary table", "err", err)
 			return nil, err
@@ -71,7 +71,7 @@ func NewSQLDB(connection types.SQLConnection) (*SQLDB, error) {
 	}
 
 	// IMPORTANT: DO NOT CHANGE TABLE CREATION ORDER (2)
-	if err = db.createTable(sysTables[types.SQLLogTableName], string(types.ActionInitialize)); err != nil {
+	if err = db.createTable(sysTables[types.SQLLogTableName], true); err != nil {
 		if !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeDuplicatedTable) {
 			db.Log.Info("msg", "Error creating Log table", "err", err)
 			return nil, err
@@ -79,7 +79,7 @@ func NewSQLDB(connection types.SQLConnection) (*SQLDB, error) {
 	}
 
 	// IMPORTANT: DO NOT CHANGE TABLE CREATION ORDER (3)
-	if err = db.createTable(sysTables[types.SQLChainInfoTableName], string(types.ActionInitialize)); err != nil {
+	if err = db.createTable(sysTables[types.SQLChainInfoTableName], true); err != nil {
 		if !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeDuplicatedTable) {
 			db.Log.Info("msg", "Error creating Chain Info table", "err", err)
 			return nil, err
@@ -257,16 +257,16 @@ func (db *SQLDB) GetLastBlockHeight() (uint64, error) {
 func (db *SQLDB) SynchronizeDB(eventTables types.EventTables) error {
 	db.Log.Info("msg", "Synchronizing DB")
 
-	for eventName, table := range eventTables {
+	for _, table := range eventTables {
 		found, err := db.findTable(table.Name)
 		if err != nil {
 			return err
 		}
 
 		if found {
-			err = db.alterTable(table, eventName)
+			err = db.alterTable(table)
 		} else {
-			err = db.createTable(table, eventName)
+			err = db.createTable(table, false)
 		}
 		if err != nil {
 			return err
@@ -308,7 +308,7 @@ func (db *SQLDB) SetBlock(eventTables types.EventTables, eventData types.EventDa
 
 loop:
 	// for each table in the block
-	for eventName, table := range eventTables {
+	for en, table := range eventTables {
 		safeTable = safe(table.Name)
 		dataRows := eventData.Tables[table.Name]
 		// for Each Row
@@ -357,9 +357,10 @@ loop:
 				break loop // exits from all loops -> continue in close log stmt
 			}
 
+			eventName, _ := row.RowData[types.SQLColumnLabelEventName].(string)
 			// Insert in log
 			db.Log.Info("msg", "INSERT LOG", "query", logQuery, "value",
-				fmt.Sprintf("tableName = %s eventName = %s block = %d", safeTable, eventName, eventData.BlockHeight))
+				fmt.Sprintf("tableName = %s eventName = %s block = %d", safeTable, en, eventData.BlockHeight))
 
 			if _, err = logStmt.Exec(safeTable, eventName, row.EventClass.GetFilter(), eventData.BlockHeight, txHash,
 				row.Action, jsonData, query, sqlValues); err != nil {
