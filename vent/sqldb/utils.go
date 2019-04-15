@@ -232,7 +232,7 @@ func (db *SQLDB) getTableDef(tableName string) (*types.SQLTable, error) {
 }
 
 // alterTable alters the structure of a SQL table & add info to the dictionary
-func (db *SQLDB) alterTable(table *types.SQLTable, eventName string) error {
+func (db *SQLDB) alterTable(table *types.SQLTable) error {
 	db.Log.Info("msg", "Altering table", "value", table.Name)
 
 	// prepare log query
@@ -284,21 +284,18 @@ func (db *SQLDB) alterTable(table *types.SQLTable, eventName string) error {
 					return err
 				}
 
-				//insert log (if action is not database initialization)
-				if eventName != string(types.ActionInitialize) {
-					// Marshal the table into a JSON string.
-					var jsonData []byte
-					jsonData, err = db.getJSON(newColumn)
-					if err != nil {
-						db.Log.Info("msg", "error marshaling column", "err", err, "value", fmt.Sprintf("%v", newColumn))
-						return err
-					}
-					//insert log
-					_, err = db.DB.Exec(logQuery, table.Name, eventName, "", nil, nil, types.ActionAlterTable, jsonData, query, sqlValues)
-					if err != nil {
-						db.Log.Info("msg", "Error inserting log", "err", err)
-						return err
-					}
+				// Marshal the table into a JSON string.
+				var jsonData []byte
+				jsonData, err = db.getJSON(newColumn)
+				if err != nil {
+					db.Log.Info("msg", "error marshaling column", "err", err, "value", fmt.Sprintf("%v", newColumn))
+					return err
+				}
+				//insert log
+				_, err = db.DB.Exec(logQuery, table.Name, "", "", nil, nil, types.ActionAlterTable, jsonData, query, sqlValues)
+				if err != nil {
+					db.Log.Info("msg", "Error inserting log", "err", err)
+					return err
 				}
 			}
 		}
@@ -314,7 +311,7 @@ func (db *SQLDB) alterTable(table *types.SQLTable, eventName string) error {
 }
 
 // createTable creates a new table
-func (db *SQLDB) createTable(table *types.SQLTable, eventName string) error {
+func (db *SQLDB) createTable(table *types.SQLTable, isInitialise bool) error {
 	db.Log.Info("msg", "Creating Table", "value", table.Name)
 
 	// prepare log query
@@ -350,7 +347,7 @@ func (db *SQLDB) createTable(table *types.SQLTable, eventName string) error {
 	}
 
 	//insert log (if action is not database initialization)
-	if eventName != string(types.ActionInitialize) {
+	if !isInitialise {
 		// Marshal the table into a JSON string.
 		var jsonData []byte
 		jsonData, err = db.getJSON(table)
@@ -361,7 +358,7 @@ func (db *SQLDB) createTable(table *types.SQLTable, eventName string) error {
 		sqlValues, _ := db.getJSON(nil)
 
 		//insert log
-		_, err = db.DB.Exec(logQuery, table.Name, eventName, "", nil, nil, types.ActionCreateTable, jsonData, query, sqlValues)
+		_, err = db.DB.Exec(logQuery, table.Name, "", "", nil, nil, types.ActionCreateTable, jsonData, query, sqlValues)
 		if err != nil {
 			db.Log.Info("msg", "Error inserting log", "err", err)
 			return err
@@ -453,7 +450,7 @@ func (db *SQLDB) getBlockTables(height uint64) (types.EventTables, error) {
 			return tables, err
 		}
 
-		tables[eventName] = table
+		tables[tableName] = table
 	}
 
 	return tables, nil
