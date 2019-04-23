@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/hyperledger/burrow/vent/types"
 )
 
@@ -17,17 +19,20 @@ type VentConfig struct {
 	SpecFileOrDirs []string
 	AbiFileOrDirs  []string
 	DBBlockTx      bool
+	// Announce status every AnnouncePeriod
+	AnnounceEvery time.Duration
 }
 
 // DefaultFlags returns a configuration with default values
 func DefaultVentConfig() *VentConfig {
 	return &VentConfig{
-		DBAdapter: types.PostgresDB,
-		DBURL:     DefaultPostgresDBURL,
-		DBSchema:  "vent",
-		GRPCAddr:  "localhost:10997",
-		HTTPAddr:  "0.0.0.0:8080",
-		LogLevel:  "debug",
-		DBBlockTx: false,
+		DBAdapter:     types.PostgresDB,
+		DBURL:         DefaultPostgresDBURL,
+		DBSchema:      "vent",
+		GRPCAddr:      "localhost:10997",
+		HTTPAddr:      "0.0.0.0:8080",
+		LogLevel:      "debug",
+		DBBlockTx:     false,
+		AnnounceEvery: time.Second * 5,
 	}
 }
