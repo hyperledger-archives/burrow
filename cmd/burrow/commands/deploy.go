@@ -19,7 +19,7 @@ const defaultChainTimeout = 15 * time.Second
 
 func Deploy(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
-		chainOpt := cmd.StringOpt("u chain", "127.0.0.1:10997", "chain to be used in IP:PORT format")
+		chainOpt := cmd.StringOpt("c chain", "127.0.0.1:10997", "chain to be used in IP:PORT format")
 
 		signerOpt := cmd.StringOpt("s keys", "",
 			"IP:PORT of Burrow GRPC service which jobs should or otherwise transaction submitted unsigned for mempool signing in Burrow")
@@ -49,7 +49,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			"default number of concurrent playbooks to run if multiple are specified")
 
 		addressOpt := cmd.StringOpt("a address", "",
-			"default address to use; operates the same way as the [account] job, only before the deploy file is ran")
+			"default address (or account name) to use; operates the same way as the [account] job, only before the deploy file is ran")
 
 		defaultFeeOpt := cmd.StringOpt("n fee", "9999", "default fee to use")
 

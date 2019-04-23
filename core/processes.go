@@ -59,7 +59,7 @@ func ProfileLauncher(kern *Kernel, conf *rpc.ServerConfig) process.Launcher {
 		Enabled: conf.Enabled,
 		Launch: func() (process.Process, error) {
 			debugServer := &http.Server{
-				Addr: conf.ListenAddress,
+				Addr: fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort),
 			}
 			go func() {
 				err := debugServer.ListenAndServe()
@@ -202,7 +202,7 @@ func InfoLauncher(kern *Kernel, conf *rpc.ServerConfig) process.Launcher {
 		Name:    InfoProcessName,
 		Enabled: conf.Enabled,
 		Launch: func() (process.Process, error) {
-			listener, err := process.ListenerFromAddress(conf.ListenAddress)
+			listener, err := process.ListenerFromAddress(fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort))
 			if err != nil {
 				return nil, err
 			}
@@ -224,7 +224,7 @@ func MetricsLauncher(kern *Kernel, conf *rpc.MetricsConfig) process.Launcher {
 		Name:    MetricsProcessName,
 		Enabled: conf.Enabled,
 		Launch: func() (process.Process, error) {
-			listener, err := process.ListenerFromAddress(conf.ListenAddress)
+			listener, err := process.ListenerFromAddress(fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort))
 			if err != nil {
 				return nil, err
 			}
@@ -252,7 +252,7 @@ func GRPCLauncher(kern *Kernel, conf *rpc.ServerConfig, keyConfig *keys.KeysConf
 				return nil, err
 			}
 
-			listener, err := process.ListenerFromAddress(conf.ListenAddress)
+			listener, err := process.ListenerFromAddress(fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort))
 			if err != nil {
 				return nil, err
 			}

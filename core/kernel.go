@@ -151,10 +151,20 @@ func (kern *Kernel) LoadState(genesisDoc *genesis.GenesisDoc) (err error) {
 }
 
 // LoadDump restores chain state from the given dump file
-func (kern *Kernel) LoadDump(genesisDoc *genesis.GenesisDoc, restoreFile string) (err error) {
-	if _, kern.Blockchain, err = bcm.LoadOrNewBlockchain(kern.database, genesisDoc, kern.Logger); err != nil {
+func (kern *Kernel) LoadDump(genesisDoc *genesis.GenesisDoc, restoreFile string, silent bool) (err error) {
+	var exists bool
+	if exists, kern.Blockchain, err = bcm.LoadOrNewBlockchain(kern.database, genesisDoc, kern.Logger); err != nil {
 		return fmt.Errorf("error creating or loading blockchain state: %v", err)
 	}
+
+	if exists {
+		if silent {
+			kern.Logger.InfoMsg("State already exists, skipping...")
+			return nil
+		}
+		return fmt.Errorf("existing state found, please remove before restoring")
+	}
+
 	kern.Blockchain.SetBlockStore(bcm.NewBlockStore(blockchain.NewBlockStore(kern.database)))
 
 	if kern.State, err = state.MakeGenesisState(kern.database, genesisDoc); err != nil {
@@ -187,7 +197,8 @@ func (kern *Kernel) LoadDump(genesisDoc *genesis.GenesisDoc, restoreFile string)
 		return fmt.Errorf("Unable to commit %v", err)
 	}
 
-	kern.Logger.InfoMsg("State restore successful: %d", kern.Blockchain.LastBlockHeight())
+	kern.Logger.InfoMsg("State restore successful -> height 0",
+		"state_hash", kern.State.Hash())
 	return nil
 }
 

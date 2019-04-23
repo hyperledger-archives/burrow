@@ -69,6 +69,7 @@ type PersistedState struct {
 	GenesisDoc            genesis.GenesisDoc
 }
 
+// LoadOrNewBlockchain returns true if state already exists
 func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc, logger *logging.Logger) (bool, *Blockchain, error) {
 	logger = logger.WithScope("LoadOrNewBlockchain")
 	logger.InfoMsg("Trying to load blockchain state from database",
@@ -92,7 +93,7 @@ func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc, logger *logg
 	return false, NewBlockchain(db, genesisDoc), nil
 }
 
-// Pointer to blockchain state initialised from genesis
+// NewBlockchain returns a pointer to blockchain state initialised from genesis
 func NewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *Blockchain {
 	bc := &Blockchain{
 		db:                    db,

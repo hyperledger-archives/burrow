@@ -55,7 +55,11 @@ func TestGovernance(t *testing.T) {
 		// the listener and start the node
 		l, err := net.Listen("tcp", "localhost:0")
 		require.NoError(t, err)
-		testConfig.Tendermint.ListenAddress = fmt.Sprintf("tcp://%v", l.Addr().String())
+		host, port, err := net.SplitHostPort(l.Addr().String())
+		require.NoError(t, err)
+
+		testConfig.Tendermint.ListenHost = host
+		testConfig.Tendermint.ListenPort = port
 
 		kernels[i], err = integration.TestKernel(acc, privateAccounts, testConfig, logconf)
 		require.NoError(t, err)

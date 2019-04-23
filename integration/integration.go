@@ -39,6 +39,7 @@ import (
 	"github.com/hyperledger/burrow/logging/logconfig"
 	lConfig "github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/permission"
+	"github.com/hyperledger/burrow/rpc"
 )
 
 const (
@@ -92,11 +93,15 @@ func NewTestConfig(genesisDoc *genesis.GenesisDoc,
 	conf.Tendermint.Moniker = name
 	conf.Keys.RemoteAddress = ""
 	// Assign run of ports
-	const localhostFreePort = "tcp://localhost:0"
-	conf.Tendermint.ListenAddress = localhostFreePort
-	conf.RPC.GRPC.ListenAddress = localhostFreePort
-	conf.RPC.Metrics.ListenAddress = localhostFreePort
-	conf.RPC.Info.ListenAddress = localhostFreePort
+	const freeport = "0"
+	conf.Tendermint.ListenHost = rpc.LocalHost
+	conf.Tendermint.ListenPort = freeport
+	conf.RPC.GRPC.ListenHost = rpc.LocalHost
+	conf.RPC.GRPC.ListenPort = freeport
+	conf.RPC.Metrics.ListenHost = rpc.LocalHost
+	conf.RPC.Metrics.ListenPort = freeport
+	conf.RPC.Info.ListenHost = rpc.LocalHost
+	conf.RPC.Info.ListenPort = freeport
 	conf.Execution.TimeoutFactor = 0.5
 	conf.Execution.VMOptions = []execution.VMOption{execution.DebugOpcodes}
 	for _, opt := range options {

@@ -49,8 +49,9 @@ func FullVersion() string {
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases(
 		"",
-		`### Added
-- [CLI] Introduced burrow configure --pool for generation of multiple validator configs suitable for running on a single (or many) machines
+		`### Changed
+- [Config] Split ListenAddress into ListenHost and ListenPort to ease parsing in the Helm charts
+- [CLI] Burrow restore now always fails if state is detected but can be made --silent
 `,
 		"0.25.0 - 2019-04-05",
 		`### Changed
@@ -60,6 +61,7 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [Kernel] Refactored and various exported methods changed
 
 ### Added
+- [CLI] Introduced burrow configure --pool for generation of multiple validator configs suitable for running on a single (or many) machines
 - [CLI] Burrow deploy can now run multiple burrow deploy files (aka playbooks) and run them in parallel
 - [Consensus] Now possible to run Burrow without Tendermint in 'NoConsensus' mode by setting Tendermint.Enabled = false  for faster local testing. Execution.TimeoutFactor can be used to control how regularly Burrow commits (and is used 
 

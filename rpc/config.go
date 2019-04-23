@@ -1,10 +1,8 @@
 package rpc
 
-import "fmt"
-
-// 'localhost' gets interpreted as ipv6
+// 'LocalHost' gets interpreted as ipv6
 // TODO: revisit this
-const localhost = "127.0.0.1"
+const LocalHost = "127.0.0.1"
 
 type RPCConfig struct {
 	Info     *ServerConfig  `json:",omitempty" toml:",omitempty"`
@@ -14,8 +12,9 @@ type RPCConfig struct {
 }
 
 type ServerConfig struct {
-	Enabled       bool
-	ListenAddress string
+	Enabled    bool
+	ListenHost string
+	ListenPort string
 }
 
 type MetricsConfig struct {
@@ -35,30 +34,34 @@ func DefaultRPCConfig() *RPCConfig {
 
 func DefaultInfoConfig() *ServerConfig {
 	return &ServerConfig{
-		Enabled:       true,
-		ListenAddress: fmt.Sprintf("tcp://%s:26658", localhost),
+		Enabled:    true,
+		ListenHost: LocalHost,
+		ListenPort: "26658",
 	}
 }
 
 func DefaultGRPCConfig() *ServerConfig {
 	return &ServerConfig{
-		Enabled:       true,
-		ListenAddress: fmt.Sprintf("tcp://%s:10997", localhost),
+		Enabled:    true,
+		ListenHost: LocalHost,
+		ListenPort: "10997",
 	}
 }
 
 func DefaultProfilerConfig() *ServerConfig {
 	return &ServerConfig{
-		Enabled:       false,
-		ListenAddress: fmt.Sprintf("tcp://%s:6060", localhost),
+		Enabled:    false,
+		ListenHost: LocalHost,
+		ListenPort: "6060",
 	}
 }
 
 func DefaultMetricsConfig() *MetricsConfig {
 	return &MetricsConfig{
 		ServerConfig: ServerConfig{
-			Enabled:       false,
-			ListenAddress: fmt.Sprintf("tcp://%s:9102", localhost),
+			Enabled:    false,
+			ListenHost: LocalHost,
+			ListenPort: "9102",
 		},
 		MetricsPath:     "/metrics",
 		BlockSampleSize: 100,

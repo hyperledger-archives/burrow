@@ -21,7 +21,7 @@ var cdc = amino.NewCodec()
 
 func Dump(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
-		chainURLOpt := cmd.StringOpt("u chain-url", "127.0.0.1:10997", "chain-url to be used in IP:PORT format")
+		chainURLOpt := cmd.StringOpt("c chain", "127.0.0.1:10997", "chain to be used in IP:PORT format")
 		heightOpt := cmd.IntOpt("h height", 0, "Block height to dump to, defaults to latest block height")
 		filename := cmd.StringArg("FILE", "", "Save dump here")
 		useJSON := cmd.BoolOpt("j json", false, "Output in json")
