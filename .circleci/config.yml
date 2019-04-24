@@ -35,12 +35,6 @@ jobs:
       - checkout
       - run: docker-compose run burrow make test_integration_no_postgres
 
-  ensure_vendor:
-    <<: *defaults
-    steps:
-      - checkout
-      - run: make ensure_vendor
-
   build_docker:
     <<: *defaults
     steps:
@@ -78,10 +72,6 @@ workflows:
             <<: *tags_filters
 
       - test_integration:
-          filters:
-            <<: *tags_filters
-
-      - ensure_vendor:
           filters:
             <<: *tags_filters
 

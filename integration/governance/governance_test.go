@@ -337,10 +337,16 @@ func localSignAndBroadcastSync(t testing.TB, tcli rpctransact.TransactClient, ch
 }
 
 func connectKernels(k1, k2 *core.Kernel) {
-	k1Address := k1.Node.NodeInfo().NetAddress()
-	k2Address := k2.Node.NodeInfo().NetAddress()
+	k1Address, err := k1.Node.NodeInfo().NetAddress()
+	if err != nil {
+		panic(fmt.Errorf("could not get kernel address: %v", err))
+	}
+	k2Address, err := k2.Node.NodeInfo().NetAddress()
+	if err != nil {
+		panic(fmt.Errorf("could not get kernel address: %v", err))
+	}
 	fmt.Printf("Connecting %v -> %v\n", k1Address, k2Address)
-	err := k1.Node.Switch().DialPeerWithAddress(k2Address, false)
+	err = k1.Node.Switch().DialPeerWithAddress(k2Address, false)
 	if err != nil {
 		switch e := err.(type) {
 		case p2p.ErrRejected:

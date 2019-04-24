@@ -8,7 +8,7 @@
 #
 set -e
 
-REPO=${REPO:-"$GOPATH/src/github.com/hyperledger/burrow"}
+REPO=${REPO:-"$PWD"}
 VERSION_REGEX="^v[0-9]+\.[0-9]+\.[0-9]+$"
 
 

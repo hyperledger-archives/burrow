@@ -31,4 +31,6 @@ RUN curl -L https://github.com/goreleaser/goreleaser/releases/download/$GORELEAS
 RUN npm install -g mocha
 RUN npm install -g mocha-circleci-reporter
 ENV CI=true
+# Protobuf builds require being in GOPATH (more or less) but this disables module support by default
+ENV GO111MODULE=on
 WORKDIR /go/src/github.com/hyperledger/burrow
