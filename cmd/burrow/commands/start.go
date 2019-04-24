@@ -42,6 +42,10 @@ func Start(output Output) func(cmd *cli.Cmd) {
 				output.Fatalf("could not boot Burrow kernel: %v", err)
 			}
 
+			if pb := conf.Tendermint.PhoneBook; len(pb) > 0 {
+				kern.DialPeersFromKeyStore(pb)
+			}
+
 			kern.WaitForShutdown()
 		}
 	}

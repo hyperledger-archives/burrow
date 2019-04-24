@@ -26,6 +26,8 @@ import (
 	"syscall"
 	"time"
 
+	"strings"
+
 	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint"
@@ -43,6 +45,7 @@ import (
 	"github.com/streadway/simpleuuid"
 	"github.com/tendermint/tendermint/blockchain"
 	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/p2p"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
@@ -200,6 +203,25 @@ func (kern *Kernel) LoadDump(genesisDoc *genesis.GenesisDoc, restoreFile string,
 	kern.Logger.InfoMsg("State restore successful -> height 0",
 		"state_hash", kern.State.Hash())
 	return nil
+}
+
+// DialPeersFromKeyStore allows us to autoconnect local validators on start
+func (kern *Kernel) DialPeersFromKeyStore(monHosts map[string]struct {
+	IP   net.IP
+	Port uint16
+}) {
+	names, _ := kern.keyStore.GetAllNames()
+	for moniker, host := range monHosts {
+		nodeID := strings.ToLower(names[moniker])
+		err := kern.Node.Switch().DialPeerWithAddress(&p2p.NetAddress{
+			ID:   p2p.ID(nodeID),
+			IP:   host.IP,
+			Port: host.Port,
+		}, true)
+		if err != nil {
+			kern.Logger.Info.Log("Could not connect to peer", host, moniker, err.Error())
+		}
+	}
 }
 
 // GetNodeView builds and returns a wrapper of our tendermint node
