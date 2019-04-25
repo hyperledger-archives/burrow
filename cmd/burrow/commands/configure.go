@@ -334,16 +334,16 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					conf.Tendermint.PersistentPeers = seeds
 
 					conf.Tendermint.ListenHost = rpc.LocalHost
-					conf.Tendermint.ListenPort = string(26656 + i)
+					conf.Tendermint.ListenPort = fmt.Sprint(26656 + i)
 
 					conf.RPC.Info.ListenHost = rpc.LocalHost
-					conf.RPC.Info.ListenPort = string(26758 + i)
+					conf.RPC.Info.ListenPort = fmt.Sprint(26758 + i)
 
 					conf.RPC.GRPC.ListenHost = rpc.LocalHost
-					conf.RPC.GRPC.ListenPort = string(10997 + i)
+					conf.RPC.GRPC.ListenPort = fmt.Sprint(10997 + i)
 
 					conf.RPC.Metrics.ListenHost = rpc.LocalHost
-					conf.RPC.Metrics.ListenPort = string(9102 + i)
+					conf.RPC.Metrics.ListenPort = fmt.Sprint(9102 + i)
 
 					conf.Logging.RootSink.Output.OutputType = "file"
 					conf.Logging.RootSink.Output.FileConfig = &logconfig.FileConfig{Path: fmt.Sprintf("burrow%03d.log", i)}
