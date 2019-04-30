@@ -1,0 +1,1 @@
+Test case for embedded constructors. We have a contract 1 which creates another contract 2 on function call and contract 2 creates contract 3 in constructor.
