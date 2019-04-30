@@ -57,7 +57,7 @@ func BuildJob(build *def.Build, deployScript *def.Playbook, resp *compilers.Resp
 		switch build.Instance {
 		case "":
 			if res.Filename != build.Contract {
-				logger.TraceMsg("Ignoring output for differint solidity file", "found", res.Filename, "expected", build.Contract)
+				logger.TraceMsg("Ignoring output for different solidity file", "found", res.Filename, "expected", build.Contract)
 				continue
 			}
 		case "all":
@@ -368,6 +368,17 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 		}
 		callData := hex.EncodeToString(packedBytes)
 		contractCode = contractCode + callData
+	} else {
+		// No constructor arguments were provided. Did the constructor want any?
+		spec, err := abi.ReadAbiSpec(compilersResponse.Contract.Abi)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(spec.Constructor.Inputs) > 0 {
+			logger.InfoMsg("Constructor wants %d arguments but 0 provided", len(spec.Constructor.Inputs))
+			return nil, fmt.Errorf("Constructor wants %d arguments but 0 provided", len(spec.Constructor.Inputs))
+		}
 	}
 
 	return deployTx(client, deploy, compilersResponse.Objectname, contractCode, logger)
