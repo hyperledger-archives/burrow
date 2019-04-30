@@ -1,0 +1,23 @@
+jobs:
+
+- name: deployD
+  deploy:
+    contract: contract.sol
+    instance: D
+
+- name: deployX
+  deploy:
+    contract: contract.sol
+    instance: X
+
+- name: deployC
+  deploy:
+    contract: contract.sol
+    instance: C 
+
+- name: create1
+  call:
+    destination: $deployC
+    function: createD 
+    data: []
+    bin: $deployC
