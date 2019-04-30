@@ -430,7 +430,7 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 		logger.InfoMsg("Function call to constant function, query-contract type job will be faster than call")
 	}
 
-	logger.InfoMsg("Calling",
+	logger.TraceMsg("Calling",
 		"destination", call.Destination,
 		"function", call.Function,
 		"data", callData)
@@ -568,7 +568,7 @@ func logEvents(txe *exec.TxExecution, client *def.Client, logger *logging.Logger
 				val := vals[i].(*string)
 				fields = append(fields, *val)
 			}
-			logger.InfoMsg("EVM Event", fields...)
+			logger.TraceMsg("EVM Event", fields...)
 		}
 	}
 }
