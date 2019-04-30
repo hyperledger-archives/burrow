@@ -192,7 +192,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 		switch {
 		case len(resp.Objects) == 1:
 			response := resp.Objects[0]
-			logger.InfoMsg("Deploying the single contract from solidity file",
+			logger.TraceMsg("Deploying the single contract from solidity file",
 				"path", contractPath,
 				"abi", string(response.Contract.Abi),
 				"bin", response.Contract.Evm.Bytecode.Object)
@@ -251,7 +251,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 					if response.Contract.Evm.Bytecode.Object == "" {
 						return nil, nil, errCodeMissing
 					}
-					logger.InfoMsg("Deploy contract",
+					logger.TraceMsg("Deploy contract",
 						"contract", response.Objectname,
 						"Abi", string(response.Contract.Abi),
 						"Bin", response.Contract.Evm.Bytecode.Object)

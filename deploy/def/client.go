@@ -424,7 +424,12 @@ type CallArg struct {
 }
 
 func (c *Client) Call(arg *CallArg, logger *logging.Logger) (*payload.CallTx, error) {
-	logger.InfoMsg("CallTx", "call", arg)
+	logger.TraceMsg("CallTx",
+		"input", arg.Input,
+		"amount", arg.Amount,
+		"sequence", arg.Sequence,
+		"address", arg.Address,
+		"data", arg.Data)
 	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true, logger)
 	if err != nil {
 		return nil, err
