@@ -173,7 +173,7 @@ func (l *remoteKeyClient) GetAddressForKeyName(keyName string) (keyAddress crypt
 	return crypto.Address{}, fmt.Errorf("`%s` is neither an address or a known key name", keyName)
 }
 
-// Returns nil if the keys instance is healthy, error otherwise
+// HealthCheck returns nil if the keys instance is healthy, error otherwise
 func (l *remoteKeyClient) HealthCheck() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -181,8 +181,7 @@ func (l *remoteKeyClient) HealthCheck() error {
 	return err
 }
 
-// keyClient.New returns a new monax-keys client for provided rpc location
-// Monax-keys connects over http request-responses
+// NewRemoteKeyClient returns a new keys client for provided rpc location
 func NewRemoteKeyClient(rpcAddress string, logger *logging.Logger) (KeyClient, error) {
 	logger = logger.WithScope("RemoteKeyClient")
 	var opts []grpc.DialOption
@@ -196,6 +195,7 @@ func NewRemoteKeyClient(rpcAddress string, logger *logging.Logger) (KeyClient, e
 	return &remoteKeyClient{kc: kc, rpcAddress: rpcAddress, logger: logger}, nil
 }
 
+// NewLocalKeyClient returns a new keys client, backed by the local filesystem
 func NewLocalKeyClient(ks *KeyStore, logger *logging.Logger) KeyClient {
 	logger = logger.WithScope("LocalKeyClient")
 	return &localKeyClient{ks: ks, logger: logger}
@@ -207,7 +207,7 @@ type Signer struct {
 	publicKey crypto.PublicKey
 }
 
-// Creates a AddressableSigner that assumes the address holds an Ed25519 key
+// AddressableSigner creates a signer that assumes the address holds an Ed25519 key
 func AddressableSigner(keyClient KeyClient, address crypto.Address) (*Signer, error) {
 	publicKey, err := keyClient.PublicKey(address)
 	if err != nil {
