@@ -22,6 +22,8 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -43,6 +45,7 @@ import (
 	"github.com/streadway/simpleuuid"
 	"github.com/tendermint/tendermint/blockchain"
 	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/p2p"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
@@ -200,6 +203,44 @@ func (kern *Kernel) LoadDump(genesisDoc *genesis.GenesisDoc, restoreFile string,
 	kern.Logger.InfoMsg("State restore successful -> height 0",
 		"state_hash", kern.State.Hash())
 	return nil
+}
+
+// DialPeersFromGenesis allows us to autoconnect local validators on start
+func (kern *Kernel) DialPeersFromGenesis(nodes []string) {
+	pb := make(map[string]string, len(nodes))
+	for _, entry := range nodes {
+		target := strings.Split(entry, "=")
+		if len(target) != 2 {
+			kern.Logger.InfoMsg(fmt.Sprintf("Entry '%s' is not valid", entry))
+		}
+		pb[target[0]] = target[1]
+	}
+
+	validators := kern.Blockchain.GenesisDoc().Validators
+	for _, val := range validators {
+		if _, ok := pb[val.Name]; !ok {
+			continue
+		}
+		host, port, err := net.SplitHostPort(pb[val.Name])
+		if err != nil {
+			kern.Logger.InfoMsg(fmt.Sprintf("Cannot parse host '%s'", pb[val.Name]))
+		}
+		portNum, err := strconv.ParseUint(port, 10, 16)
+		if err != nil {
+			kern.Logger.InfoMsg(fmt.Sprintf("Cannot parse port '%s'", port))
+		}
+		nodeAddress := strings.ToLower(val.NodeAddress.String())
+		err = kern.Node.Switch().DialPeerWithAddress(&p2p.NetAddress{
+			ID:   p2p.ID(nodeAddress),
+			IP:   net.ParseIP(host),
+			Port: uint16(portNum),
+		}, true)
+		if err != nil {
+			kern.Logger.InfoMsg("Could not connect to peer", host, val.Name, err.Error())
+		}
+	}
+
+	return
 }
 
 // GetNodeView builds and returns a wrapper of our tendermint node

@@ -12,7 +12,9 @@ func Start(output Output) func(cmd *cli.Cmd) {
 
 		configOpt := cmd.StringOpt("c config", "", "Use the specified burrow config file")
 
-		cmd.Spec = "[--config=<config file>] [--genesis=<genesis json file>]"
+		dialOpt := cmd.StringsOpt("d dial", nil, "Dial the specified moniker on a given host address (moniker=host)")
+
+		cmd.Spec = "[--config=<config file>] [--genesis=<genesis json file>] [--dial=<moniker=host>]"
 
 		configOpts := addConfigOptions(cmd)
 
@@ -40,6 +42,11 @@ func Start(output Output) func(cmd *cli.Cmd) {
 
 			if err = kern.Boot(); err != nil {
 				output.Fatalf("could not boot Burrow kernel: %v", err)
+			}
+
+			// dialOpt should be of the form moniker=host
+			if pb := *dialOpt; len(pb) > 0 {
+				kern.DialPeersFromGenesis(pb)
 			}
 
 			kern.WaitForShutdown()

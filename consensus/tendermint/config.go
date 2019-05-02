@@ -11,9 +11,9 @@ import (
 	tmConfig "github.com/tendermint/tendermint/config"
 )
 
-// Burrow's view on Tendermint's config. Since we operate as a Tendermint harness not all configuration values
-// are applicable, we may not allow some values to specified, or we may not allow some to be set independently.
-// So this serves as a layer of indirection over Tendermint's real config that we derive from ours.
+// BurrowTendermintConfig is our view on Tendermint's config. Since we operate as a Tendermint harness not all
+// configuration values are applicable, we may not allow some values to specified, or we may not allow some to
+// be set independently. So this serves as a layer of indirection over Tendermint's real config that we derive from ours.
 type BurrowTendermintConfig struct {
 	Enabled bool
 	// Initial peers we connect to for peer exchange
@@ -22,14 +22,16 @@ type BurrowTendermintConfig struct {
 	SeedMode bool
 	// Peers to which we automatically connect
 	PersistentPeers string
-	ListenHost      string
-	ListenPort      string
+	// Address for incoming peer connections
+	ListenHost string
+	ListenPort string
 	// Optional external that nodes may provide with their NodeInfo
 	ExternalAddress string
 	// Set true for strict address routability rules
 	// Set false for private or local networks
 	AddrBookStrict bool
-	Moniker        string
+	// Human readable node name
+	Moniker string
 	// Peers ID or address this node is authorize to sync with
 	AuthorizedPeers string
 	// EmptyBlocks mode and possible interval between empty blocks in seconds
