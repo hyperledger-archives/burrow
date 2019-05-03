@@ -1,5 +1,5 @@
 package types
 
 // EventTables contains SQL tables definition
-// (-> the event name maps to SQL table)
+// Map from TableName to SQLTable
 type EventTables map[string]*SQLTable

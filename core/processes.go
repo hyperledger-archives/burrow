@@ -7,11 +7,8 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/bcm"
-
-	"github.com/hyperledger/burrow/execution"
-
 	"github.com/hyperledger/burrow/consensus/abci"
-
+	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/process"
@@ -25,7 +22,7 @@ import (
 	"github.com/hyperledger/burrow/rpc/rpctransact"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/tendermint/version"
-	"github.com/tmthrgd/go-hex"
+	hex "github.com/tmthrgd/go-hex"
 )
 
 const (
@@ -59,7 +56,7 @@ func ProfileLauncher(kern *Kernel, conf *rpc.ServerConfig) process.Launcher {
 		Enabled: conf.Enabled,
 		Launch: func() (process.Process, error) {
 			debugServer := &http.Server{
-				Addr: conf.ListenAddress,
+				Addr: fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort),
 			}
 			go func() {
 				err := debugServer.ListenAndServe()
@@ -180,13 +177,17 @@ func StartupLauncher(kern *Kernel) process.Launcher {
 
 			genesisDoc := kern.Blockchain.GenesisDoc()
 			info := kern.Node.NodeInfo()
+			netAddress, err := info.NetAddress()
+			if err != nil {
+				return nil, err
+			}
 			logger := kern.Logger.With(
 				"launch_time", start,
 				"burrow_version", project.FullVersion(),
-				"tendermint_version", version.TMCoreSemVer,
+				"tendermint_version", version.Version,
 				"validator_address", nodeView.ValidatorAddress(),
 				"node_id", string(info.ID()),
-				"net_address", info.NetAddress().String(),
+				"net_address", netAddress.String(),
 				"genesis_app_hash", genesisDoc.AppHash.String(),
 				"genesis_hash", hex.EncodeUpperToString(genesisDoc.Hash()),
 			)
@@ -202,7 +203,7 @@ func InfoLauncher(kern *Kernel, conf *rpc.ServerConfig) process.Launcher {
 		Name:    InfoProcessName,
 		Enabled: conf.Enabled,
 		Launch: func() (process.Process, error) {
-			listener, err := process.ListenerFromAddress(conf.ListenAddress)
+			listener, err := process.ListenerFromAddress(fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort))
 			if err != nil {
 				return nil, err
 			}
@@ -224,7 +225,7 @@ func MetricsLauncher(kern *Kernel, conf *rpc.MetricsConfig) process.Launcher {
 		Name:    MetricsProcessName,
 		Enabled: conf.Enabled,
 		Launch: func() (process.Process, error) {
-			listener, err := process.ListenerFromAddress(conf.ListenAddress)
+			listener, err := process.ListenerFromAddress(fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort))
 			if err != nil {
 				return nil, err
 			}
@@ -252,7 +253,7 @@ func GRPCLauncher(kern *Kernel, conf *rpc.ServerConfig, keyConfig *keys.KeysConf
 				return nil, err
 			}
 
-			listener, err := process.ListenerFromAddress(conf.ListenAddress)
+			listener, err := process.ListenerFromAddress(fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort))
 			if err != nil {
 				return nil, err
 			}

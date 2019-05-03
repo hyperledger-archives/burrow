@@ -21,23 +21,25 @@ var cdc = amino.NewCodec()
 
 func Dump(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
-		chainURLOpt := cmd.StringOpt("u chain-url", "127.0.0.1:10997", "chain-url to be used in IP:PORT format")
+		chainURLOpt := cmd.StringOpt("c chain", "127.0.0.1:10997", "chain to be used in IP:PORT format")
 		heightOpt := cmd.IntOpt("h height", 0, "Block height to dump to, defaults to latest block height")
 		filename := cmd.StringArg("FILE", "", "Save dump here")
 		useJSON := cmd.BoolOpt("j json", false, "Output in json")
-
-		timeoutOpt := cmd.IntOpt("t timeout", 10, "GRPC timeout in seconds (default 10)")
-		timeout := time.Duration(*timeoutOpt)
+		timeoutOpt := cmd.IntOpt("t timeout", 0, "GRPC timeout in seconds")
 
 		s := state.NewState(db.NewMemDB())
 
 		cmd.Action = func() {
-			ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
+			ctx, cancel := context.WithCancel(context.Background())
+			if *timeoutOpt != 0 {
+				timeout := time.Duration(*timeoutOpt) * time.Second
+				ctx, cancel = context.WithTimeout(context.Background(), timeout)
+			}
 			defer cancel()
 
 			var opts []grpc.DialOption
 			opts = append(opts, grpc.WithInsecure())
-			conn, err := grpc.Dial(*chainURLOpt, opts...)
+			conn, err := grpc.DialContext(ctx, *chainURLOpt, opts...)
 			if err != nil {
 				output.Fatalf("failed to connect: %v", err)
 				return

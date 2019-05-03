@@ -1,0 +1,13 @@
+jobs:
+
+- name: deployC
+  deploy:
+    contract: contract.sol
+    instance: C 
+
+- name: create1
+  call:
+    destination: $deployC
+    function: createD 
+    data: []
+    bin: $deployC

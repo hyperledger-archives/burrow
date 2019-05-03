@@ -1,6 +1,7 @@
 package tendermint
 
 import (
+	"fmt"
 	"math"
 	"net/url"
 	"strings"
@@ -21,7 +22,8 @@ type BurrowTendermintConfig struct {
 	SeedMode bool
 	// Peers to which we automatically connect
 	PersistentPeers string
-	ListenAddress   string
+	ListenHost      string
+	ListenPort      string
 	// Optional external that nodes may provide with their NodeInfo
 	ExternalAddress string
 	// Set true for strict address routability rules
@@ -37,9 +39,14 @@ type BurrowTendermintConfig struct {
 
 func DefaultBurrowTendermintConfig() *BurrowTendermintConfig {
 	tmDefaultConfig := tmConfig.DefaultConfig()
+	url, err := url.ParseRequestURI(tmDefaultConfig.P2P.ListenAddress)
+	if err != nil {
+		return nil
+	}
 	return &BurrowTendermintConfig{
 		Enabled:                   true,
-		ListenAddress:             tmDefaultConfig.P2P.ListenAddress,
+		ListenHost:                url.Hostname(),
+		ListenPort:                url.Port(),
 		ExternalAddress:           tmDefaultConfig.P2P.ExternalAddress,
 		CreateEmptyBlocks:         tmDefaultConfig.Consensus.CreateEmptyBlocks,
 		CreateEmptyBlocksInterval: tmDefaultConfig.Consensus.CreateEmptyBlocksInterval,
@@ -72,7 +79,7 @@ func (btc *BurrowTendermintConfig) Config(rootDir string, timeoutFactor float64)
 		conf.P2P.Seeds = btc.Seeds
 		conf.P2P.SeedMode = btc.SeedMode
 		conf.P2P.PersistentPeers = btc.PersistentPeers
-		conf.P2P.ListenAddress = btc.ListenAddress
+		conf.P2P.ListenAddress = fmt.Sprintf("%s:%s", btc.ListenHost, btc.ListenPort)
 		conf.P2P.ExternalAddress = btc.ExternalAddress
 		conf.P2P.AddrBookStrict = btc.AddrBookStrict
 		// We use this in tests and I am not aware of a strong reason to reject nodes on the same IP with different ports

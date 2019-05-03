@@ -6,12 +6,12 @@ services:
       - 5432
 
   burrow:
-    image: hyperledger/burrow:ci
+    build: .circleci
     environment:
       DB_URL: "postgres://postgres@db:5432/postgres?sslmode=disable"
+      GO111MODULE: "on"
     depends_on:
       - db
     volumes:
     - .:/go/src/github.com/hyperledger/burrow
-#    - /var/run/docker.sock:/var/run/docker.sock
     working_dir: /go/src/github.com/hyperledger/burrow

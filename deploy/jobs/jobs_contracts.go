@@ -45,7 +45,7 @@ func BuildJob(build *def.Build, deployScript *def.Playbook, resp *compilers.Resp
 	binP := build.BinPath
 	if binP == "" {
 		binP = deployScript.BinPath
-
+	} else {
 		if _, err := os.Stat(binP); os.IsNotExist(err) {
 			if err := os.Mkdir(binP, 0775); err != nil {
 				return "", err
@@ -57,7 +57,7 @@ func BuildJob(build *def.Build, deployScript *def.Playbook, resp *compilers.Resp
 		switch build.Instance {
 		case "":
 			if res.Filename != build.Contract {
-				logger.TraceMsg("Ignoring output for differint solidity file", "found", res.Filename, "expected", build.Contract)
+				logger.TraceMsg("Ignoring output for different solidity file", "found", res.Filename, "expected", build.Contract)
 				continue
 			}
 		case "all":
@@ -78,6 +78,12 @@ func BuildJob(build *def.Build, deployScript *def.Playbook, resp *compilers.Resp
 		if build.Store != "" {
 			dir := filepath.Dir(build.Store)
 			file := filepath.Base(build.Store)
+
+			if _, err := os.Stat(dir); os.IsNotExist(err) {
+				if err := os.Mkdir(dir, 0775); err != nil {
+					return "", err
+				}
+			}
 
 			err = res.Contract.Save(dir, file)
 			if err != nil {
@@ -186,7 +192,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 		switch {
 		case len(resp.Objects) == 1:
 			response := resp.Objects[0]
-			logger.InfoMsg("Deploying the single contract from solidity file",
+			logger.TraceMsg("Deploying the single contract from solidity file",
 				"path", contractPath,
 				"abi", string(response.Contract.Abi),
 				"bin", response.Contract.Evm.Bytecode.Object)
@@ -245,7 +251,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 					if response.Contract.Evm.Bytecode.Object == "" {
 						return nil, nil, errCodeMissing
 					}
-					logger.InfoMsg("Deploy contract",
+					logger.TraceMsg("Deploy contract",
 						"contract", response.Objectname,
 						"Abi", string(response.Contract.Abi),
 						"Bin", response.Contract.Evm.Bytecode.Object)
@@ -362,6 +368,17 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 		}
 		callData := hex.EncodeToString(packedBytes)
 		contractCode = contractCode + callData
+	} else {
+		// No constructor arguments were provided. Did the constructor want any?
+		spec, err := abi.ReadAbiSpec(compilersResponse.Contract.Abi)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(spec.Constructor.Inputs) > 0 {
+			logger.InfoMsg("Constructor wants %d arguments but 0 provided", len(spec.Constructor.Inputs))
+			return nil, fmt.Errorf("Constructor wants %d arguments but 0 provided", len(spec.Constructor.Inputs))
+		}
 	}
 
 	return deployTx(client, deploy, compilersResponse.Objectname, contractCode, logger)
@@ -424,7 +441,7 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 		logger.InfoMsg("Function call to constant function, query-contract type job will be faster than call")
 	}
 
-	logger.InfoMsg("Calling",
+	logger.TraceMsg("Calling",
 		"destination", call.Destination,
 		"function", call.Function,
 		"data", callData)
@@ -562,7 +579,7 @@ func logEvents(txe *exec.TxExecution, client *def.Client, logger *logging.Logger
 				val := vals[i].(*string)
 				fields = append(fields, *val)
 			}
-			logger.InfoMsg("EVM Event", fields...)
+			logger.TraceMsg("EVM Event", fields...)
 		}
 	}
 }

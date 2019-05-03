@@ -79,8 +79,7 @@ protobuf_deps:
 # Implicit compile rule for GRPC/proto files (note since pb.go files no longer generated
 # in same directory as proto file this just regenerates everything
 %.pb.go: %.proto
-	cp -a vendor/github.com/gogo/protobuf/gogoproto/gogo.proto protobuf/github.com/gogo/protobuf/gogoproto/gogo.proto
-	protoc -I protobuf -I vendor $< --gogo_out=plugins=grpc:${GOPATH}/src
+	protoc -I ./protobuf $< --gogo_out=plugins=grpc:${GOPATH}/src
 
 .PHONY: protobuf
 protobuf: $(PROTO_GO_FILES)
@@ -88,25 +87,6 @@ protobuf: $(PROTO_GO_FILES)
 .PHONY: clean_protobuf
 clean_protobuf:
 	@rm -f $(PROTO_GO_FILES_REAL)
-
-### Dependency management for github.com/hyperledger/burrow
-# erase vendor wipes the full vendor directory
-.PHONY: erase_vendor
-erase_vendor:
-	rm -rf ${REPO}/vendor/
-
-# install vendor uses dep to install vendored dependencies
-.PHONY: reinstall_vendor
-reinstall_vendor: erase_vendor
-	@go get -u github.com/golang/dep/cmd/dep
-	@dep ensure -v
-
-# delete the vendor directy and pull back using dep lock and constraints file
-# will exit with an error if the working directory is not clean (any missing files or new
-# untracked ones)
-.PHONY: ensure_vendor protobuf
-ensure_vendor: reinstall_vendor
-	@scripts/is_checkout_dirty.sh
 
 ### Building github.com/hyperledger/burrow
 
@@ -237,7 +217,7 @@ NOTES.md: project/history.go project/cmd/notes/main.go
 docs: CHANGELOG.md NOTES.md
 
 # Tag the current HEAD commit with the current release defined in
-# ./release/release.go
+# ./project/history.go
 .PHONY: tag_release
 tag_release: test check CHANGELOG.md NOTES.md build
 	@scripts/tag_release.sh
@@ -260,4 +240,4 @@ push_ci_image: build_ci_image
 	docker push ${CI_IMAGE}
 
 .PHONY: ready_for_pull_request
-ready_for_pull_request: ensure_vendor docs fix
+ready_for_pull_request: docs fix

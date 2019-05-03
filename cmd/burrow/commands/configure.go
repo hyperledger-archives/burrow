@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/logging/logconfig/presets"
+	"github.com/hyperledger/burrow/rpc"
 	cli "github.com/jawher/mow.cli"
 	amino "github.com/tendermint/go-amino"
 	tmEd25519 "github.com/tendermint/tendermint/crypto/ed25519"
@@ -331,10 +332,19 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					conf.ValidatorAddress = &v.Address
 					conf.BurrowDir = fmt.Sprintf("burrow%03d", i)
 					conf.Tendermint.PersistentPeers = seeds
-					conf.Tendermint.ListenAddress = fmt.Sprintf("tcp://127.0.0.1:%d", 26656+i)
-					conf.RPC.Info.ListenAddress = fmt.Sprintf("tcp://127.0.0.1:%d", 26758+i)
-					conf.RPC.GRPC.ListenAddress = fmt.Sprintf("127.0.0.1:%d", 10997+i)
-					conf.RPC.Metrics.ListenAddress = fmt.Sprintf("tcp://127.0.0.1:%d", 9102+i)
+
+					conf.Tendermint.ListenHost = rpc.LocalHost
+					conf.Tendermint.ListenPort = fmt.Sprint(26656 + i)
+
+					conf.RPC.Info.ListenHost = rpc.LocalHost
+					conf.RPC.Info.ListenPort = fmt.Sprint(26758 + i)
+
+					conf.RPC.GRPC.ListenHost = rpc.LocalHost
+					conf.RPC.GRPC.ListenPort = fmt.Sprint(10997 + i)
+
+					conf.RPC.Metrics.ListenHost = rpc.LocalHost
+					conf.RPC.Metrics.ListenPort = fmt.Sprint(9102 + i)
+
 					conf.Logging.RootSink.Output.OutputType = "file"
 					conf.Logging.RootSink.Output.FileConfig = &logconfig.FileConfig{Path: fmt.Sprintf("burrow%03d.log", i)}
 

@@ -40,9 +40,9 @@ func ABIErrorHandler(err error, call *def.Call, query *def.QueryContract, logger
 			"rawErr", err)
 	case query != nil:
 		logger.InfoMsg("ABI Error",
-			"data", call.Data,
-			"bin", call.Bin,
-			"dest", call.Destination,
+			"data", query.Data,
+			"bin", query.Bin,
+			"dest", query.Destination,
 			"rawErr", err)
 	}
 

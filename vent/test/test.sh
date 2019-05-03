@@ -3,7 +3,8 @@
 # This script provides a simple running test chain that will generate height notification events
 # Run postgres in background with: docker run -p 5432:5432 postgres
 
-vent_test_dir="$GOPATH/src/github.com/hyperledger/burrow/vent/test"
+REPO=${REPO:-"$PWD"}
+vent_test_dir="$REPO/vent/test"
 [[ ! -f burrow.toml ]] && burrow spec -f1 | burrow configure -s- > burrow.toml && rm -rf .burrow
 burrow start -v0 &> burrow.log &
 sleep 2s

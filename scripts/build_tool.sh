@@ -26,7 +26,7 @@ script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 . "$script_dir/local_version.sh" > /dev/null
 
 DOCKER_REPO=${DOCKER_REPO:-"hyperledger/burrow"}
-REPO=${REPO:-"$GOPATH/src/github.com/hyperledger/burrow"}
+REPO=${REPO:-"$PWD"}
 
 function log() {
     echo "$*" >> /dev/stderr

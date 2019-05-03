@@ -5,6 +5,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/vent/config"
@@ -35,6 +36,8 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				specFileOrDirOpt := cmd.StringsOpt("spec", cfg.SpecFileOrDirs, "SQLSol specification file or folder")
 				dbBlockTxOpt := cmd.BoolOpt("db-block", cfg.DBBlockTx, "Create block & transaction tables and persist related data (true/false)")
 
+				announceEveryOpt := cmd.StringOpt("announce-every", "5s", "Announce vent status every period as a Go duration, e.g. 1ms, 3s, 1h")
+
 				cmd.Before = func() {
 					// Rather annoying boilerplate here... but there is no way to pass mow.cli a pointer for it to fill you value
 					cfg.DBAdapter = *dbAdapterOpt
@@ -46,10 +49,18 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					cfg.AbiFileOrDirs = *abiFileOpt
 					cfg.SpecFileOrDirs = *specFileOrDirOpt
 					cfg.DBBlockTx = *dbBlockTxOpt
+
+					if *announceEveryOpt != "" {
+						var err error
+						cfg.AnnounceEvery, err = time.ParseDuration(*announceEveryOpt)
+						if err != nil {
+							output.Fatalf("could not parse announce-every duration %s: %v", *announceEveryOpt, err)
+						}
+					}
 				}
 
 				cmd.Spec = "--spec=<spec file or dir> --abi=<abi file or dir> [--db-adapter] [--db-url] [--db-schema] " +
-					"[--db-block] [--grpc-addr] [--http-addr] [--log-level]"
+					"[--db-block] [--grpc-addr] [--http-addr] [--log-level] [--announce-every=<duration>]"
 
 				cmd.Action = func() {
 					log := logger.NewLogger(cfg.LogLevel)
