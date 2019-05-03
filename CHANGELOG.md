@@ -1,7 +1,15 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
-## [Unreleased]
-### Added
-- [CLI] Introduced burrow configure --pool for generation of multiple validator configs suitable for running on a single (or many) machines
+## [0.25.1] - 2019-05-03
+### Changed
+- [Config] Split ListenAddress into ListenHost and ListenPort to ease parsing in the Helm charts
+- [CLI] Burrow restore now always fails if state is detected but can be made --silent
+- [CLI] No dump client timeout by default
+- [Deploy] Reduced the default logging level to trace instead of info
+- [Build] Switched to Go modules
+
+### Fixed
+- [Keys] Resolved an issue where the keyStore wasn't built when using the remote keys client.
+- [Deploy] Fix nil dereference in query error path, check constructor args in BuildJob
 
 
 ## [0.25.0] - 2019-04-05
@@ -12,6 +20,7 @@
 - [Kernel] Refactored and various exported methods changed
 
 ### Added
+- [CLI] Introduced burrow configure --pool for generation of multiple validator configs suitable for running on a single (or many) machines
 - [CLI] Burrow deploy can now run multiple burrow deploy files (aka playbooks) and run them in parallel
 - [Consensus] Now possible to run Burrow without Tendermint in 'NoConsensus' mode by setting Tendermint.Enabled = false  for faster local testing. Execution.TimeoutFactor can be used to control how regularly Burrow commits (and is used 
 
@@ -458,7 +467,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
-[Unreleased]: https://github.com/hyperledger/burrow/compare/v0.25.0...HEAD
+[0.25.1]: https://github.com/hyperledger/burrow/compare/v0.25.0...v0.25.1
 [0.25.0]: https://github.com/hyperledger/burrow/compare/v0.24.6...v0.25.0
 [0.24.6]: https://github.com/hyperledger/burrow/compare/v0.24.5...v0.24.6
 [0.24.5]: https://github.com/hyperledger/burrow/compare/v0.24.4...v0.24.5

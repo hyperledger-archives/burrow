@@ -1,15 +1,11 @@
 ### Changed
-- [Tendermint] Upgraded to 0.31.2
-- [IAVL] upgraded to 0.12.2
-- [Config] Tendermint.TimeoutFactor moved to Execution.TimeoutFactor (and reused for NoConsensus mode)
-- [Kernel] Refactored and various exported methods changed
-
-### Added
-- [CLI] Burrow deploy can now run multiple burrow deploy files (aka playbooks) and run them in parallel
-- [Consensus] Now possible to run Burrow without Tendermint in 'NoConsensus' mode by setting Tendermint.Enabled = false  for faster local testing. Execution.TimeoutFactor can be used to control how regularly Burrow commits (and is used 
+- [Config] Split ListenAddress into ListenHost and ListenPort to ease parsing in the Helm charts
+- [CLI] Burrow restore now always fails if state is detected but can be made --silent
+- [CLI] No dump client timeout by default
+- [Deploy] Reduced the default logging level to trace instead of info
+- [Build] Switched to Go modules
 
 ### Fixed
-- [Execution] Fixed uint64 underflow (when subtracting fee from balance) not protected against in CallContext
-- [Tests] Various concurrency issues fixed in tests and execution tests parallelised
-
+- [Keys] Resolved an issue where the keyStore wasn't built when using the remote keys client.
+- [Deploy] Fix nil dereference in query error path, check constructor args in BuildJob
 
