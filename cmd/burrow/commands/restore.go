@@ -16,7 +16,7 @@ func Restore(output Output) func(cmd *cli.Cmd) {
 
 		filename := cmd.StringArg("FILE", "", "Restore from this dump")
 
-		cmd.Spec = "[--config=<config file>] [--genesis=<genesis json file>] [FILE]"
+		cmd.Spec = "[--config=<config file>] [--genesis=<genesis json file>] [--silent] [FILE]"
 
 		configOpts := addConfigOptions(cmd)
 
