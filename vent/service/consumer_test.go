@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testConsumer(t *testing.T, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
+func testConsumer(t *testing.T, chainid string, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
 	create := test.CreateContract(t, tcli, inputAddress)
 
 	// generate events
@@ -44,7 +44,7 @@ func testConsumer(t *testing.T, cfg *config.VentConfig, tcli rpctransact.Transac
 	txeB := test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
 
 	// create test db
-	db, closeDB := test.NewTestDB(t, cfg)
+	db, closeDB := test.NewTestDB(t, chainid, cfg)
 	defer closeDB()
 
 	// Run the consumer
@@ -55,6 +55,7 @@ func testConsumer(t *testing.T, cfg *config.VentConfig, tcli rpctransact.Transac
 
 	blockID := txeA.Height
 	eventData, err := db.GetBlock(blockID)
+
 	require.NoError(t, err)
 	require.Equal(t, blockID, eventData.BlockHeight)
 	require.Equal(t, 3, len(eventData.Tables))
@@ -91,11 +92,11 @@ func testConsumer(t *testing.T, cfg *config.VentConfig, tcli rpctransact.Transac
 	require.NoError(t, err)
 }
 
-func testDeleteEvent(t *testing.T, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
+func testDeleteEvent(t *testing.T, chainid string, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
 	create := test.CreateContract(t, tcli, inputAddress)
 
 	// create test db
-	db, closeDB := test.NewTestDB(t, cfg)
+	db, closeDB := test.NewTestDB(t, chainid, cfg)
 	defer closeDB()
 
 	// test data stored in database for two different block ids
@@ -135,8 +136,8 @@ func testDeleteEvent(t *testing.T, cfg *config.VentConfig, tcli rpctransact.Tran
 	require.Equal(t, 0, len(tblData))
 }
 
-func testResume(t *testing.T, cfg *config.VentConfig) {
-	_, closeDB := test.NewTestDB(t, cfg)
+func testResume(t *testing.T, chainid string, cfg *config.VentConfig) {
+	_, closeDB := test.NewTestDB(t, chainid, cfg)
 	defer closeDB()
 
 	numRestarts := 6
@@ -155,7 +156,7 @@ func testResume(t *testing.T, cfg *config.VentConfig) {
 	}
 }
 
-func testInvalidUTF8(t *testing.T, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
+func testInvalidUTF8(t *testing.T, chainid string, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
 	create := test.CreateContract(t, tcli, inputAddress)
 
 	// The code point for ó is less than 255 but needs two unicode bytes - it's value expressed as a single byte
@@ -168,7 +169,7 @@ func testInvalidUTF8(t *testing.T, cfg *config.VentConfig, tcli rpctransact.Tran
 	test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
 
 	// create test db
-	_, closeDB := test.NewTestDB(t, cfg)
+	_, closeDB := test.NewTestDB(t, chainid, cfg)
 	defer closeDB()
 
 	// Run the consumer with this event - this used to create an error on UPSERT

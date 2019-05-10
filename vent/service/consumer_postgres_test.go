@@ -33,19 +33,19 @@ func TestPostgresConsumer(t *testing.T) {
 
 	t.Run("Group", func(t *testing.T) {
 		t.Run("PostgresConsumer", func(t *testing.T) {
-			testConsumer(t, test.PostgresVentConfig(grpcAddress), tcli, inputAddress)
+			testConsumer(t, kern.Blockchain.ChainID(), test.PostgresVentConfig(grpcAddress), tcli, inputAddress)
 		})
 
 		t.Run("PostgresInvalidUTF8", func(t *testing.T) {
-			testInvalidUTF8(t, test.PostgresVentConfig(grpcAddress), tcli, inputAddress)
+			testInvalidUTF8(t, kern.Blockchain.ChainID(), test.PostgresVentConfig(grpcAddress), tcli, inputAddress)
 		})
 
 		t.Run("PostgresDeleteEvent", func(t *testing.T) {
-			testDeleteEvent(t, test.PostgresVentConfig(grpcAddress), tcli, inputAddress)
+			testDeleteEvent(t, kern.Blockchain.ChainID(), test.PostgresVentConfig(grpcAddress), tcli, inputAddress)
 		})
 
 		t.Run("PostgresResume", func(t *testing.T) {
-			testResume(t, test.PostgresVentConfig(grpcAddress))
+			testResume(t, kern.Blockchain.ChainID(), test.PostgresVentConfig(grpcAddress))
 		})
 
 		t.Run("PostgresTriggers", func(t *testing.T) {
@@ -59,7 +59,7 @@ func TestPostgresConsumer(t *testing.T) {
 
 			cfg := test.PostgresVentConfig(grpcAddress)
 			// create test db
-			_, closeDB := test.NewTestDB(t, cfg)
+			_, closeDB := test.NewTestDB(t, kern.Blockchain.ChainID(), cfg)
 			defer closeDB()
 
 			// Create a postgres notification listener

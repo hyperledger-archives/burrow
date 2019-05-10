@@ -24,7 +24,7 @@ func testSynchronizeDB(t *testing.T, cfg *config.VentConfig) {
 			tableStructure, err := sqlsol.NewProjectionFromBytes(byteValue)
 			require.NoError(t, err)
 
-			db, cleanUpDB := test.NewTestDB(t, cfg)
+			db, cleanUpDB := test.NewTestDB(t, "CHAIN 123", cfg)
 			defer cleanUpDB()
 
 			err = db.Ping()
@@ -42,7 +42,7 @@ func testCleanDB(t *testing.T, cfg *config.VentConfig) {
 			tableStructure, err := sqlsol.NewProjectionFromBytes(byteValue)
 			require.NoError(t, err)
 
-			db, cleanUpDB := test.NewTestDB(t, cfg)
+			db, cleanUpDB := test.NewTestDB(t, "CHAIN 123", cfg)
 			defer cleanUpDB()
 
 			err = db.Ping()
@@ -59,7 +59,7 @@ func testCleanDB(t *testing.T, cfg *config.VentConfig) {
 func testSetBlock(t *testing.T, cfg *config.VentConfig) {
 	t.Run(fmt.Sprintf("%s: successfully inserts a block", cfg.DBAdapter),
 		func(t *testing.T) {
-			db, closeDB := test.NewTestDB(t, cfg)
+			db, closeDB := test.NewTestDB(t, "CHAIN 123", cfg)
 			defer closeDB()
 
 			errp := db.Ping()
@@ -90,7 +90,7 @@ func testSetBlock(t *testing.T, cfg *config.VentConfig) {
 		})
 
 	t.Run(fmt.Sprintf("%s: successfully creates an empty table", cfg.DBAdapter), func(t *testing.T) {
-		db, closeDB := test.NewTestDB(t, cfg)
+		db, closeDB := test.NewTestDB(t, "CHAIN 123", cfg)
 		defer closeDB()
 
 		errp := db.Ping()

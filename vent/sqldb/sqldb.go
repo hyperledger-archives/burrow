@@ -18,6 +18,7 @@ type SQLDB struct {
 	DB        *sql.DB
 	DBAdapter adapters.DBAdapter
 	Schema    string
+	ChainID   string
 	Log       *logger.Logger
 }
 
@@ -25,8 +26,9 @@ type SQLDB struct {
 // opens database connection and create log tables
 func NewSQLDB(connection types.SQLConnection) (*SQLDB, error) {
 	db := &SQLDB{
-		Schema: connection.DBSchema,
-		Log:    connection.Log,
+		Schema:  connection.DBSchema,
+		ChainID: connection.ChainID,
+		Log:     connection.Log,
 	}
 
 	var url string
@@ -93,7 +95,7 @@ func NewSQLDB(connection types.SQLConnection) (*SQLDB, error) {
 	return db, nil
 }
 
-// CleanTables, drop tables if stored chainID is different from the given one & store new chainID
+// CleanTables drop tables if stored chainID is different from the given one & store new chainID
 // if the chainID is the same, do nothing
 func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
 
@@ -235,14 +237,14 @@ func (db *SQLDB) Ping() error {
 	return nil
 }
 
-// GetLastBlockID returns last inserted blockId from log table
+// GetLastBlockHeight returns last inserted blockId from log table
 func (db *SQLDB) GetLastBlockHeight() (uint64, error) {
 	query := db.DBAdapter.LastBlockIDQuery()
 	id := ""
 
 	db.Log.Info("msg", "MAX ID", "query", query)
 
-	if err := db.DB.QueryRow(query).Scan(&id); err != nil {
+	if err := db.DB.QueryRow(query, db.ChainID).Scan(&id); err != nil {
 		db.Log.Info("msg", "Error selecting last block id", "err", err)
 		return 0, err
 	}
@@ -360,9 +362,9 @@ loop:
 			eventName, _ := row.RowData[types.SQLColumnLabelEventName].(string)
 			// Insert in log
 			db.Log.Info("msg", "INSERT LOG", "query", logQuery, "value",
-				fmt.Sprintf("tableName = %s eventName = %s block = %d", safeTable, en, eventData.BlockHeight))
+				fmt.Sprintf("chainid = %s tableName = %s eventName = %s block = %d", db.ChainID, safeTable, en, eventData.BlockHeight))
 
-			if _, err = logStmt.Exec(safeTable, eventName, row.EventClass.GetFilter(), eventData.BlockHeight, txHash,
+			if _, err = logStmt.Exec(db.ChainID, safeTable, eventName, row.EventClass.GetFilter(), eventData.BlockHeight, txHash,
 				row.Action, jsonData, query, sqlValues); err != nil {
 				db.Log.Info("msg", "Error inserting into log", "err", err)
 				break loop // exits from all loops -> continue in close log stmt
@@ -431,7 +433,7 @@ func (db *SQLDB) GetBlock(height uint64) (types.EventData, error) {
 	data.Tables = make(map[string]types.EventDataTable)
 
 	// get all table structures involved in the block
-	tables, err := db.getBlockTables(height)
+	tables, err := db.getBlockTables(db.ChainID, height)
 	if err != nil {
 		return data, err
 	}

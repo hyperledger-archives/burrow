@@ -112,6 +112,7 @@ const (
 	EventTypeLabel = "eventType"
 
 	// block related
+	ChainIDLabel     = "chainid"
 	BlockHeightLabel = "height"
 	BlockHeaderLabel = "blockHeader"
 

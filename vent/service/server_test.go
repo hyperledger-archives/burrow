@@ -34,7 +34,7 @@ func TestServer(t *testing.T) {
 			cfg := config.DefaultVentConfig()
 
 			// create test db
-			_, closeDB := test.NewTestDB(t, cfg)
+			_, closeDB := test.NewTestDB(t, kern.Blockchain.ChainID(), cfg)
 			defer closeDB()
 
 			cfg.SpecFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_example.json"}
