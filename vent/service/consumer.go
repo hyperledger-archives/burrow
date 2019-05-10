@@ -255,6 +255,14 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 			// so check that condition to filter them
 			if txe.Exception == nil {
 
+				origin := txe.Origin
+				if origin == nil {
+					origin = &exec.Origin{
+						ChainID: c.DB.ChainID,
+						Height:  txe.Height,
+					}
+				}
+
 				// get events for a given transaction
 				for _, event := range txe.Events {
 
@@ -275,7 +283,7 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 								"filter", eventClass.Filter)
 
 							// unpack, decode & build event data
-							eventData, err := buildEventData(projection, eventClass, event, abiSpec, c.Log)
+							eventData, err := buildEventData(projection, eventClass, event, origin, abiSpec, c.Log)
 							if err != nil {
 								return errors.Wrapf(err, "Error building event data")
 							}

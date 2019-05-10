@@ -158,7 +158,7 @@ func (adapter *PostgresAdapter) CreateTableQuery(tableName string, columns []*ty
 func (adapter *PostgresAdapter) LastBlockIDQuery() string {
 	query := `
 		WITH ll AS (
-			SELECT MAX(%s) AS %s FROM %s.%s
+			SELECT MAX(%s) AS %s FROM %s.%s WHERE %s = $1
 		)
 		SELECT COALESCE(%s, '0') AS %s
 			FROM ll LEFT OUTER JOIN %s.%s log ON (ll.%s = log.%s);`
@@ -167,6 +167,7 @@ func (adapter *PostgresAdapter) LastBlockIDQuery() string {
 		types.SQLColumnLabelId,                // max
 		types.SQLColumnLabelId,                // as
 		adapter.Schema, types.SQLLogTableName, // from
+		types.SQLColumnLabelChainID,           // where
 		types.SQLColumnLabelHeight,            // coalesce
 		types.SQLColumnLabelHeight,            // as
 		adapter.Schema, types.SQLLogTableName, // from
@@ -244,24 +245,26 @@ func (adapter *PostgresAdapter) SelectRowQuery(tableName, fields, indexValue str
 // SelectLogQuery returns a query for selecting all tables involved in a block trn
 func (adapter *PostgresAdapter) SelectLogQuery() string {
 	query := `
-		SELECT DISTINCT %s,%s FROM %s.%s l WHERE %s = $1;`
+		SELECT DISTINCT %s,%s FROM %s.%s l WHERE %s = $1 AND %s = $2;`
 
 	return Cleanf(query,
 		types.SQLColumnLabelTableName, types.SQLColumnLabelEventName, // select
 		adapter.Schema, types.SQLLogTableName, // from
-		types.SQLColumnLabelHeight) // where
+		types.SQLColumnLabelHeight,
+		types.SQLColumnLabelChainID) // where
 }
 
 // InsertLogQuery returns a query to insert a row in log table
 func (adapter *PostgresAdapter) InsertLogQuery() string {
 	query := `
-		INSERT INTO %s.%s (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-		VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6 ,$7, $8, $9);`
+		INSERT INTO %s.%s (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+		VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6 ,$7, $8, $9, $10);`
 
 	return Cleanf(query,
 		adapter.Schema, types.SQLLogTableName, // insert
 		//fields
-		types.SQLColumnLabelTimeStamp, types.SQLColumnLabelTableName, types.SQLColumnLabelEventName, types.SQLColumnLabelEventFilter,
+		types.SQLColumnLabelTimeStamp,
+		types.SQLColumnLabelChainID, types.SQLColumnLabelTableName, types.SQLColumnLabelEventName, types.SQLColumnLabelEventFilter,
 		types.SQLColumnLabelHeight, types.SQLColumnLabelTxHash, types.SQLColumnLabelAction, types.SQLColumnLabelDataRow,
 		types.SQLColumnLabelSqlStmt, types.SQLColumnLabelSqlValues)
 }

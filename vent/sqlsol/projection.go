@@ -265,6 +265,11 @@ func getSQLType(evmSignature string, bytesToString bool) (types.SQLColumnType, i
 func getGlobalFieldMappings() []*types.EventFieldMapping {
 	return []*types.EventFieldMapping{
 		{
+			ColumnName: types.SQLColumnLabelChainID,
+			Field:      types.ChainIDLabel,
+			Type:       types.EventFieldTypeString,
+		},
+		{
 			ColumnName: types.SQLColumnLabelHeight,
 			Field:      types.BlockHeightLabel,
 			Type:       types.EventFieldTypeString,

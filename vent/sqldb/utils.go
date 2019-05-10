@@ -48,6 +48,11 @@ func (db *SQLDB) getSysTablesDefinition() types.EventTables {
 					Primary: true,
 				},
 				{
+					Name:   types.SQLColumnLabelChainID,
+					Type:   types.SQLColumnTypeVarchar,
+					Length: 100,
+				},
+				{
 					Name:    types.SQLColumnLabelTimeStamp,
 					Type:    types.SQLColumnTypeTimeStamp,
 					Primary: false,
@@ -292,7 +297,7 @@ func (db *SQLDB) alterTable(table *types.SQLTable) error {
 					return err
 				}
 				//insert log
-				_, err = db.DB.Exec(logQuery, table.Name, "", "", nil, nil, types.ActionAlterTable, jsonData, query, sqlValues)
+				_, err = db.DB.Exec(logQuery, table.Name, db.ChainID, "", "", nil, nil, types.ActionAlterTable, jsonData, query, sqlValues)
 				if err != nil {
 					db.Log.Info("msg", "Error inserting log", "err", err)
 					return err
@@ -358,7 +363,7 @@ func (db *SQLDB) createTable(table *types.SQLTable, isInitialise bool) error {
 		sqlValues, _ := db.getJSON(nil)
 
 		//insert log
-		_, err = db.DB.Exec(logQuery, table.Name, "", "", nil, nil, types.ActionCreateTable, jsonData, query, sqlValues)
+		_, err = db.DB.Exec(logQuery, table.Name, db.ChainID, "", "", nil, nil, types.ActionCreateTable, jsonData, query, sqlValues)
 		if err != nil {
 			db.Log.Info("msg", "Error inserting log", "err", err)
 			return err
@@ -416,13 +421,13 @@ func (db *SQLDB) getSelectQuery(table *types.SQLTable, height uint64) (string, e
 
 // getBlockTables return all SQL tables that have been involved
 // in a given batch transaction for a specific block
-func (db *SQLDB) getBlockTables(height uint64) (types.EventTables, error) {
+func (db *SQLDB) getBlockTables(chainid string, height uint64) (types.EventTables, error) {
 	tables := make(types.EventTables)
 
 	query := db.DBAdapter.SelectLogQuery()
-	db.Log.Info("msg", "QUERY LOG", "query", query, "value", height)
+	db.Log.Info("msg", "QUERY LOG", "query", query, "height", height, "chainid", chainid)
 
-	rows, err := db.DB.Query(query, height)
+	rows, err := db.DB.Query(query, height, chainid)
 	if err != nil {
 		db.Log.Info("msg", "Error querying log", "err", err)
 		return tables, err
