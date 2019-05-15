@@ -40,12 +40,10 @@ func NewTestDB(t *testing.T, chainid string, cfg *config.VentConfig) (*sqldb.SQL
 		DBURL:     cfg.DBURL,
 		DBSchema:  cfg.DBSchema,
 
-		Log:           logger.NewLogger(""),
-		ChainID:       chainid,
-		BurrowVersion: "Version 0.0",
+		Log: logger.NewLogger(""),
 	}
 
-	db, err := sqldb.NewSQLDB(connection)
+	db, err := sqldb.NewSQLDB(connection, chainid, "Version 0.0")
 	if err != nil {
 		require.NoError(t, err)
 	}

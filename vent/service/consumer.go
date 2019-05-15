@@ -83,15 +83,13 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 	c.Log.Info("msg", "Connecting to SQL database")
 
 	connection := types.SQLConnection{
-		DBAdapter:     c.Config.DBAdapter,
-		DBURL:         c.Config.DBURL,
-		DBSchema:      c.Config.DBSchema,
-		Log:           c.Log,
-		ChainID:       chainStatus.ChainID,
-		BurrowVersion: chainStatus.BurrowVersion,
+		DBAdapter: c.Config.DBAdapter,
+		DBURL:     c.Config.DBURL,
+		DBSchema:  c.Config.DBSchema,
+		Log:       c.Log,
 	}
 
-	c.DB, err = sqldb.NewSQLDB(connection)
+	c.DB, err = sqldb.NewSQLDB(connection, chainStatus.ChainID, chainStatus.BurrowVersion)
 	if err != nil {
 		return fmt.Errorf("error connecting to SQL database: %v", err)
 	}

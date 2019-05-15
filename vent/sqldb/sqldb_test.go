@@ -51,7 +51,7 @@ func testCleanDB(t *testing.T, cfg *config.VentConfig) {
 			err = db.SynchronizeDB(tableStructure.Tables)
 			require.NoError(t, err)
 
-			err = db.CleanTables("NEW_ID", "Version 1.0")
+			err = db.CleanTables("Version 1.0")
 			require.NoError(t, err)
 		})
 }

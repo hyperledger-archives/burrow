@@ -18,16 +18,16 @@ type SQLDB struct {
 	DB        *sql.DB
 	DBAdapter adapters.DBAdapter
 	Schema    string
-	ChainID   string
+	ChainID   string // needed for many sql queries
 	Log       *logger.Logger
 }
 
 // NewSQLDB delegates work to a specific database adapter implementation,
 // opens database connection and create log tables
-func NewSQLDB(connection types.SQLConnection) (*SQLDB, error) {
+func NewSQLDB(connection types.SQLConnection, chainid, burrowversion string) (*SQLDB, error) {
 	db := &SQLDB{
 		Schema:  connection.DBSchema,
-		ChainID: connection.ChainID,
+		ChainID: chainid,
 		Log:     connection.Log,
 	}
 
@@ -88,7 +88,7 @@ func NewSQLDB(connection types.SQLConnection) (*SQLDB, error) {
 		}
 	}
 
-	if err = db.CleanTables(connection.ChainID, connection.BurrowVersion); err != nil {
+	if err = db.CleanTables(burrowversion); err != nil {
 		db.Log.Info("msg", "Error cleaning tables", "err", err)
 		return nil, err
 	}
@@ -97,10 +97,10 @@ func NewSQLDB(connection types.SQLConnection) (*SQLDB, error) {
 
 // CleanTables drop tables if stored chainID is different from the given one & store new chainID
 // if the chainID is the same, do nothing
-func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
+func (db *SQLDB) CleanTables(burrowVersion string) error {
 
-	if chainID == "" {
-		return fmt.Errorf("error CHAIN ID cannot by empty")
+	if db.ChainID == "" {
+		return fmt.Errorf("error CHAIN ID cannot be empty")
 	}
 
 	cleanQueries := db.DBAdapter.CleanDBQueries()
@@ -124,14 +124,14 @@ func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
 	case savedRows == 0:
 		// Save new values and exit
 		query = cleanQueries.InsertChainIDQry
-		if _, err := db.DB.Exec(query, chainID, burrowVersion); err != nil {
+		if _, err := db.DB.Exec(query, db.ChainID, burrowVersion); err != nil {
 			db.Log.Info("msg", "Error inserting CHAIN ID", "err", err, "query", query)
 			return err
 		}
 		return nil
 
 	// if data equals previous version exit
-	case savedChainID == chainID:
+	case savedChainID == db.ChainID:
 		return nil
 
 	// clean database
@@ -157,7 +157,7 @@ func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
 
 		// Insert chainID
 		query = cleanQueries.InsertChainIDQry
-		if _, err := tx.Exec(query, chainID, burrowVersion); err != nil {
+		if _, err := tx.Exec(query, db.ChainID, burrowVersion); err != nil {
 			db.Log.Info("msg", "Error inserting CHAIN ID", "err", err, "query", query)
 			return err
 		}
