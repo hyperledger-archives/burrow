@@ -12,7 +12,7 @@ import (
 )
 
 // decodeEvent unpacks & decodes event data
-func decodeEvent(header *exec.Header, log *exec.LogEvent, abiSpec *abi.AbiSpec) (map[string]interface{}, error) {
+func decodeEvent(header *exec.Header, log *exec.LogEvent, origin *exec.Origin, abiSpec *abi.AbiSpec) (map[string]interface{}, error) {
 	// to prepare decoded data and map to event item name
 	data := make(map[string]interface{})
 
@@ -26,7 +26,8 @@ func decodeEvent(header *exec.Header, log *exec.LogEvent, abiSpec *abi.AbiSpec) 
 
 	// decode header to get context data for each event
 	data[types.EventNameLabel] = evAbi.Name
-	data[types.BlockHeightLabel] = fmt.Sprintf("%v", header.GetHeight())
+	data[types.ChainIDLabel] = origin.ChainID
+	data[types.BlockHeightLabel] = fmt.Sprintf("%v", origin.GetHeight())
 	data[types.EventTypeLabel] = header.GetEventType().String()
 	data[types.TxTxHashLabel] = header.TxHash.String()
 

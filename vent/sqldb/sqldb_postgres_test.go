@@ -32,7 +32,7 @@ func TestPostgresSetBlock(t *testing.T) {
 
 func TestPostgresBlockNotification(t *testing.T) {
 	cfg := test.PostgresVentConfig("")
-	db, closeDB := test.NewTestDB(t, cfg)
+	db, closeDB := test.NewTestDB(t, "Chain 123", cfg)
 	defer closeDB()
 
 	errp := db.Ping()

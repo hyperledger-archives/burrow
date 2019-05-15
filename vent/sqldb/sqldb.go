@@ -18,15 +18,17 @@ type SQLDB struct {
 	DB        *sql.DB
 	DBAdapter adapters.DBAdapter
 	Schema    string
+	ChainID   string // needed for many sql queries
 	Log       *logger.Logger
 }
 
 // NewSQLDB delegates work to a specific database adapter implementation,
 // opens database connection and create log tables
-func NewSQLDB(connection types.SQLConnection) (*SQLDB, error) {
+func NewSQLDB(connection types.SQLConnection, chainid, burrowversion string) (*SQLDB, error) {
 	db := &SQLDB{
-		Schema: connection.DBSchema,
-		Log:    connection.Log,
+		Schema:  connection.DBSchema,
+		ChainID: chainid,
+		Log:     connection.Log,
 	}
 
 	var url string
@@ -86,19 +88,19 @@ func NewSQLDB(connection types.SQLConnection) (*SQLDB, error) {
 		}
 	}
 
-	if err = db.CleanTables(connection.ChainID, connection.BurrowVersion); err != nil {
+	if err = db.CleanTables(burrowversion); err != nil {
 		db.Log.Info("msg", "Error cleaning tables", "err", err)
 		return nil, err
 	}
 	return db, nil
 }
 
-// CleanTables, drop tables if stored chainID is different from the given one & store new chainID
+// CleanTables drop tables if stored chainID is different from the given one & store new chainID
 // if the chainID is the same, do nothing
-func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
+func (db *SQLDB) CleanTables(burrowVersion string) error {
 
-	if chainID == "" {
-		return fmt.Errorf("error CHAIN ID cannot by empty")
+	if db.ChainID == "" {
+		return fmt.Errorf("error CHAIN ID cannot be empty")
 	}
 
 	cleanQueries := db.DBAdapter.CleanDBQueries()
@@ -122,14 +124,14 @@ func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
 	case savedRows == 0:
 		// Save new values and exit
 		query = cleanQueries.InsertChainIDQry
-		if _, err := db.DB.Exec(query, chainID, burrowVersion); err != nil {
+		if _, err := db.DB.Exec(query, db.ChainID, burrowVersion); err != nil {
 			db.Log.Info("msg", "Error inserting CHAIN ID", "err", err, "query", query)
 			return err
 		}
 		return nil
 
 	// if data equals previous version exit
-	case savedChainID == chainID:
+	case savedChainID == db.ChainID:
 		return nil
 
 	// clean database
@@ -155,7 +157,7 @@ func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
 
 		// Insert chainID
 		query = cleanQueries.InsertChainIDQry
-		if _, err := tx.Exec(query, chainID, burrowVersion); err != nil {
+		if _, err := tx.Exec(query, db.ChainID, burrowVersion); err != nil {
 			db.Log.Info("msg", "Error inserting CHAIN ID", "err", err, "query", query)
 			return err
 		}
@@ -235,14 +237,14 @@ func (db *SQLDB) Ping() error {
 	return nil
 }
 
-// GetLastBlockID returns last inserted blockId from log table
+// GetLastBlockHeight returns last inserted blockId from log table
 func (db *SQLDB) GetLastBlockHeight() (uint64, error) {
 	query := db.DBAdapter.LastBlockIDQuery()
 	id := ""
 
 	db.Log.Info("msg", "MAX ID", "query", query)
 
-	if err := db.DB.QueryRow(query).Scan(&id); err != nil {
+	if err := db.DB.QueryRow(query, db.ChainID).Scan(&id); err != nil {
 		db.Log.Info("msg", "Error selecting last block id", "err", err)
 		return 0, err
 	}
@@ -360,9 +362,9 @@ loop:
 			eventName, _ := row.RowData[types.SQLColumnLabelEventName].(string)
 			// Insert in log
 			db.Log.Info("msg", "INSERT LOG", "query", logQuery, "value",
-				fmt.Sprintf("tableName = %s eventName = %s block = %d", safeTable, en, eventData.BlockHeight))
+				fmt.Sprintf("chainid = %s tableName = %s eventName = %s block = %d", db.ChainID, safeTable, en, eventData.BlockHeight))
 
-			if _, err = logStmt.Exec(safeTable, eventName, row.EventClass.GetFilter(), eventData.BlockHeight, txHash,
+			if _, err = logStmt.Exec(db.ChainID, safeTable, eventName, row.EventClass.GetFilter(), eventData.BlockHeight, txHash,
 				row.Action, jsonData, query, sqlValues); err != nil {
 				db.Log.Info("msg", "Error inserting into log", "err", err)
 				break loop // exits from all loops -> continue in close log stmt
@@ -431,7 +433,7 @@ func (db *SQLDB) GetBlock(height uint64) (types.EventData, error) {
 	data.Tables = make(map[string]types.EventDataTable)
 
 	// get all table structures involved in the block
-	tables, err := db.getBlockTables(height)
+	tables, err := db.getBlockTables(db.ChainID, height)
 	if err != nil {
 		return data, err
 	}

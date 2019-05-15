@@ -25,7 +25,7 @@ func init() {
 }
 
 // NewTestDB creates a database connection for testing
-func NewTestDB(t *testing.T, cfg *config.VentConfig) (*sqldb.SQLDB, func()) {
+func NewTestDB(t *testing.T, chainid string, cfg *config.VentConfig) (*sqldb.SQLDB, func()) {
 	t.Helper()
 
 	if cfg.DBAdapter != types.SQLiteDB {
@@ -40,12 +40,10 @@ func NewTestDB(t *testing.T, cfg *config.VentConfig) (*sqldb.SQLDB, func()) {
 		DBURL:     cfg.DBURL,
 		DBSchema:  cfg.DBSchema,
 
-		Log:           logger.NewLogger(""),
-		ChainID:       "ID 0123",
-		BurrowVersion: "Version 0.0",
+		Log: logger.NewLogger(""),
 	}
 
-	db, err := sqldb.NewSQLDB(connection)
+	db, err := sqldb.NewSQLDB(connection, chainid, "Version 0.0")
 	if err != nil {
 		require.NoError(t, err)
 	}
