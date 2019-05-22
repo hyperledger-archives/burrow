@@ -372,8 +372,15 @@ func (c *Consumer) statusMessage() []interface{} {
 	return []interface{}{
 		"msg", "status",
 		"last_processed_height", c.LastProcessedHeight,
-		"burrow_latest_block_height", c.Burrow.SyncInfo.LatestBlockHeight,
 		"fraction_caught_up", catchUpRatio,
+		"burrow_latest_block_height", c.Burrow.SyncInfo.LatestBlockHeight,
+		"burrow_latest_block_duration", c.Burrow.SyncInfo.LatestBlockDuration,
+		"burrow_latest_block_hash", c.Burrow.SyncInfo.LatestBlockHash,
+		"burrow_latest_app_hash", c.Burrow.SyncInfo.LatestAppHash,
+		"burrow_latest_block_time", c.Burrow.SyncInfo.LatestBlockTime,
+		"burrow_latest_block_seen_time", c.Burrow.SyncInfo.LatestBlockSeenTime,
+		"burrow_node_info", c.Burrow.NodeInfo,
+		"burrow_catching_up", c.Burrow.CatchingUp,
 	}
 }
 
