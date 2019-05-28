@@ -250,7 +250,7 @@ From inside that directory, we are ready to deploy.
 burrow deploy --address F71831847564B7008AD30DD56336D9C42787CF63 deploy.yaml
 ```
 
-where you should replace the `--address` field with the `ValidatorAddress` at the top of your `burrow.toml`.
+where you should replace the `--address` field with the `Address` at the top of your `burrow.toml`.
 
 That's it! You've successfully deployed (and tested) a Solidity contract to a Burrow node.
 

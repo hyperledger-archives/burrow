@@ -40,7 +40,7 @@ func TestCascade(t *testing.T) {
 	envVar := "FISH_SPOON_ALPHA"
 	// Both fall through so baseConfig returned
 	conf := newTestConfig()
-	err := Cascade(os.Stderr, true,
+	err := Cascade(true,
 		Environment(envVar),
 		File("", false)).Apply(conf)
 	assert.NoError(t, err)
@@ -51,7 +51,7 @@ func TestCascade(t *testing.T) {
 	file := writeConfigFile(t, fileConfig)
 	defer os.Remove(file)
 	conf = new(animalConfig)
-	err = Cascade(os.Stderr, true,
+	err = Cascade(true,
 		Environment(envVar),
 		File(file, false)).Apply(conf)
 	assert.NoError(t, err)
@@ -64,7 +64,7 @@ func TestCascade(t *testing.T) {
 	}
 	os.Setenv(envVar, JSONString(envConfig))
 	conf = newTestConfig()
-	err = Cascade(os.Stderr, true,
+	err = Cascade(true,
 		Environment(envVar),
 		File(file, false)).Apply(conf)
 	assert.NoError(t, err)
