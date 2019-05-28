@@ -13,7 +13,7 @@ import (
 )
 
 func FormulateUpdateAccountJob(gov *def.UpdateAccount, account string, client *def.Client, logger *logging.Logger) (*payload.GovTx, []*abi.Variable, error) {
-	gov.Source = useDefault(gov.Source, account)
+	gov.Source = FirstOf(gov.Source, account)
 	perms := make([]string, len(gov.Permissions))
 
 	for i, p := range gov.Permissions {

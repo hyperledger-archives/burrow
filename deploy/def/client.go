@@ -338,42 +338,14 @@ func (c *Client) UpdateAccount(arg *GovArg, logger *logging.Logger) (*payload.Go
 		Permissions: arg.Permissions,
 		Roles:       arg.Permissions,
 	}
-	if arg.Address != "" {
-		address, err := c.GetKeyAddress(arg.Address, logger)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse UpdateAccoount Address: %v", err)
-		}
-		update.Address = &address
+	err = c.getIdentity(update, arg.Address, arg.PublicKey, logger)
+	if err != nil {
+		return nil, err
 	}
-	if arg.PublicKey != "" {
-		publicKey, err := publicKeyFromString(arg.PublicKey)
-		if err != nil {
-			return nil, fmt.Errorf("could not parse UpdateAccount PublicKey: %v", err)
-		}
-		update.PublicKey = &publicKey
-		// Update arg for variable usage
-		arg.Address = publicKey.GetAddress().String()
-	}
-	if update.PublicKey == nil {
-		// Attempt to get public key from connected key client
-		if update.Address != nil {
-			// Try key client
-			if c.keyClient != nil {
-				publicKey, err := c.keyClient.PublicKey(*update.Address)
-				if err != nil {
-					logger.InfoMsg("Could not retrieve public key from keys server", "address", *update.Address)
-				} else {
-					update.PublicKey = &publicKey
-				}
-			}
-			// We can still proceed with just address set
-		} else {
-			return nil, fmt.Errorf("neither target address or public key were provided to govern account")
-		}
-	}
+
 	_, err = permission.PermFlagFromStringList(arg.Permissions)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse UpdateAccoutn permissions: %v", err)
+		return nil, fmt.Errorf("could not parse UpdateAccount permissions: %v", err)
 	}
 
 	if arg.Native != "" {
@@ -395,6 +367,40 @@ func (c *Client) UpdateAccount(arg *GovArg, logger *logging.Logger) (*payload.Go
 		AccountUpdates: []*spec.TemplateAccount{update},
 	}
 	return tx, nil
+}
+
+func (c *Client) getIdentity(account *spec.TemplateAccount, address, publicKey string, logger *logging.Logger) error {
+	if address != "" {
+		addr, err := c.GetKeyAddress(address, logger)
+		if err != nil {
+			return fmt.Errorf("could not parse address: %v", err)
+		}
+		account.Address = &addr
+	}
+	if publicKey != "" {
+		pubKey, err := publicKeyFromString(publicKey)
+		if err != nil {
+			return fmt.Errorf("could not parse publicKey: %v", err)
+		}
+		account.PublicKey = &pubKey
+	} else {
+		// Attempt to get public key from connected key client
+		if address != "" {
+			// Try key client
+			if c.keyClient != nil {
+				pubKey, err := c.keyClient.PublicKey(*account.Address)
+				if err != nil {
+					logger.InfoMsg("Could not retrieve public key from keys server", "address", *account.Address)
+				} else {
+					account.PublicKey = &pubKey
+				}
+			}
+			// We can still proceed with just address set
+		} else {
+			return fmt.Errorf("neither target address or public key were provided")
+		}
+	}
+	return nil
 }
 
 func publicKeyFromString(publicKey string) (crypto.PublicKey, error) {
