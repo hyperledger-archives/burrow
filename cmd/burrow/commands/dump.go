@@ -44,13 +44,14 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 				output.Fatalf("failed to connect: %v", err)
 				return
 			}
-			dc := rpcdump.NewDumpClient(conn)
 
+			dc := rpcdump.NewDumpClient(conn)
 			dump, err := dc.GetDump(ctx, &rpcdump.GetDumpParam{Height: uint64(*heightOpt)})
 			if err != nil {
 				output.Fatalf("failed to retrieve dump: %v", err)
 				return
 			}
+			output.Logf("Connected to %s", conn.Target())
 
 			f, err := os.OpenFile(*filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 			if err != nil {
