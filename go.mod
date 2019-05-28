@@ -24,6 +24,7 @@ require (
 	github.com/iancoleman/strcase v0.0.0-20190422225806-e506e3ef7365
 	github.com/imdario/mergo v0.3.7
 	github.com/jawher/mow.cli v1.0.5
+	github.com/jmhodges/levigo v1.0.0 // indirect
 	github.com/lib/pq v1.1.0
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/monax/relic v2.0.0+incompatible

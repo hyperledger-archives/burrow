@@ -7,11 +7,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/vent/config"
-
-	"github.com/hyperledger/burrow/config/source"
-
 	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/service"
 	"github.com/hyperledger/burrow/vent/sqlsol"
@@ -19,6 +17,7 @@ import (
 	cli "github.com/jawher/mow.cli"
 )
 
+// Vent consumes EVM events and commits to a DB
 func Vent(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 

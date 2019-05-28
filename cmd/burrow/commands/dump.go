@@ -19,13 +19,14 @@ import (
 
 var cdc = amino.NewCodec()
 
+// Dump saves the state from a remote chain
 func Dump(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 		chainURLOpt := cmd.StringOpt("c chain", "127.0.0.1:10997", "chain to be used in IP:PORT format")
 		heightOpt := cmd.IntOpt("h height", 0, "Block height to dump to, defaults to latest block height")
 		filename := cmd.StringArg("FILE", "", "Save dump here")
 		useJSON := cmd.BoolOpt("j json", false, "Output in json")
-		timeoutOpt := cmd.IntOpt("t timeout", 0, "GRPC timeout in seconds")
+		timeoutOpt := cmd.IntOpt("t timeout", 0, "Timeout in seconds")
 
 		s := state.NewState(db.NewMemDB())
 

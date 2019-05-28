@@ -17,6 +17,7 @@ import (
 // 15 seconds is like a long time man
 const defaultChainTimeout = 15 * time.Second
 
+// Deploy runs the desired playbook(s)
 func Deploy(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 		chainOpt := cmd.StringOpt("c chain", "127.0.0.1:10997", "chain to be used in IP:PORT format")
