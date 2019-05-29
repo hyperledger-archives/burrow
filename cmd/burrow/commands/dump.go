@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger/burrow/execution/state"
 
 	"github.com/hyperledger/burrow/rpc/rpcdump"
+	"github.com/hyperledger/burrow/rpc/rpcquery"
 	amino "github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/libs/db"
 
@@ -52,7 +53,17 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 				output.Fatalf("failed to retrieve dump: %v", err)
 				return
 			}
-			output.Logf("Connected to %s", conn.Target())
+
+			qCli := rpcquery.NewQueryClient(conn)
+			chainStatus, err := qCli.Status(context.Background(), &rpcquery.StatusParam{})
+			if err != nil {
+				output.Logf("could not get chain status: %v", err)
+			}
+			stat, err := json.Marshal(chainStatus)
+			if err != nil {
+				output.Logf("failed to marshal: %v", err)
+			}
+			output.Logf(string(stat))
 
 			f, err := os.OpenFile(*filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 			if err != nil {
