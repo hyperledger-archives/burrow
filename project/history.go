@@ -50,6 +50,7 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 	MustDeclareReleases("",
 		`### Fixed
 - [Tendermint] Disable default Tendermint TxIndexer - for which we have no use but puts extra load on DB
+- [State] Store TxExecutions as single entry per block, rather than one per Event
 `,
 		"0.25.1 - 2019-05-03",
 		`### Changed

@@ -70,7 +70,7 @@ var keys = KeyFormatStore{
 	// ValidatorAddress -> Power
 	Validator: storage.NewMustKeyFormat("v", crypto.AddressLength),
 	// Height, EventIndex -> StreamEvent
-	Event: storage.NewMustKeyFormat("e", uint64Length, uint64Length),
+	Event: storage.NewMustKeyFormat("e", uint64Length),
 	// TxHash -> TxHeight, TxIndex
 	TxHash: storage.NewMustKeyFormat("th", txs.HashLength),
 }
