@@ -9,22 +9,17 @@ import (
 )
 
 func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
-	txHashTree, err := ws.forest.Writer(keys.TxHash.Prefix())
-	if err != nil {
-		return err
-	}
-
-	txebs := make([]byte, 0)
+	streamEventBytes := make([]byte, 0)
 
 	for _, ev := range be.StreamEvents() {
 		if ev.BeginTx != nil {
-			val := &exec.TxExecutionKey{Height: be.Height, Offset: uint64(len(txebs))}
+			val := &exec.TxExecutionKey{Height: be.Height, Offset: uint64(len(streamEventBytes))}
 			bs, err := val.Encode()
 			if err != nil {
 				return err
 			}
 			// Set reference to TxExecution
-			txHashTree.Set(keys.TxHash.KeyNoPrefix(ev.BeginTx.TxHeader.TxHash), bs)
+			ws.plain.Set(keys.TxHash.Key(ev.BeginTx.TxHeader.TxHash), bs)
 		}
 
 		bs, err := cdc.MarshalBinaryLengthPrefixed(ev)
@@ -32,7 +27,7 @@ func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
 			return err
 		}
 
-		txebs = append(txebs, bs...)
+		streamEventBytes = append(streamEventBytes, bs...)
 	}
 
 	tree, err := ws.forest.Writer(keys.Event.Prefix())
@@ -40,7 +35,7 @@ func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
 		return err
 	}
 	key := keys.Event.KeyNoPrefix(be.Height)
-	tree.Set(key, txebs)
+	tree.Set(key, streamEventBytes)
 
 	return nil
 }
@@ -99,12 +94,7 @@ func (s *ReadState) TxsAtHeight(height uint64) ([]*exec.TxExecution, error) {
 
 func (s *ReadState) TxByHash(txHash []byte) (*exec.TxExecution, error) {
 	const errHeader = "TxByHash():"
-	blockKeyByTxHashTree, err := s.Forest.Reader(keys.TxHash.Prefix())
-	if err != nil {
-		return nil, err
-	}
-
-	bs := blockKeyByTxHashTree.Get(keys.TxHash.KeyNoPrefix(txHash))
+	bs := s.Plain.Get(keys.TxHash.Key(txHash))
 	if len(bs) == 0 {
 		return nil, nil
 	}

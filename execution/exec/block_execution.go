@@ -29,23 +29,6 @@ func (be *BlockExecution) StreamEvents() StreamEvents {
 	})
 }
 
-func DecodeTxExecutionKey(bs []byte) (*TxExecutionKey, error) {
-	be := new(TxExecutionKey)
-
-	err := cdc.UnmarshalBinaryLengthPrefixed(bs, be)
-	if err != nil {
-		return nil, err
-	}
-	return be, nil
-}
-
-func (key *TxExecutionKey) Encode() ([]byte, error) {
-	// At height 0 index 0, the B cdc.MarshalBinaryBase() returns a string of 0 bytes,
-	// which cannot be stored in iavl. So, abuse MarshalBinaryLengthPrefixed() to
-	// ensure we have > 0 bytes.
-	return cdc.MarshalBinaryLengthPrefixed(key)
-}
-
 func (be *BlockExecution) EncodeHeader() ([]byte, error) {
 	return cdc.MarshalBinaryBare(be.Header)
 }

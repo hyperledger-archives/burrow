@@ -76,8 +76,8 @@ message BlockExecution {
 message TxExecutionKey {
     // The block height
     uint64 Height = 1;
-    // The offset of the TxExecution
-    uint64 offset = 2;
+    // The offset of the TxExecution in bytes
+    uint64 Offset = 2;
 }
 
 message TxExecution {
