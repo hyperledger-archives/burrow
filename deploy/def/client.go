@@ -12,6 +12,7 @@ import (
 	hex "github.com/tmthrgd/go-hex"
 
 	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/evm/abi"
@@ -138,6 +139,22 @@ func (c *Client) GetAccount(address crypto.Address) (*acm.Account, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 	return c.queryClient.GetAccount(ctx, &rpcquery.GetAccountParam{Address: address})
+}
+
+func (c *Client) GetAbiForAccount(address crypto.Address) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	abi, err := c.queryClient.GetAbi(ctx, &rpcquery.GetAbiParam{Address: address})
+	if err != nil {
+		return "", err
+	}
+
+	return abi.Abi, nil
+}
+
+func (c *Client) GetAbi(abihash acmstate.AbiHash) (string, error) {
+	panic("not implemented")
+	return "", nil
 }
 
 func (c *Client) GetStorage(address crypto.Address, key binary.Word256) ([]byte, error) {
@@ -429,6 +446,7 @@ type CallArg struct {
 	Gas      string
 	Data     string
 	WASM     string
+	Abis     map[acmstate.CodeHash]string
 }
 
 func (c *Client) Call(arg *CallArg, logger *logging.Logger) (*payload.CallTx, error) {
@@ -445,12 +463,13 @@ func (c *Client) Call(arg *CallArg, logger *logging.Logger) (*payload.CallTx, er
 	}
 	var contractAddress *crypto.Address
 	if arg.Address != "" {
-		address, err := c.GetKeyAddress(arg.Address, logger)
+		address, err := crypto.AddressFromHexString(arg.Address)
 		if err != nil {
 			return nil, err
 		}
 		contractAddress = &address
 	}
+
 	fee, err := c.ParseUint64(arg.Fee)
 	if err != nil {
 		return nil, err
@@ -463,10 +482,20 @@ func (c *Client) Call(arg *CallArg, logger *logging.Logger) (*payload.CallTx, er
 	if err != nil {
 		return nil, err
 	}
+
 	wasm, err := hex.DecodeString(arg.WASM)
 	if err != nil {
 		return nil, err
 	}
+
+	abis := make([]*payload.Abis, 0)
+	for codehash, abi := range arg.Abis {
+		abis = append(abis, &payload.Abis{
+			CodeHash: codehash.Bytes(),
+			Abi:      abi,
+		})
+	}
+
 	tx := &payload.CallTx{
 		Input:    input,
 		Address:  contractAddress,
@@ -474,7 +503,9 @@ func (c *Client) Call(arg *CallArg, logger *logging.Logger) (*payload.CallTx, er
 		WASM:     wasm,
 		Fee:      fee,
 		GasLimit: gas,
+		Abis:     abis,
 	}
+
 	return tx, nil
 }
 

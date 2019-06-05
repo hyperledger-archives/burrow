@@ -2,6 +2,7 @@ package compile
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -10,10 +11,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/logging"
 )
 
+// SolidityInput is a structure for the solidity compiler input json form, see:
+// https://solidity.readthedocs.io/en/v0.5.9/using-the-compiler.html#compiler-input-and-output-json-description
 type SolidityInput struct {
 	Language string                         `json:"language"`
 	Sources  map[string]SolidityInputSource `json:"sources"`
@@ -30,11 +35,13 @@ type SolidityInput struct {
 	} `json:"settings"`
 }
 
+// SolidityInputSource should be set for each solidity input source file in SolidityInput
 type SolidityInputSource struct {
 	Content string   `json:"content,omitempty"`
 	Urls    []string `json:"urls,omitempty"`
 }
 
+// SolidityOutput is a structure for the output of the solidity json output form
 type SolidityOutput struct {
 	Contracts map[string]map[string]SolidityContract
 	Errors    []struct {
@@ -46,12 +53,16 @@ type SolidityOutput struct {
 	}
 }
 
+// SolidityContract is defined for each contract defined in the solidity source code
 type SolidityContract struct {
 	Abi json.RawMessage
 	Evm struct {
 		Bytecode struct {
 			Object         string
-			Opcodes        string
+			LinkReferences json.RawMessage
+		}
+		DeployedBytecode struct {
+			Object         string
 			LinkReferences json.RawMessage
 		}
 	}
@@ -61,6 +72,9 @@ type SolidityContract struct {
 	Devdoc   json.RawMessage
 	Userdoc  json.RawMessage
 	Metadata string
+	// This is not present in the solidity output, but we add it ourselves
+	// This is map from CodeHash to ABI
+	AbiMap map[acmstate.CodeHash]string
 }
 
 type Response struct {
@@ -77,6 +91,8 @@ type ResponseItem struct {
 	Contract   SolidityContract `json:"binary"`
 }
 
+// LoadSolidityContract is the opposite of the .Save() method. This expects the input file
+// to be in the Solidity json output format
 func LoadSolidityContract(file string) (*SolidityContract, error) {
 	codeB, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -90,6 +106,7 @@ func LoadSolidityContract(file string) (*SolidityContract, error) {
 	return &contract, nil
 }
 
+// Save persists the contract in its json form to disk
 func (contract *SolidityContract) Save(dir, file string) error {
 	str, err := json.Marshal(*contract)
 	if err != nil {
@@ -162,7 +179,7 @@ func EVM(file string, optimize bool, workDir string, libraries map[string]string
 
 	input.Sources[file] = SolidityInputSource{Urls: []string{file}}
 	input.Settings.Optimizer.Enabled = optimize
-	input.Settings.OutputSelection.File.OutputType = []string{"abi", "evm.bytecode.linkReferences", "metadata", "bin", "devdoc"}
+	input.Settings.OutputSelection.File.OutputType = []string{"abi", "evm.deployedBytecode.object", "evm.bytecode.linkReferences", "metadata", "bin", "devdoc"}
 	input.Settings.Libraries = make(map[string]map[string]string)
 	input.Settings.Libraries[""] = make(map[string]string)
 
@@ -188,10 +205,16 @@ func EVM(file string, optimize bool, workDir string, libraries map[string]string
 		return nil, err
 	}
 
+	abis, err := output.getAbis(logger)
+	if err != nil {
+		return nil, err
+	}
+
 	respItemArray := make([]ResponseItem, 0)
 
 	for f, s := range output.Contracts {
 		for contract, item := range s {
+			item.AbiMap = abis
 			respItem := ResponseItem{
 				Filename:   f,
 				Objectname: objectName(contract),
@@ -317,4 +340,35 @@ func PrintResponse(resp Response, cli bool, logger *logging.Logger) {
 			)
 		}
 	}
+}
+
+// GetAbis get the CodeHashes + Abis for the generated Code. So, we have a map for all the possible contracts codes hashes to abis
+func (sol *SolidityOutput) getAbis(logger *logging.Logger) (map[acmstate.CodeHash]string, error) {
+	res := make(map[acmstate.CodeHash]string)
+	for filename, src := range sol.Contracts {
+		for name, contract := range src {
+			if contract.Evm.DeployedBytecode.Object == "" {
+				continue
+			}
+
+			runtime, err := hex.DecodeString(contract.Evm.DeployedBytecode.Object)
+			if err != nil {
+				return nil, err
+			}
+
+			hash := sha3.NewKeccak256()
+			hash.Write(runtime)
+			var codehash acmstate.CodeHash
+			copy(codehash[:], hash.Sum(nil))
+			logger.TraceMsg("Found ABI",
+				"contract", name,
+				"file", filename,
+				"code", fmt.Sprintf("%X", runtime),
+				"code hash", fmt.Sprintf("%X", codehash),
+				"abi", string(contract.Abi))
+			res[codehash] = string(contract.Abi)
+		}
+	}
+
+	return res, nil
 }

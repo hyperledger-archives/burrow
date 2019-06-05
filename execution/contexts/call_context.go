@@ -151,6 +151,21 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		ctx.Logger.TraceMsg("Creating new contract",
 			"contract_address", callee,
 			"init_code", code)
+
+		// store abis
+		if len(ctx.tx.Abis) > 0 {
+			metamap := make([]*acm.MetaMap, len(ctx.tx.Abis))
+			for i, abi := range ctx.tx.Abis {
+				abihash := acmstate.GetAbiHash(abi.Abi)
+				metamap[i] = &acm.MetaMap{
+					AbiHash:  abihash[:],
+					CodeHash: abi.CodeHash,
+				}
+				txCache.SetAbi(abihash, abi.Abi)
+			}
+
+			txCache.UpdateMetaMap(callee, metamap)
+		}
 	} else {
 		if outAcc == nil || (len(outAcc.EVMCode) == 0 && len(outAcc.WASMCode) == 0) {
 			// if you call an account that doesn't exist
@@ -225,7 +240,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		} else {
 			ctx.Logger.TraceMsg("Successful execution")
 			if createContract {
-				txCache.InitCode(callee, ret)
+				txCache.InitCode(callee, nil, ret)
 			}
 			err := txCache.Sync()
 			if err != nil {

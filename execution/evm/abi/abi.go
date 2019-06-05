@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	hex "github.com/tmthrgd/go-hex"
+
 	burrow_binary "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/crypto/sha3"
@@ -238,6 +240,10 @@ type FunctionID [FunctionIDSize]byte
 const EventIDSize = 32
 
 type EventID [EventIDSize]byte
+
+func (e EventID) String() string {
+	return hex.EncodeUpperToString(e[:])
+}
 
 type FunctionSpec struct {
 	FunctionID FunctionID

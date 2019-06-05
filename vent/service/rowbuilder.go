@@ -16,7 +16,7 @@ import (
 )
 
 // buildEventData builds event data from transactions
-func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass, event *exec.Event, origin *exec.Origin, abiSpec *abi.Spec,
+func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass, event *exec.Event, origin *exec.Origin, abiProvider *AbiProvider,
 	l *logging.Logger) (types.EventDataRow, error) {
 
 	// a fresh new row to store column/value data
@@ -26,8 +26,17 @@ func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass,
 	eventHeader := event.GetHeader()
 	eventLog := event.GetLog()
 
+	// Find event spec for this event
+	var eventID abi.EventID
+	copy(eventID[:], eventLog.Topics[0].Bytes())
+
+	evAbi, err := abiProvider.GetEventAbi(eventID, eventLog.Address, l)
+	if err != nil {
+		return types.EventDataRow{}, err
+	}
+
 	// decode event data using the provided abi specification
-	decodedData, err := decodeEvent(eventHeader, eventLog, origin, abiSpec)
+	decodedData, err := decodeEvent(eventHeader, eventLog, origin, evAbi)
 	if err != nil {
 		return types.EventDataRow{}, errors.Wrapf(err, "Error decoding event (filter: %s)", eventClass.Filter)
 	}

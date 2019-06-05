@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc/rpctransact"
 	"github.com/hyperledger/burrow/vent/config"
@@ -204,10 +203,7 @@ func runConsumer(t *testing.T, cfg *config.VentConfig) chan types.EventData {
 	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, cfg.SpecOpt)
 	require.NoError(t, err)
 
-	abiSpec, err := abi.LoadPath(cfg.AbiFileOrDirs...)
-	require.NoError(t, err)
-
-	err = consumer.Run(projection, abiSpec, false)
+	err = consumer.Run(projection, false)
 	require.NoError(t, err)
 	return consumer.EventsChannel
 }

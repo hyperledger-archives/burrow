@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
@@ -163,7 +164,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 			contractCode = contractCode + callData
 		}
 
-		tx, err := deployTx(client, deploy, contractName, string(contractCode), "", logger)
+		tx, err := deployTx(client, deploy, contractName, string(contractCode), "", nil, logger)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not deploy binary contract: %v", err)
 		}
@@ -387,10 +388,10 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 		}
 	}
 
-	return deployTx(client, deploy, compilersResponse.Objectname, data, wasm, logger)
+	return deployTx(client, deploy, compilersResponse.Objectname, data, wasm, contract.AbiMap, logger)
 }
 
-func deployTx(client *def.Client, deploy *def.Deploy, contractName, data, wasm string, logger *logging.Logger) (*payload.CallTx, error) {
+func deployTx(client *def.Client, deploy *def.Deploy, contractName, data, wasm string, abis map[acmstate.CodeHash]string, logger *logging.Logger) (*payload.CallTx, error) {
 	// Deploy contract
 	logger.TraceMsg("Deploying Contract",
 		"contract", contractName,
@@ -407,6 +408,7 @@ func deployTx(client *def.Client, deploy *def.Deploy, contractName, data, wasm s
 		Data:     data,
 		WASM:     wasm,
 		Sequence: deploy.Sequence,
+		Abis:     abis,
 	}, logger)
 }
 
@@ -424,24 +426,40 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 	call.Fee = FirstOf(call.Fee, do.DefaultFee)
 	call.Gas = FirstOf(call.Gas, do.DefaultGas)
 
+	// Get address (possibly via key)
+	address, err := client.GetKeyAddress(call.Destination, logger)
+	if err != nil {
+		return nil, err
+	}
+
 	// formulate call
 	var packedBytes []byte
 	var funcSpec *abi.FunctionSpec
-	logger.TraceMsg("Looking for ABI in", "path", deployScript.BinPath, "bin", call.Bin, "dest", call.Destination)
-	if call.Bin != "" {
-		packedBytes, funcSpec, err = abi.EncodeFunctionCallFromFile(call.Bin, deployScript.BinPath, call.Function, logger, callDataArray...)
-		callData = hex.EncodeToString(packedBytes)
-	}
-	if call.Bin == "" || err != nil {
-		packedBytes, funcSpec, err = abi.EncodeFunctionCallFromFile(call.Destination, deployScript.BinPath, call.Function, logger, callDataArray...)
-		callData = hex.EncodeToString(packedBytes)
-	}
-	if err != nil {
-		if call.Function == "()" {
-			logger.InfoMsg("Calling the fallback function")
-		} else {
-			err = util.ABIErrorHandler(err, call, nil, logger)
+
+	abiJSON, err := client.GetAbiForAccount(address)
+	if abiJSON != "" && err == nil {
+		packedBytes, funcSpec, err = abi.EncodeFunctionCall(abiJSON, call.Function, logger, callDataArray...)
+		if err != nil {
 			return
+		}
+		callData = hex.EncodeToString(packedBytes)
+	} else {
+		logger.TraceMsg("Looking for ABI in", "path", deployScript.BinPath, "bin", call.Bin, "dest", call.Destination)
+		if call.Bin != "" {
+			packedBytes, funcSpec, err = abi.EncodeFunctionCallFromFile(call.Bin, deployScript.BinPath, call.Function, logger, callDataArray...)
+			callData = hex.EncodeToString(packedBytes)
+		}
+		if call.Bin == "" || err != nil {
+			packedBytes, funcSpec, err = abi.EncodeFunctionCallFromFile(call.Destination, deployScript.BinPath, call.Function, logger, callDataArray...)
+			callData = hex.EncodeToString(packedBytes)
+		}
+		if err != nil {
+			if call.Function == "()" {
+				logger.InfoMsg("Calling the fallback function")
+			} else {
+				err = util.ABIErrorHandler(err, call, nil, logger)
+				return
+			}
 		}
 	}
 
@@ -450,14 +468,14 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 	}
 
 	logger.TraceMsg("Calling",
-		"destination", call.Destination,
+		"destination", address.String(),
 		"function", call.Function,
 		"data", callData)
 
 	return client.Call(&def.CallArg{
 		Input:    call.Source,
 		Amount:   call.Amount,
-		Address:  call.Destination,
+		Address:  address.String(),
 		Fee:      call.Fee,
 		Gas:      call.Gas,
 		Data:     callData,

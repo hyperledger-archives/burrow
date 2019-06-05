@@ -61,6 +61,7 @@ const (
 	ErrorCodeBlockNumberOutOfRange
 	ErrorCodeAlreadyVoted
 	ErrorCodeUnresolvedSymbols
+	ErrorCodeInvalidContractCode
 )
 
 func (c Code) ErrorCode() Code {
@@ -155,6 +156,8 @@ func (c Code) String() string {
 		return "vote already registered for this address"
 	case ErrorCodeUnresolvedSymbols:
 		return "code has unresolved symbols"
+	case ErrorCodeInvalidContractCode:
+		return "contract being created with unexpected code"
 	default:
 		return "Unknown error"
 	}

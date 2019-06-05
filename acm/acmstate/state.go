@@ -4,8 +4,70 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/permission"
+	"github.com/tmthrgd/go-hex"
 )
+
+// AbiHash is the keccak hash for the ABI. This is to make the ABI content-addressed
+type AbiHash [32]byte
+
+func (h *AbiHash) Bytes() []byte {
+	b := make([]byte, 32)
+	copy(b, h[:])
+	return b
+}
+
+func (ch *AbiHash) UnmarshalText(hexBytes []byte) error {
+	bs, err := hex.DecodeString(string(hexBytes))
+	if err != nil {
+		return err
+	}
+	copy(ch[:], bs)
+	return nil
+}
+
+func (ch AbiHash) MarshalText() ([]byte, error) {
+	return []byte(ch.String()), nil
+}
+
+func (ch AbiHash) String() string {
+	return hex.EncodeUpperToString(ch[:])
+}
+
+func GetAbiHash(abi string) (abihash AbiHash) {
+	hash := sha3.NewKeccak256()
+	hash.Write([]byte(abi))
+	copy(abihash[:], hash.Sum(nil))
+	return
+}
+
+// CodeHash is the keccak hash for the code for an account. This is used for the EVM CODEHASH opcode, and to find the
+// correct ABI for a contract
+type CodeHash [32]byte
+
+func (h *CodeHash) Bytes() []byte {
+	b := make([]byte, 32)
+	copy(b, h[:])
+	return b
+}
+
+func (ch *CodeHash) UnmarshalText(hexBytes []byte) error {
+	bs, err := hex.DecodeString(string(hexBytes))
+	if err != nil {
+		return err
+	}
+	copy(ch[:], bs)
+	return nil
+}
+
+func (ch CodeHash) MarshalText() ([]byte, error) {
+	return []byte(ch.String()), nil
+}
+
+func (ch CodeHash) String() string {
+	return hex.EncodeUpperToString(ch[:])
+}
 
 type AccountGetter interface {
 	// Get an account by its address return nil if it does not exist (which should not be an error)
@@ -45,6 +107,16 @@ type StorageIterable interface {
 	IterateStorage(address crypto.Address, consumer func(key binary.Word256, value []byte) error) (err error)
 }
 
+type AbiGetter interface {
+	// Get an ABI by its hash. This is content-addressed
+	GetAbi(abihash AbiHash) (string, error)
+}
+
+type AbiSetter interface {
+	// Set an ABI according to it keccak-256 hash.
+	SetAbi(abihash AbiHash, abi string) error
+}
+
 type AccountStats struct {
 	AccountsWithCode    uint64
 	AccountsWithoutCode uint64
@@ -60,6 +132,7 @@ type AccountStatsGetter interface {
 type Reader interface {
 	AccountGetter
 	StorageGetter
+	AbiGetter
 }
 
 type Iterable interface {
@@ -82,6 +155,7 @@ type IterableStatsReader interface {
 type Writer interface {
 	AccountUpdater
 	StorageSetter
+	AbiSetter
 }
 
 // Read and write account and storage state

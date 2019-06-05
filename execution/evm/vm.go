@@ -621,17 +621,15 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 				// In case the account does not exist 0 is pushed to the stack.
 				stack.PushU64(0)
 			} else {
-				code := callState.GetEVMCode(address)
-				if code == nil {
-					// In case the account does not have code the keccak256 hash of empty data
-					code = acm.Bytecode{}
-				}
-
 				// keccak256 hash of a contract's code
 				var extcodehash Word256
-				hash := sha3.NewKeccak256()
-				hash.Write(code)
-				copy(extcodehash[:], hash.Sum(nil))
+				codehash := callState.GetCodeHash(address)
+				if codehash != nil {
+					copy(extcodehash[:], codehash)
+				} else {
+					hash := sha3.NewKeccak256()
+					copy(extcodehash[:], hash.Sum(nil))
+				}
 
 				stack.Push(extcodehash)
 			}
@@ -815,7 +813,8 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 				returnData = ret
 			} else {
 				// Update the account with its initialised contract code
-				childCallState.InitCode(newAccount, ret)
+				forebear := callState.GetForebear(callee)
+				childCallState.InitCode(newAccount, &forebear, ret)
 				callState.PushError(childCallState.Sync())
 				stack.PushAddress(newAccount)
 			}

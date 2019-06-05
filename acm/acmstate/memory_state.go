@@ -11,6 +11,7 @@ import (
 type MemoryState struct {
 	Accounts map[crypto.Address]*acm.Account
 	Storage  map[crypto.Address]map[binary.Word256][]byte
+	Abis     map[AbiHash]string
 }
 
 var _ IterableReaderWriter = &MemoryState{}
@@ -20,6 +21,7 @@ func NewMemoryState() *MemoryState {
 	return &MemoryState{
 		Accounts: make(map[crypto.Address]*acm.Account),
 		Storage:  make(map[crypto.Address]map[binary.Word256][]byte),
+		Abis:     make(map[AbiHash]string),
 	}
 }
 
@@ -32,6 +34,15 @@ func (ms *MemoryState) UpdateAccount(updatedAccount *acm.Account) error {
 		return fmt.Errorf("UpdateAccount passed nil account in MemoryState")
 	}
 	ms.Accounts[updatedAccount.GetAddress()] = updatedAccount
+	return nil
+}
+
+func (ms *MemoryState) GetAbi(abihash AbiHash) (string, error) {
+	return ms.Abis[abihash], nil
+}
+
+func (ms *MemoryState) SetAbi(abihash AbiHash, abi string) error {
+	ms.Abis[abihash] = abi
 	return nil
 }
 

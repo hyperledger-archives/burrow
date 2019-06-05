@@ -30,6 +30,7 @@ type Cache struct {
 	name     string
 	backend  Reader
 	accounts map[crypto.Address]*accountInfo
+	abis     map[AbiHash]*abiInfo
 	readonly bool
 }
 
@@ -41,6 +42,11 @@ type accountInfo struct {
 	updated bool
 }
 
+type abiInfo struct {
+	abi     string
+	updated bool
+}
+
 type CacheOption func(*Cache) *Cache
 
 // Returns a Cache that wraps an underlying Reader to use on a cache miss, can write to an output Writer
@@ -49,6 +55,7 @@ func NewCache(backend Reader, options ...CacheOption) *Cache {
 	cache := &Cache{
 		backend:  backend,
 		accounts: make(map[crypto.Address]*accountInfo),
+		abis:     make(map[AbiHash]*abiInfo),
 	}
 	for _, option := range options {
 		option(cache)
@@ -100,6 +107,31 @@ func (cache *Cache) UpdateAccount(account *acm.Account) error {
 	}
 	accInfo.account = account.Copy()
 	accInfo.updated = true
+	return nil
+}
+
+func (cache *Cache) GetAbi(abihash AbiHash) (string, error) {
+	cache.RLock()
+	defer cache.RUnlock()
+
+	abiInfo, ok := cache.abis[abihash]
+	if ok {
+		return abiInfo.abi, nil
+	}
+
+	return "", nil
+}
+
+func (cache *Cache) SetAbi(abihash AbiHash, abi string) error {
+	if cache.readonly {
+		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "UpdateAbi called in read-only context on abi hash: %v", abihash)
+	}
+
+	cache.Lock()
+	defer cache.Unlock()
+
+	cache.abis[abihash] = &abiInfo{updated: true, abi: abi}
+
 	return nil
 }
 
@@ -248,6 +280,15 @@ func (cache *Cache) Sync(st Writer) error {
 
 		}
 		accInfo.RUnlock()
+	}
+
+	for abihash, abiInfo := range cache.abis {
+		if abiInfo.updated {
+			err := st.SetAbi(abihash, abiInfo.abi)
+			if err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

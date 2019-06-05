@@ -1,3 +1,5 @@
+// +build integration
+
 package rpctest
 
 import (
@@ -6,6 +8,7 @@ import (
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/integration"
@@ -47,7 +50,25 @@ func NewQueryClient(t testing.TB, listenAddress string) rpcquery.QueryClient {
 	return rpcquery.NewQueryClient(conn)
 }
 
-func CreateContract(cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte) (*exec.TxExecution, error) {
+type AbiMap struct {
+	DeployedCode []byte
+	Abi          []byte
+}
+
+func CreateContract(cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte, abimap []AbiMap) (*exec.TxExecution, error) {
+	var abis []*payload.Abis
+	if abimap != nil {
+		abis = make([]*payload.Abis, len(abimap))
+		for i, m := range abimap {
+			hash := sha3.NewKeccak256()
+			hash.Write([]byte(m.DeployedCode))
+			abis[i] = &payload.Abis{
+				CodeHash: hash.Sum(nil),
+				Abi:      string(m.Abi),
+			}
+		}
+	}
+
 	txe, err := cli.CallTxSync(context.Background(), &payload.CallTx{
 		Input: &payload.TxInput{
 			Address: inputAddress,
@@ -57,6 +78,7 @@ func CreateContract(cli rpctransact.TransactClient, inputAddress crypto.Address,
 		Data:     bytecode,
 		Fee:      2,
 		GasLimit: 10000,
+		Abis:     abis,
 	})
 	if err != nil {
 		return nil, err

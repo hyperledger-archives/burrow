@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/state"
@@ -30,6 +31,15 @@ func Load(source Source, st *state.State) error {
 
 			if row.Account != nil {
 				if row.Account.Address != acm.GlobalPermissionsAddress {
+					for _, m := range row.Account.MetaMap {
+						abihash := acmstate.GetAbiHash(m.Abi)
+						err = s.SetAbi(abihash, m.Abi)
+						if err != nil {
+							return err
+						}
+						m.AbiHash = abihash.Bytes()
+						m.Abi = ""
+					}
 					err := s.UpdateAccount(row.Account)
 					if err != nil {
 						return err

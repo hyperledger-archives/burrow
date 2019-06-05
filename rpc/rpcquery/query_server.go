@@ -1,6 +1,7 @@
 package rpcquery
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -57,6 +58,30 @@ func (qs *queryServer) GetAccount(ctx context.Context, param *GetAccountParam) (
 		acc = &acm.Account{}
 	}
 	return acc, err
+}
+
+func (qs *queryServer) GetAbi(ctx context.Context, param *GetAbiParam) (*AbiValue, error) {
+	abi := AbiValue{}
+	acc, err := qs.accounts.GetAccount(param.Address)
+	if acc != nil && acc.CodeHash != nil {
+		codehash := acc.CodeHash
+		if acc.Forebear != nil {
+			acc, err = qs.accounts.GetAccount(*acc.Forebear)
+			if err != nil {
+				return &abi, err
+			}
+		}
+
+		for _, m := range acc.MetaMap {
+			if bytes.Equal(m.CodeHash, codehash) {
+				var abihash acmstate.AbiHash
+				copy(abihash[:], m.AbiHash)
+				abi.Abi, err = qs.accounts.GetAbi(abihash)
+				break
+			}
+		}
+	}
+	return &abi, err
 }
 
 func (qs *queryServer) GetStorage(ctx context.Context, param *GetStorageParam) (*StorageValue, error) {
