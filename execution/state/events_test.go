@@ -25,7 +25,9 @@ func TestWriteState_AddBlock(t *testing.T) {
 
 	txIndex := uint64(0)
 	eventIndex := uint64(0)
-	err = s.IterateStreamEvents(&exec.StreamKey{Height: height}, &exec.StreamKey{Height: height + 1},
+	start := height
+	end := height + 1
+	err = s.IterateStreamEvents(&start, &end,
 		func(ev *exec.StreamEvent) error {
 			switch {
 			case ev.BeginTx != nil:
@@ -174,4 +176,22 @@ func mkEvent(height, tx, index uint64) *exec.Event {
 			Topics:  []binary.Word256{{1, 2, 3}},
 		},
 	}
+}
+
+func BenchmarkAddBlockAndIterator(b *testing.B) {
+	s := NewState(db.NewMemDB())
+	numTxs := uint64(5)
+	events := uint64(10)
+	for height := uint64(0); height < 2000; height++ {
+		block := mkBlock(height, numTxs, events)
+		_, _, err := s.Update(func(ws Updatable) error {
+			return ws.AddBlock(block)
+		})
+		require.NoError(b, err)
+	}
+	err := s.IterateStreamEvents(nil, nil,
+		func(ev *exec.StreamEvent) error {
+			return nil
+		})
+	require.NoError(b, err)
 }

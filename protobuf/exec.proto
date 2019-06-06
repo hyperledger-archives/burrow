@@ -30,14 +30,6 @@ message StreamEvent {
     EndBlock EndBlock = 6;
 }
 
-// A key to a stream event
-message StreamKey {
-    // The block height
-    uint64 Height = 1;
-    // The index of the StreamEvent amongst other StreamEvents at the same height
-    uint64 Index = 2;
-}
-
 message BeginBlock {
     // The height of this block
     uint64 Height = 1;
@@ -79,6 +71,13 @@ message BlockExecution {
     uint64 Height = 1;
     types.Header Header = 2;
     repeated TxExecution TxExecutions = 3;
+}
+
+message TxExecutionKey {
+    // The block height
+    uint64 Height = 1;
+    // The offset of the TxExecution in bytes
+    uint64 Offset = 2;
 }
 
 message TxExecution {

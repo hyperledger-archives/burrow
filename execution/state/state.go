@@ -41,6 +41,9 @@ const (
 	uint64Length                = 8
 	// Prefix under which the versioned merkle state tree resides - tracking previous versions of history
 	forestPrefix = "f"
+	// Prefix for storage outside for the merkel tree - does not contribute to AppHash as a result
+	// Leaving the forest for the plains like early members of the homo genus
+	plainPrefix = "h"
 )
 
 // Implements account and blockchain state
@@ -70,7 +73,7 @@ var keys = KeyFormatStore{
 	// ValidatorAddress -> Power
 	Validator: storage.NewMustKeyFormat("v", crypto.AddressLength),
 	// Height, EventIndex -> StreamEvent
-	Event: storage.NewMustKeyFormat("e", uint64Length, uint64Length),
+	Event: storage.NewMustKeyFormat("e", uint64Length),
 	// TxHash -> TxHeight, TxIndex
 	TxHash: storage.NewMustKeyFormat("th", txs.HashLength),
 }
@@ -93,12 +96,14 @@ type Updatable interface {
 // Wraps state to give access to writer methods
 type writeState struct {
 	forest       *storage.MutableForest
+	plain        *storage.PrefixDB
 	accountStats acmstate.AccountStats
 	ring         *validator.Ring
 }
 
 type ReadState struct {
 	Forest storage.ForestReader
+	Plain  *storage.PrefixDB
 	validator.History
 }
 
@@ -118,9 +123,10 @@ func NewState(db dbm.DB) *State {
 		// This should only happen if we have negative cache capacity, which for us is a positive compile-time constant
 		panic(fmt.Errorf("could not create new state because error creating MutableForest"))
 	}
+	plain := storage.NewPrefixDB(db, plainPrefix)
 	ring := validator.NewRing(nil, DefaultValidatorsWindowSize)
-	rs := ReadState{Forest: forest, History: ring}
-	ws := writeState{forest: forest, ring: ring}
+	rs := ReadState{Forest: forest, Plain: plain, History: ring}
+	ws := writeState{forest: forest, plain: plain, ring: ring}
 	return &State{
 		db:         db,
 		ReadState:  rs,
