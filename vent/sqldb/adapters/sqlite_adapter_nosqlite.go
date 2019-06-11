@@ -17,6 +17,8 @@ type SQLiteAdapter struct {
 	Log *logger.Logger
 }
 
+var _ DBAdapter = &SQLiteAdapter{}
+
 func NewSQLiteAdapter(log *logger.Logger) *SQLiteAdapter {
 	panic(fmt.Errorf("vent has been built without sqlite support. To use the sqlite DBAdapter build with the 'sqlite' build tag enabled"))
 }
@@ -86,5 +88,9 @@ func (*SQLiteAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 }
 
 func (*SQLiteAdapter) DropTableQuery(tableName string) string {
+	panic("implement me")
+}
+
+func (*SQLiteAdapter) SchemaName(tableName string) string {
 	panic("implement me")
 }

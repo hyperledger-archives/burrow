@@ -3,15 +3,18 @@
 package sqldb_test
 
 import (
+	"database/sql"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/hyperledger/burrow/vent/config"
-
+	"github.com/hyperledger/burrow/vent/sqldb"
+	"github.com/hyperledger/burrow/vent/sqldb/adapters"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/test"
 	"github.com/hyperledger/burrow/vent/types"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,42 +27,42 @@ func testSynchronizeDB(t *testing.T, cfg *config.VentConfig) {
 			tableStructure, err := sqlsol.NewProjectionFromBytes(byteValue)
 			require.NoError(t, err)
 
-			db, cleanUpDB := test.NewTestDB(t, "CHAIN 123", cfg)
+			db, cleanUpDB := test.NewTestDB(t, cfg)
 			defer cleanUpDB()
 
 			err = db.Ping()
 			require.NoError(t, err)
 
-			err = db.SynchronizeDB(tableStructure.Tables)
+			err = db.SynchronizeDB(test.ChainID, tableStructure.Tables)
 			require.NoError(t, err)
 		})
 }
 
 func testCleanDB(t *testing.T, cfg *config.VentConfig) {
-	t.Run(fmt.Sprintf("%s: successfully creates tables, updates chainID and drops all tables", cfg.DBAdapter),
+	t.Run(fmt.Sprintf("%s: successfully creates tables, updates test.ChainID and drops all tables", cfg.DBAdapter),
 		func(t *testing.T) {
 			byteValue := []byte(test.GoodJSONConfFile(t))
 			tableStructure, err := sqlsol.NewProjectionFromBytes(byteValue)
 			require.NoError(t, err)
 
-			db, cleanUpDB := test.NewTestDB(t, "CHAIN 123", cfg)
+			db, cleanUpDB := test.NewTestDB(t, cfg)
 			defer cleanUpDB()
 
 			err = db.Ping()
 			require.NoError(t, err)
 
-			err = db.SynchronizeDB(tableStructure.Tables)
+			err = db.SynchronizeDB(test.ChainID, tableStructure.Tables)
 			require.NoError(t, err)
 
-			err = db.CleanTables("Version 1.0")
+			err = db.CleanTables(test.ChainID, test.BurrowVersion)
 			require.NoError(t, err)
 		})
 }
 
-func testSetBlock(t *testing.T, cfg *config.VentConfig) {
-	t.Run(fmt.Sprintf("%s: successfully inserts a block", cfg.DBAdapter),
+func testRestore(t *testing.T, cfg *config.VentConfig) {
+	t.Run(fmt.Sprintf("%s: can restore from vent logging", cfg.DBAdapter),
 		func(t *testing.T) {
-			db, closeDB := test.NewTestDB(t, "CHAIN 123", cfg)
+			db, closeDB := test.NewTestDB(t, cfg)
 			defer closeDB()
 
 			errp := db.Ping()
@@ -67,30 +70,68 @@ func testSetBlock(t *testing.T, cfg *config.VentConfig) {
 
 			// new
 			str, dat := getBlock()
-			err := db.SetBlock(str, dat)
+			err := db.SetBlock(test.ChainID, str, dat)
+			require.NoError(t, err)
+
+			// restore to new table
+			prefix := "RESTORED"
+			err = db.RestoreDB(time.Time{}, prefix)
+			require.NoError(t, err)
+
+			for table := range dat.Tables {
+				assertTablesEqual(t, db, table, fmt.Sprintf("%s_%s", prefix, table))
+			}
+
+			for table := range dat.Tables {
+				dropQuery := db.DBAdapter.DropTableQuery(table)
+				_, err = db.DB.Exec(dropQuery)
+				require.NoError(t, err)
+			}
+
+			// restore in-place over original tables
+			err = db.RestoreDB(time.Time{}, "")
+			require.NoError(t, err)
+
+			for table := range dat.Tables {
+				assertTablesEqual(t, db, table, fmt.Sprintf("%s_%s", prefix, table))
+			}
+		})
+}
+
+func testSetBlock(t *testing.T, cfg *config.VentConfig) {
+	t.Run(fmt.Sprintf("%s: successfully inserts a block", cfg.DBAdapter),
+		func(t *testing.T) {
+			db, closeDB := test.NewTestDB(t, cfg)
+			defer closeDB()
+
+			errp := db.Ping()
+			require.NoError(t, errp)
+
+			// new
+			str, dat := getBlock()
+			err := db.SetBlock(test.ChainID, str, dat)
 			require.NoError(t, err)
 
 			// read
-			_, err = db.GetLastBlockHeight()
+			_, err = db.GetLastBlockHeight(test.ChainID)
 			require.NoError(t, err)
 
-			_, err = db.GetBlock(dat.BlockHeight)
+			_, err = db.GetBlock(test.ChainID, dat.BlockHeight)
 			require.NoError(t, err)
 
 			// alter
 			str, dat = getAlterBlock()
-			err = db.SetBlock(str, dat)
+			err = db.SetBlock(test.ChainID, str, dat)
 			require.NoError(t, err)
 
 			//restore
-			ti := time.Now().Local().AddDate(10, 0, 0)
-			err = db.RestoreDB(ti, "RESTORED")
+			err = db.RestoreDB(time.Time{}, "RESTORED")
 			require.NoError(t, err)
 
 		})
 
 	t.Run(fmt.Sprintf("%s: successfully creates an empty table", cfg.DBAdapter), func(t *testing.T) {
-		db, closeDB := test.NewTestDB(t, "CHAIN 123", cfg)
+		db, closeDB := test.NewTestDB(t, cfg)
 		defer closeDB()
 
 		errp := db.Ping()
@@ -112,7 +153,7 @@ func testSetBlock(t *testing.T, cfg *config.VentConfig) {
 			},
 		}
 
-		err := db.SynchronizeDB(tables)
+		err := db.SynchronizeDB(test.ChainID, tables)
 		require.NoError(t, err)
 	})
 }
@@ -234,4 +275,61 @@ func getAlterBlock() (types.EventTables, types.EventData) {
 	dat.Tables["test_table3"] = rows5
 
 	return str, dat
+}
+
+func assertTablesEqual(t *testing.T, db *sqldb.SQLDB, table1, table2 string) {
+	cols1, rows1 := selectAll(t, db, table1)
+	cols2, rows2 := selectAll(t, db, table2)
+
+	assert.Equal(t, cols1, cols2, "columns should be equal")
+	for i, r1 := range rows1 {
+		r2 := rows2[i]
+		assert.Equal(t, r1, r2, "each row should be equal")
+	}
+}
+
+func selectAll(t *testing.T, db *sqldb.SQLDB, tablename string) (columns []string, rows []map[string]interface{}) {
+	// language=SQL
+	selectQuery := adapters.Cleanf("SELECT * FROM %s", db.DBAdapter.SchemaName(tablename))
+	sqlRows, err := db.DB.Query(selectQuery)
+	require.NoError(t, err)
+	defer sqlRows.Close()
+
+	cols, err := sqlRows.Columns()
+	require.NoError(t, err)
+	for sqlRows.Next() {
+		row := rowMap(t, cols, sqlRows)
+		rows = append(rows, row)
+	}
+	return cols, rows
+}
+
+func rowMap(t *testing.T, cols []string, rows *sql.Rows) map[string]interface{} {
+	vals := scanValues(len(cols))
+	err := rows.Scan(vals...)
+	require.NoError(t, err)
+	mp := make(map[string]interface{}, len(cols))
+
+	for i, v := range vals {
+		iface := v.(*interface{})
+		if iface != nil {
+			// truly go at its most beautiful
+			switch iv := (*iface).(type) {
+			case []byte:
+				str := string(iv)
+				mp[cols[i]] = str
+			default:
+				mp[cols[i]] = iv
+			}
+		}
+	}
+	return mp
+}
+
+func scanValues(n int) []interface{} {
+	vals := make([]interface{}, n)
+	for i := 0; i < n; i++ {
+		vals[i] = new(interface{})
+	}
+	return vals
 }

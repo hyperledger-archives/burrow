@@ -396,14 +396,18 @@ func (adapter *SQLiteAdapter) DeleteQuery(table *types.SQLTable, row types.Event
 
 func (adapter *SQLiteAdapter) RestoreDBQuery() string {
 
-	query := Cleanf("SELECT %s, %s, %s, %s FROM %s",
-		types.SQLColumnLabelTableName, types.SQLColumnLabelAction, types.SQLColumnLabelSqlStmt, types.SQLColumnLabelSqlValues,
+	query := Cleanf("SELECT %s, %s, %s, %s, %s FROM %s",
+		types.SQLColumnLabelId, types.SQLColumnLabelTableName, types.SQLColumnLabelAction, // select
+		types.SQLColumnLabelSqlStmt, types.SQLColumnLabelSqlValues, // select
 		types.SQLLogTableName)
 
 	query += " WHERE strftime('%Y-%m-%d %H:%M:%S',"
 
-	query += Cleanf("%s)<=$1 ORDER BY %s;",
-		types.SQLColumnLabelTimeStamp, types.SQLColumnLabelId)
+	query += Cleanf("%s) AND %s != '%s' AND  %s != '%s' <=$1 ORDER BY %s;",
+		types.SQLColumnLabelTimeStamp,
+		types.SQLColumnLabelTableName, types.SQLBlockTableName, // where not _vent_block
+		types.SQLColumnLabelTableName, types.SQLTxTableName, // where not _vent_tx
+		types.SQLColumnLabelId)
 
 	return query
 
@@ -466,4 +470,8 @@ func (adapter *SQLiteAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 func (adapter *SQLiteAdapter) DropTableQuery(tableName string) string {
 	// SQLite does not support DROP TABLE CASCADE so this will fail if there are dependent objects
 	return Cleanf(`DROP TABLE %s;`, adapter.SecureName(tableName))
+}
+
+func (adapter *SQLiteAdapter) SchemaName(tableName string) string {
+	return secureName(tableName)
 }

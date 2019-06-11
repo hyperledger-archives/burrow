@@ -37,7 +37,7 @@ func TestPostgresConsumer(t *testing.T) {
 		})
 
 		t.Run("PostgresInvalidUTF8", func(t *testing.T) {
-			testInvalidUTF8(t, kern.Blockchain.ChainID(), test.PostgresVentConfig(grpcAddress), tcli, inputAddress)
+			testInvalidUTF8(t, test.PostgresVentConfig(grpcAddress), tcli, inputAddress)
 		})
 
 		t.Run("PostgresDeleteEvent", func(t *testing.T) {
@@ -45,7 +45,7 @@ func TestPostgresConsumer(t *testing.T) {
 		})
 
 		t.Run("PostgresResume", func(t *testing.T) {
-			testResume(t, kern.Blockchain.ChainID(), test.PostgresVentConfig(grpcAddress))
+			testResume(t, test.PostgresVentConfig(grpcAddress))
 		})
 
 		t.Run("PostgresTriggers", func(t *testing.T) {
@@ -59,7 +59,7 @@ func TestPostgresConsumer(t *testing.T) {
 
 			cfg := test.PostgresVentConfig(grpcAddress)
 			// create test db
-			_, closeDB := test.NewTestDB(t, kern.Blockchain.ChainID(), cfg)
+			_, closeDB := test.NewTestDB(t, cfg)
 			defer closeDB()
 
 			// Create a postgres notification listener
