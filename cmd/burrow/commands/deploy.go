@@ -59,6 +59,8 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 
 		verboseOpt := cmd.BoolOpt("v verbose", false, "verbose output")
 
+		wasmOpt := cmd.BoolOpt("wasm", false, "Compile to WASM using solang (experimental)")
+
 		debugOpt := cmd.BoolOpt("d debug", false, "debug level output")
 
 		proposalVerify := cmd.BoolOpt("proposal-verify", false, "Verify any proposal, do NOT create new proposal or vote")
@@ -95,6 +97,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			args.MempoolSign = *mempoolSigningOpt
 			args.Timeout = *timeoutSecondsOpt
 			args.Path = *pathOpt
+			args.Wasm = *wasmOpt
 			args.DefaultOutput = *defaultOutputOpt
 			args.DefaultSets = *defaultSetsOpt
 			args.BinPath = *binPathOpt

@@ -23,4 +23,5 @@ message Account {
     uint64 Balance = 4;
     bytes Code = 5 [(gogoproto.customtype) = "Bytecode", (gogoproto.nullable) = false];
     permission.AccountPermissions Permissions = 6 [(gogoproto.nullable) = false];
+    bytes WASM = 7 [(gogoproto.customtype) = "Bytecode", (gogoproto.nullable) = false];
 }

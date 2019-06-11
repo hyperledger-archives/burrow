@@ -130,6 +130,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		caller  crypto.Address = inAcc.Address
 		callee  crypto.Address = crypto.ZeroAddress // initialized below
 		code    []byte         = nil
+		wasm    []byte         = nil
 		ret     []byte         = nil
 		txCache                = evm.NewState(ctx.StateWriter, ctx.Blockchain.BlockHash, acmstate.Named("TxCache"))
 		params                 = evm.Params{
@@ -144,6 +145,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		// We already checked for permission
 		callee = crypto.NewContractAddress(caller, ctx.txe.TxHash)
 		code = ctx.tx.Data
+		wasm = ctx.tx.WASM
 		txCache.CreateAccount(callee)
 		ctx.Logger.TraceMsg("Creating new contract",
 			"contract_address", callee,
@@ -177,6 +179,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		}
 		callee = outAcc.Address
 		code = txCache.GetCode(callee)
+		wasm = txCache.GetWASMCode(callee)
 		ctx.Logger.TraceMsg("Calling existing contract",
 			"contract_address", callee,
 			"input", ctx.tx.Data,

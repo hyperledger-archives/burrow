@@ -55,6 +55,9 @@ type SolidityContract struct {
 			LinkReferences json.RawMessage
 		}
 	}
+	EWasm struct {
+		Wasm string
+	}
 	Devdoc   json.RawMessage
 	Userdoc  json.RawMessage
 	Metadata string
@@ -193,6 +196,62 @@ func Compile(file string, optimize bool, workDir string, libraries map[string]st
 	warnings := ""
 	errors := ""
 	for _, msg := range output.Errors {
+		if msg.Type == "Warning" {
+			warnings += msg.FormattedMessage
+		} else {
+			errors += msg.FormattedMessage
+		}
+	}
+
+	for _, re := range respItemArray {
+		logger.TraceMsg("Response formulated",
+			"name", re.Objectname,
+			"bin", re.Contract.EWasm.Wasm,
+			"abi", string(re.Contract.Abi))
+	}
+
+	resp := Response{
+		Objects: respItemArray,
+		Warning: warnings,
+		Error:   errors,
+	}
+
+	return &resp, nil
+}
+
+func CompileWASM(file string, workDir string, logger *logging.Logger) (*Response, error) {
+	shellCmd := exec.Command("solang", "--json", file)
+	if workDir != "" {
+		shellCmd.Dir = workDir
+	}
+	output, err := shellCmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+	logger.TraceMsg("Command Output", "result", string(output))
+
+	wasmoutput := SolidityOutput{}
+	err = json.Unmarshal(output, &output)
+	if err != nil {
+		return nil, err
+	}
+
+	respItemArray := make([]ResponseItem, 0)
+
+	for f, s := range wasmoutput.Contracts {
+		for contract, item := range s {
+			respItem := ResponseItem{
+				Filename:   f,
+				Objectname: objectName(contract),
+				Contract:   item,
+			}
+			respItemArray = append(respItemArray, respItem)
+		}
+	}
+
+	warnings := ""
+	errors := ""
+	for _, msg := range wasmoutput.Errors {
 		if msg.Type == "Warning" {
 			warnings += msg.FormattedMessage
 		} else {

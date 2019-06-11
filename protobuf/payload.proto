@@ -66,9 +66,10 @@ message CallTx {
     uint64 GasLimit = 3;
     // Fee to offer validators for processing transaction
     uint64 Fee = 4;
-    // EVM bytecode payload
+    // EVM bytecode payload or call data
     bytes Data = 5 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
-
+    // 
+    bytes WASM = 6 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
 }
 
 // A payment between two sets of parties

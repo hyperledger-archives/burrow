@@ -24,27 +24,40 @@ type solidityCompilerWork struct {
 	workDir      string
 }
 
-type intermediateJob struct {
+type compilerJob struct {
 	work         solidityCompilerWork
 	compilerResp *compilers.Response
 	err          error
 	done         chan struct{}
 }
 
-func intermediateJobRunner(jobs chan *intermediateJob, logger *logging.Logger) {
+func solcRunner(jobs chan *compilerJob, logger *logging.Logger) {
 	for {
-		intermediate, ok := <-jobs
+		job, ok := <-jobs
 		if !ok {
 			break
 		}
-		resp, err := compilers.Compile(intermediate.work.contractName, false, intermediate.work.workDir, nil, logger)
-		(*intermediate).compilerResp = resp
-		(*intermediate).err = err
-		close(intermediate.done)
+		resp, err := compilers.Compile(job.work.contractName, false, job.work.workDir, nil, logger)
+		(*job).compilerResp = resp
+		(*job).err = err
+		close(job.done)
 	}
 }
 
-func queueCompilerWork(job *def.Job, playbook *def.Playbook, jobs chan *intermediateJob) error {
+func solangRunner(jobs chan *compilerJob, logger *logging.Logger) {
+	for {
+		job, ok := <-jobs
+		if !ok {
+			break
+		}
+		resp, err := compilers.CompileWASM(job.work.contractName, job.work.workDir, logger)
+		(*job).compilerResp = resp
+		(*job).err = err
+		close(job.done)
+	}
+}
+
+func queueCompilerWork(job *def.Job, playbook *def.Playbook, jobs chan *compilerJob) error {
 	payload, err := job.Payload()
 	if err != nil {
 		return fmt.Errorf("could not get Job payload: %v", payload)
@@ -53,7 +66,7 @@ func queueCompilerWork(job *def.Job, playbook *def.Playbook, jobs chan *intermed
 	// Do compilation first
 	switch payload.(type) {
 	case *def.Build:
-		intermediate := intermediateJob{
+		intermediate := compilerJob{
 			done: make(chan struct{}),
 			work: solidityCompilerWork{
 				contractName: job.Build.Contract,
@@ -64,7 +77,7 @@ func queueCompilerWork(job *def.Job, playbook *def.Playbook, jobs chan *intermed
 		jobs <- &intermediate
 	case *def.Deploy:
 		if filepath.Ext(job.Deploy.Contract) == ".sol" {
-			intermediate := intermediateJob{
+			intermediate := compilerJob{
 				done: make(chan struct{}),
 				work: solidityCompilerWork{
 					contractName: job.Deploy.Contract,
@@ -94,7 +107,7 @@ func queueCompilerWork(job *def.Job, playbook *def.Playbook, jobs chan *intermed
 }
 
 func getCompilerWork(intermediate interface{}) (*compilers.Response, error) {
-	if intermediate, ok := intermediate.(*intermediateJob); ok {
+	if intermediate, ok := intermediate.(*compilerJob); ok {
 		<-intermediate.done
 
 		return intermediate.compilerResp, intermediate.err
@@ -271,11 +284,15 @@ func ExecutePlaybook(args *def.DeployArgs, playbook *def.Playbook, client *def.C
 		return fmt.Errorf("error validating Burrow deploy file at %s: %v", playbook.Filename, err)
 	}
 
-	jobs := make(chan *intermediateJob, concurrentSolcWorkQueue)
+	jobs := make(chan *compilerJob, concurrentSolcWorkQueue)
 	defer close(jobs)
 
 	for i := 0; i < concurrentSolc; i++ {
-		go intermediateJobRunner(jobs, logger)
+		if args.Wasm {
+			go solangRunner(jobs, logger)
+		} else {
+			go solcRunner(jobs, logger)
+		}
 	}
 
 	for _, job := range playbook.Jobs {

@@ -163,7 +163,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 			contractCode = contractCode + callData
 		}
 
-		tx, err := deployTx(client, deploy, contractName, string(contractCode), logger)
+		tx, err := deployTx(client, deploy, contractName, string(contractCode), "", logger)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not deploy binary contract: %v", err)
 		}
@@ -351,11 +351,17 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 		}
 	}
 
-	err = contract.Link(libs)
-	if err != nil {
-		return nil, err
+	wasm := ""
+	data := ""
+	if contract.EWasm.Wasm != "" {
+		wasm = contract.EWasm.Wasm
+	} else {
+		err = contract.Link(libs)
+		if err != nil {
+			return nil, err
+		}
+		data = contract.Evm.Bytecode.Object
 	}
-	contractCode := contract.Evm.Bytecode.Object
 
 	if deploy.Data != nil {
 		_, callDataArray, err := util.PreProcessInputData(compilersResponse.Objectname, deploy.Data, do, script, client, true, logger)
@@ -367,7 +373,7 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 			return nil, err
 		}
 		callData := hex.EncodeToString(packedBytes)
-		contractCode = contractCode + callData
+		data = data + callData
 	} else {
 		// No constructor arguments were provided. Did the constructor want any?
 		spec, err := abi.ReadAbiSpec(compilersResponse.Contract.Abi)
@@ -381,15 +387,16 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 		}
 	}
 
-	return deployTx(client, deploy, compilersResponse.Objectname, contractCode, logger)
+	return deployTx(client, deploy, compilersResponse.Objectname, data, wasm, logger)
 }
 
-func deployTx(client *def.Client, deploy *def.Deploy, contractName, contractCode string, logger *logging.Logger) (*payload.CallTx, error) {
+func deployTx(client *def.Client, deploy *def.Deploy, contractName, data, wasm string, logger *logging.Logger) (*payload.CallTx, error) {
 	// Deploy contract
 	logger.TraceMsg("Deploying Contract",
 		"contract", contractName,
 		"source", deploy.Source,
-		"code", contractCode,
+		"data", data,
+		"wasm", wasm,
 		"chain", client.ChainAddress)
 
 	return client.Call(&def.CallArg{
@@ -397,7 +404,8 @@ func deployTx(client *def.Client, deploy *def.Deploy, contractName, contractCode
 		Amount:   deploy.Amount,
 		Fee:      deploy.Fee,
 		Gas:      deploy.Gas,
-		Data:     contractCode,
+		Data:     data,
+		WASM:     wasm,
 		Sequence: deploy.Sequence,
 	}, logger)
 }

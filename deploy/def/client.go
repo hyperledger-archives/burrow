@@ -427,6 +427,7 @@ type CallArg struct {
 	Fee      string
 	Gas      string
 	Data     string
+	WASM     string
 }
 
 func (c *Client) Call(arg *CallArg, logger *logging.Logger) (*payload.CallTx, error) {
