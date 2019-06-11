@@ -86,8 +86,7 @@ func testConsumer(t *testing.T, cfg *config.VentConfig, tcli rpctransact.Transac
 	}
 
 	//Restore
-	ti := time.Now().Local().AddDate(10, 0, 0)
-	err = db.RestoreDB(ti, "RESTORED")
+	err = db.RestoreDB(time.Time{}, "RESTORED")
 	require.NoError(t, err)
 }
 

@@ -1,19 +1,19 @@
 package commands
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/vent/config"
-
-	"github.com/hyperledger/burrow/config/source"
-
 	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/service"
+	"github.com/hyperledger/burrow/vent/sqldb"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/types"
 	cli "github.com/jawher/mow.cli"
@@ -26,9 +26,7 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 			func(cmd *cli.Cmd) {
 				cfg := config.DefaultVentConfig()
 
-				dbAdapterOpt := cmd.StringOpt("db-adapter", cfg.DBAdapter, "Database adapter, 'postgres' or 'sqlite' (if built with the sqlite tag) are supported")
-				dbURLOpt := cmd.StringOpt("db-url", cfg.DBURL, "PostgreSQL database URL or SQLite db file path")
-				dbSchemaOpt := cmd.StringOpt("db-schema", cfg.DBSchema, "PostgreSQL database schema (empty for SQLite)")
+				dbOpts := sqlDBOpts(cmd, cfg)
 				grpcAddrOpt := cmd.StringOpt("grpc-addr", cfg.GRPCAddr, "Address to connect to the Hyperledger Burrow gRPC server")
 				httpAddrOpt := cmd.StringOpt("http-addr", cfg.HTTPAddr, "Address to bind the HTTP server")
 				logLevelOpt := cmd.StringOpt("log-level", cfg.LogLevel, "Logging level (error, warn, info, debug)")
@@ -40,9 +38,9 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 
 				cmd.Before = func() {
 					// Rather annoying boilerplate here... but there is no way to pass mow.cli a pointer for it to fill you value
-					cfg.DBAdapter = *dbAdapterOpt
-					cfg.DBURL = *dbURLOpt
-					cfg.DBSchema = *dbSchemaOpt
+					cfg.DBAdapter = *dbOpts.adapter
+					cfg.DBURL = *dbOpts.url
+					cfg.DBSchema = *dbOpts.schema
 					cfg.GRPCAddr = *grpcAddrOpt
 					cfg.HTTPAddr = *httpAddrOpt
 					cfg.LogLevel = *logLevelOpt
@@ -122,5 +120,76 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					output.Printf(source.JSONString(types.EventSpecSchema()))
 				}
 			})
+
+		cmd.Command("restore", "Restore the mapped tables from the _vent_log table",
+			func(cmd *cli.Cmd) {
+				const timeLayout = "2006-01-02 15:04:05"
+
+				dbOpts := sqlDBOpts(cmd, config.DefaultVentConfig())
+				timeOpt := cmd.StringOpt("t time", "", fmt.Sprintf("restore time up to which all "+
+					"log entries will be applied to restore DB, in the format '%s'- restores all log entries if omitted",
+					timeLayout))
+				prefixOpt := cmd.StringOpt("p prefix", "", "")
+
+				cmd.Spec = "[--db-adapter] [--db-url] [--db-schema] [--time=<date/time to up to which to restore>] " +
+					"[--prefix=<destination table prefix>]"
+
+				var restoreTime time.Time
+
+				cmd.Before = func() {
+					if *timeOpt != "" {
+						var err error
+						restoreTime, err = time.Parse(timeLayout, *timeOpt)
+						if err != nil {
+							output.Fatalf("Could not parse restore time, should be in the format '%s': %v",
+								timeLayout, err)
+						}
+					}
+				}
+
+				cmd.Action = func() {
+					db, err := sqldb.NewSQLDB(types.SQLConnection{
+						DBAdapter: *dbOpts.adapter,
+						DBURL:     *dbOpts.url,
+						DBSchema:  *dbOpts.schema,
+						Log:       logger.NewLogger("debug"),
+					})
+					if err != nil {
+						output.Fatalf("Could not connect to SQL DB: %v", err)
+					}
+
+					if restoreTime.IsZero() {
+						output.Logf("Restoring DB to state from log")
+					} else {
+						output.Logf("Restoring DB to state from log as of %v", restoreTime)
+					}
+
+					if *prefixOpt == "" {
+						output.Logf("Restoring DB in-place by overwriting any existing tables")
+					} else {
+						output.Logf("Restoring DB to destination tables with prefix '%s'", *prefixOpt)
+					}
+
+					err = db.RestoreDB(restoreTime, *prefixOpt)
+					if err != nil {
+						output.Fatalf("Error restoring DB: %v", err)
+					}
+					output.Logf("Successfully restored DB")
+				}
+			})
+	}
+}
+
+type dbOpts struct {
+	adapter *string
+	url     *string
+	schema  *string
+}
+
+func sqlDBOpts(cmd *cli.Cmd, cfg *config.VentConfig) dbOpts {
+	return dbOpts{
+		adapter: cmd.StringOpt("db-adapter", cfg.DBAdapter, "Database adapter, 'postgres' or 'sqlite' (if built with the sqlite tag) are supported"),
+		url:     cmd.StringOpt("db-url", cfg.DBURL, "PostgreSQL database URL or SQLite db file path"),
+		schema:  cmd.StringOpt("db-schema", cfg.DBSchema, "PostgreSQL database schema (empty for SQLite)"),
 	}
 }

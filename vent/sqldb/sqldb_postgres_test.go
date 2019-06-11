@@ -30,6 +30,10 @@ func TestPostgresSetBlock(t *testing.T) {
 	testSetBlock(t, test.PostgresVentConfig(""))
 }
 
+func TestRestore(t *testing.T) {
+	testRestore(t, test.PostgresVentConfig(""))
+}
+
 func TestPostgresBlockNotification(t *testing.T) {
 	cfg := test.PostgresVentConfig("")
 	db, closeDB := test.NewTestDB(t, cfg)

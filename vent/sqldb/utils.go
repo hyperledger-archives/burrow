@@ -483,5 +483,18 @@ func (db *SQLDB) getValuesFromJSON(JSON string) ([]interface{}, error) {
 	pointers := make([]interface{}, 0)
 	bytes := []byte(JSON)
 	err := json.Unmarshal(bytes, &pointers)
-	return pointers, err
+	if err != nil {
+		return nil, err
+	}
+	for i, ptr := range pointers {
+		switch v := ptr.(type) {
+		// Normalise integral floats
+		case float64:
+			i64 := int64(v)
+			if float64(i64) == v {
+				pointers[i] = i64
+			}
+		}
+	}
+	return pointers, nil
 }

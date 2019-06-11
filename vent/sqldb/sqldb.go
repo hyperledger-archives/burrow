@@ -86,9 +86,12 @@ func NewSQLDB(connection types.SQLConnection) (*SQLDB, error) {
 		}
 	}
 
-	if err = db.CleanTables(connection.ChainID, connection.BurrowVersion); err != nil {
-		db.Log.Info("msg", "Error cleaning tables", "err", err)
-		return nil, err
+	// Allow connection to be used generically
+	if connection.ChainID != "" {
+		if err = db.CleanTables(connection.ChainID, connection.BurrowVersion); err != nil {
+			db.Log.Info("msg", "Error cleaning tables", "err", err)
+			return nil, err
+		}
 	}
 	return db, nil
 }
@@ -96,9 +99,8 @@ func NewSQLDB(connection types.SQLConnection) (*SQLDB, error) {
 // CleanTables, drop tables if stored chainID is different from the given one & store new chainID
 // if the chainID is the same, do nothing
 func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
-
 	if chainID == "" {
-		return fmt.Errorf("error CHAIN ID cannot by empty")
+		return fmt.Errorf("error CHAIN ID cannot be empty")
 	}
 
 	cleanQueries := db.DBAdapter.CleanDBQueries()
@@ -501,20 +503,22 @@ func (db *SQLDB) GetBlock(height uint64) (types.EventData, error) {
 	return data, nil
 }
 
-// RestoreDB restores the DB to a given moment in time
-func (db *SQLDB) RestoreDB(time time.Time, prefix string) error {
-
+// RestoreDB restores the DB to a given moment in time. If prefix is provided restores the table state to a new set of
+// tables as <prefix>_<table name>. Drops destination tables before recreating them. If zero time passed restores
+// all values
+func (db *SQLDB) RestoreDB(restoreTime time.Time, prefix string) error {
+	const year = time.Hour * 24 * 365
 	const yymmddhhmmss = "2006-01-02 15:04:05"
 
 	var pointers []interface{}
 
-	if prefix == "" {
-		return fmt.Errorf("error prefix mus not be empty")
-	}
-
 	// Get Restore DB query
 	query := db.DBAdapter.RestoreDBQuery()
-	strTime := time.Format(yymmddhhmmss)
+	if restoreTime.IsZero() {
+		// We'll assume a sufficiently small clock skew...
+		restoreTime = time.Now().Add(100 * year)
+	}
+	strTime := restoreTime.Format(yymmddhhmmss)
 
 	db.Log.Info("msg", "RESTORING DB..................................")
 
@@ -529,10 +533,11 @@ func (db *SQLDB) RestoreDB(time time.Time, prefix string) error {
 
 	// For each row returned
 	for rows.Next() {
+		var id int64
 		var tableName, sqlSmt, sqlValues string
 		var action types.DBAction
 
-		if err = rows.Scan(&tableName, &action, &sqlSmt, &sqlValues); err != nil {
+		if err = rows.Scan(&id, &tableName, &action, &sqlSmt, &sqlValues); err != nil {
 			db.Log.Info("msg", "error scanning table structure", "err", err)
 			return err
 		}
@@ -542,7 +547,10 @@ func (db *SQLDB) RestoreDB(time time.Time, prefix string) error {
 			return err
 		}
 
-		restoreTable := fmt.Sprintf("%s_%s", prefix, tableName)
+		restoreTable := tableName
+		if prefix != "" {
+			restoreTable = fmt.Sprintf("%s_%s", prefix, tableName)
+		}
 
 		switch action {
 		case types.ActionUpsert, types.ActionDelete:
@@ -553,15 +561,26 @@ func (db *SQLDB) RestoreDB(time time.Time, prefix string) error {
 			}
 
 			// Prepare Upsert/delete
-			query = strings.Replace(sqlSmt, tableName, restoreTable, -1)
+			query = sqlSmt
+			if prefix != "" {
+				// TODO: [Silas] ugh this is a little fragile
+				query = strings.Replace(sqlSmt, tableName, restoreTable, -1)
+			}
 
-			db.Log.Info("msg", "SQL COMMAND", "sql", query)
+			db.Log.Info("msg", "SQL COMMAND", "sql", query, "log_id", id)
 			if _, err = db.DB.Exec(query, pointers...); err != nil {
 				db.Log.Info("msg", "Error executing upsert/delete ", "err", err, "value", sqlSmt, "data", sqlValues)
 				return err
 			}
 
 		case types.ActionAlterTable, types.ActionCreateTable:
+			if action == types.ActionCreateTable {
+				dropQuery := db.DBAdapter.DropTableQuery(restoreTable)
+				_, err := db.DB.Exec(dropQuery)
+				if err != nil && !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeUndefinedTable) {
+					return fmt.Errorf("could not drop target restore table %s: %v", restoreTable, err)
+				}
+			}
 			// Prepare Alter/Create Table
 			query = strings.Replace(sqlSmt, tableName, restoreTable, -1)
 
