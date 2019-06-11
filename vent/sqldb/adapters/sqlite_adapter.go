@@ -136,18 +136,19 @@ func (adapter *SQLiteAdapter) CreateTableQuery(tableName string, columns []*type
 func (adapter *SQLiteAdapter) LastBlockIDQuery() string {
 	query := `
 		WITH ll AS (
-			SELECT MAX(%s) AS %s FROM %s
+			SELECT MAX(%s) AS %s FROM %s WHERE %s IS NOT NULL
 		)
 		SELECT COALESCE(%s, '0') AS %s
 			FROM ll LEFT OUTER JOIN %s log ON (ll.%s = log.%s);`
 
 	return Cleanf(query,
-		types.SQLColumnLabelId,                         // max
-		types.SQLColumnLabelId,                         // as
-		types.SQLLogTableName,                          // from
-		types.SQLColumnLabelHeight,                     // coalesce
-		types.SQLColumnLabelHeight,                     // as
-		types.SQLLogTableName,                          // from
+		types.SQLColumnLabelId,     // max
+		types.SQLColumnLabelId,     // as
+		types.SQLLogTableName,      // from
+		types.SQLColumnLabelHeight, // where IS NOT NULL
+		types.SQLColumnLabelHeight, // coalesce
+		types.SQLColumnLabelHeight, // as
+		types.SQLLogTableName,      // from
 		types.SQLColumnLabelId, types.SQLColumnLabelId) // on
 }
 
@@ -156,7 +157,7 @@ func (adapter *SQLiteAdapter) FindTableQuery() string {
 	query := "SELECT COUNT(*) found FROM %s WHERE %s = $1;"
 
 	return Cleanf(query,
-		types.SQLDictionaryTableName,  // from
+		types.SQLDictionaryTableName, // from
 		types.SQLColumnLabelTableName) // where
 }
 
@@ -173,10 +174,10 @@ func (adapter *SQLiteAdapter) TableDefinitionQuery() string {
 			%s;`
 
 	return Cleanf(query,
-		types.SQLColumnLabelColumnName, types.SQLColumnLabelColumnType, // select
+		types.SQLColumnLabelColumnName, types.SQLColumnLabelColumnType,   // select
 		types.SQLColumnLabelColumnLength, types.SQLColumnLabelPrimaryKey, // select
-		types.SQLDictionaryTableName,    // from
-		types.SQLColumnLabelTableName,   // where
+		types.SQLDictionaryTableName,                                     // from
+		types.SQLColumnLabelTableName,                                    // where
 		types.SQLColumnLabelColumnOrder) // order by
 }
 
@@ -219,7 +220,7 @@ func (adapter *SQLiteAdapter) SelectLogQuery() string {
 
 	return Cleanf(query,
 		types.SQLColumnLabelTableName, types.SQLColumnLabelEventName, // select
-		types.SQLLogTableName,      // from
+		types.SQLLogTableName,                                        // from
 		types.SQLColumnLabelHeight) // where
 }
 
