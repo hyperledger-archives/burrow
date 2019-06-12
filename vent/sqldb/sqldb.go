@@ -18,17 +18,15 @@ type SQLDB struct {
 	DB        *sql.DB
 	DBAdapter adapters.DBAdapter
 	Schema    string
-	ChainID   string // needed for many sql queries
 	Log       *logger.Logger
 }
 
 // NewSQLDB delegates work to a specific database adapter implementation,
 // opens database connection and create log tables
-func NewSQLDB(connection types.SQLConnection, chainid, burrowversion string) (*SQLDB, error) {
+func NewSQLDB(connection types.SQLConnection) (*SQLDB, error) {
 	db := &SQLDB{
-		Schema:  connection.DBSchema,
-		ChainID: chainid,
-		Log:     connection.Log,
+		Schema: connection.DBSchema,
+		Log:    connection.Log,
 	}
 
 	var url string
@@ -59,50 +57,58 @@ func NewSQLDB(connection types.SQLConnection, chainid, burrowversion string) (*S
 		return nil, err
 	}
 
+	return db, nil
+}
+
+// Initialise the system and chain tables in case this is the first run - is idempotent though will drop tables
+// if ChainID has changed
+func (db *SQLDB) Init(chainID, burrowVersion string) error {
 	db.Log.Info("msg", "Initializing DB")
 
 	// Create dictionary and log tables
 	sysTables := db.getSysTablesDefinition()
 
 	// IMPORTANT: DO NOT CHANGE TABLE CREATION ORDER (1)
-	if err = db.createTable(sysTables[types.SQLDictionaryTableName], true); err != nil {
+	if err := db.createTable(chainID, sysTables[types.SQLDictionaryTableName], true); err != nil {
 		if !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeDuplicatedTable) {
 			db.Log.Info("msg", "Error creating Dictionary table", "err", err)
-			return nil, err
+			return err
 		}
 	}
 
 	// IMPORTANT: DO NOT CHANGE TABLE CREATION ORDER (2)
-	if err = db.createTable(sysTables[types.SQLLogTableName], true); err != nil {
+	if err := db.createTable(chainID, sysTables[types.SQLLogTableName], true); err != nil {
 		if !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeDuplicatedTable) {
 			db.Log.Info("msg", "Error creating Log table", "err", err)
-			return nil, err
+			return err
 		}
 	}
 
 	// IMPORTANT: DO NOT CHANGE TABLE CREATION ORDER (3)
-	if err = db.createTable(sysTables[types.SQLChainInfoTableName], true); err != nil {
+	if err := db.createTable(chainID, sysTables[types.SQLChainInfoTableName], true); err != nil {
 		if !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeDuplicatedTable) {
 			db.Log.Info("msg", "Error creating Chain Info table", "err", err)
-			return nil, err
+			return err
 		}
 	}
 
-	if err = db.CleanTables(burrowversion); err != nil {
-		db.Log.Info("msg", "Error cleaning tables", "err", err)
-		return nil, err
+	chainIDChanged, err := db.InitChain(chainID, burrowVersion)
+	if err != nil {
+		return fmt.Errorf("could not initialise chain in database: %v", err)
 	}
-	return db, nil
+
+	if chainIDChanged {
+		// If the chain has changed - drop existing data
+		err = db.CleanTables(chainID, burrowVersion)
+		if err != nil {
+			return fmt.Errorf("could not clean tables after ChainID change: %v", err)
+		}
+	}
+
+	return nil
 }
 
-// CleanTables drop tables if stored chainID is different from the given one & store new chainID
-// if the chainID is the same, do nothing
-func (db *SQLDB) CleanTables(burrowVersion string) error {
-
-	if db.ChainID == "" {
-		return fmt.Errorf("error CHAIN ID cannot be empty")
-	}
-
+func (db *SQLDB) InitChain(chainID, burrowVersion string) (chainIDChanged bool, _ error) {
 	cleanQueries := db.DBAdapter.CleanDBQueries()
 
 	var savedChainID, savedBurrowVersion, query string
@@ -112,112 +118,113 @@ func (db *SQLDB) CleanTables(burrowVersion string) error {
 	query = cleanQueries.SelectChainIDQry
 	if err := db.DB.QueryRow(query).Scan(&savedRows, &savedChainID, &savedBurrowVersion); err != nil {
 		db.Log.Info("msg", "Error selecting CHAIN ID", "err", err, "query", query)
+		return false, err
+	}
+
+	if savedRows == 1 {
+		return savedChainID == chainID, nil
+	}
+
+	if savedRows > 1 {
+		return false, fmt.Errorf("error multiple chains defined returned")
+	}
+
+	// First database access
+	// Save new values and exit
+	query = cleanQueries.InsertChainIDQry
+	_, err := db.DB.Exec(query, chainID, burrowVersion)
+
+	if err != nil {
+		db.Log.Info("msg", "Error inserting CHAIN ID", "err", err, "query", query)
+	}
+	return false, err
+
+}
+
+// CleanTables drop tables if stored chainID is different from the given one & store new chainID
+// if the chainID is the same, do nothing
+func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
+	var tx *sql.Tx
+	var err error
+	var tableName string
+	tables := make([]string, 0)
+	cleanQueries := db.DBAdapter.CleanDBQueries()
+
+	// Begin tx
+	if tx, err = db.DB.Begin(); err != nil {
+		db.Log.Info("msg", "Error beginning transaction", "err", err)
+		return err
+	}
+	defer tx.Rollback()
+
+	// Delete chainID
+	query := cleanQueries.DeleteChainIDQry
+	if _, err = tx.Exec(query); err != nil {
+		db.Log.Info("msg", "Error deleting CHAIN ID", "err", err, "query", query)
 		return err
 	}
 
-	switch {
-	// Must be empty or one row
-	case savedRows != 0 && savedRows != 1:
-		return fmt.Errorf("error multiple CHAIN ID returned")
-
-	// First database access
-	case savedRows == 0:
-		// Save new values and exit
-		query = cleanQueries.InsertChainIDQry
-		if _, err := db.DB.Exec(query, db.ChainID, burrowVersion); err != nil {
-			db.Log.Info("msg", "Error inserting CHAIN ID", "err", err, "query", query)
-			return err
-		}
-		return nil
-
-	// if data equals previous version exit
-	case savedChainID == db.ChainID:
-		return nil
-
-	// clean database
-	default:
-		var tx *sql.Tx
-		var err error
-		var tableName string
-		tables := make([]string, 0)
-
-		// Begin tx
-		if tx, err = db.DB.Begin(); err != nil {
-			db.Log.Info("msg", "Error beginning transaction", "err", err)
-			return err
-		}
-		defer tx.Rollback()
-
-		// Delete chainID
-		query := cleanQueries.DeleteChainIDQry
-		if _, err = tx.Exec(query); err != nil {
-			db.Log.Info("msg", "Error deleting CHAIN ID", "err", err, "query", query)
-			return err
-		}
-
-		// Insert chainID
-		query = cleanQueries.InsertChainIDQry
-		if _, err := tx.Exec(query, db.ChainID, burrowVersion); err != nil {
-			db.Log.Info("msg", "Error inserting CHAIN ID", "err", err, "query", query)
-			return err
-		}
-
-		// Load Tables
-		query = cleanQueries.SelectDictionaryQry
-		rows, err := tx.Query(query)
-		if err != nil {
-			db.Log.Info("msg", "error querying dictionary", "err", err, "query", query)
-			return err
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-
-			if err = rows.Scan(&tableName); err != nil {
-				db.Log.Info("msg", "error scanning table structure", "err", err)
-				return err
-			}
-
-			if err = rows.Err(); err != nil {
-				db.Log.Info("msg", "error scanning table structure", "err", err)
-				return err
-			}
-			tables = append(tables, tableName)
-		}
-
-		// Delete Dictionary
-		query = cleanQueries.DeleteDictionaryQry
-		if _, err = tx.Exec(query); err != nil {
-			db.Log.Info("msg", "Error deleting dictionary", "err", err, "query", query)
-			return err
-		}
-
-		// Delete Log
-		query = cleanQueries.DeleteLogQry
-		if _, err = tx.Exec(query); err != nil {
-			db.Log.Info("msg", "Error deleting log", "err", err, "query", query)
-			return err
-		}
-		// Drop database tables
-		for _, tableName = range tables {
-			query = db.DBAdapter.DropTableQuery(tableName)
-			if _, err = tx.Exec(query); err != nil {
-				// if error == table does not exists, continue
-				if !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeUndefinedTable) {
-					db.Log.Info("msg", "error dropping tables", "err", err, "value", tableName, "query", query)
-					return err
-				}
-			}
-		}
-
-		// Commit
-		if err = tx.Commit(); err != nil {
-			db.Log.Info("msg", "Error commiting transaction", "err", err)
-			return err
-		}
-
-		return nil
+	// Insert chainID
+	query = cleanQueries.InsertChainIDQry
+	if _, err := tx.Exec(query, chainID, burrowVersion); err != nil {
+		db.Log.Info("msg", "Error inserting CHAIN ID", "err", err, "query", query)
+		return err
 	}
+
+	// Load Tables
+	query = cleanQueries.SelectDictionaryQry
+	rows, err := tx.Query(query)
+	if err != nil {
+		db.Log.Info("msg", "error querying dictionary", "err", err, "query", query)
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		if err = rows.Scan(&tableName); err != nil {
+			db.Log.Info("msg", "error scanning table structure", "err", err)
+			return err
+		}
+
+		if err = rows.Err(); err != nil {
+			db.Log.Info("msg", "error scanning table structure", "err", err)
+			return err
+		}
+		tables = append(tables, tableName)
+	}
+
+	// Delete Dictionary
+	query = cleanQueries.DeleteDictionaryQry
+	if _, err = tx.Exec(query); err != nil {
+		db.Log.Info("msg", "Error deleting dictionary", "err", err, "query", query)
+		return err
+	}
+
+	// Delete Log
+	query = cleanQueries.DeleteLogQry
+	if _, err = tx.Exec(query); err != nil {
+		db.Log.Info("msg", "Error deleting log", "err", err, "query", query)
+		return err
+	}
+	// Drop database tables
+	for _, tableName = range tables {
+		query = db.DBAdapter.DropTableQuery(tableName)
+		if _, err = tx.Exec(query); err != nil {
+			// if error == table does not exists, continue
+			if !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeUndefinedTable) {
+				db.Log.Info("msg", "error dropping tables", "err", err, "value", tableName, "query", query)
+				return err
+			}
+		}
+	}
+
+	// Commit
+	if err = tx.Commit(); err != nil {
+		db.Log.Info("msg", "Error commiting transaction", "err", err)
+		return err
+	}
+
+	return nil
 }
 
 // Close database connection
@@ -238,13 +245,13 @@ func (db *SQLDB) Ping() error {
 }
 
 // GetLastBlockHeight returns last inserted blockId from log table
-func (db *SQLDB) GetLastBlockHeight() (uint64, error) {
+func (db *SQLDB) GetLastBlockHeight(chainID string) (uint64, error) {
 	query := db.DBAdapter.LastBlockIDQuery()
 	id := ""
 
 	db.Log.Info("msg", "MAX ID", "query", query)
 
-	if err := db.DB.QueryRow(query, db.ChainID).Scan(&id); err != nil {
+	if err := db.DB.QueryRow(query, chainID).Scan(&id); err != nil {
 		db.Log.Info("msg", "Error selecting last block id", "err", err)
 		return 0, err
 	}
@@ -256,7 +263,7 @@ func (db *SQLDB) GetLastBlockHeight() (uint64, error) {
 }
 
 // SynchronizeDB synchronize db tables structures from given tables specifications
-func (db *SQLDB) SynchronizeDB(eventTables types.EventTables) error {
+func (db *SQLDB) SynchronizeDB(chainID string, eventTables types.EventTables) error {
 	db.Log.Info("msg", "Synchronizing DB")
 
 	for _, table := range eventTables {
@@ -266,9 +273,9 @@ func (db *SQLDB) SynchronizeDB(eventTables types.EventTables) error {
 		}
 
 		if found {
-			err = db.alterTable(table)
+			err = db.alterTable(chainID, table)
 		} else {
-			err = db.createTable(table, false)
+			err = db.createTable(chainID, table, false)
 		}
 		if err != nil {
 			return err
@@ -279,7 +286,7 @@ func (db *SQLDB) SynchronizeDB(eventTables types.EventTables) error {
 }
 
 // SetBlock inserts or updates multiple rows and stores log info in SQL tables
-func (db *SQLDB) SetBlock(eventTables types.EventTables, eventData types.EventData) error {
+func (db *SQLDB) SetBlock(chainID string, eventTables types.EventTables, eventData types.EventData) error {
 	db.Log.Info("msg", "Synchronize Block..........")
 
 	//Declarations
@@ -362,9 +369,9 @@ loop:
 			eventName, _ := row.RowData[types.SQLColumnLabelEventName].(string)
 			// Insert in log
 			db.Log.Info("msg", "INSERT LOG", "query", logQuery, "value",
-				fmt.Sprintf("chainid = %s tableName = %s eventName = %s block = %d", db.ChainID, safeTable, en, eventData.BlockHeight))
+				fmt.Sprintf("chainid = %s tableName = %s eventName = %s block = %d", chainID, safeTable, en, eventData.BlockHeight))
 
-			if _, err = logStmt.Exec(db.ChainID, safeTable, eventName, row.EventClass.GetFilter(), eventData.BlockHeight, txHash,
+			if _, err = logStmt.Exec(chainID, safeTable, eventName, row.EventClass.GetFilter(), eventData.BlockHeight, txHash,
 				row.Action, jsonData, query, sqlValues); err != nil {
 				db.Log.Info("msg", "Error inserting into log", "err", err)
 				break loop // exits from all loops -> continue in close log stmt
@@ -394,22 +401,22 @@ loop:
 			if db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeUndefinedTable) {
 				db.Log.Warn("msg", "Table not found", "value", safeTable)
 				//Synchronize DB
-				if err = db.SynchronizeDB(eventTables); err != nil {
+				if err = db.SynchronizeDB(chainID, eventTables); err != nil {
 					return err
 				}
 				//Retry
-				return db.SetBlock(eventTables, eventData)
+				return db.SetBlock(chainID, eventTables, eventData)
 			}
 
 			// Columns do not match
 			if db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeUndefinedColumn) {
 				db.Log.Warn("msg", "Column not found", "value", safeTable)
 				//Synchronize DB
-				if err = db.SynchronizeDB(eventTables); err != nil {
+				if err = db.SynchronizeDB(chainID, eventTables); err != nil {
 					return err
 				}
 				//Retry
-				return db.SetBlock(eventTables, eventData)
+				return db.SetBlock(chainID, eventTables, eventData)
 			}
 			return err
 		}
@@ -427,13 +434,13 @@ loop:
 }
 
 // GetBlock returns all tables structures and row data for given block
-func (db *SQLDB) GetBlock(height uint64) (types.EventData, error) {
+func (db *SQLDB) GetBlock(chainID string, height uint64) (types.EventData, error) {
 	var data types.EventData
 	data.BlockHeight = height
 	data.Tables = make(map[string]types.EventDataTable)
 
 	// get all table structures involved in the block
-	tables, err := db.getBlockTables(db.ChainID, height)
+	tables, err := db.getBlockTables(chainID, height)
 	if err != nil {
 		return data, err
 	}
@@ -503,20 +510,22 @@ func (db *SQLDB) GetBlock(height uint64) (types.EventData, error) {
 	return data, nil
 }
 
-// RestoreDB restores the DB to a given moment in time
-func (db *SQLDB) RestoreDB(time time.Time, prefix string) error {
-
+// RestoreDB restores the DB to a given moment in time. If prefix is provided restores the table state to a new set of
+// tables as <prefix>_<table name>. Drops destination tables before recreating them. If zero time passed restores
+// all values
+func (db *SQLDB) RestoreDB(restoreTime time.Time, prefix string) error {
+	const year = time.Hour * 24 * 365
 	const yymmddhhmmss = "2006-01-02 15:04:05"
 
 	var pointers []interface{}
 
-	if prefix == "" {
-		return fmt.Errorf("error prefix mus not be empty")
-	}
-
 	// Get Restore DB query
 	query := db.DBAdapter.RestoreDBQuery()
-	strTime := time.Format(yymmddhhmmss)
+	if restoreTime.IsZero() {
+		// We'll assume a sufficiently small clock skew...
+		restoreTime = time.Now().Add(100 * year)
+	}
+	strTime := restoreTime.Format(yymmddhhmmss)
 
 	db.Log.Info("msg", "RESTORING DB..................................")
 
@@ -531,10 +540,11 @@ func (db *SQLDB) RestoreDB(time time.Time, prefix string) error {
 
 	// For each row returned
 	for rows.Next() {
+		var id int64
 		var tableName, sqlSmt, sqlValues string
 		var action types.DBAction
 
-		if err = rows.Scan(&tableName, &action, &sqlSmt, &sqlValues); err != nil {
+		if err = rows.Scan(&id, &tableName, &action, &sqlSmt, &sqlValues); err != nil {
 			db.Log.Info("msg", "error scanning table structure", "err", err)
 			return err
 		}
@@ -544,7 +554,10 @@ func (db *SQLDB) RestoreDB(time time.Time, prefix string) error {
 			return err
 		}
 
-		restoreTable := fmt.Sprintf("%s_%s", prefix, tableName)
+		restoreTable := tableName
+		if prefix != "" {
+			restoreTable = fmt.Sprintf("%s_%s", prefix, tableName)
+		}
 
 		switch action {
 		case types.ActionUpsert, types.ActionDelete:
@@ -555,15 +568,26 @@ func (db *SQLDB) RestoreDB(time time.Time, prefix string) error {
 			}
 
 			// Prepare Upsert/delete
-			query = strings.Replace(sqlSmt, tableName, restoreTable, -1)
+			query = sqlSmt
+			if prefix != "" {
+				// TODO: [Silas] ugh this is a little fragile
+				query = strings.Replace(sqlSmt, tableName, restoreTable, -1)
+			}
 
-			db.Log.Info("msg", "SQL COMMAND", "sql", query)
+			db.Log.Info("msg", "SQL COMMAND", "sql", query, "log_id", id)
 			if _, err = db.DB.Exec(query, pointers...); err != nil {
 				db.Log.Info("msg", "Error executing upsert/delete ", "err", err, "value", sqlSmt, "data", sqlValues)
 				return err
 			}
 
 		case types.ActionAlterTable, types.ActionCreateTable:
+			if action == types.ActionCreateTable {
+				dropQuery := db.DBAdapter.DropTableQuery(restoreTable)
+				_, err := db.DB.Exec(dropQuery)
+				if err != nil && !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeUndefinedTable) {
+					return fmt.Errorf("could not drop target restore table %s: %v", restoreTable, err)
+				}
+			}
 			// Prepare Alter/Create Table
 			query = strings.Replace(sqlSmt, tableName, restoreTable, -1)
 

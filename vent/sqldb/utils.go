@@ -237,7 +237,7 @@ func (db *SQLDB) getTableDef(tableName string) (*types.SQLTable, error) {
 }
 
 // alterTable alters the structure of a SQL table & add info to the dictionary
-func (db *SQLDB) alterTable(table *types.SQLTable) error {
+func (db *SQLDB) alterTable(chainID string, table *types.SQLTable) error {
 	db.Log.Info("msg", "Altering table", "value", table.Name)
 
 	// prepare log query
@@ -297,7 +297,7 @@ func (db *SQLDB) alterTable(table *types.SQLTable) error {
 					return err
 				}
 				//insert log
-				_, err = db.DB.Exec(logQuery, db.ChainID, table.Name, "", "", nil, nil, types.ActionAlterTable, jsonData, query, sqlValues)
+				_, err = db.DB.Exec(logQuery, chainID, table.Name, "", "", nil, nil, types.ActionAlterTable, jsonData, query, sqlValues)
 				if err != nil {
 					db.Log.Info("msg", "Error inserting log", "err", err)
 					return err
@@ -316,7 +316,7 @@ func (db *SQLDB) alterTable(table *types.SQLTable) error {
 }
 
 // createTable creates a new table
-func (db *SQLDB) createTable(table *types.SQLTable, isInitialise bool) error {
+func (db *SQLDB) createTable(chainID string, table *types.SQLTable, isInitialise bool) error {
 	db.Log.Info("msg", "Creating Table", "value", table.Name)
 
 	// prepare log query
@@ -363,7 +363,7 @@ func (db *SQLDB) createTable(table *types.SQLTable, isInitialise bool) error {
 		sqlValues, _ := db.getJSON(nil)
 
 		//insert log
-		_, err = db.DB.Exec(logQuery, db.ChainID, table.Name, "", "", nil, nil, types.ActionCreateTable, jsonData, query, sqlValues)
+		_, err = db.DB.Exec(logQuery, chainID, table.Name, "", "", nil, nil, types.ActionCreateTable, jsonData, query, sqlValues)
 		if err != nil {
 			db.Log.Info("msg", "Error inserting log", "err", err)
 			return err
@@ -489,5 +489,18 @@ func (db *SQLDB) getValuesFromJSON(JSON string) ([]interface{}, error) {
 	pointers := make([]interface{}, 0)
 	bytes := []byte(JSON)
 	err := json.Unmarshal(bytes, &pointers)
-	return pointers, err
+	if err != nil {
+		return nil, err
+	}
+	for i, ptr := range pointers {
+		switch v := ptr.(type) {
+		// Normalise integral floats
+		case float64:
+			i64 := int64(v)
+			if float64(i64) == v {
+				pointers[i] = i64
+			}
+		}
+	}
+	return pointers, nil
 }

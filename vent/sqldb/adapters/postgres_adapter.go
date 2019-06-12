@@ -158,7 +158,7 @@ func (adapter *PostgresAdapter) CreateTableQuery(tableName string, columns []*ty
 func (adapter *PostgresAdapter) LastBlockIDQuery() string {
 	query := `
 		WITH ll AS (
-			SELECT MAX(%s) AS %s FROM %s.%s WHERE %s = $1
+			SELECT MAX(%s) AS %s FROM %s.%s WHERE %s = $1 AND %s IS NOT NULL
 		)
 		SELECT COALESCE(%s, '0') AS %s
 			FROM ll LEFT OUTER JOIN %s.%s log ON (ll.%s = log.%s);`
@@ -168,6 +168,7 @@ func (adapter *PostgresAdapter) LastBlockIDQuery() string {
 		types.SQLColumnLabelId,                // as
 		adapter.Schema, types.SQLLogTableName, // from
 		types.SQLColumnLabelChainID,           // where
+		types.SQLColumnLabelHeight,            // where IS NOT NULL
 		types.SQLColumnLabelHeight,            // coalesce
 		types.SQLColumnLabelHeight,            // as
 		adapter.Schema, types.SQLLogTableName, // from
@@ -413,12 +414,15 @@ func (adapter *PostgresAdapter) DeleteQuery(table *types.SQLTable, row types.Eve
 }
 
 func (adapter *PostgresAdapter) RestoreDBQuery() string {
-	return Cleanf(`SELECT %s, %s, %s, %s FROM %s.%s 
-								WHERE to_char(%s,'YYYY-MM-DD HH24:MI:SS')<=$1 
+	return Cleanf(`SELECT %s, %s, %s, %s, %s FROM %s 
+								WHERE %s != '%s' AND  %s != '%s' AND to_char(%s,'YYYY-MM-DD HH24:MI:SS')<=$1 
 								ORDER BY %s;`,
-		types.SQLColumnLabelTableName, types.SQLColumnLabelAction, types.SQLColumnLabelSqlStmt, types.SQLColumnLabelSqlValues,
-		adapter.Schema, types.SQLLogTableName,
-		types.SQLColumnLabelTimeStamp,
+		types.SQLColumnLabelId, types.SQLColumnLabelTableName, types.SQLColumnLabelAction, // select id, table, action
+		types.SQLColumnLabelSqlStmt, types.SQLColumnLabelSqlValues, // select stmt, values
+		adapter.SchemaName(types.SQLLogTableName),              // from
+		types.SQLColumnLabelTableName, types.SQLBlockTableName, // where not _vent_block
+		types.SQLColumnLabelTableName, types.SQLTxTableName, // where not _vent_tx
+		types.SQLColumnLabelTimeStamp, // where time
 		types.SQLColumnLabelId)
 }
 
@@ -481,7 +485,7 @@ func (adapter *PostgresAdapter) DropTableQuery(tableName string) string {
 	// We cascade here to drop any associated views and triggers. We work under the assumption that vent
 	// owns its database and any users need to be able to recreate objects that depend on vent tables in the event of
 	// table drops
-	return Cleanf(`DROP TABLE %s CASCADE;`, adapter.schemaName(tableName))
+	return Cleanf(`DROP TABLE %s CASCADE;`, adapter.SchemaName(tableName))
 }
 
 func (adapter *PostgresAdapter) CreateNotifyFunctionQuery(function, channel string, columns ...string) string {
@@ -500,7 +504,7 @@ func (adapter *PostgresAdapter) CreateNotifyFunctionQuery(function, channel stri
 		$trigger$
 		LANGUAGE 'plpgsql';
 		`,
-		adapter.schemaName(function),                                             // create function
+		adapter.SchemaName(function),                                             // create function
 		channel, types.SQLColumnLabelAction, jsonBuildObjectArgs("OLD", columns), // case delete
 		channel, types.SQLColumnLabelAction, jsonBuildObjectArgs("NEW", columns), // case else
 	)
@@ -508,7 +512,7 @@ func (adapter *PostgresAdapter) CreateNotifyFunctionQuery(function, channel stri
 
 func (adapter *PostgresAdapter) CreateTriggerQuery(triggerName, tableName, functionName string) string {
 	trigger := adapter.SecureName(triggerName)
-	table := adapter.schemaName(tableName)
+	table := adapter.SchemaName(tableName)
 	return Cleanf(`DROP TRIGGER IF EXISTS %s ON %s CASCADE; 
 		CREATE TRIGGER %s AFTER INSERT OR UPDATE OR DELETE ON %s
 		FOR EACH ROW 
@@ -518,11 +522,11 @@ func (adapter *PostgresAdapter) CreateTriggerQuery(triggerName, tableName, funct
 		table,                            // on
 		trigger,                          // create
 		table,                            // on
-		adapter.schemaName(functionName), // function
+		adapter.SchemaName(functionName), // function
 	)
 }
 
-func (adapter *PostgresAdapter) schemaName(tableName string) string {
+func (adapter *PostgresAdapter) SchemaName(tableName string) string {
 	return fmt.Sprintf("%s.%s", adapter.Schema, adapter.SecureName(tableName))
 }
 

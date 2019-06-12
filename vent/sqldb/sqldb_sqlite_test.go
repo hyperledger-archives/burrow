@@ -19,3 +19,7 @@ func TestSqliteCleanDB(t *testing.T) {
 func TestSqliteSetBlock(t *testing.T) {
 	testSetBlock(t, test.SqliteVentConfig(""))
 }
+
+func TestSqliteRestore(t *testing.T) {
+	testRestore(t, test.SqliteVentConfig(""))
+}

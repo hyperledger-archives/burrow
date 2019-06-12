@@ -44,6 +44,8 @@ type DBAdapter interface {
 	CleanDBQueries() types.SQLCleanDBQuery
 	// DropTableQuery builds a DROP TABLE query to delete a table
 	DropTableQuery(tableName string) string
+	// Get the schema qualified name of the given table
+	SchemaName(tableName string) string
 }
 
 type DBNotifyTriggerAdapter interface {
