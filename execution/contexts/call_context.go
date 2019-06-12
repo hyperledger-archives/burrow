@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs/payload"
+	wexec "github.com/perlin-network/life/exec"
 )
 
 // TODO: make configurable
@@ -189,27 +190,64 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 
 	txHash := ctx.txe.Envelope.Tx.Hash()
 	logger := ctx.Logger.With(structure.TxHashKey, txHash)
-	vmach := evm.NewVM(params, caller, txHash, logger, ctx.VMOptions...)
-	ret, exception := vmach.Call(txCache, ctx.txe, caller, callee, code, ctx.tx.Data, value, &gas)
-	if exception != nil {
-		// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
-		ctx.Logger.InfoMsg("Error on execution",
-			structure.ErrorKey, exception)
-
-		ctx.txe.PushError(errors.ErrorCodef(exception.ErrorCode(), "call error: %s\nEVM call trace: %s",
-			exception.String(), ctx.txe.CallTrace()))
-	} else {
-		ctx.Logger.TraceMsg("Successful execution")
-		if createContract {
-			txCache.InitCode(callee, ret)
+	var exception errors.CodedError
+	if wasm != nil {
+		// WASM
+		config := wexec.VMConfig{
+			DisableFloatingPoint: true,
+			MaxMemoryPages:       2,
+			DefaultMemoryPages:   2,
 		}
-		err := txCache.Sync()
+		vm, err := wexec.NewVirtualMachine(wasm, config, &wexec.NopResolver{}, nil)
+		if err != nil {
+			ctx.Logger.InfoMsg("Invalid WASM bytecode",
+				"error", err)
+			return err
+		}
+		wasmFunc := "function"
+		if createContract {
+			txCache.InitWASMCode(callee, wasm)
+			wasmFunc = "constructor"
+		}
+		entryID, ok := vm.GetFunctionExport(wasmFunc)
+		if !ok {
+			ctx.Logger.InfoMsg("Missing exported WASM function", "export", wasmFunc)
+			return fmt.Errorf("WASM missing function %s", wasmFunc)
+		}
+		_, err = vm.Run(entryID)
+		if err != nil {
+			ctx.Logger.InfoMsg("Error returned from WASM", "error", err)
+			return err
+		}
+		err = txCache.Sync()
 		if err != nil {
 			return err
 		}
+	} else {
+		// EVM
+		vmach := evm.NewVM(params, caller, txHash, logger, ctx.VMOptions...)
+		ret, exception = vmach.Call(txCache, ctx.txe, caller, callee, code, ctx.tx.Data, value, &gas)
+		if exception != nil {
+			// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
+			ctx.Logger.InfoMsg("Error on execution",
+				structure.ErrorKey, exception)
+
+			ctx.txe.PushError(errors.ErrorCodef(exception.ErrorCode(), "call error: %s\nEVM call trace: %s",
+				exception.String(), ctx.txe.CallTrace()))
+		} else {
+			ctx.Logger.TraceMsg("Successful execution")
+			if createContract {
+				txCache.InitCode(callee, ret)
+			}
+			err := txCache.Sync()
+			if err != nil {
+				return err
+			}
+		}
+		ctx.CallEvents(exception)
+		ctx.txe.Return(ret, ctx.tx.GasLimit-gas)
 	}
-	ctx.CallEvents(exception)
-	ctx.txe.Return(ret, ctx.tx.GasLimit-gas)
+
 	// Create a receipt from the ret and whether it erred.
 	ctx.Logger.TraceMsg("VM call complete",
 		"caller", caller,

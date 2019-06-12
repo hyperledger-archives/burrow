@@ -38,6 +38,7 @@ type Reader interface {
 type Writer interface {
 	CreateAccount(address crypto.Address)
 	InitCode(address crypto.Address, code []byte)
+	InitWASMCode(address crypto.Address, code []byte)
 	RemoveAccount(address crypto.Address)
 	SetStorage(address crypto.Address, key, value binary.Word256)
 	AddToBalance(address crypto.Address, amount uint64)
@@ -193,6 +194,22 @@ func (st *State) InitCode(address crypto.Address, code []byte) {
 		return
 	}
 	acc.Code = code
+	st.updateAccount(acc)
+}
+
+func (st *State) InitWASMCode(address crypto.Address, code []byte) {
+	acc := st.mustAccount(address)
+	if acc == nil {
+		st.PushError(errors.ErrorCodef(errors.ErrorCodeInvalidAddress,
+			"tried to initialise code for an account that does not exist: %v", address))
+		return
+	}
+	if acc.Code != nil {
+		st.PushError(errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+			"tried to initialise code for a contract that already exists: %v", address))
+		return
+	}
+	acc.WASM = code
 	st.updateAccount(acc)
 }
 

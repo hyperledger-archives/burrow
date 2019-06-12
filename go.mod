@@ -2,6 +2,8 @@ module github.com/hyperledger/burrow
 
 go 1.12
 
+replace github.com/go-interpreter/wagon v0.0.0 => github.com/perlin-network/wagon v0.3.1-0.20180825141017-f8cb99b55a39
+
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/OneOfOne/xxhash v1.2.5
@@ -36,6 +38,7 @@ require (
 	github.com/magiconair/properties v1.8.0
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/monax/relic v2.0.0+incompatible
+	github.com/perlin-network/life v0.0.0-20190521143330-57f3819c2df0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.2
 	github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910
