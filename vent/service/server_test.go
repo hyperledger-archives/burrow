@@ -44,7 +44,7 @@ func TestServer(t *testing.T) {
 			log := logger.NewLogger(cfg.LogLevel)
 			consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
 
-			projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, false)
+			projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, sqlsol.None)
 			abiSpec, err := abi.LoadPath(cfg.AbiFileOrDirs...)
 
 			var wg sync.WaitGroup

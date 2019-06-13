@@ -7,8 +7,20 @@ import (
 	"github.com/hyperledger/burrow/vent/types"
 )
 
+type SpecOpt uint64
+
+const (
+	Block SpecOpt = 1 << iota
+	Tx
+)
+
+const (
+	None    SpecOpt = 0
+	BlockTx         = Block | Tx
+)
+
 // SpecLoader loads spec files and parses them
-func SpecLoader(specFileOrDirs []string, createBlkTxTables bool) (*Projection, error) {
+func SpecLoader(specFileOrDirs []string, opts SpecOpt) (*Projection, error) {
 	var projection *Projection
 	var err error
 
@@ -21,89 +33,95 @@ func SpecLoader(specFileOrDirs []string, createBlkTxTables bool) (*Projection, e
 		return nil, fmt.Errorf("error parsing spec: %v", err)
 	}
 
-	if createBlkTxTables {
-		// add block & tx to tables definition
-		blkTxTables := getBlockTxTablesDefinition()
-
-		for k, v := range blkTxTables {
+	// add block & tx to tables definition
+	if Block&opts > 0 {
+		for k, v := range blockTables() {
 			projection.Tables[k] = v
 		}
-
+	}
+	if Tx&opts > 0 {
+		for k, v := range txTables() {
+			projection.Tables[k] = v
+		}
 	}
 
 	return projection, nil
 }
 
 // getBlockTxTablesDefinition returns block & transaction structures
-func getBlockTxTablesDefinition() types.EventTables {
+func blockTables() types.EventTables {
 	return types.EventTables{
-		types.SQLBlockTableName: &types.SQLTable{
-			Name: types.SQLBlockTableName,
+		tables.Block: &types.SQLTable{
+			Name: tables.Block,
 			Columns: []*types.SQLTableColumn{
 				{
-					Name:    types.SQLColumnLabelHeight,
+					Name:    columns.Height,
 					Type:    types.SQLColumnTypeVarchar,
 					Length:  100,
 					Primary: true,
 				},
 				{
-					Name:    types.SQLColumnLabelBlockHeader,
+					Name:    columns.BlockHeader,
 					Type:    types.SQLColumnTypeJSON,
 					Primary: false,
 				},
 			},
 		},
+	}
+}
 
-		types.SQLTxTableName: &types.SQLTable{
-			Name: types.SQLTxTableName,
+func txTables() types.EventTables {
+	return types.EventTables{
+		tables.Tx: &types.SQLTable{
+			Name: tables.Tx,
 			Columns: []*types.SQLTableColumn{
 				// transaction table
 				{
-					Name:    types.SQLColumnLabelHeight,
+					Name:    columns.Height,
 					Type:    types.SQLColumnTypeVarchar,
 					Length:  100,
 					Primary: true,
 				},
 				{
-					Name:    types.SQLColumnLabelTxHash,
+					Name:    columns.TxHash,
 					Type:    types.SQLColumnTypeVarchar,
 					Length:  txs.HashLengthHex,
 					Primary: true,
 				},
 				{
-					Name:    types.SQLColumnLabelIndex,
+					Name:    columns.Index,
 					Type:    types.SQLColumnTypeNumeric,
 					Length:  0,
 					Primary: false,
 				},
 				{
-					Name:    types.SQLColumnLabelTxType,
+					Name:    columns.TxType,
 					Type:    types.SQLColumnTypeVarchar,
 					Length:  100,
 					Primary: false,
 				},
 				{
-					Name:    types.SQLColumnLabelEnvelope,
+					Name:    columns.Envelope,
 					Type:    types.SQLColumnTypeJSON,
 					Primary: false,
 				},
 				{
-					Name:    types.SQLColumnLabelEvents,
+					Name:    columns.Events,
 					Type:    types.SQLColumnTypeJSON,
 					Primary: false,
 				},
 				{
-					Name:    types.SQLColumnLabelResult,
+					Name:    columns.Result,
 					Type:    types.SQLColumnTypeJSON,
 					Primary: false,
 				},
 				{
-					Name:    types.SQLColumnLabelReceipt,
+					Name:    columns.Receipt,
 					Type:    types.SQLColumnTypeJSON,
 					Primary: false,
 				},
 				{
-					Name:    types.SQLColumnLabelException,
+					Name:    columns.Exception,
 					Type:    types.SQLColumnTypeJSON,
 					Primary: false,
 				},

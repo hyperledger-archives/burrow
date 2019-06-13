@@ -4,49 +4,46 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/sqldb/adapters"
 	"github.com/hyperledger/burrow/vent/types"
+	"github.com/jmoiron/sqlx"
 )
 
 // SQLDB implements the access to a sql database
 type SQLDB struct {
-	DB        *sql.DB
-	DBAdapter adapters.DBAdapter
-	Schema    string
-	Log       *logger.Logger
+	DB *sqlx.DB
+	adapters.DBAdapter
+	Schema  string
+	Queries Queries
+	types.SQLNames
+	Log *logger.Logger
 }
 
 // NewSQLDB delegates work to a specific database adapter implementation,
 // opens database connection and create log tables
 func NewSQLDB(connection types.SQLConnection) (*SQLDB, error) {
 	db := &SQLDB{
-		Schema: connection.DBSchema,
-		Log:    connection.Log,
+		Schema:   connection.DBSchema,
+		SQLNames: types.DefaultSQLNames,
+		Log:      connection.Log,
 	}
-
-	var url string
 
 	switch connection.DBAdapter {
 	case types.PostgresDB:
-		db.DBAdapter = adapters.NewPostgresAdapter(safe(connection.DBSchema), connection.Log)
-		url = connection.DBURL
+		db.DBAdapter = adapters.NewPostgresAdapter(safe(connection.DBSchema), db.SQLNames, connection.Log)
 
 	case types.SQLiteDB:
-		db.DBAdapter = adapters.NewSQLiteAdapter(connection.Log)
-		// "?_journal_mode=WAL" parameter is necessary to prevent database locking
-		url = connection.DBURL + "?_journal_mode=WAL"
-
+		db.DBAdapter = adapters.NewSQLiteAdapter(db.SQLNames, connection.Log)
 	default:
 		return nil, errors.New("invalid database adapter")
 	}
 
 	var err error
-	db.DB, err = db.DBAdapter.Open(url)
+	db.DB, err = db.DBAdapter.Open(connection.DBURL)
 	if err != nil {
 		db.Log.Info("msg", "Error opening database connection", "err", err)
 		return nil, err
@@ -69,7 +66,7 @@ func (db *SQLDB) Init(chainID, burrowVersion string) error {
 	sysTables := db.getSysTablesDefinition()
 
 	// IMPORTANT: DO NOT CHANGE TABLE CREATION ORDER (1)
-	if err := db.createTable(chainID, sysTables[types.SQLDictionaryTableName], true); err != nil {
+	if err := db.createTable(chainID, sysTables[db.Tables.Dictionary], true); err != nil {
 		if !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeDuplicatedTable) {
 			db.Log.Info("msg", "Error creating Dictionary table", "err", err)
 			return err
@@ -77,7 +74,7 @@ func (db *SQLDB) Init(chainID, burrowVersion string) error {
 	}
 
 	// IMPORTANT: DO NOT CHANGE TABLE CREATION ORDER (2)
-	if err := db.createTable(chainID, sysTables[types.SQLLogTableName], true); err != nil {
+	if err := db.createTable(chainID, sysTables[db.Tables.Log], true); err != nil {
 		if !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeDuplicatedTable) {
 			db.Log.Info("msg", "Error creating Log table", "err", err)
 			return err
@@ -85,7 +82,7 @@ func (db *SQLDB) Init(chainID, burrowVersion string) error {
 	}
 
 	// IMPORTANT: DO NOT CHANGE TABLE CREATION ORDER (3)
-	if err := db.createTable(chainID, sysTables[types.SQLChainInfoTableName], true); err != nil {
+	if err := db.createTable(chainID, sysTables[db.Tables.ChainInfo], true); err != nil {
 		if !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeDuplicatedTable) {
 			db.Log.Info("msg", "Error creating Chain Info table", "err", err)
 			return err
@@ -105,7 +102,30 @@ func (db *SQLDB) Init(chainID, burrowVersion string) error {
 		}
 	}
 
+	db.Queries, err = db.prepareQueries()
+	if err != nil {
+		db.Log.Info("msg", "Could not prepare queries", "err", err)
+		return err
+	}
+
 	return nil
+}
+
+func (db *SQLDB) prepareQueries() (Queries, error) {
+	err := new(error)
+	//language=SQL
+	return Queries{
+		LastBlockHeight: db.prepare(err, fmt.Sprintf("SELECT %s FROM %s WHERE %s=:chainid",
+			db.Columns.Height, // select
+			db.DBAdapter.SchemaName(db.Tables.ChainInfo), // from
+			db.DBAdapter.SecureName(db.Columns.ChainID),  // where
+		)),
+		SetBlockHeight: fmt.Sprintf("UPDATE %s SET %s = :height WHERE %s = :chainid",
+			db.DBAdapter.SchemaName(db.Tables.ChainInfo), // update
+			db.Columns.Height,  // set
+			db.Columns.ChainID, // where
+		),
+	}, *err
 }
 
 func (db *SQLDB) InitChain(chainID, burrowVersion string) (chainIDChanged bool, _ error) {
@@ -122,7 +142,7 @@ func (db *SQLDB) InitChain(chainID, burrowVersion string) (chainIDChanged bool, 
 	}
 
 	if savedRows == 1 {
-		return savedChainID == chainID, nil
+		return savedChainID != chainID, nil
 	}
 
 	if savedRows > 1 {
@@ -132,7 +152,7 @@ func (db *SQLDB) InitChain(chainID, burrowVersion string) (chainIDChanged bool, 
 	// First database access
 	// Save new values and exit
 	query = cleanQueries.InsertChainIDQry
-	_, err := db.DB.Exec(query, chainID, burrowVersion)
+	_, err := db.DB.Exec(query, chainID, burrowVersion, 0)
 
 	if err != nil {
 		db.Log.Info("msg", "Error inserting CHAIN ID", "err", err, "query", query)
@@ -166,7 +186,7 @@ func (db *SQLDB) CleanTables(chainID, burrowVersion string) error {
 
 	// Insert chainID
 	query = cleanQueries.InsertChainIDQry
-	if _, err := tx.Exec(query, chainID, burrowVersion); err != nil {
+	if _, err := tx.Exec(query, chainID, burrowVersion, 0); err != nil {
 		db.Log.Info("msg", "Error inserting CHAIN ID", "err", err, "query", query)
 		return err
 	}
@@ -244,24 +264,6 @@ func (db *SQLDB) Ping() error {
 	return nil
 }
 
-// GetLastBlockHeight returns last inserted blockId from log table
-func (db *SQLDB) GetLastBlockHeight(chainID string) (uint64, error) {
-	query := db.DBAdapter.LastBlockIDQuery()
-	id := ""
-
-	db.Log.Info("msg", "MAX ID", "query", query)
-
-	if err := db.DB.QueryRow(query, chainID).Scan(&id); err != nil {
-		db.Log.Info("msg", "Error selecting last block id", "err", err)
-		return 0, err
-	}
-	height, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("could not parse height from block ID: %v", err)
-	}
-	return height, nil
-}
-
 // SynchronizeDB synchronize db tables structures from given tables specifications
 func (db *SQLDB) SynchronizeDB(chainID string, eventTables types.EventTables) error {
 	db.Log.Info("msg", "Synchronizing DB")
@@ -289,20 +291,9 @@ func (db *SQLDB) SynchronizeDB(chainID string, eventTables types.EventTables) er
 func (db *SQLDB) SetBlock(chainID string, eventTables types.EventTables, eventData types.EventData) error {
 	db.Log.Info("msg", "Synchronize Block..........")
 
-	//Declarations
-	var logStmt *sql.Stmt
-	var tx *sql.Tx
-	var safeTable string
-	var query string
-	var queryVal types.UpsertDeleteQuery
-	var err error
-	var errQuery error
-	var txHash interface{}
-	var jsonData []byte
-	var sqlValues []byte
-
 	// Begin tx
-	if tx, err = db.DB.Begin(); err != nil {
+	tx, err := db.DB.Beginx()
+	if err != nil {
 		db.Log.Info("msg", "Error beginning transaction", "err", err)
 		return err
 	}
@@ -310,11 +301,14 @@ func (db *SQLDB) SetBlock(chainID string, eventTables types.EventTables, eventDa
 
 	// Prepare log statement
 	logQuery := db.DBAdapter.InsertLogQuery()
-	if logStmt, err = tx.Prepare(logQuery); err != nil {
+	logStmt, err := tx.Prepare(logQuery)
+	if err != nil {
 		db.Log.Info("msg", "Error preparing log stmt", "err", err)
 		return err
 	}
+	defer logStmt.Close()
 
+	var safeTable string
 loop:
 	// for each table in the block
 	for en, table := range eventTables {
@@ -322,6 +316,9 @@ loop:
 		dataRows := eventData.Tables[table.Name]
 		// for Each Row
 		for _, row := range dataRows {
+			var queryVal types.UpsertDeleteQuery
+			var txHash interface{}
+			var errQuery error
 
 			switch row.Action {
 			case types.ActionUpsert:
@@ -333,7 +330,6 @@ loop:
 
 			case types.ActionDelete:
 				//Prepare Delete
-				txHash = nil
 				if queryVal, errQuery = db.DBAdapter.DeleteQuery(table, row); errQuery != nil {
 					db.Log.Info("msg", "Error building delete query", "err", errQuery, "value", fmt.Sprintf("%v %v", table, row))
 					break loop // exits from all loops -> continue in close log stmt
@@ -345,7 +341,7 @@ loop:
 				break loop // exits from all loops -> continue in close log stmt
 			}
 
-			query = queryVal.Query
+			query := queryVal.Query
 
 			// Perform row action
 			db.Log.Info("msg", row.Action, "query", query, "value", queryVal.Values)
@@ -355,18 +351,20 @@ loop:
 			}
 
 			// Marshal the rowData map
-			if jsonData, err = db.getJSON(row.RowData); err != nil {
+			jsonData, err := getJSON(row.RowData)
+			if err != nil {
 				db.Log.Info("msg", "error marshaling rowData", "err", err, "value", fmt.Sprintf("%v", row.RowData))
 				break loop // exits from all loops -> continue in close log stmt
 			}
 
 			// Marshal sql values
-			if sqlValues, err = db.getJSONFromValues(queryVal.Pointers); err != nil {
+			sqlValues, err := getJSONFromValues(queryVal.Pointers)
+			if err != nil {
 				db.Log.Info("msg", "error marshaling rowdata", "err", err, "value", fmt.Sprintf("%v", row.RowData))
 				break loop // exits from all loops -> continue in close log stmt
 			}
 
-			eventName, _ := row.RowData[types.SQLColumnLabelEventName].(string)
+			eventName, _ := row.RowData[db.Columns.EventName].(string)
 			// Insert in log
 			db.Log.Info("msg", "INSERT LOG", "query", logQuery, "value",
 				fmt.Sprintf("chainid = %s tableName = %s eventName = %s block = %d", chainID, safeTable, en, eventData.BlockHeight))
@@ -425,7 +423,14 @@ loop:
 
 	db.Log.Info("msg", "COMMIT")
 
-	if err := tx.Commit(); err != nil {
+	err = db.SetBlockHeight(tx, chainID, eventData.BlockHeight)
+	if err != nil {
+		db.Log.Info("msg", "Could not commit block height", "err", err)
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
 		db.Log.Info("msg", "Error on commit", "err", err)
 		return err
 	}
@@ -510,6 +515,40 @@ func (db *SQLDB) GetBlock(chainID string, height uint64) (types.EventData, error
 	return data, nil
 }
 
+func (db *SQLDB) LastBlockHeight(chainID string) (uint64, error) {
+	const errHeader = "LastBlockHeight()"
+	type arg struct {
+		ChainID string
+	}
+	height := new(uint64)
+	err := db.Queries.LastBlockHeight.Get(height, arg{ChainID: chainID})
+	if err != nil {
+		return 0, fmt.Errorf("%s: %v", errHeader, err)
+	}
+	return *height, nil
+}
+
+func (db *SQLDB) SetBlockHeight(tx sqlx.Ext, chainID string, height uint64) error {
+	const errHeader = "SetBlockHeight()"
+	type arg struct {
+		ChainID string
+		Height  uint64
+	}
+	result, err := sqlx.NamedExec(tx, db.Queries.SetBlockHeight, arg{ChainID: chainID, Height: height})
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%s: could not get rows affected: %v", errHeader, err)
+	}
+	if rows != 1 {
+		return fmt.Errorf("%s: should update the height in  exactly one row for ChainID '%s' but %d rows were affected",
+			errHeader, chainID, rows)
+	}
+	return nil
+}
+
 // RestoreDB restores the DB to a given moment in time. If prefix is provided restores the table state to a new set of
 // tables as <prefix>_<table name>. Drops destination tables before recreating them. If zero time passed restores
 // all values
@@ -529,8 +568,8 @@ func (db *SQLDB) RestoreDB(restoreTime time.Time, prefix string) error {
 
 	db.Log.Info("msg", "RESTORING DB..................................")
 
-	// Open rows
 	db.Log.Info("msg", "open log", "query", query)
+	// Postgres does not work is run within same tx as updates, see: https://github.com/lib/pq/issues/81
 	rows, err := db.DB.Query(query, strTime)
 	if err != nil {
 		db.Log.Info("msg", "error querying log", "err", err)
@@ -538,18 +577,27 @@ func (db *SQLDB) RestoreDB(restoreTime time.Time, prefix string) error {
 	}
 	defer rows.Close()
 
+	tx, err := db.DB.Begin()
+	if err != nil {
+		db.Log.Info("msg", "could not open transaction for restore", "err", err)
+		return err
+	}
+	defer tx.Rollback()
+
 	// For each row returned
 	for rows.Next() {
 		var id int64
 		var tableName, sqlSmt, sqlValues string
 		var action types.DBAction
 
-		if err = rows.Scan(&id, &tableName, &action, &sqlSmt, &sqlValues); err != nil {
+		err = rows.Err()
+		if err != nil {
 			db.Log.Info("msg", "error scanning table structure", "err", err)
 			return err
 		}
 
-		if err = rows.Err(); err != nil {
+		err = rows.Scan(&id, &tableName, &action, &sqlSmt, &sqlValues)
+		if err != nil {
 			db.Log.Info("msg", "error scanning table structure", "err", err)
 			return err
 		}
@@ -562,7 +610,7 @@ func (db *SQLDB) RestoreDB(restoreTime time.Time, prefix string) error {
 		switch action {
 		case types.ActionUpsert, types.ActionDelete:
 			// get row values
-			if pointers, err = db.getValuesFromJSON(sqlValues); err != nil {
+			if pointers, err = getValuesFromJSON(sqlValues); err != nil {
 				db.Log.Info("msg", "error unmarshaling json", "err", err, "value", sqlValues)
 				return err
 			}
@@ -575,7 +623,7 @@ func (db *SQLDB) RestoreDB(restoreTime time.Time, prefix string) error {
 			}
 
 			db.Log.Info("msg", "SQL COMMAND", "sql", query, "log_id", id)
-			if _, err = db.DB.Exec(query, pointers...); err != nil {
+			if _, err = tx.Exec(query, pointers...); err != nil {
 				db.Log.Info("msg", "Error executing upsert/delete ", "err", err, "value", sqlSmt, "data", sqlValues)
 				return err
 			}
@@ -583,7 +631,7 @@ func (db *SQLDB) RestoreDB(restoreTime time.Time, prefix string) error {
 		case types.ActionAlterTable, types.ActionCreateTable:
 			if action == types.ActionCreateTable {
 				dropQuery := db.DBAdapter.DropTableQuery(restoreTable)
-				_, err := db.DB.Exec(dropQuery)
+				_, err := tx.Exec(dropQuery)
 				if err != nil && !db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeUndefinedTable) {
 					return fmt.Errorf("could not drop target restore table %s: %v", restoreTable, err)
 				}
@@ -592,7 +640,8 @@ func (db *SQLDB) RestoreDB(restoreTime time.Time, prefix string) error {
 			query = strings.Replace(sqlSmt, tableName, restoreTable, -1)
 
 			db.Log.Info("msg", "SQL COMMAND", "sql", query)
-			if _, err = db.DB.Exec(query); err != nil {
+			_, err = tx.Exec(query)
+			if err != nil {
 				db.Log.Info("msg", "Error executing alter/create table command ", "err", err, "value", sqlSmt)
 				return err
 			}
@@ -602,5 +651,18 @@ func (db *SQLDB) RestoreDB(restoreTime time.Time, prefix string) error {
 			return fmt.Errorf("invalid row action %s", action)
 		}
 	}
+	err = tx.Commit()
+	if err != nil {
+		db.Log.Info("msg", "could not commit restore tx", "err", err)
+		return err
+	}
 	return nil
+}
+
+func (db *SQLDB) prepare(perr *error, query string) *sqlx.NamedStmt {
+	stmt, err := db.DB.PrepareNamed(query)
+	if err != nil && *perr == nil {
+		*perr = fmt.Errorf("could not prepare query '%s': %v", query, err)
+	}
+	return stmt
 }

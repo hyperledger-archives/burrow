@@ -131,9 +131,9 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 		// right now there is no way to know if the last block of events was completely read
 		// so we have to begin processing from the last block number stored in database
 		// and update event data if already present
-		fromBlock, err := c.DB.GetLastBlockHeight(c.Burrow.ChainID)
+		fromBlock, err := c.DB.LastBlockHeight(c.Burrow.ChainID)
 		if err != nil {
-			errCh <- errors.Wrapf(err, "Error trying to get last processed block number from SQL log table")
+			errCh <- errors.Wrapf(err, "Error trying to get last processed block number")
 			return
 		}
 
@@ -232,26 +232,26 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 		// create a fresh new structure to store block data at this height
 		blockData := sqlsol.NewBlockData(fromBlock)
 
-		if c.Config.DBBlockTx {
+		if c.Config.SpecOpt&sqlsol.Block > 0 {
 			blkRawData, err := buildBlkData(projection.Tables, blockExecution)
 			if err != nil {
 				return errors.Wrapf(err, "Error building block raw data")
 			}
 			// set row in structure
-			blockData.AddRow(types.SQLBlockTableName, blkRawData)
+			blockData.AddRow(tables.Block, blkRawData)
 		}
 
 		// get transactions for a given block
 		for _, txe := range blockExecution.TxExecutions {
 			c.Log.Debug("msg", "Getting transaction", "TxHash", txe.TxHash, "num_events", len(txe.Events))
 
-			if c.Config.DBBlockTx {
+			if c.Config.SpecOpt&sqlsol.Tx > 0 {
 				txRawData, err := buildTxData(txe)
 				if err != nil {
 					return errors.Wrapf(err, "Error building tx raw data")
 				}
 				// set row in structure
-				blockData.AddRow(types.SQLTxTableName, txRawData)
+				blockData.AddRow(tables.Tx, txRawData)
 			}
 
 			// reverted transactions don't have to update event data tables

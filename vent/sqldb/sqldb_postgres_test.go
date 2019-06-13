@@ -18,6 +18,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var tables = types.DefaultSQLTableNames
+var columns = types.DefaultSQLColumnNames
+
 func TestPostgresSynchronizeDB(t *testing.T) {
 	testSynchronizeDB(t, test.PostgresVentConfig(""))
 }
@@ -47,11 +50,11 @@ func TestPostgresBlockNotification(t *testing.T) {
 	pad := db.DBAdapter.(*adapters.PostgresAdapter)
 
 	for i := 0; i < 2; i++ {
-		query := pad.CreateNotifyFunctionQuery(functionName, channelName, types.SQLColumnLabelHeight)
+		query := pad.CreateNotifyFunctionQuery(functionName, channelName, columns.Height)
 		_, err := db.DB.Exec(query)
 		require.NoError(t, err)
 
-		query = pad.CreateTriggerQuery("notify_height_trigger", types.SQLLogTableName, functionName)
+		query = pad.CreateTriggerQuery("notify_height_trigger", tables.Log, functionName)
 		_, err = db.DB.Exec(query)
 		require.NoError(t, err)
 	}
@@ -93,7 +96,7 @@ func TestPostgresBlockNotification(t *testing.T) {
 	require.NoError(t, err)
 
 	// read
-	_, err = db.GetLastBlockHeight(test.ChainID)
+	_, err = db.LastBlockHeight(test.ChainID)
 	require.NoError(t, err)
 
 	_, err = db.GetBlock(test.ChainID, dat.BlockHeight)

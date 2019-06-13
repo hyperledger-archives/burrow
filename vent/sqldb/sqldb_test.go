@@ -104,16 +104,16 @@ func testSetBlock(t *testing.T, cfg *config.VentConfig) {
 			db, closeDB := test.NewTestDB(t, cfg)
 			defer closeDB()
 
-			errp := db.Ping()
-			require.NoError(t, errp)
+			err := db.Ping()
+			require.NoError(t, err)
 
 			// new
 			str, dat := getBlock()
-			err := db.SetBlock(test.ChainID, str, dat)
+			err = db.SetBlock(test.ChainID, str, dat)
 			require.NoError(t, err)
 
 			// read
-			_, err = db.GetLastBlockHeight(test.ChainID)
+			_, err = db.LastBlockHeight(test.ChainID)
 			require.NoError(t, err)
 
 			_, err = db.GetBlock(test.ChainID, dat.BlockHeight)
