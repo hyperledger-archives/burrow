@@ -1189,7 +1189,7 @@ func TestCreates(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, Zero256, secondCreatedAddress, "should not be zero address")
 
-	if firstCreatedAddress == secondCreatedAddress {
+	if bytes.Equal(firstCreatedAddress, secondCreatedAddress) {
 		t.Errorf("Multiple contracts created with the same address!")
 	}
 }

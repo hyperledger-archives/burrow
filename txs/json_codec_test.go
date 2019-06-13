@@ -52,6 +52,7 @@ func TestJSONEncodeTxDecodeTx_CallTx(t *testing.T) {
 		Fee:      2,
 		Address:  nil,
 		Data:     []byte("code"),
+		WASM:     []byte("wasm"),
 	}
 	txEnv := Enclose(chainID, tx)
 	require.NoError(t, txEnv.Sign(inputAccount))

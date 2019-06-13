@@ -699,14 +699,14 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 
 		case SLOAD: // 0x54
 			loc := stack.Pop()
-			data := callState.GetStorage(callee, loc)
+			data := LeftPadWord256(callState.GetStorage(callee, loc))
 			stack.Push(data)
 			vm.Debugf("%s {0x%X = 0x%X}\n", callee, loc, data)
 
 		case SSTORE: // 0x55
 			loc, data := stack.Pop(), stack.Pop()
 			useGasNegative(gas, GasStorageUpdate, callState)
-			callState.SetStorage(callee, loc, data)
+			callState.SetStorage(callee, loc, data.Bytes())
 			vm.Debugf("%s {0x%X := 0x%X}\n", callee, loc, data)
 
 		case JUMP: // 0x56

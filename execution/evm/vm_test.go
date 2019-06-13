@@ -62,7 +62,7 @@ func NewTestState(st acmstate.ReaderWriter, blockHashGetter func(uint64) []byte)
 func newAppState() *FakeAppState {
 	fas := &FakeAppState{
 		accounts: make(map[crypto.Address]*acm.Account),
-		storage:  make(map[string]Word256),
+		storage:  make(map[string][]byte),
 	}
 	// For default permissions
 	fas.accounts[acm.GlobalPermissionsAddress] = &acm.Account{
@@ -675,7 +675,7 @@ func TestRevert(t *testing.T) {
 	account2 := newAccount(cache, "1, 0, 1")
 
 	key, value := []byte{0x00}, []byte{0x00}
-	cache.SetStorage(account1, LeftPadWord256(key), LeftPadWord256(value))
+	cache.SetStorage(account1, LeftPadWord256(key), value)
 
 	var gas uint64 = 100000
 
@@ -692,7 +692,7 @@ func TestRevert(t *testing.T) {
 	assert.Error(t, cErr, "Expected execution reverted error")
 
 	storageVal := cache.GetStorage(account1, LeftPadWord256(key))
-	assert.Equal(t, LeftPadWord256(value), storageVal)
+	assert.Equal(t, value, storageVal)
 
 	t.Logf("Output: %v\n", output)
 }

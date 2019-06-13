@@ -24,7 +24,7 @@ type Interface interface {
 }
 
 type Reader interface {
-	GetStorage(address crypto.Address, key binary.Word256) binary.Word256
+	GetStorage(address crypto.Address, key binary.Word256) []byte
 	GetBalance(address crypto.Address) uint64
 	GetPermissions(address crypto.Address) permission.AccountPermissions
 	GetCode(address crypto.Address) acm.Bytecode
@@ -40,7 +40,7 @@ type Writer interface {
 	InitCode(address crypto.Address, code []byte)
 	InitWASMCode(address crypto.Address, code []byte)
 	RemoveAccount(address crypto.Address)
-	SetStorage(address crypto.Address, key, value binary.Word256)
+	SetStorage(address crypto.Address, key binary.Word256, value []byte)
 	AddToBalance(address crypto.Address, amount uint64)
 	SubtractFromBalance(address crypto.Address, amount uint64)
 	SetPermission(address crypto.Address, permFlag permission.PermFlag, value bool)
@@ -109,11 +109,11 @@ func (st *State) PushError(err error) {
 
 // Reader
 
-func (st *State) GetStorage(address crypto.Address, key binary.Word256) binary.Word256 {
+func (st *State) GetStorage(address crypto.Address, key binary.Word256) []byte {
 	value, err := st.cache.GetStorage(address, key)
 	if err != nil {
 		st.PushError(err)
-		return binary.Zero256
+		return []byte{}
 	}
 	return value
 }
@@ -144,10 +144,11 @@ func (st *State) GetCode(address crypto.Address) acm.Bytecode {
 
 func (st *State) GetWASMCode(address crypto.Address) acm.Bytecode {
 	acc := st.account(address)
-	if acc == nil {
+	if acc == nil || acc.WASM == nil {
 		return nil
 	}
-	return acc.WASM
+
+	return *acc.WASM
 }
 
 func (st *State) Exists(address crypto.Address) bool {
@@ -209,7 +210,8 @@ func (st *State) InitWASMCode(address crypto.Address, code []byte) {
 			"tried to initialise code for a contract that already exists: %v", address))
 		return
 	}
-	acc.WASM = code
+	bc, _ := acm.NewBytecode(code)
+	acc.WASM = &bc
 	st.updateAccount(acc)
 }
 
@@ -222,7 +224,7 @@ func (st *State) RemoveAccount(address crypto.Address) {
 	st.removeAccount(address)
 }
 
-func (st *State) SetStorage(address crypto.Address, key, value binary.Word256) {
+func (st *State) SetStorage(address crypto.Address, key binary.Word256, value []byte) {
 	err := st.cache.SetStorage(address, key, value)
 	if err != nil {
 		st.PushError(err)

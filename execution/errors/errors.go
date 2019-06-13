@@ -60,6 +60,7 @@ const (
 	ErrorCodeInvalidBlockNumber
 	ErrorCodeBlockNumberOutOfRange
 	ErrorCodeAlreadyVoted
+	ErrorCodeUnresolvedSymbols
 )
 
 func (c Code) ErrorCode() Code {
@@ -152,6 +153,8 @@ func (c Code) String() string {
 		return "block number out of range"
 	case ErrorCodeAlreadyVoted:
 		return "vote already registered for this address"
+	case ErrorCodeUnresolvedSymbols:
+		return "code has unresolved symbols"
 	default:
 		return "Unknown error"
 	}

@@ -10,7 +10,7 @@ import (
 
 type MemoryState struct {
 	Accounts map[crypto.Address]*acm.Account
-	Storage  map[crypto.Address]map[binary.Word256]binary.Word256
+	Storage  map[crypto.Address]map[binary.Word256][]byte
 }
 
 var _ IterableReaderWriter = &MemoryState{}
@@ -19,7 +19,7 @@ var _ IterableReaderWriter = &MemoryState{}
 func NewMemoryState() *MemoryState {
 	return &MemoryState{
 		Accounts: make(map[crypto.Address]*acm.Account),
-		Storage:  make(map[crypto.Address]map[binary.Word256]binary.Word256),
+		Storage:  make(map[crypto.Address]map[binary.Word256][]byte),
 	}
 }
 
@@ -40,22 +40,22 @@ func (ms *MemoryState) RemoveAccount(address crypto.Address) error {
 	return nil
 }
 
-func (ms *MemoryState) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
+func (ms *MemoryState) GetStorage(address crypto.Address, key binary.Word256) ([]byte, error) {
 	storage, ok := ms.Storage[address]
 	if !ok {
-		return binary.Zero256, fmt.Errorf("could not find storage for account %s", address)
+		return []byte{}, fmt.Errorf("could not find storage for account %s", address)
 	}
 	value, ok := storage[key]
 	if !ok {
-		return binary.Zero256, fmt.Errorf("could not find key %x for account %s", key, address)
+		return []byte{}, fmt.Errorf("could not find key %x for account %s", key, address)
 	}
 	return value, nil
 }
 
-func (ms *MemoryState) SetStorage(address crypto.Address, key, value binary.Word256) error {
+func (ms *MemoryState) SetStorage(address crypto.Address, key binary.Word256, value []byte) error {
 	storage, ok := ms.Storage[address]
 	if !ok {
-		storage = make(map[binary.Word256]binary.Word256)
+		storage = make(map[binary.Word256][]byte)
 		ms.Storage[address] = storage
 	}
 	storage[key] = value
@@ -71,7 +71,7 @@ func (ms *MemoryState) IterateAccounts(consumer func(*acm.Account) error) (err e
 	return nil
 }
 
-func (ms *MemoryState) IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) error) (err error) {
+func (ms *MemoryState) IterateStorage(address crypto.Address, consumer func(key binary.Word256, value []byte) error) (err error) {
 	for key, value := range ms.Storage[address] {
 		if err := consumer(key, value); err != nil {
 			return err

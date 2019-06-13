@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 )
 
@@ -32,7 +31,7 @@ func (dw *DumpState) RemoveAccount(address crypto.Address) error {
 	return nil
 }
 
-func (dw *DumpState) SetStorage(address crypto.Address, key, value binary.Word256) error {
+func (dw *DumpState) SetStorage(address crypto.Address, key, value []byte) error {
 	dw.WriteString("SetStorage\n")
 	dw.WriteString(address.String())
 	dw.WriteByte('/')

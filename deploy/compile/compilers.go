@@ -220,7 +220,7 @@ func Compile(file string, optimize bool, workDir string, libraries map[string]st
 }
 
 func CompileWASM(file string, workDir string, logger *logging.Logger) (*Response, error) {
-	shellCmd := exec.Command("solang", "--json", file)
+	shellCmd := exec.Command("solang", "--standard-json", file)
 	if workDir != "" {
 		shellCmd.Dir = workDir
 	}
@@ -231,7 +231,7 @@ func CompileWASM(file string, workDir string, logger *logging.Logger) (*Response
 	logger.TraceMsg("Command Output", "result", string(output))
 
 	wasmoutput := SolidityOutput{}
-	err = json.Unmarshal(output, &output)
+	err = json.Unmarshal(output, &wasmoutput)
 	if err != nil {
 		return nil, err
 	}

@@ -10,10 +10,10 @@ import (
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/execution/wasm"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs/payload"
-	wexec "github.com/perlin-network/life/exec"
 )
 
 // TODO: make configurable
@@ -131,7 +131,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		caller  crypto.Address = inAcc.Address
 		callee  crypto.Address = crypto.ZeroAddress // initialized below
 		code    []byte         = nil
-		wasm    []byte         = nil
+		wcode   []byte         = nil
 		ret     []byte         = nil
 		txCache                = evm.NewState(ctx.StateWriter, ctx.Blockchain.BlockHash, acmstate.Named("TxCache"))
 		params                 = evm.Params{
@@ -146,13 +146,13 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		// We already checked for permission
 		callee = crypto.NewContractAddress(caller, ctx.txe.TxHash)
 		code = ctx.tx.Data
-		wasm = ctx.tx.WASM
+		wcode = ctx.tx.WASM
 		txCache.CreateAccount(callee)
 		ctx.Logger.TraceMsg("Creating new contract",
 			"contract_address", callee,
 			"init_code", code)
 	} else {
-		if outAcc == nil || len(outAcc.Code) == 0 {
+		if outAcc == nil || (len(outAcc.Code) == 0 && outAcc.WASM == nil) {
 			// if you call an account that doesn't exist
 			// or an account with no code then we take fees (sorry pal)
 			// NOTE: it's fine to create a contract and call it within one
@@ -180,7 +180,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		}
 		callee = outAcc.Address
 		code = txCache.GetCode(callee)
-		wasm = txCache.GetWASMCode(callee)
+		wcode = txCache.GetWASMCode(callee)
 		ctx.Logger.TraceMsg("Calling existing contract",
 			"contract_address", callee,
 			"input", ctx.tx.Data,
@@ -191,30 +191,11 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 	txHash := ctx.txe.Envelope.Tx.Hash()
 	logger := ctx.Logger.With(structure.TxHashKey, txHash)
 	var exception errors.CodedError
-	if wasm != nil {
-		// WASM
-		config := wexec.VMConfig{
-			DisableFloatingPoint: true,
-			MaxMemoryPages:       2,
-			DefaultMemoryPages:   2,
-		}
-		vm, err := wexec.NewVirtualMachine(wasm, config, &wexec.NopResolver{}, nil)
-		if err != nil {
-			ctx.Logger.InfoMsg("Invalid WASM bytecode",
-				"error", err)
-			return err
-		}
-		wasmFunc := "function"
+	if wcode != nil {
 		if createContract {
-			txCache.InitWASMCode(callee, wasm)
-			wasmFunc = "constructor"
+			txCache.InitWASMCode(callee, wcode)
 		}
-		entryID, ok := vm.GetFunctionExport(wasmFunc)
-		if !ok {
-			ctx.Logger.InfoMsg("Missing exported WASM function", "export", wasmFunc)
-			return fmt.Errorf("WASM missing function %s", wasmFunc)
-		}
-		_, err = vm.Run(entryID)
+		ret, err := wasm.RunWASM(txCache, callee, createContract, wcode, ctx.tx.Data)
 		if err != nil {
 			ctx.Logger.InfoMsg("Error returned from WASM", "error", err)
 			return err
@@ -223,6 +204,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		if err != nil {
 			return err
 		}
+		ctx.txe.Return(ret, ctx.tx.GasLimit-gas)
 	} else {
 		// EVM
 		vmach := evm.NewVM(params, caller, txHash, logger, ctx.VMOptions...)

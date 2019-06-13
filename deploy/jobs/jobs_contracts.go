@@ -196,7 +196,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 				"path", contractPath,
 				"abi", string(response.Contract.Abi),
 				"bin", response.Contract.Evm.Bytecode.Object)
-			if response.Contract.Evm.Bytecode.Object == "" {
+			if response.Contract.Evm.Bytecode.Object == "" && response.Contract.EWasm.Wasm == "" {
 				return nil, nil, errCodeMissing
 			}
 			mergeAbiSpecBytes(client, response.Contract.Abi)
@@ -214,7 +214,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 			var baseContract *compilers.ResponseItem
 			deployedCount := 0
 			for i, response := range resp.Objects {
-				if response.Contract.Evm.Bytecode.Object == "" {
+				if response.Contract.Evm.Bytecode.Object == "" && response.Contract.EWasm.Wasm == "" {
 					continue
 				}
 				mergeAbiSpecBytes(client, response.Contract.Abi)
@@ -248,7 +248,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 					continue
 				}
 				if matchInstanceName(response.Objectname, deploy.Instance) {
-					if response.Contract.Evm.Bytecode.Object == "" {
+					if response.Contract.Evm.Bytecode.Object == "" && response.Contract.EWasm.Wasm == "" {
 						return nil, nil, errCodeMissing
 					}
 					logger.TraceMsg("Deploy contract",

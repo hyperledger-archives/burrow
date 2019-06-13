@@ -74,7 +74,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 		proposalList := cmd.StringOpt("list-proposals state", "", "List proposals, either all, executed, expired, or current")
 
 		cmd.Spec = "[--chain=<host:port>] [--keys=<host:port>] [--mempool-signing] [--dir=<root directory>] " +
-			"[--output=<output file>] [--set=<KEY=VALUE>]... [--bin-path=<path>] [--gas=<gas>] " +
+			"[--output=<output file>] [--wasm] [--set=<KEY=VALUE>]... [--bin-path=<path>] [--gas=<gas>] " +
 			"[--jobs=<concurrent playbooks>] [--address=<address>] [--fee=<fee>] [--amount=<amount>] " +
 			"[--verbose] [--debug] [--timeout=<timeout>] [--proposal-create|--proposal-verify|--proposal-create] FILE..."
 
