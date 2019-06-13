@@ -9,6 +9,12 @@ import (
 )
 
 func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
+	// If there are no transactions, do not store anything. This reduces the amount of data we store and
+	// prevents the iavl tree from changing, which means the AppHash does not change.
+	if len(be.TxExecutions) == 0 {
+		return nil
+	}
+
 	streamEventBytes := make([]byte, 0)
 
 	for _, ev := range be.StreamEvents() {

@@ -68,7 +68,7 @@ func (btc *BurrowTendermintConfig) Config(rootDir string, timeoutFactor float64)
 
 		// Consensus
 		conf.Consensus.CreateEmptyBlocks = btc.CreateEmptyBlocks
-		conf.Consensus.CreateEmptyBlocksInterval = btc.CreateEmptyBlocksInterval
+		conf.Consensus.CreateEmptyBlocksInterval = btc.CreateEmptyBlocksInterval * time.Second
 		// Assume Tendermint has some mutually consistent values, assume scaling them linearly makes sense
 		conf.Consensus.TimeoutPropose = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutPropose)
 		conf.Consensus.TimeoutProposeDelta = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutProposeDelta)

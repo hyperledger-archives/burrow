@@ -148,9 +148,11 @@ func testResume(t *testing.T, cfg *config.VentConfig) {
 		// wait up to a second
 		time.Sleep(time.Millisecond * time.Duration(rnd.Int63n(1000)))
 		for ed := range runConsumer(t, cfg) {
-			expectedHeight++
 			t.Logf("expecting block: %d, got block: %d", expectedHeight, ed.BlockHeight)
-			require.Equal(t, expectedHeight, ed.BlockHeight, "should get monotonic sequential sequence")
+			if expectedHeight > ed.BlockHeight {
+				require.Fail(t, "should get monotonic sequential sequence")
+			}
+			expectedHeight = ed.BlockHeight
 		}
 	}
 }
