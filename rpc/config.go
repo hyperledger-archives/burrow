@@ -3,6 +3,7 @@ package rpc
 // 'LocalHost' gets interpreted as ipv6
 // TODO: revisit this
 const LocalHost = "127.0.0.1"
+const AnyLocal = "0.0.0.0"
 
 type RPCConfig struct {
 	Info     *ServerConfig  `json:",omitempty" toml:",omitempty"`
@@ -35,7 +36,7 @@ func DefaultRPCConfig() *RPCConfig {
 func DefaultInfoConfig() *ServerConfig {
 	return &ServerConfig{
 		Enabled:    true,
-		ListenHost: LocalHost,
+		ListenHost: AnyLocal,
 		ListenPort: "26658",
 	}
 }
@@ -43,7 +44,7 @@ func DefaultInfoConfig() *ServerConfig {
 func DefaultGRPCConfig() *ServerConfig {
 	return &ServerConfig{
 		Enabled:    true,
-		ListenHost: LocalHost,
+		ListenHost: AnyLocal,
 		ListenPort: "10997",
 	}
 }
@@ -51,7 +52,7 @@ func DefaultGRPCConfig() *ServerConfig {
 func DefaultProfilerConfig() *ServerConfig {
 	return &ServerConfig{
 		Enabled:    false,
-		ListenHost: LocalHost,
+		ListenHost: AnyLocal,
 		ListenPort: "6060",
 	}
 }
@@ -60,7 +61,7 @@ func DefaultMetricsConfig() *MetricsConfig {
 	return &MetricsConfig{
 		ServerConfig: ServerConfig{
 			Enabled:    false,
-			ListenHost: LocalHost,
+			ListenHost: AnyLocal,
 			ListenPort: "9102",
 		},
 		MetricsPath:     "/metrics",
