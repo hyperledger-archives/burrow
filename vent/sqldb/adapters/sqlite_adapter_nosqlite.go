@@ -4,12 +4,11 @@
 package adapters
 
 import (
-	"database/sql"
 	"fmt"
 
-	"github.com/hyperledger/burrow/vent/types"
-
 	"github.com/hyperledger/burrow/vent/logger"
+	"github.com/hyperledger/burrow/vent/types"
+	"github.com/jmoiron/sqlx"
 )
 
 // This is a no-op version of SQLiteAdapter
@@ -19,11 +18,11 @@ type SQLiteAdapter struct {
 
 var _ DBAdapter = &SQLiteAdapter{}
 
-func NewSQLiteAdapter(log *logger.Logger) *SQLiteAdapter {
+func NewSQLiteAdapter(names types.SQLNames, log *logger.Logger) *SQLiteAdapter {
 	panic(fmt.Errorf("vent has been built without sqlite support. To use the sqlite DBAdapter build with the 'sqlite' build tag enabled"))
 }
 
-func (*SQLiteAdapter) Open(dbURL string) (*sql.DB, error) {
+func (*SQLiteAdapter) Open(dbURL string) (*sqlx.DB, error) {
 	panic("implement me")
 }
 
@@ -40,10 +39,6 @@ func (*SQLiteAdapter) SecureName(name string) string {
 }
 
 func (*SQLiteAdapter) CreateTableQuery(tableName string, columns []*types.SQLTableColumn) (string, string) {
-	panic("implement me")
-}
-
-func (*SQLiteAdapter) LastBlockIDQuery() string {
 	panic("implement me")
 }
 

@@ -33,7 +33,8 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				logLevelOpt := cmd.StringOpt("log-level", cfg.LogLevel, "Logging level (error, warn, info, debug)")
 				abiFileOpt := cmd.StringsOpt("abi", cfg.AbiFileOrDirs, "EVM Contract ABI file or folder")
 				specFileOrDirOpt := cmd.StringsOpt("spec", cfg.SpecFileOrDirs, "SQLSol specification file or folder")
-				dbBlockTxOpt := cmd.BoolOpt("db-block", cfg.DBBlockTx, "Create block & transaction tables and persist related data (true/false)")
+				dbBlockOpt := cmd.BoolOpt("blocks", false, "Create block tables and persist related data")
+				dbTxOpt := cmd.BoolOpt("txs", false, "Create tx tables and persist related data")
 
 				announceEveryOpt := cmd.StringOpt("announce-every", "5s", "Announce vent status every period as a Go duration, e.g. 1ms, 3s, 1h")
 
@@ -47,7 +48,12 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					cfg.LogLevel = *logLevelOpt
 					cfg.AbiFileOrDirs = *abiFileOpt
 					cfg.SpecFileOrDirs = *specFileOrDirOpt
-					cfg.DBBlockTx = *dbBlockTxOpt
+					if *dbBlockOpt {
+						cfg.SpecOpt &= sqlsol.Block
+					}
+					if *dbTxOpt {
+						cfg.SpecOpt &= sqlsol.Tx
+					}
 
 					if *announceEveryOpt != "" {
 						var err error
@@ -59,14 +65,14 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				}
 
 				cmd.Spec = "--spec=<spec file or dir> --abi=<abi file or dir> [--db-adapter] [--db-url] [--db-schema] " +
-					"[--db-block] [--grpc-addr] [--http-addr] [--log-level] [--announce-every=<duration>]"
+					"[--blocks] [--txs] [--grpc-addr] [--http-addr] [--log-level] [--announce-every=<duration>]"
 
 				cmd.Action = func() {
 					log := logger.NewLogger(cfg.LogLevel)
 					consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
 					server := service.NewServer(cfg, log, consumer)
 
-					projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, cfg.DBBlockTx)
+					projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, cfg.SpecOpt)
 					if err != nil {
 						output.Fatalf("Spec loader error: %v", err)
 					}

@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var columns = types.DefaultSQLColumnNames
+
 func TestNewProjection(t *testing.T) {
 	t.Run("returns an error if the json is malformed", func(t *testing.T) {
 		badJSON := test.BadJSONConfFile(t)
@@ -44,12 +46,12 @@ func TestNewProjection(t *testing.T) {
 		require.Equal(t, types.SQLColumnTypeVarchar, col.Type)
 		require.Equal(t, "address", col.Name)
 
-		col, err = tableStruct.GetColumn(tableName, types.SQLColumnLabelTxHash)
+		col, err = tableStruct.GetColumn(tableName, columns.TxHash)
 		require.NoError(t, err)
 		require.Equal(t, false, col.Primary)
 		require.Equal(t, types.SQLColumnTypeText, col.Type)
 
-		col, err = tableStruct.GetColumn(tableName, types.SQLColumnLabelEventName)
+		col, err = tableStruct.GetColumn(tableName, columns.EventName)
 		require.NoError(t, err)
 		require.Equal(t, false, col.Primary)
 		require.Equal(t, types.SQLColumnTypeText, col.Type)

@@ -23,6 +23,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var tables = types.DefaultSQLTableNames
+
 func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
 	create := test.CreateContract(t, tcli, inputAddress)
 
@@ -77,11 +79,13 @@ func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli rpc
 	require.Equal(t, "UpdateTestEvents", tblData[0].RowData["_eventname"].(string))
 
 	// block & tx raw data also persisted
-	if cfg.DBBlockTx {
-		tblData = eventData.Tables[types.SQLBlockTableName]
+	if cfg.SpecOpt&sqlsol.Block > 0 {
+		tblData = eventData.Tables[tables.Block]
 		require.Equal(t, 1, len(tblData))
 
-		tblData = eventData.Tables[types.SQLTxTableName]
+	}
+	if cfg.SpecOpt&sqlsol.Tx > 0 {
+		tblData = eventData.Tables[tables.Tx]
 		require.Equal(t, 1, len(tblData))
 		require.Equal(t, txeB.TxHash.String(), tblData[0].RowData["_txhash"].(string))
 	}
@@ -188,7 +192,7 @@ func newConsumer(t *testing.T, cfg *config.VentConfig) *service.Consumer {
 
 	cfg.SpecFileOrDirs = []string{path.Join(testDir, "sqlsol_example.json")}
 	cfg.AbiFileOrDirs = []string{path.Join(testDir, "EventsTest.abi")}
-	cfg.DBBlockTx = true
+	cfg.SpecOpt = sqlsol.BlockTx
 
 	log := logger.NewLogger(cfg.LogLevel)
 	ch := make(chan types.EventData, 100)
@@ -199,7 +203,7 @@ func newConsumer(t *testing.T, cfg *config.VentConfig) *service.Consumer {
 func runConsumer(t *testing.T, cfg *config.VentConfig) chan types.EventData {
 	consumer := newConsumer(t, cfg)
 
-	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, cfg.DBBlockTx)
+	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, cfg.SpecOpt)
 	require.NoError(t, err)
 
 	abiSpec, err := abi.LoadPath(cfg.AbiFileOrDirs...)

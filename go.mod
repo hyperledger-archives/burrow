@@ -7,6 +7,8 @@ require (
 	github.com/OneOfOne/xxhash v1.2.5
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/alecthomas/jsonschema v0.0.0-20190122210438-a6952de1bbe6
+	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
+	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
 	github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf // indirect
 	github.com/btcsuite/btcd v0.0.0-20190418232430-6867ff32788a
 	github.com/cep21/xdgbasedir v0.0.0-20170329171747-21470bfc93b9
@@ -29,15 +31,17 @@ require (
 	github.com/imdario/mergo v0.3.7
 	github.com/jawher/mow.cli v1.0.5
 	github.com/jmhodges/levigo v1.0.0 // indirect
-	github.com/kisielk/errcheck v1.2.0 // indirect
-	github.com/lib/pq v1.1.0
+	github.com/jmoiron/sqlx v1.2.0
+	github.com/lib/pq v1.1.1
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/monax/relic v2.0.0+incompatible
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.2
 	github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910
+	github.com/prometheus/common v0.0.0-20181126121408-4724e9255275
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a
 	github.com/rs/cors v1.6.0 // indirect
+	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/spf13/viper v1.3.2
 	github.com/streadway/simpleuuid v0.0.0-20130420165545-6617b501e485
 	github.com/stretchr/testify v1.3.0
@@ -54,7 +58,7 @@ require (
 	golang.org/x/net v0.0.0-20190522155817-f3200d17e092
 	golang.org/x/sys v0.0.0-20190529164535-6a60838ec259 // indirect
 	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20190530043710-12d73424210d // indirect
 	google.golang.org/grpc v1.20.1
+	gopkg.in/alecthomas/kingpin.v2 v2.2.6 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 )
