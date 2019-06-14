@@ -51,6 +51,11 @@ See the [install instructions](docs/INSTALL.md).
 ## Project documentation
 Burrow getting started documentation is available in the [docs](docs/README.md) directory and in [GoDocs](https://godoc.org/github.com/hyperledger/burrow).
 
+### Reference
+
+- [Genesis](docs/genesis.md) - the 'chain making' or genesis process
+- [Permissions](docs/permissions.md) - understand the permissions model at the core of Burrow
+
 ## Contribute
 
 We welcome any and all contributions. Read the [contributing file](.github/CONTRIBUTING.md) for more information on making your first Pull Request to Burrow!
