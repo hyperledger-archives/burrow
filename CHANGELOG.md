@@ -1,4 +1,19 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.26.0] - 2019-06-14
+### Changed
+- [Vent] The chain id is stored in the SQL Tables
+- [CLI] Command line arguments have changed
+
+### Fixed
+- [Tendermint] Disable default Tendermint TxIndexer - for which we have no use but puts extra load on DB
+- [Tendermint] The CreateEmptyBlocks and CreateEmptyBlocksInterval now works
+- [State] Empty blocks are not longer stored
+- [State] Genesis doc is no longer persisted at every block
+- [State] Store TxExecutions as single entry per block, rather than one per Event
+### Add
+- [Vent] vent can restore tables from vent log using new vent restore command
+
+
 ## [0.25.1] - 2019-05-03
 ### Changed
 - [Config] Split ListenAddress into ListenHost and ListenPort to ease parsing in the Helm charts
@@ -467,6 +482,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.26.0]: https://github.com/hyperledger/burrow/compare/v0.25.1...v0.26.0
 [0.25.1]: https://github.com/hyperledger/burrow/compare/v0.25.0...v0.25.1
 [0.25.0]: https://github.com/hyperledger/burrow/compare/v0.24.6...v0.25.0
 [0.24.6]: https://github.com/hyperledger/burrow/compare/v0.24.5...v0.24.6
