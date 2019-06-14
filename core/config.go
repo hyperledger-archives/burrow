@@ -96,7 +96,11 @@ func (kern *Kernel) LoadTendermintFromConfig(conf *config.BurrowConfig, privVal 
 	tmGenesisDoc := tendermint.DeriveGenesisDoc(&genesisDoc, kern.Blockchain.AppHashAfterLastBlock())
 	heightValuer := log.Valuer(func() interface{} { return kern.Blockchain.LastBlockHeight() })
 	tmLogger := kern.Logger.With(structure.CallerKey, log.Caller(LoggingCallerDepth+1)).With("height", heightValuer)
-	kern.Node, err = tendermint.NewNode(conf.TendermintConfig(), privVal, tmGenesisDoc, app, metricsProvider, nodeKey, tmLogger)
+	tmConf, err := conf.TendermintConfig()
+	if err != nil {
+		return fmt.Errorf("could not build Tendermint config: %v", err)
+	}
+	kern.Node, err = tendermint.NewNode(tmConf, privVal, tmGenesisDoc, app, metricsProvider, nodeKey, tmLogger)
 	return err
 }
 

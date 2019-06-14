@@ -11,6 +11,11 @@ import (
 	tmConfig "github.com/tendermint/tendermint/config"
 )
 
+const (
+	NeverCreateEmptyBlocks  = "never"
+	AlwaysCreateEmptyBlocks = "always"
+)
+
 // Burrow's view on Tendermint's config. Since we operate as a Tendermint harness not all configuration values
 // are applicable, we may not allow some values to specified, or we may not allow some to be set independently.
 // So this serves as a layer of indirection over Tendermint's real config that we derive from ours.
@@ -32,9 +37,10 @@ type BurrowTendermintConfig struct {
 	Moniker        string
 	// Peers ID or address this node is authorize to sync with
 	AuthorizedPeers string
-	// EmptyBlocks mode and possible interval between empty blocks in seconds
-	CreateEmptyBlocks         bool
-	CreateEmptyBlocksInterval time.Duration
+	// EmptyBlocks mode and possible interval between empty blocks in seconds, one of:
+	// "", "never" (to never create unnecessary blocks)
+	// "always" (to create empty blocks each consensus round)
+	CreateEmptyBlocks string
 }
 
 func DefaultBurrowTendermintConfig() *BurrowTendermintConfig {
@@ -44,16 +50,15 @@ func DefaultBurrowTendermintConfig() *BurrowTendermintConfig {
 		return nil
 	}
 	return &BurrowTendermintConfig{
-		Enabled:                   true,
-		ListenHost:                url.Hostname(),
-		ListenPort:                url.Port(),
-		ExternalAddress:           tmDefaultConfig.P2P.ExternalAddress,
-		CreateEmptyBlocks:         tmDefaultConfig.Consensus.CreateEmptyBlocks,
-		CreateEmptyBlocksInterval: tmDefaultConfig.Consensus.CreateEmptyBlocksInterval,
+		Enabled:           true,
+		ListenHost:        url.Hostname(),
+		ListenPort:        url.Port(),
+		ExternalAddress:   tmDefaultConfig.P2P.ExternalAddress,
+		CreateEmptyBlocks: "5m",
 	}
 }
 
-func (btc *BurrowTendermintConfig) Config(rootDir string, timeoutFactor float64) *tmConfig.Config {
+func (btc *BurrowTendermintConfig) Config(rootDir string, timeoutFactor float64) (*tmConfig.Config, error) {
 	conf := tmConfig.DefaultConfig()
 	// We expose Tendermint config as required, but try to give fewer levers to pull where possible
 	if btc != nil {
@@ -67,8 +72,21 @@ func (btc *BurrowTendermintConfig) Config(rootDir string, timeoutFactor float64)
 		conf.TxIndex.Indexer = "null"
 
 		// Consensus
-		conf.Consensus.CreateEmptyBlocks = btc.CreateEmptyBlocks
-		conf.Consensus.CreateEmptyBlocksInterval = btc.CreateEmptyBlocksInterval * time.Second
+		switch strings.ToLower(btc.CreateEmptyBlocks) {
+		case NeverCreateEmptyBlocks, "":
+			conf.Consensus.CreateEmptyBlocks = false
+		case AlwaysCreateEmptyBlocks:
+			conf.Consensus.CreateEmptyBlocks = true
+		default:
+			conf.Consensus.CreateEmptyBlocks = true
+			createEmptyBlocksInterval, err := time.ParseDuration(btc.CreateEmptyBlocks)
+			if err != nil {
+				return nil, fmt.Errorf("could not parse CreateEmptyBlock '%s' "+
+					"as '%s', '%s', or duration (e.g. 1s, 2m, 4h): %v",
+					btc.CreateEmptyBlocks, NeverCreateEmptyBlocks, AlwaysCreateEmptyBlocks, err)
+			}
+			conf.Consensus.CreateEmptyBlocksInterval = createEmptyBlocksInterval
+		}
 		// Assume Tendermint has some mutually consistent values, assume scaling them linearly makes sense
 		conf.Consensus.TimeoutPropose = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutPropose)
 		conf.Consensus.TimeoutProposeDelta = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutProposeDelta)
@@ -96,7 +114,7 @@ func (btc *BurrowTendermintConfig) Config(rootDir string, timeoutFactor float64)
 	}
 	// Disable Tendermint RPC
 	conf.RPC.ListenAddress = ""
-	return conf
+	return conf, nil
 }
 
 func (btc *BurrowTendermintConfig) DefaultAuthorizedPeersProvider() abci.PeersFilterProvider {

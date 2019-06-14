@@ -91,6 +91,8 @@ func NewTestConfig(genesisDoc *genesis.GenesisDoc,
 	conf.BurrowDir = path.Join(testDir, fmt.Sprintf(".burrow_%s", name))
 	conf.GenesisDoc = genesisDoc
 	conf.Tendermint.Moniker = name
+	// Make blocks for purposes of tests
+	conf.Tendermint.CreateEmptyBlocks = tendermint.AlwaysCreateEmptyBlocks
 	conf.Keys.RemoteAddress = ""
 	// Assign run of ports
 	const freeport = "0"

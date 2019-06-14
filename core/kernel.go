@@ -26,6 +26,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hyperledger/burrow/dump"
+
 	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint"
@@ -174,29 +176,26 @@ func (kern *Kernel) LoadDump(genesisDoc *genesis.GenesisDoc, restoreFile string,
 		return fmt.Errorf("AppHash is required when restoring chain")
 	}
 
-	reader, err := state.NewFileDumpReader(restoreFile)
+	reader, err := dump.NewFileReader(restoreFile)
 	if err != nil {
 		return err
 	}
 
-	if err = kern.State.LoadDump(reader); err != nil {
-		return err
-	}
-
-	if err = kern.State.InitialCommit(); err != nil {
+	err = dump.Load(reader, kern.State)
+	if err != nil {
 		return err
 	}
 
 	if !bytes.Equal(kern.State.Hash(), kern.Blockchain.GenesisDoc().AppHash) {
-		return fmt.Errorf("Restore produced a different apphash expect 0x%x got 0x%x",
+		return fmt.Errorf("restore produced a different apphash expect 0x%x got 0x%x",
 			kern.Blockchain.GenesisDoc().AppHash, kern.State.Hash())
 	}
 	err = kern.Blockchain.CommitWithAppHash(kern.State.Hash())
 	if err != nil {
-		return fmt.Errorf("Unable to commit %v", err)
+		return fmt.Errorf("unable to commit %v", err)
 	}
 
-	kern.Logger.InfoMsg("State restore successful -> height 0",
+	kern.Logger.InfoMsg("State restore successful",
 		"state_hash", kern.State.Hash())
 	return nil
 }

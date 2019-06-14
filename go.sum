@@ -85,8 +85,8 @@ github.com/iancoleman/strcase v0.0.0-20190422225806-e506e3ef7365 h1:ECW73yc9MY79
 github.com/iancoleman/strcase v0.0.0-20190422225806-e506e3ef7365/go.mod h1:SK73tn/9oHe+/Y0h39VT4UCxmurVJkR5NA7kMEAOgSE=
 github.com/imdario/mergo v0.3.7 h1:Y+UAYTZ7gDEuOfhxKWy+dvb5dRQ6rJjFSdX2HZY1/gI=
 github.com/imdario/mergo v0.3.7/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
-github.com/jawher/mow.cli v1.0.5 h1:MEWYfyzcJXp8yvqtJYBMa8GLW073pM7RXN1zRDayMU8=
-github.com/jawher/mow.cli v1.0.5/go.mod h1:rZZcz2ygDSemQyV66jOaCszjT/zAL3FcEGNj5ReUpkQ=
+github.com/jawher/mow.cli v1.1.0 h1:NdtHXRc0CwZQ507wMvQ/IS+Q3W3x2fycn973/b8Zuk8=
+github.com/jawher/mow.cli v1.1.0/go.mod h1:aNaQlc7ozF3vw6IJ2dHjp2ZFiA4ozMIYY6PyuRJwlUg=
 github.com/jessevdk/go-flags v0.0.0-20141203071132-1679536dcc89/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
 github.com/jmhodges/levigo v1.0.0 h1:q5EC36kV79HWeTBWsod3mG11EgStG3qArTKcvlksN1U=
 github.com/jmhodges/levigo v1.0.0/go.mod h1:Q6Qx+uH3RAqyK4rFQroq9RL7mdkABMcfhEI+nNuzMJQ=
@@ -154,6 +154,7 @@ github.com/streadway/simpleuuid v0.0.0-20130420165545-6617b501e485 h1:tvEO2/Btzw
 github.com/streadway/simpleuuid v0.0.0-20130420165545-6617b501e485/go.mod h1:fMlyZAyOBbIsA9SgKX9V3X8DvF+5ImkZ+Z1HZcmo8Ec=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
+github.com/stretchr/objx v0.2.0/go.mod h1:qt09Ya8vawLte6SNmTgCsAVtYtaKzEcn8ATUoHMkEqE=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=

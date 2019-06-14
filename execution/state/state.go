@@ -301,3 +301,7 @@ func (s *State) Copy(db dbm.DB) (*State, error) {
 func (s *State) SetLogger(logger *logging.Logger) {
 	s.logger = logger
 }
+
+func (s *State) Dump() string {
+	return s.writeState.forest.Dump()
+}

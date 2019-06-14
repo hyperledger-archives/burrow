@@ -49,10 +49,10 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					cfg.AbiFileOrDirs = *abiFileOpt
 					cfg.SpecFileOrDirs = *specFileOrDirOpt
 					if *dbBlockOpt {
-						cfg.SpecOpt &= sqlsol.Block
+						cfg.SpecOpt |= sqlsol.Block
 					}
 					if *dbTxOpt {
-						cfg.SpecOpt &= sqlsol.Tx
+						cfg.SpecOpt |= sqlsol.Tx
 					}
 
 					if *announceEveryOpt != "" {

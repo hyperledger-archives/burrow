@@ -92,28 +92,34 @@ func buildTxData(txe *exec.TxExecution) (types.EventDataRow, error) {
 	// transaction raw data
 	envelope, err := json.Marshal(txe.Envelope)
 	if err != nil {
-		return types.EventDataRow{}, fmt.Errorf("couldn't marshal envelope in tx %v", txe)
+		return types.EventDataRow{}, fmt.Errorf("couldn't marshal envelope in tx %v: %v", txe, err)
 	}
 
 	events, err := json.Marshal(txe.Events)
 	if err != nil {
-		return types.EventDataRow{}, fmt.Errorf("couldn't marshal events in tx %v", txe)
+		return types.EventDataRow{}, fmt.Errorf("couldn't marshal events in tx %v: %v", txe, err)
 	}
 
 	result, err := json.Marshal(txe.Result)
 	if err != nil {
-		return types.EventDataRow{}, fmt.Errorf("couldn't marshal result in tx %v", txe)
+		return types.EventDataRow{}, fmt.Errorf("couldn't marshal result in tx %v: %v", txe, err)
 	}
 
 	receipt, err := json.Marshal(txe.Receipt)
 	if err != nil {
-		return types.EventDataRow{}, fmt.Errorf("couldn't marshal receipt in tx %v", txe)
+		return types.EventDataRow{}, fmt.Errorf("couldn't marshal receipt in tx %v: %v", txe, err)
 	}
 
 	exception, err := json.Marshal(txe.Exception)
 	if err != nil {
-		return types.EventDataRow{}, fmt.Errorf("couldn't marshal exception in tx %v", txe)
+		return types.EventDataRow{}, fmt.Errorf("couldn't marshal exception in tx %v: %v", txe, err)
 	}
+
+	origin, err := json.Marshal(txe.Origin)
+	if err != nil {
+		return types.EventDataRow{}, fmt.Errorf("couldn't marshal origin in tx %v: %v", txe, err)
+	}
+
 	return types.EventDataRow{
 		Action: types.ActionUpsert,
 		RowData: map[string]interface{}{
@@ -125,6 +131,7 @@ func buildTxData(txe *exec.TxExecution) (types.EventDataRow, error) {
 			columns.Events:    string(events),
 			columns.Result:    string(result),
 			columns.Receipt:   string(receipt),
+			columns.Origin:    string(origin),
 			columns.Exception: string(exception),
 		},
 	}, nil

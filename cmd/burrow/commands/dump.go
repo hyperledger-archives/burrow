@@ -3,123 +3,146 @@ package commands
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"os"
 	"time"
 
-	"github.com/hyperledger/burrow/execution/state"
-
+	"github.com/hyperledger/burrow/core"
+	"github.com/hyperledger/burrow/dump"
+	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/hyperledger/burrow/rpc/rpcdump"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
-	amino "github.com/tendermint/go-amino"
-	"github.com/tendermint/tendermint/libs/db"
-
 	cli "github.com/jawher/mow.cli"
 	"google.golang.org/grpc"
 )
 
-var cdc = amino.NewCodec()
+type dumpOptions struct {
+	height   *int
+	filename *string
+	useJSON  *bool
+}
+
+func addDumpOptions(cmd *cli.Cmd, specOptions ...string) *dumpOptions {
+	cmd.Spec += "[--height=<state height to dump at>] [--json]"
+	for _, spec := range specOptions {
+		cmd.Spec += " " + spec
+	}
+	cmd.Spec += " FILE"
+	return &dumpOptions{
+		height:   cmd.IntOpt("h height", 0, "Block height to dump to, defaults to latest block height"),
+		useJSON:  cmd.BoolOpt("j json", false, "Output in json"),
+		filename: cmd.StringArg("FILE", "", "Save dump here"),
+	}
+}
 
 // Dump saves the state from a remote chain
 func Dump(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
-		chainURLOpt := cmd.StringOpt("c chain", "127.0.0.1:10997", "chain to be used in IP:PORT format")
-		heightOpt := cmd.IntOpt("h height", 0, "Block height to dump to, defaults to latest block height")
-		filename := cmd.StringArg("FILE", "", "Save dump here")
-		useJSON := cmd.BoolOpt("j json", false, "Output in json")
-		timeoutOpt := cmd.IntOpt("t timeout", 0, "Timeout in seconds")
+		cmd.Command("local", "create a dump from local Burrow directory", func(cmd *cli.Cmd) {
+			output.Logf("dumping from local Burrow dir")
+			configFileOpt := cmd.String(configFileOption)
+			genesisFileOpt := cmd.String(genesisFileOption)
 
-		s := state.NewState(db.NewMemDB())
+			dumpOpts := addDumpOptions(cmd, configFileSpec, genesisFileSpec)
 
-		cmd.Action = func() {
-			ctx, cancel := context.WithCancel(context.Background())
-			if *timeoutOpt != 0 {
-				timeout := time.Duration(*timeoutOpt) * time.Second
-				ctx, cancel = context.WithTimeout(context.Background(), timeout)
-			}
-			defer cancel()
-
-			var opts []grpc.DialOption
-			opts = append(opts, grpc.WithInsecure())
-			conn, err := grpc.DialContext(ctx, *chainURLOpt, opts...)
-			if err != nil {
-				output.Fatalf("failed to connect: %v", err)
-				return
-			}
-
-			dc := rpcdump.NewDumpClient(conn)
-			dump, err := dc.GetDump(ctx, &rpcdump.GetDumpParam{Height: uint64(*heightOpt)})
-			if err != nil {
-				output.Fatalf("failed to retrieve dump: %v", err)
-				return
-			}
-
-			qCli := rpcquery.NewQueryClient(conn)
-			chainStatus, err := qCli.Status(context.Background(), &rpcquery.StatusParam{})
-			if err != nil {
-				output.Logf("could not get chain status: %v", err)
-			}
-			stat, err := json.Marshal(chainStatus)
-			if err != nil {
-				output.Logf("failed to marshal: %v", err)
-			}
-			output.Logf(string(stat))
-
-			f, err := os.OpenFile(*filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-			if err != nil {
-				output.Fatalf("%s: failed to save dump: %v", *filename, err)
-				return
-			}
-
-			_, _, err = s.Update(func(ws state.Updatable) error {
-				for {
-					resp, err := dump.Recv()
-					if err == io.EOF {
-						break
-					}
-					if err != nil {
-						output.Fatalf("failed to recv dump: %v", err)
-						return err
-					}
-
-					// update our temporary state
-					if resp.Account != nil {
-						ws.UpdateAccount(resp.Account)
-					}
-					if resp.AccountStorage != nil {
-						for _, storage := range resp.AccountStorage.Storage {
-							ws.SetStorage(resp.AccountStorage.Address, storage.Key, storage.Value)
-						}
-					}
-					if resp.Name != nil {
-						ws.UpdateName(resp.Name)
-					}
-
-					var bs []byte
-					if *useJSON {
-						bs, err = json.Marshal(resp)
-						if bs != nil {
-							bs = append(bs, []byte("\n")...)
-						}
-					} else {
-						bs, err = cdc.MarshalBinaryLengthPrefixed(resp)
-					}
-					if err != nil {
-						output.Fatalf("failed to marshall dump: %v", *filename, err)
-					}
-
-					n, err := f.Write(bs)
-					if err == nil && n < len(bs) {
-						output.Fatalf("%s: failed to save dump: %v", *filename, err)
-					}
+			cmd.Action = func() {
+				conf, err := obtainDefaultConfig(*configFileOpt, *genesisFileOpt)
+				if err != nil {
+					output.Fatalf("could not obtain config: %v", err)
 				}
 
-				return nil
-			})
+				kern, err := core.NewKernel(conf.BurrowDir)
+				if err != nil {
+					output.Fatalf("could not create burrow kernel: %v", err)
+				}
 
-			if err := f.Close(); err != nil {
-				output.Fatalf("%s: failed to save dump: %v", *filename, err)
+				err = kern.LoadState(conf.GenesisDoc)
+				if err != nil {
+					output.Fatalf("could not load burrow state: %v", err)
+				}
+
+				// Include all logging by default
+				logger, err := lifecycle.NewStdErrLogger()
+				if err != nil {
+					output.Fatalf("could not make logger: %v", err)
+				}
+
+				receiver := dump.NewDumper(kern.State, kern.Blockchain, logger).
+					Pipe(0, uint64(*dumpOpts.height), dump.All)
+
+				err = dumpToFile(receiver, *dumpOpts.filename, *dumpOpts.useJSON)
+				if err != nil {
+					output.Fatalf("could not dump to file %s': %v", *dumpOpts.filename, err)
+				}
+				output.Logf("dump successfully written to '%s'", *dumpOpts.filename)
 			}
-		}
+		})
+
+		cmd.Command("remote", "pull a dump from a remote Burrow node", func(cmd *cli.Cmd) {
+			chainURLOpt := cmd.StringOpt("c chain", "127.0.0.1:10997", "chain to be used in IP:PORT format")
+			timeoutOpt := cmd.IntOpt("t timeout", 0, "Timeout in seconds")
+			dumpOpts := addDumpOptions(cmd, "[--chain=<chain GRPC address>]",
+				"[--timeout=<GRPC timeout seconds>]")
+
+			cmd.Action = func() {
+				output.Logf("dumping from remote chain at %s", *chainURLOpt)
+
+				ctx, cancel := context.WithCancel(context.Background())
+				if *timeoutOpt != 0 {
+					timeout := time.Duration(*timeoutOpt) * time.Second
+					ctx, cancel = context.WithTimeout(context.Background(), timeout)
+				}
+				defer cancel()
+
+				var opts []grpc.DialOption
+				opts = append(opts, grpc.WithInsecure())
+				conn, err := grpc.DialContext(ctx, *chainURLOpt, opts...)
+				if err != nil {
+					output.Fatalf("failed to connect: %v", err)
+				}
+
+				qCli := rpcquery.NewQueryClient(conn)
+				chainStatus, err := qCli.Status(context.Background(), &rpcquery.StatusParam{})
+				if err != nil {
+					output.Logf("could not get chain status: %v", err)
+				}
+				stat, err := json.Marshal(chainStatus)
+				if err != nil {
+					output.Logf("failed to marshal: %v", err)
+				}
+				output.Logf("dumping from chain: %s", string(stat))
+
+				dc := rpcdump.NewDumpClient(conn)
+				receiver, err := dc.GetDump(ctx, &rpcdump.GetDumpParam{Height: uint64(*dumpOpts.height)})
+				if err != nil {
+					output.Fatalf("failed to retrieve dump: %v", err)
+				}
+
+				err = dumpToFile(receiver, *dumpOpts.filename, *dumpOpts.useJSON)
+				if err != nil {
+					output.Fatalf("could not dump to file %s': %v", *dumpOpts.filename, err)
+				}
+				output.Logf("dump successfully written to '%s'", *dumpOpts.filename)
+
+			}
+		})
 	}
+}
+
+func dumpToFile(receiver dump.Receiver, filename string, useJSON bool) error {
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+
+	// Receive
+	err = dump.Write(receiver, f, useJSON, dump.All)
+	if err != nil {
+		return err
+	}
+
+	err = f.Close()
+	if err != nil {
+		return err
+	}
+	return nil
 }

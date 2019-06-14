@@ -115,6 +115,7 @@ type SQLColumnNames struct {
 	Events      string
 	Result      string
 	Receipt     string
+	Origin      string
 	Exception   string
 }
 
@@ -149,6 +150,7 @@ var DefaultSQLColumnNames = SQLColumnNames{
 	Events:      "_events",
 	Result:      "_result",
 	Receipt:     "_receipt",
+	Origin:      "_origin",
 	Exception:   "_exception",
 }
 

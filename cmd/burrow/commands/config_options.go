@@ -20,14 +20,30 @@ type configOptions struct {
 	externalAddressOpt *string
 }
 
+const configFileSpec = "[--config=<config file>]"
+
+var configFileOption = cli.StringOpt{
+	Name:   "c config",
+	Desc:   "Use the specified burrow config file",
+	EnvVar: "BURROW_CONFIG_FILE",
+}
+
+const genesisFileSpec = "[--genesis=<genesis json file>]"
+
+var genesisFileOption = cli.StringOpt{
+	Name:   "g genesis",
+	Desc:   "Use the specified genesis JSON file rather than a key in the main config, use - to read from STDIN",
+	EnvVar: "BURROW_GENESIS_FILE",
+}
+
 func addConfigOptions(cmd *cli.Cmd) *configOptions {
 	spec := "[--moniker=<human readable moniker>] " +
 		"[--index=<index of account in GenesisDoc> " +
-		"| --validator=<index of validator in GenesisDoc> " +
-		"| --address=<address of signing key>] " +
+		"|--validator=<index of validator in GenesisDoc> " +
+		"|--address=<address of signing key>] " +
 		"[--passphrase=<secret passphrase to unlock key>] " +
 		"[--external-address=<hostname:port>] " +
-		"[--config=<config file>] [--genesis=<genesis json file>]"
+		configFileSpec + " " + genesisFileSpec
 
 	cmd.Spec = strings.Join([]string{cmd.Spec, spec}, " ")
 	return &configOptions{
@@ -69,17 +85,9 @@ func addConfigOptions(cmd *cli.Cmd) *configOptions {
 			EnvVar: "BURROW_EXTERNAL_ADDRESS",
 		}),
 
-		configFileOpt: cmd.String(cli.StringOpt{
-			Name:   "c config",
-			Desc:   "Use the specified burrow config file",
-			EnvVar: "BURROW_CONFIG_FILE",
-		}),
+		configFileOpt: cmd.String(configFileOption),
 
-		genesisFileOpt: cmd.String(cli.StringOpt{
-			Name:   "g genesis",
-			Desc:   "Use the specified genesis JSON file rather than a key in the main config, use - to read from STDIN",
-			EnvVar: "BURROW_GENESIS_FILE",
-		}),
+		genesisFileOpt: cmd.String(genesisFileOption),
 	}
 }
 

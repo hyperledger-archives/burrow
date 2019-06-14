@@ -61,7 +61,7 @@ func benchmarkKVCache_Iterator(b *testing.B, inserts int) {
 	keyvals := make([][]byte, inserts)
 	for i := 0; i < inserts; i++ {
 		bs := make([]byte, 8)
-		binary.PutInt64BE(bs, rnd.Int63())
+		binary.PutInt64(bs, rnd.Int63())
 		keyvals[i] = bs
 	}
 	for i := 0; i < inserts; i++ {

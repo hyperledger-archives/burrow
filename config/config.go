@@ -50,7 +50,7 @@ func (conf *BurrowConfig) Verify() error {
 	return nil
 }
 
-func (conf *BurrowConfig) TendermintConfig() *tmConfig.Config {
+func (conf *BurrowConfig) TendermintConfig() (*tmConfig.Config, error) {
 	return conf.Tendermint.Config(conf.BurrowDir, conf.Execution.TimeoutFactor)
 }
 

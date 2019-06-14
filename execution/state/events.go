@@ -5,8 +5,12 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/tendermint/go-amino"
+
 	"github.com/hyperledger/burrow/execution/exec"
 )
+
+var cdc = amino.NewCodec()
 
 func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
 	// If there are no transactions, do not store anything. This reduces the amount of data we store and
