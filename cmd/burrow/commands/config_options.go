@@ -10,44 +10,57 @@ import (
 )
 
 type configOptions struct {
-	validatorIndexOpt      *int
-	validatorAddressOpt    *string
-	validatorPassphraseOpt *string
-	validatorMonikerOpt    *string
-	externalAddressOpt     *string
+	configFileOpt      *string
+	genesisFileOpt     *string
+	validatorIndexOpt  *int
+	accountIndexOpt    *int
+	initAddressOpt     *string
+	initPassphraseOpt  *string
+	initMonikerOpt     *string
+	externalAddressOpt *string
 }
 
 func addConfigOptions(cmd *cli.Cmd) *configOptions {
-	spec := "[--validator-moniker=<human readable moniker>] " +
-		"[--validator-index=<index of validator in GenesisDoc> | --validator-address=<address of validator signing key>] " +
-		"[--validator-passphrase=<secret passphrase to unlock validator key>] " +
-		"[--external-address=<hostname:port>]"
+	spec := "[--moniker=<human readable moniker>] " +
+		"[--index=<index of account in GenesisDoc> " +
+		"| --validator=<index of validator in GenesisDoc> " +
+		"| --address=<address of signing key>] " +
+		"[--passphrase=<secret passphrase to unlock key>] " +
+		"[--external-address=<hostname:port>] " +
+		"[--config=<config file>] [--genesis=<genesis json file>]"
 
 	cmd.Spec = strings.Join([]string{cmd.Spec, spec}, " ")
 	return &configOptions{
+		accountIndexOpt: cmd.Int(cli.IntOpt{
+			Name:   "i index",
+			Desc:   "Account index (in accounts list - GenesisSpec or GenesisDoc) from which to set Address",
+			Value:  -1,
+			EnvVar: "BURROW_ACCOUNT_INDEX",
+		}),
+
 		validatorIndexOpt: cmd.Int(cli.IntOpt{
-			Name:   "v validator-index",
-			Desc:   "Validator index (in validators list - GenesisSpec or GenesisDoc) from which to set ValidatorAddress",
+			Name:   "v validator",
+			Desc:   "Validator index (in validators list - GenesisSpec or GenesisDoc) from which to set Address",
 			Value:  -1,
 			EnvVar: "BURROW_VALIDATOR_INDEX",
 		}),
 
-		validatorAddressOpt: cmd.String(cli.StringOpt{
-			Name:   "a validator-address",
-			Desc:   "The address of the the signing key of this validator",
-			EnvVar: "BURROW_VALIDATOR_ADDRESS",
+		initAddressOpt: cmd.String(cli.StringOpt{
+			Name:   "a address",
+			Desc:   "The address of the signing key of this node",
+			EnvVar: "BURROW_ADDRESS",
 		}),
 
-		validatorPassphraseOpt: cmd.String(cli.StringOpt{
-			Name:   "p validator-passphrase",
-			Desc:   "The passphrase of the signing key of this validator (currently unimplemented but planned for future version of our KeyClient interface)",
-			EnvVar: "BURROW_VALIDATOR_PASSPHRASE",
+		initPassphraseOpt: cmd.String(cli.StringOpt{
+			Name:   "p passphrase",
+			Desc:   "The passphrase of the signing key of this node (currently unimplemented but planned for future version of our KeyClient interface)",
+			EnvVar: "BURROW_PASSPHRASE",
 		}),
 
-		validatorMonikerOpt: cmd.String(cli.StringOpt{
-			Name:   "m validator-moniker",
-			Desc:   "An optional human-readable moniker to identify this validator amongst Tendermint peers in logs and status queries",
-			EnvVar: "BURROW_VALIDATOR_MONIKER",
+		initMonikerOpt: cmd.String(cli.StringOpt{
+			Name:   "m moniker",
+			Desc:   "An optional human-readable moniker to identify this node amongst Tendermint peers in logs and status queries",
+			EnvVar: "BURROW_NODE_MONIKER",
 		}),
 
 		externalAddressOpt: cmd.String(cli.StringOpt{
@@ -55,59 +68,88 @@ func addConfigOptions(cmd *cli.Cmd) *configOptions {
 			Desc:   "An external address or host name provided with the port that this node will broadcast over gossip in order for other nodes to connect",
 			EnvVar: "BURROW_EXTERNAL_ADDRESS",
 		}),
+
+		configFileOpt: cmd.String(cli.StringOpt{
+			Name:   "c config",
+			Desc:   "Use the specified burrow config file",
+			EnvVar: "BURROW_CONFIG_FILE",
+		}),
+
+		genesisFileOpt: cmd.String(cli.StringOpt{
+			Name:   "g genesis",
+			Desc:   "Use the specified genesis JSON file rather than a key in the main config, use - to read from STDIN",
+			EnvVar: "BURROW_GENESIS_FILE",
+		}),
 	}
 }
 
-func (opts *configOptions) configure(conf *config.BurrowConfig) error {
-	var err error
-	// Which validator am I?
-	conf.ValidatorAddress, err = validatorAddress(conf, *opts.validatorAddressOpt, *opts.validatorIndexOpt)
+func (opts *configOptions) obtainBurrowConfig() (*config.BurrowConfig, error) {
+	conf, err := obtainDefaultConfig(*opts.configFileOpt, *opts.genesisFileOpt)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if *opts.validatorPassphraseOpt != "" {
-		conf.ValidatorPassphrase = opts.validatorPassphraseOpt
+	// Which account am I?
+	conf.Address, err = accountAddress(conf, *opts.initAddressOpt, *opts.accountIndexOpt, *opts.validatorIndexOpt)
+	if err != nil {
+		return nil, err
 	}
-	if *opts.validatorMonikerOpt == "" {
+	if *opts.initPassphraseOpt != "" {
+		conf.Passphrase = opts.initPassphraseOpt
+	}
+	if *opts.initMonikerOpt == "" {
 		chainIDHeader := ""
 		if conf.GenesisDoc != nil && conf.GenesisDoc.ChainID() != "" {
 			chainIDHeader = conf.GenesisDoc.ChainID() + "_"
 		}
-		if conf.ValidatorAddress != nil {
+		if conf.Address != nil {
 			// Set a default moniker... since we can at this stage of config completion and it is required for start
-			conf.Tendermint.Moniker = fmt.Sprintf("%sValidator_%s", chainIDHeader, conf.ValidatorAddress)
+			conf.Tendermint.Moniker = fmt.Sprintf("%sNode_%s", chainIDHeader, conf.Address)
 		}
 	} else {
-		conf.Tendermint.Moniker = *opts.validatorMonikerOpt
+		conf.Tendermint.Moniker = *opts.initMonikerOpt
 	}
 	if *opts.externalAddressOpt != "" {
 		conf.Tendermint.ExternalAddress = *opts.externalAddressOpt
 	}
-	return nil
+	return conf, nil
 }
 
-func validatorAddress(conf *config.BurrowConfig, addressString string, index int) (*crypto.Address, error) {
-	if addressString != "" {
-		address, err := crypto.AddressFromHexString(addressString)
+// address is sourced in the following order:
+// 	1. explicitly from cli
+// 	2. genesis accounts (by index)
+// 	3. genesis validators (by index)
+// 	4. config
+// 	5. genesis validator (if only one)
+func accountAddress(conf *config.BurrowConfig, addressIn string, accIndex, valIndex int) (*crypto.Address, error) {
+	if addressIn != "" {
+		address, err := crypto.AddressFromHexString(addressIn)
 		if err != nil {
-			return nil, fmt.Errorf("could not read address for validator in '%s': %v", addressString, err)
+			return nil, fmt.Errorf("could not read address for account in '%s': %v", addressIn, err)
 		}
 		return &address, nil
-	} else if index > -1 {
+	} else if accIndex > -1 {
 		if conf.GenesisDoc == nil {
-			return nil, fmt.Errorf("unable to set ValidatorAddress from provided validator-index since no " +
+			return nil, fmt.Errorf("unable to set Address from provided index since no " +
 				"GenesisDoc/GenesisSpec provided")
 		}
-		if index >= len(conf.GenesisDoc.Validators) {
-			return nil, fmt.Errorf("validator-index of %v given but only %v validators specified in GenesisDoc",
-				index, len(conf.GenesisDoc.Validators))
+		if accIndex >= len(conf.GenesisDoc.Accounts) {
+			return nil, fmt.Errorf("index of %v given but only %v accounts specified in GenesisDoc",
+				accIndex, len(conf.GenesisDoc.Accounts))
 		}
-		return &conf.GenesisDoc.Validators[index].Address, nil
-	}
-	if conf.ValidatorAddress != nil {
-		return conf.ValidatorAddress, nil
-	}
-	if conf.GenesisDoc != nil && len(conf.GenesisDoc.Validators) == 1 {
+		return &conf.GenesisDoc.Accounts[accIndex].Address, nil
+	} else if valIndex > -1 {
+		if conf.GenesisDoc == nil {
+			return nil, fmt.Errorf("unable to set Address from provided validator since no " +
+				"GenesisDoc/GenesisSpec provided")
+		}
+		if valIndex >= len(conf.GenesisDoc.Validators) {
+			return nil, fmt.Errorf("validator index of %v given but only %v validators specified in GenesisDoc",
+				valIndex, len(conf.GenesisDoc.Validators))
+		}
+		return &conf.GenesisDoc.Validators[valIndex].Address, nil
+	} else if conf.Address != nil {
+		return conf.Address, nil
+	} else if conf.GenesisDoc != nil && len(conf.GenesisDoc.Validators) == 1 {
 		return &conf.GenesisDoc.Validators[0].Address, nil
 	}
 	return nil, nil

@@ -6,11 +6,10 @@ import (
 	"strings"
 
 	compilers "github.com/hyperledger/burrow/deploy/compile"
-	"github.com/hyperledger/burrow/logging"
-	pbpayload "github.com/hyperledger/burrow/txs/payload"
-
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
+	"github.com/hyperledger/burrow/logging"
+	pbpayload "github.com/hyperledger/burrow/txs/payload"
 )
 
 const (

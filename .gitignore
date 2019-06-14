@@ -5,9 +5,10 @@ bin/
 # tests
 test_scratch/
 *.log
-.burrow
 .keys
+.burrow*
 burrow.toml
+burrow???.toml
 
 # Temporary / cached
 *.swp
@@ -20,3 +21,4 @@ commit_hash.txt
 
 tests/keys/
 .output.json
+vendor/

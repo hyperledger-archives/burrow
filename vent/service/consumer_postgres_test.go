@@ -33,7 +33,7 @@ func TestPostgresConsumer(t *testing.T) {
 
 	t.Run("Group", func(t *testing.T) {
 		t.Run("PostgresConsumer", func(t *testing.T) {
-			testConsumer(t, test.PostgresVentConfig(grpcAddress), tcli, inputAddress)
+			testConsumer(t, kern.Blockchain.ChainID(), test.PostgresVentConfig(grpcAddress), tcli, inputAddress)
 		})
 
 		t.Run("PostgresInvalidUTF8", func(t *testing.T) {
@@ -41,7 +41,7 @@ func TestPostgresConsumer(t *testing.T) {
 		})
 
 		t.Run("PostgresDeleteEvent", func(t *testing.T) {
-			testDeleteEvent(t, test.PostgresVentConfig(grpcAddress), tcli, inputAddress)
+			testDeleteEvent(t, kern.Blockchain.ChainID(), test.PostgresVentConfig(grpcAddress), tcli, inputAddress)
 		})
 
 		t.Run("PostgresResume", func(t *testing.T) {

@@ -1,11 +1,13 @@
 ### Changed
-- [Config] Split ListenAddress into ListenHost and ListenPort to ease parsing in the Helm charts
-- [CLI] Burrow restore now always fails if state is detected but can be made --silent
-- [CLI] No dump client timeout by default
-- [Deploy] Reduced the default logging level to trace instead of info
-- [Build] Switched to Go modules
+- [Vent] The chain id is stored in the SQL Tables
+- [CLI] Command line arguments have changed
 
 ### Fixed
-- [Keys] Resolved an issue where the keyStore wasn't built when using the remote keys client.
-- [Deploy] Fix nil dereference in query error path, check constructor args in BuildJob
+- [Tendermint] Disable default Tendermint TxIndexer - for which we have no use but puts extra load on DB
+- [Tendermint] The CreateEmptyBlocks and CreateEmptyBlocksInterval now works
+- [State] Empty blocks are not longer stored
+- [State] Genesis doc is no longer persisted at every block
+- [State] Store TxExecutions as single entry per block, rather than one per Event
+### Add
+- [Vent] vent can restore tables from vent log using new vent restore command
 

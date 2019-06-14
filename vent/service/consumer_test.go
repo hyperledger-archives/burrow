@@ -23,7 +23,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testConsumer(t *testing.T, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
+var tables = types.DefaultSQLTableNames
+
+func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
 	create := test.CreateContract(t, tcli, inputAddress)
 
 	// generate events
@@ -54,7 +56,8 @@ func testConsumer(t *testing.T, cfg *config.VentConfig, tcli rpctransact.Transac
 	eventColumnName := "EventTest"
 
 	blockID := txeA.Height
-	eventData, err := db.GetBlock(blockID)
+	eventData, err := db.GetBlock(chainID, blockID)
+
 	require.NoError(t, err)
 	require.Equal(t, blockID, eventData.BlockHeight)
 	require.Equal(t, 3, len(eventData.Tables))
@@ -65,7 +68,7 @@ func testConsumer(t *testing.T, cfg *config.VentConfig, tcli rpctransact.Transac
 	require.Equal(t, "UpdateTestEvents", tblData[0].RowData["_eventname"].(string))
 
 	blockID = txeB.Height
-	eventData, err = db.GetBlock(blockID)
+	eventData, err = db.GetBlock(chainID, blockID)
 	require.NoError(t, err)
 	require.Equal(t, blockID, eventData.BlockHeight)
 	require.Equal(t, 3, len(eventData.Tables))
@@ -76,22 +79,23 @@ func testConsumer(t *testing.T, cfg *config.VentConfig, tcli rpctransact.Transac
 	require.Equal(t, "UpdateTestEvents", tblData[0].RowData["_eventname"].(string))
 
 	// block & tx raw data also persisted
-	if cfg.DBBlockTx {
-		tblData = eventData.Tables[types.SQLBlockTableName]
+	if cfg.SpecOpt&sqlsol.Block > 0 {
+		tblData = eventData.Tables[tables.Block]
 		require.Equal(t, 1, len(tblData))
 
-		tblData = eventData.Tables[types.SQLTxTableName]
+	}
+	if cfg.SpecOpt&sqlsol.Tx > 0 {
+		tblData = eventData.Tables[tables.Tx]
 		require.Equal(t, 1, len(tblData))
 		require.Equal(t, txeB.TxHash.String(), tblData[0].RowData["_txhash"].(string))
 	}
 
 	//Restore
-	ti := time.Now().Local().AddDate(10, 0, 0)
-	err = db.RestoreDB(ti, "RESTORED")
+	err = db.RestoreDB(time.Time{}, "RESTORED")
 	require.NoError(t, err)
 }
 
-func testDeleteEvent(t *testing.T, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
+func testDeleteEvent(t *testing.T, chainID string, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
 	create := test.CreateContract(t, tcli, inputAddress)
 
 	// create test db
@@ -110,7 +114,7 @@ func testDeleteEvent(t *testing.T, cfg *config.VentConfig, tcli rpctransact.Tran
 	runConsumer(t, cfg)
 
 	// Expect block table, tx table, and EventTest table
-	eventData, err := db.GetBlock(txeAdd.Height)
+	eventData, err := db.GetBlock(chainID, txeAdd.Height)
 	require.NoError(t, err)
 	require.Equal(t, txeAdd.Height, eventData.BlockHeight)
 	require.Equal(t, 3, len(eventData.Tables))
@@ -125,7 +129,7 @@ func testDeleteEvent(t *testing.T, cfg *config.VentConfig, tcli rpctransact.Tran
 	test.CallRemoveEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name)
 	runConsumer(t, cfg)
 
-	eventData, err = db.GetBlock(txeAdd.Height)
+	eventData, err = db.GetBlock(chainID, txeAdd.Height)
 	require.NoError(t, err)
 	require.Equal(t, txeAdd.Height, eventData.BlockHeight)
 	require.Equal(t, 3, len(eventData.Tables))
@@ -148,9 +152,11 @@ func testResume(t *testing.T, cfg *config.VentConfig) {
 		// wait up to a second
 		time.Sleep(time.Millisecond * time.Duration(rnd.Int63n(1000)))
 		for ed := range runConsumer(t, cfg) {
-			expectedHeight++
 			t.Logf("expecting block: %d, got block: %d", expectedHeight, ed.BlockHeight)
-			require.Equal(t, expectedHeight, ed.BlockHeight, "should get monotonic sequential sequence")
+			if expectedHeight > ed.BlockHeight {
+				require.Fail(t, "should get monotonic sequential sequence")
+			}
+			expectedHeight = ed.BlockHeight
 		}
 	}
 }
@@ -186,7 +192,7 @@ func newConsumer(t *testing.T, cfg *config.VentConfig) *service.Consumer {
 
 	cfg.SpecFileOrDirs = []string{path.Join(testDir, "sqlsol_example.json")}
 	cfg.AbiFileOrDirs = []string{path.Join(testDir, "EventsTest.abi")}
-	cfg.DBBlockTx = true
+	cfg.SpecOpt = sqlsol.BlockTx
 
 	log := logger.NewLogger(cfg.LogLevel)
 	ch := make(chan types.EventData, 100)
@@ -197,7 +203,7 @@ func newConsumer(t *testing.T, cfg *config.VentConfig) *service.Consumer {
 func runConsumer(t *testing.T, cfg *config.VentConfig) chan types.EventData {
 	consumer := newConsumer(t, cfg)
 
-	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, cfg.DBBlockTx)
+	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, cfg.SpecOpt)
 	require.NoError(t, err)
 
 	abiSpec, err := abi.LoadPath(cfg.AbiFileOrDirs...)

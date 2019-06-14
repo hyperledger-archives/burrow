@@ -9,7 +9,6 @@
 # - Stop chain and delete
 # - Restore chain from dump
 # - Check all bits are present (account, namereg, code, events)
-#
 
 set -e
 
@@ -21,11 +20,10 @@ rm -rf .burrow genesis.json burrow.toml burrow.log
 
 burrow_bin=${burrow_bin:-burrow}
 
-echo "------------------------------------"
-echo "Creating new chain..."
-echo "------------------------------------"
+title="Creating new chain..."
+echo -e "\n${title//?/-}\n${title}\n${title//?/-}\n"
 
-$burrow_bin spec -n "Fresh Chain" -v1 | $burrow_bin configure -m BurrowTestDumpNode -s- -w genesis.json > burrow.toml
+$burrow_bin spec -n "Fresh Chain" -v1 | $burrow_bin configure -n BurrowTestDumpNode -s- --separate-genesis-doc genesis.json > burrow.toml
 
 $burrow_bin start 2>> burrow.log &
 burrow_pid=$!
@@ -37,16 +35,13 @@ trap kill_burrow EXIT
 
 sleep 1
 
-echo "------------------------------------"
-echo "Creating code, events and names..."
-echo "------------------------------------"
+title="Creating code, events and names..."
+echo -e "\n${title//?/-}\n${title}\n${title//?/-}\n"
 
 $burrow_bin deploy -o '' -a Validator_0 --dir $burrow_dump deploy.yaml
 
-
-echo "------------------------------------"
-echo "Dumping chain..."
-echo "------------------------------------"
+title="Dumping chain..."
+echo -e "${title//?/-}\n${title}\n${title//?/-}\n"
 
 $burrow_bin dump dump.bin
 $burrow_bin dump -j dump.json
@@ -59,20 +54,18 @@ kill $burrow_pid
 mv genesis.json genesis-original.json
 rm -rf .burrow burrow.toml
 
-echo "------------------------------------"
-echo "Create new chain based of dump with new name..."
-echo "------------------------------------"
+title="Create new chain based of dump with new name..."
+echo -e "\n${title//?/-}\n${title}\n${title//?/-}\n"
 
-$burrow_bin configure -m BurrowTestRestoreNode -n "Restored Chain" -g genesis-original.json -w genesis.json --restore-dump dump.json > burrow.toml
+$burrow_bin configure -m BurrowTestRestoreNode -n "Restored Chain" --genesis genesis-original.json --separate-genesis-doc genesis.json --restore-dump dump.json > burrow.toml
 
 $burrow_bin restore dump.json
 $burrow_bin start 2>> burrow.log &
 burrow_pid=$!
 sleep 13
 
-echo "------------------------------------"
-echo "Dumping restored chain for comparison..."
-echo "------------------------------------"
+title="Dumping restored chain for comparison..."
+echo -e "\n${title//?/-}\n${title}\n${title//?/-}\n"
 
 burrow dump -j --height $height dump-after-restore.json
 
@@ -80,9 +73,8 @@ kill $burrow_pid
 
 if cmp dump.json dump-after-restore.json
 then
-	echo "------------------------------------"
-	echo "Done."
-	echo "------------------------------------"
+	title="Done."
+	echo -e "\n${title//?/-}\n${title}\n${title//?/-}\n"
 else
 	echo "RESTORE FAILURE"
 	echo "restored dump is different"

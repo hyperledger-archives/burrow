@@ -16,7 +16,7 @@ import (
 
 func FormulateSendJob(send *def.Send, account string, client *def.Client, logger *logging.Logger) (*payload.SendTx, error) {
 	// Use Default
-	send.Source = useDefault(send.Source, account)
+	send.Source = FirstOf(send.Source, account)
 
 	// Formulate tx
 	logger.InfoMsg("Sending Transaction",
@@ -33,7 +33,6 @@ func FormulateSendJob(send *def.Send, account string, client *def.Client, logger
 }
 
 func SendJob(send *def.Send, tx *payload.SendTx, account string, client *def.Client, logger *logging.Logger) (string, error) {
-
 	// Sign, broadcast, display
 	txe, err := client.SignAndBroadcast(tx, logger)
 	if err != nil {
@@ -136,9 +135,9 @@ func FormulateRegisterNameJob(name *def.RegisterName, do *def.DeployArgs, playbo
 // Runs an individual nametx.
 func registerNameTx(name *def.RegisterName, do *def.DeployArgs, account string, client *def.Client, logger *logging.Logger) (*payload.NameTx, error) {
 	// Set Defaults
-	name.Source = useDefault(name.Source, account)
-	name.Fee = useDefault(name.Fee, do.DefaultFee)
-	name.Amount = useDefault(name.Amount, do.DefaultAmount)
+	name.Source = FirstOf(name.Source, account)
+	name.Fee = FirstOf(name.Fee, do.DefaultFee)
+	name.Amount = FirstOf(name.Amount, do.DefaultAmount)
 
 	// Formulate tx
 	logger.InfoMsg("NameReg Transaction",
@@ -178,7 +177,7 @@ func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, script *def.Pla
 
 func FormulatePermissionJob(perm *def.Permission, account string, client *def.Client, logger *logging.Logger) (*payload.PermsTx, error) {
 	// Set defaults
-	perm.Source = useDefault(perm.Source, account)
+	perm.Source = FirstOf(perm.Source, account)
 
 	logger.TraceMsg("Permsision",
 		"Target", perm.Target,
@@ -215,9 +214,11 @@ func PermissionJob(perm *def.Permission, account string, tx *payload.PermsTx, cl
 	return txe.Receipt.TxHash.String(), nil
 }
 
-func useDefault(thisOne, defaultOne string) string {
-	if thisOne == "" {
-		return defaultOne
+func FirstOf(inputs ...string) string {
+	for _, in := range inputs {
+		if in != "" {
+			return in
+		}
 	}
-	return thisOne
+	return ""
 }

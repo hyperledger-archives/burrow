@@ -41,7 +41,7 @@ burrow spec --full-accounts=3 | burrow configure -s- > .burrow_init.toml
 
 ### Generate one additional key in another local store for seed node
 ```bash
-burrow spec -f1 | burrow configure --keysdir=.keys_seed -s- > /dev/null
+burrow spec -f1 | burrow configure --keys-dir=.keys_seed -s- > /dev/null
 ```
 
 ### Make 3 validator nodes and one seed node config files
@@ -189,7 +189,7 @@ BurrowDir = ".burrow_node2"
 
 #### Start the seed node
 ```bash
-burrow start --validator-address=`basename .keys_seed/data/* .json` --config=.burrow_seed.toml  > .burrow_seed.log 2>&1 &
+burrow start --address=`basename .keys_seed/data/* .json` --config=.burrow_seed.toml  > .burrow_seed.log 2>&1 &
 ```
 
 #### Find seed node external address
@@ -209,9 +209,9 @@ sed -i s%PUT_HERE_SEED_NODE_ID@LISTEN_EXTERNAL_ADDRESS%${SEED_URL}% .burrow_val2
 
 #### Start validator nodes
 ```bash
-burrow start --validator-index=0 --config=.burrow_val0.toml  > .burrow_val0.log 2>&1 &
-burrow start --validator-index=1 --config=.burrow_val1.toml  > .burrow_val1.log 2>&1 &
-burrow start --validator-index=2 --config=.burrow_val2.toml  > .burrow_val2.log 2>&1 &
+burrow start -v=0 --config=.burrow_val0.toml  > .burrow_val0.log 2>&1 &
+burrow start -v=1 --config=.burrow_val1.toml  > .burrow_val1.log 2>&1 &
+burrow start -v=2 --config=.burrow_val2.toml  > .burrow_val2.log 2>&1 &
 ```
 
 Nodes will connect to seed node and request addresses, then they will connect to each other and start submitting and voting on blocks.

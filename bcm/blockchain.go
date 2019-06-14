@@ -66,7 +66,7 @@ var _ BlockchainInfo = &Blockchain{}
 type PersistedState struct {
 	AppHashAfterLastBlock []byte
 	LastBlockHeight       uint64
-	GenesisDoc            genesis.GenesisDoc
+	GenesisHash           []byte
 }
 
 // LoadOrNewBlockchain returns true if state already exists
@@ -74,12 +74,12 @@ func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc, logger *logg
 	logger = logger.WithScope("LoadOrNewBlockchain")
 	logger.InfoMsg("Trying to load blockchain state from database",
 		"database_key", stateKey)
-	bc, err := loadBlockchain(db)
+	bc, err := loadBlockchain(db, genesisDoc)
 	if err != nil {
 		return false, nil, fmt.Errorf("error loading blockchain state from database: %v", err)
 	}
 	if bc != nil {
-		dbHash := bc.genesisDoc.Hash()
+		dbHash := bc.genesisHash
 		argHash := genesisDoc.Hash()
 		if !bytes.Equal(dbHash, argHash) {
 			return false, nil, fmt.Errorf("GenesisDoc passed to LoadOrNewBlockchain has hash: 0x%X, which does not "+
@@ -117,12 +117,12 @@ func GetSyncInfo(blockchain BlockchainInfo) *SyncInfo {
 	}
 }
 
-func loadBlockchain(db dbm.DB) (*Blockchain, error) {
+func loadBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*Blockchain, error) {
 	buf := db.Get(stateKey)
 	if len(buf) == 0 {
 		return nil, nil
 	}
-	bc, err := DecodeBlockchain(buf)
+	bc, err := decodeBlockchain(buf, genesisDoc)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ var cdc = amino.NewCodec()
 
 func (bc *Blockchain) Encode() ([]byte, error) {
 	persistedState := &PersistedState{
-		GenesisDoc:            bc.genesisDoc,
+		GenesisHash:           bc.genesisDoc.Hash(),
 		AppHashAfterLastBlock: bc.appHashAfterLastBlock,
 		LastBlockHeight:       bc.lastBlockHeight,
 	}
@@ -187,13 +187,15 @@ func (bc *Blockchain) Encode() ([]byte, error) {
 	return encodedState, nil
 }
 
-func DecodeBlockchain(encodedState []byte) (*Blockchain, error) {
+func decodeBlockchain(encodedState []byte, genesisDoc *genesis.GenesisDoc) (*Blockchain, error) {
 	persistedState := new(PersistedState)
 	err := cdc.UnmarshalBinaryBare(encodedState, persistedState)
 	if err != nil {
 		return nil, err
 	}
-	bc := NewBlockchain(nil, &persistedState.GenesisDoc)
+
+	bc := NewBlockchain(nil, genesisDoc)
+	bc.genesisHash = persistedState.GenesisHash
 	//bc.lastBlockHeight = persistedState.LastBlockHeight
 	bc.lastBlockHeight = persistedState.LastBlockHeight
 	bc.appHashAfterLastBlock = persistedState.AppHashAfterLastBlock

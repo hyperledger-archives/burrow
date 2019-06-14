@@ -4,12 +4,12 @@
 package adapters
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 
 	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/types"
+	"github.com/jmoiron/sqlx"
 	sqlite3 "github.com/mattn/go-sqlite3"
 )
 
@@ -28,29 +28,31 @@ var sqliteDataTypes = map[types.SQLColumnType]string{
 
 // SQLiteAdapter implements DBAdapter for SQLiteDB
 type SQLiteAdapter struct {
+	types.SQLNames
 	Log *logger.Logger
 }
 
+var _ DBAdapter = &SQLiteAdapter{}
+
 // NewSQLiteAdapter constructs a new db adapter
-func NewSQLiteAdapter(log *logger.Logger) *SQLiteAdapter {
+func NewSQLiteAdapter(sqlNames types.SQLNames, log *logger.Logger) *SQLiteAdapter {
 	return &SQLiteAdapter{
-		Log: log,
+		SQLNames: sqlNames,
+		Log:      log,
 	}
 }
 
-// Open connects to a SQLiteQL database, opens it & create default schema if provided
-func (adapter *SQLiteAdapter) Open(dbURL string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", dbURL)
+func (sla *SQLiteAdapter) Open(dbURL string) (*sqlx.DB, error) {
+	db, err := sqlx.Open("sqlite3", dbURL)
 	if err != nil {
-		adapter.Log.Info("msg", "Error creating database connection", "err", err)
+		sla.Log.Info("msg", "Error creating database connection", "err", err)
 		return nil, err
 	}
-
 	return db, nil
 }
 
 // TypeMapping convert generic dataTypes to database dependent dataTypes
-func (adapter *SQLiteAdapter) TypeMapping(sqlColumnType types.SQLColumnType) (string, error) {
+func (sla *SQLiteAdapter) TypeMapping(sqlColumnType types.SQLColumnType) (string, error) {
 	if sqlDataType, ok := sqliteDataTypes[sqlColumnType]; ok {
 		return sqlDataType, nil
 	}
@@ -59,12 +61,12 @@ func (adapter *SQLiteAdapter) TypeMapping(sqlColumnType types.SQLColumnType) (st
 }
 
 // SecureColumnName return columns between appropriate security containers
-func (adapter *SQLiteAdapter) SecureName(name string) string {
+func (sla *SQLiteAdapter) SecureName(name string) string {
 	return Cleanf("[%s]", name)
 }
 
 // CreateTableQuery builds query for creating a new table
-func (adapter *SQLiteAdapter) CreateTableQuery(tableName string, columns []*types.SQLTableColumn) (string, string) {
+func (sla *SQLiteAdapter) CreateTableQuery(tableName string, columns []*types.SQLTableColumn) (string, string) {
 	// build query
 	columnsDef := ""
 	primaryKey := ""
@@ -72,8 +74,8 @@ func (adapter *SQLiteAdapter) CreateTableQuery(tableName string, columns []*type
 	hasSerial := false
 
 	for i, column := range columns {
-		secureColumn := adapter.SecureName(column.Name)
-		sqlType, _ := adapter.TypeMapping(column.Type)
+		secureColumn := sla.SecureName(column.Name)
+		sqlType, _ := sla.TypeMapping(column.Type)
 		pKey := 0
 
 		if columnsDef != "" {
@@ -111,7 +113,7 @@ func (adapter *SQLiteAdapter) CreateTableQuery(tableName string, columns []*type
 			i)
 	}
 
-	query := Cleanf("CREATE TABLE %s (%s", adapter.SecureName(tableName), columnsDef)
+	query := Cleanf("CREATE TABLE %s (%s", sla.SecureName(tableName), columnsDef)
 	if primaryKey != "" {
 		if hasSerial {
 			// SQLITE AUTOINCREMENT LIMITATION
@@ -123,45 +125,26 @@ func (adapter *SQLiteAdapter) CreateTableQuery(tableName string, columns []*type
 	query += ");"
 
 	dictionaryQuery := Cleanf("INSERT INTO %s (%s,%s,%s,%s,%s,%s) VALUES %s;",
-		types.SQLDictionaryTableName,
-		types.SQLColumnLabelTableName, types.SQLColumnLabelColumnName,
-		types.SQLColumnLabelColumnType, types.SQLColumnLabelColumnLength,
-		types.SQLColumnLabelPrimaryKey, types.SQLColumnLabelColumnOrder,
+		sla.Tables.Dictionary,
+		sla.Columns.TableName, sla.Columns.ColumnName,
+		sla.Columns.ColumnType, sla.Columns.ColumnLength,
+		sla.Columns.PrimaryKey, sla.Columns.ColumnOrder,
 		dictionaryValues)
 
 	return query, dictionaryQuery
 }
 
-// LastBlockIDQuery returns a query for last inserted blockId in log table
-func (adapter *SQLiteAdapter) LastBlockIDQuery() string {
-	query := `
-		WITH ll AS (
-			SELECT MAX(%s) AS %s FROM %s
-		)
-		SELECT COALESCE(%s, '0') AS %s
-			FROM ll LEFT OUTER JOIN %s log ON (ll.%s = log.%s);`
-
-	return Cleanf(query,
-		types.SQLColumnLabelId,                         // max
-		types.SQLColumnLabelId,                         // as
-		types.SQLLogTableName,                          // from
-		types.SQLColumnLabelHeight,                     // coalesce
-		types.SQLColumnLabelHeight,                     // as
-		types.SQLLogTableName,                          // from
-		types.SQLColumnLabelId, types.SQLColumnLabelId) // on
-}
-
 // FindTableQuery returns a query that checks if a table exists
-func (adapter *SQLiteAdapter) FindTableQuery() string {
+func (sla *SQLiteAdapter) FindTableQuery() string {
 	query := "SELECT COUNT(*) found FROM %s WHERE %s = $1;"
 
 	return Cleanf(query,
-		types.SQLDictionaryTableName,  // from
-		types.SQLColumnLabelTableName) // where
+		sla.Tables.Dictionary, // from
+		sla.Columns.TableName) // where
 }
 
 // TableDefinitionQuery returns a query with table structure
-func (adapter *SQLiteAdapter) TableDefinitionQuery() string {
+func (sla *SQLiteAdapter) TableDefinitionQuery() string {
 	query := `
 		SELECT
 			%s,%s,%s,%s
@@ -173,34 +156,34 @@ func (adapter *SQLiteAdapter) TableDefinitionQuery() string {
 			%s;`
 
 	return Cleanf(query,
-		types.SQLColumnLabelColumnName, types.SQLColumnLabelColumnType, // select
-		types.SQLColumnLabelColumnLength, types.SQLColumnLabelPrimaryKey, // select
-		types.SQLDictionaryTableName,    // from
-		types.SQLColumnLabelTableName,   // where
-		types.SQLColumnLabelColumnOrder) // order by
+		sla.Columns.ColumnName, sla.Columns.ColumnType, // select
+		sla.Columns.ColumnLength, sla.Columns.PrimaryKey, // select
+		sla.Tables.Dictionary,   // from
+		sla.Columns.TableName,   // where
+		sla.Columns.ColumnOrder) // order by
 }
 
 // AlterColumnQuery returns a query for adding a new column to a table
-func (adapter *SQLiteAdapter) AlterColumnQuery(tableName, columnName string, sqlColumnType types.SQLColumnType, length, order int) (string, string) {
-	sqlType, _ := adapter.TypeMapping(sqlColumnType)
+func (sla *SQLiteAdapter) AlterColumnQuery(tableName, columnName string, sqlColumnType types.SQLColumnType, length, order int) (string, string) {
+	sqlType, _ := sla.TypeMapping(sqlColumnType)
 	if length > 0 {
 		sqlType = Cleanf("%s(%d)", sqlType, length)
 	}
 
 	query := Cleanf("ALTER TABLE %s ADD COLUMN %s %s;",
-		adapter.SecureName(tableName),
-		adapter.SecureName(columnName),
+		sla.SecureName(tableName),
+		sla.SecureName(columnName),
 		sqlType)
 
 	dictionaryQuery := Cleanf(`
 		INSERT INTO %s (%s,%s,%s,%s,%s,%s)
 		VALUES ('%s','%s',%d,%d,%d,%d);`,
 
-		types.SQLDictionaryTableName,
+		sla.Tables.Dictionary,
 
-		types.SQLColumnLabelTableName, types.SQLColumnLabelColumnName,
-		types.SQLColumnLabelColumnType, types.SQLColumnLabelColumnLength,
-		types.SQLColumnLabelPrimaryKey, types.SQLColumnLabelColumnOrder,
+		sla.Columns.TableName, sla.Columns.ColumnName,
+		sla.Columns.ColumnType, sla.Columns.ColumnLength,
+		sla.Columns.PrimaryKey, sla.Columns.ColumnOrder,
 
 		tableName, columnName, sqlColumnType, length, 0, order)
 
@@ -208,37 +191,40 @@ func (adapter *SQLiteAdapter) AlterColumnQuery(tableName, columnName string, sql
 }
 
 // SelectRowQuery returns a query for selecting row values
-func (adapter *SQLiteAdapter) SelectRowQuery(tableName, fields, indexValue string) string {
-	return Cleanf("SELECT %s FROM %s WHERE %s = '%s';", fields, adapter.SecureName(tableName), types.SQLColumnLabelHeight, indexValue)
+func (sla *SQLiteAdapter) SelectRowQuery(tableName, fields, indexValue string) string {
+	return Cleanf("SELECT %s FROM %s WHERE %s = '%s';", fields, sla.SecureName(tableName), sla.Columns.Height, indexValue)
 }
 
 // SelectLogQuery returns a query for selecting all tables involved in a block trn
-func (adapter *SQLiteAdapter) SelectLogQuery() string {
+func (sla *SQLiteAdapter) SelectLogQuery() string {
 	query := `
-		SELECT DISTINCT %s,%s FROM %s l WHERE %s = $1;`
+		SELECT DISTINCT %s,%s FROM %s l WHERE %s = $1 AND %s = $2;`
 
 	return Cleanf(query,
-		types.SQLColumnLabelTableName, types.SQLColumnLabelEventName, // select
-		types.SQLLogTableName,      // from
-		types.SQLColumnLabelHeight) // where
+		sla.Columns.TableName, sla.Columns.EventName, // select
+		sla.Tables.Log,     // from
+		sla.Columns.Height, // where
+		sla.Columns.ChainID)
 }
 
 // InsertLogQuery returns a query to insert a row in log table
-func (adapter *SQLiteAdapter) InsertLogQuery() string {
+func (sla *SQLiteAdapter) InsertLogQuery() string {
 	query := `
-		INSERT INTO %s (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-		VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6 ,$7, $8, $9);`
+		INSERT INTO %s (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+		VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6 ,$7, $8, $9, $10);`
 
 	return Cleanf(query,
-		types.SQLLogTableName, // insert
+		sla.Tables.Log, // insert
 		//fields
-		types.SQLColumnLabelTimeStamp, types.SQLColumnLabelTableName, types.SQLColumnLabelEventName, types.SQLColumnLabelEventFilter,
-		types.SQLColumnLabelHeight, types.SQLColumnLabelTxHash, types.SQLColumnLabelAction, types.SQLColumnLabelDataRow,
-		types.SQLColumnLabelSqlStmt, types.SQLColumnLabelSqlValues)
+		sla.Columns.TimeStamp,
+		sla.Columns.ChainID,
+		sla.Columns.TableName, sla.Columns.EventName, sla.Columns.EventFilter,
+		sla.Columns.Height, sla.Columns.TxHash, sla.Columns.Action, sla.Columns.DataRow,
+		sla.Columns.SqlStmt, sla.Columns.SqlValues)
 }
 
 // ErrorEquals verify if an error is of a given SQL type
-func (adapter *SQLiteAdapter) ErrorEquals(err error, sqlErrorType types.SQLErrorType) bool {
+func (sla *SQLiteAdapter) ErrorEquals(err error, sqlErrorType types.SQLErrorType) bool {
 	if err, ok := err.(sqlite3.Error); ok {
 		errDescription := err.Error()
 
@@ -262,7 +248,7 @@ func (adapter *SQLiteAdapter) ErrorEquals(err error, sqlErrorType types.SQLError
 	return false
 }
 
-func (adapter *SQLiteAdapter) UpsertQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, interface{}, error) {
+func (sla *SQLiteAdapter) UpsertQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, interface{}, error) {
 	pointers := make([]interface{}, 0)
 	columns := ""
 	insValues := ""
@@ -275,7 +261,7 @@ func (adapter *SQLiteAdapter) UpsertQuery(table *types.SQLTable, row types.Event
 
 	// for each column in table
 	for _, column := range table.Columns {
-		secureColumn := adapter.SecureName(column.Name)
+		secureColumn := sla.SecureName(column.Name)
 
 		i++
 
@@ -291,7 +277,7 @@ func (adapter *SQLiteAdapter) UpsertQuery(table *types.SQLTable, row types.Event
 		//find data for column
 		if value, ok := row.RowData[column.Name]; ok {
 			//load hash value
-			if column.Name == types.SQLColumnLabelTxHash {
+			if column.Name == sla.Columns.TxHash {
 				txHash = value
 			}
 
@@ -328,7 +314,7 @@ func (adapter *SQLiteAdapter) UpsertQuery(table *types.SQLTable, row types.Event
 
 	}
 
-	query := Cleanf("INSERT INTO %s (%s) VALUES (%s) ", adapter.SecureName(table.Name), columns, insValues)
+	query := Cleanf("INSERT INTO %s (%s) VALUES (%s) ", sla.SecureName(table.Name), columns, insValues)
 
 	if pkColumns != "" {
 		if updValues != "" {
@@ -342,7 +328,7 @@ func (adapter *SQLiteAdapter) UpsertQuery(table *types.SQLTable, row types.Event
 	return types.UpsertDeleteQuery{Query: query, Values: values, Pointers: pointers}, txHash, nil
 }
 
-func (adapter *SQLiteAdapter) DeleteQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, error) {
+func (sla *SQLiteAdapter) DeleteQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, error) {
 
 	pointers := make([]interface{}, 0)
 	columns := ""
@@ -356,7 +342,7 @@ func (adapter *SQLiteAdapter) DeleteQuery(table *types.SQLTable, row types.Event
 		if column.Primary {
 			i++
 
-			secureColumn := adapter.SecureName(column.Name)
+			secureColumn := sla.SecureName(column.Name)
 
 			// WHERE ..........
 			if columns != "" {
@@ -384,27 +370,31 @@ func (adapter *SQLiteAdapter) DeleteQuery(table *types.SQLTable, row types.Event
 		return types.UpsertDeleteQuery{}, fmt.Errorf("error primary key not found for deletion")
 	}
 
-	query := Cleanf("DELETE FROM %s WHERE %s;", adapter.SecureName(table.Name), columns)
+	query := Cleanf("DELETE FROM %s WHERE %s;", sla.SecureName(table.Name), columns)
 
 	return types.UpsertDeleteQuery{Query: query, Values: values, Pointers: pointers}, nil
 }
 
-func (adapter *SQLiteAdapter) RestoreDBQuery() string {
+func (sla *SQLiteAdapter) RestoreDBQuery() string {
 
-	query := Cleanf("SELECT %s, %s, %s, %s FROM %s",
-		types.SQLColumnLabelTableName, types.SQLColumnLabelAction, types.SQLColumnLabelSqlStmt, types.SQLColumnLabelSqlValues,
-		types.SQLLogTableName)
+	query := Cleanf("SELECT %s, %s, %s, %s, %s FROM %s",
+		sla.Columns.Id, sla.Columns.TableName, sla.Columns.Action, // select
+		sla.Columns.SqlStmt, sla.Columns.SqlValues, // select
+		sla.Tables.Log)
 
 	query += " WHERE strftime('%Y-%m-%d %H:%M:%S',"
 
-	query += Cleanf("%s)<=$1 ORDER BY %s;",
-		types.SQLColumnLabelTimeStamp, types.SQLColumnLabelId)
+	query += Cleanf("%s) AND %s != '%s' AND  %s != '%s' <=$1 ORDER BY %s;",
+		sla.Columns.TimeStamp,
+		sla.Columns.TableName, sla.Tables.Block, // where not _vent_block
+		sla.Columns.TableName, sla.Tables.Tx, // where not _vent_tx
+		sla.Columns.Id)
 
 	return query
 
 }
 
-func (adapter *SQLiteAdapter) CleanDBQueries() types.SQLCleanDBQuery {
+func (sla *SQLiteAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 	// Chain info
 	selectChainIDQry := Cleanf(`
 		SELECT 
@@ -412,17 +402,17 @@ func (adapter *SQLiteAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 		COALESCE(MAX(%s),'') CHAINID,
 		COALESCE(MAX(%s),'') BVERSION 
 		FROM %s;`,
-		types.SQLColumnLabelChainID, types.SQLColumnLabelBurrowVer,
-		types.SQLChainInfoTableName)
+		sla.Columns.ChainID, sla.Columns.BurrowVersion,
+		sla.Tables.ChainInfo)
 
 	deleteChainIDQry := Cleanf(`
 		DELETE FROM %s;`,
-		types.SQLChainInfoTableName)
+		sla.Tables.ChainInfo)
 
 	insertChainIDQry := Cleanf(`
-		INSERT INTO %s (%s,%s) VALUES($1,$2)`,
-		types.SQLChainInfoTableName,
-		types.SQLColumnLabelChainID, types.SQLColumnLabelBurrowVer)
+		INSERT INTO %s (%s,%s,%s) VALUES($1,$2,$3)`,
+		sla.Tables.ChainInfo,
+		sla.Columns.ChainID, sla.Columns.BurrowVersion, sla.Columns.Height)
 
 	// Dictionary
 	selectDictionaryQry := Cleanf(`
@@ -430,23 +420,23 @@ func (adapter *SQLiteAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 		FROM %s 
  		WHERE %s
 		NOT IN ('%s','%s','%s');`,
-		types.SQLColumnLabelTableName,
-		types.SQLDictionaryTableName,
-		types.SQLColumnLabelTableName,
-		types.SQLLogTableName, types.SQLDictionaryTableName, types.SQLChainInfoTableName)
+		sla.Columns.TableName,
+		sla.Tables.Dictionary,
+		sla.Columns.TableName,
+		sla.Tables.Log, sla.Tables.Dictionary, sla.Tables.ChainInfo)
 
 	deleteDictionaryQry := Cleanf(`
 		DELETE FROM %s 
 		WHERE %s 
 		NOT IN ('%s','%s','%s');`,
-		types.SQLDictionaryTableName,
-		types.SQLColumnLabelTableName,
-		types.SQLLogTableName, types.SQLDictionaryTableName, types.SQLChainInfoTableName)
+		sla.Tables.Dictionary,
+		sla.Columns.TableName,
+		sla.Tables.Log, sla.Tables.Dictionary, sla.Tables.ChainInfo)
 
 	// log
 	deleteLogQry := Cleanf(`
 		DELETE FROM %s;`,
-		types.SQLLogTableName)
+		sla.Tables.Log)
 
 	return types.SQLCleanDBQuery{
 		SelectChainIDQry:    selectChainIDQry,
@@ -458,7 +448,11 @@ func (adapter *SQLiteAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 	}
 }
 
-func (adapter *SQLiteAdapter) DropTableQuery(tableName string) string {
+func (sla *SQLiteAdapter) DropTableQuery(tableName string) string {
 	// SQLite does not support DROP TABLE CASCADE so this will fail if there are dependent objects
-	return Cleanf(`DROP TABLE %s;`, adapter.SecureName(tableName))
+	return Cleanf(`DROP TABLE IF EXISTS %s;`, sla.SecureName(tableName))
+}
+
+func (sla *SQLiteAdapter) SchemaName(tableName string) string {
+	return secureName(tableName)
 }

@@ -58,52 +58,99 @@ type UpsertDeleteQuery struct {
 	Pointers []interface{}
 }
 
-// SQL log & dictionary tables
-const (
-	SQLLogTableName        = "_vent_log"
-	SQLDictionaryTableName = "_vent_dictionary"
-	SQLBlockTableName      = "_vent_block"
-	SQLTxTableName         = "_vent_tx"
-	SQLChainInfoTableName  = "_vent_chain"
-)
+type SQLNames struct {
+	Tables  SQLTableNames
+	Columns SQLColumnNames
+}
 
-// fixed sql column names in tables
-const (
+var DefaultSQLNames = SQLNames{
+	Tables:  DefaultSQLTableNames,
+	Columns: DefaultSQLColumnNames,
+}
+
+type SQLTableNames struct {
+	Log        string
+	Dictionary string
+	Block      string
+	Tx         string
+	ChainInfo  string
+}
+
+var DefaultSQLTableNames = SQLTableNames{
+	Log:        "_vent_log",
+	Dictionary: "_vent_dictionary",
+	Block:      "_vent_block",
+	Tx:         "_vent_tx",
+	ChainInfo:  "_vent_chain",
+}
+
+type SQLColumnNames struct {
 	// log
-	SQLColumnLabelId          = "_id"
-	SQLColumnLabelTimeStamp   = "_timestamp"
-	SQLColumnLabelTableName   = "_tablename"
-	SQLColumnLabelEventName   = "_eventname"
-	SQLColumnLabelEventFilter = "_eventfilter"
-	SQLColumnLabelHeight      = "_height"
-	SQLColumnLabelTxHash      = "_txhash"
-	SQLColumnLabelAction      = "_action"
-	SQLColumnLabelDataRow     = "_datarow"
-	SQLColumnLabelSqlStmt     = "_sqlstmt"
-	SQLColumnLabelSqlValues   = "_sqlvalues"
-
+	Id          string
+	TimeStamp   string
+	TableName   string
+	EventName   string
+	EventFilter string
+	Height      string
+	TxHash      string
+	Action      string
+	DataRow     string
+	SqlStmt     string
+	SqlValues   string
 	// dictionary
-	SQLColumnLabelColumnName   = "_columnname"
-	SQLColumnLabelColumnType   = "_columntype"
-	SQLColumnLabelColumnLength = "_columnlength"
-	SQLColumnLabelPrimaryKey   = "_primarykey"
-	SQLColumnLabelColumnOrder  = "_columnorder"
-
+	ColumnName   string
+	ColumnType   string
+	ColumnLength string
+	PrimaryKey   string
+	ColumnOrder  string
 	// chain info
-	SQLColumnLabelBurrowVer = "_burrowversion"
-	SQLColumnLabelChainID   = "_chainid"
-
+	BurrowVersion string
+	ChainID       string
 	// context
-	SQLColumnLabelIndex       = "_index"
-	SQLColumnLabelEventType   = "_eventtype"
-	SQLColumnLabelBlockHeader = "_blockheader"
-	SQLColumnLabelTxType      = "_txtype"
-	SQLColumnLabelEnvelope    = "_envelope"
-	SQLColumnLabelEvents      = "_events"
-	SQLColumnLabelResult      = "_result"
-	SQLColumnLabelReceipt     = "_receipt"
-	SQLColumnLabelException   = "_exception"
-)
+	Index       string
+	EventType   string
+	BlockHeader string
+	TxType      string
+	Envelope    string
+	Events      string
+	Result      string
+	Receipt     string
+	Exception   string
+}
+
+var DefaultSQLColumnNames = SQLColumnNames{
+	// log
+	Id:          "_id",
+	TimeStamp:   "_timestamp",
+	TableName:   "_tablename",
+	EventName:   "_eventname",
+	EventFilter: "_eventfilter",
+	Height:      "_height",
+	TxHash:      "_txhash",
+	Action:      "_action",
+	DataRow:     "_datarow",
+	SqlStmt:     "_sqlstmt",
+	SqlValues:   "_sqlvalues",
+	// dictionary,
+	ColumnName:   "_columnname",
+	ColumnType:   "_columntype",
+	ColumnLength: "_columnlength",
+	PrimaryKey:   "_primarykey",
+	ColumnOrder:  "_columnorder",
+	// chain info,
+	BurrowVersion: "_burrowversion",
+	ChainID:       "_chainid",
+	// context,
+	Index:       "_index",
+	EventType:   "_eventtype",
+	BlockHeader: "_blockheader",
+	TxType:      "_txtype",
+	Envelope:    "_envelope",
+	Events:      "_events",
+	Result:      "_result",
+	Receipt:     "_receipt",
+	Exception:   "_exception",
+}
 
 // labels for column mapping
 const (
@@ -112,16 +159,9 @@ const (
 	EventTypeLabel = "eventType"
 
 	// block related
+	ChainIDLabel     = "chainid"
 	BlockHeightLabel = "height"
-	BlockHeaderLabel = "blockHeader"
 
 	// transaction related
-	TxTxTypeLabel    = "txType"
-	TxTxHashLabel    = "txHash"
-	TxIndexLabel     = "index"
-	TxEnvelopeLabel  = "envelope"
-	TxEventsLabel    = "events"
-	TxResultLabel    = "result"
-	TxReceiptLabel   = "receipt"
-	TxExceptionLabel = "exception"
+	TxTxHashLabel = "txHash"
 )

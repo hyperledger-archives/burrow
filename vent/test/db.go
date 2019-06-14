@@ -18,6 +18,11 @@ import (
 	"github.com/hyperledger/burrow/vent/types"
 )
 
+const (
+	ChainID       = "CHAIN_123"
+	BurrowVersion = "1.0.0"
+)
+
 var letters = []rune("abcdefghijklmnopqrstuvwxyz")
 
 func init() {
@@ -40,15 +45,14 @@ func NewTestDB(t *testing.T, cfg *config.VentConfig) (*sqldb.SQLDB, func()) {
 		DBURL:     cfg.DBURL,
 		DBSchema:  cfg.DBSchema,
 
-		Log:           logger.NewLogger(""),
-		ChainID:       "ID 0123",
-		BurrowVersion: "Version 0.0",
+		Log: logger.NewLogger(""),
 	}
 
 	db, err := sqldb.NewSQLDB(connection)
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
+
+	err = db.Init(ChainID, BurrowVersion)
+	require.NoError(t, err)
 
 	return db, func() {
 		if cfg.DBAdapter == types.SQLiteDB {

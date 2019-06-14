@@ -8,6 +8,7 @@ import (
 	cli "github.com/jawher/mow.cli"
 )
 
+// Spec generates a list of genesis accounts with certain permissions
 func Spec(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 		tomlOpt := cmd.BoolOpt("t toml", false, "Emit GenesisSpec as TOML rather than the "+

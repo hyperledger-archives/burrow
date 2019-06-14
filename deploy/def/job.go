@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/abi"
 )
 
-//TODO: Interface all the jobs, determine if they should remain in definitions or get their own package
+// TODO: Interface all the jobs, determine if they should remain in definitions or get their own package
 
 type Job struct {
 	// Name of the job

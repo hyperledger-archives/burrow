@@ -61,9 +61,14 @@ func (btc *BurrowTendermintConfig) Config(rootDir string, timeoutFactor float64)
 		conf.Mempool.RootDir = rootDir
 		conf.Consensus.RootDir = rootDir
 
+		// Transactions
+		// This creates load on leveldb for no purpose. The default indexer is "kv" and allows retrieval the TxResult
+		// for which we use use TxReceipt (returned from ABCI DeliverTx) - we have our own much richer index
+		conf.TxIndex.Indexer = "null"
+
 		// Consensus
 		conf.Consensus.CreateEmptyBlocks = btc.CreateEmptyBlocks
-		conf.Consensus.CreateEmptyBlocksInterval = btc.CreateEmptyBlocksInterval
+		conf.Consensus.CreateEmptyBlocksInterval = btc.CreateEmptyBlocksInterval * time.Second
 		// Assume Tendermint has some mutually consistent values, assume scaling them linearly makes sense
 		conf.Consensus.TimeoutPropose = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutPropose)
 		conf.Consensus.TimeoutProposeDelta = scaleTimeout(timeoutFactor, conf.Consensus.TimeoutProposeDelta)

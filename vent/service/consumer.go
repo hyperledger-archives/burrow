@@ -38,7 +38,7 @@ type Consumer struct {
 // Status announcement
 type Status struct {
 	LastProcessedHeight uint64
-	Burrow              rpc.ResultStatus
+	Burrow              *rpc.ResultStatus
 }
 
 // NewConsumer constructs a new consumer configuration.
@@ -70,7 +70,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 
 	// get the chain ID to compare with the one stored in the db
 	qCli := rpcquery.NewQueryClient(c.GRPCConnection)
-	chainStatus, err := qCli.Status(context.Background(), &rpcquery.StatusParam{})
+	c.Status.Burrow, err = qCli.Status(context.Background(), &rpcquery.StatusParam{})
 	if err != nil {
 		return errors.Wrapf(err, "Error getting chain status")
 	}
@@ -83,12 +83,10 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 	c.Log.Info("msg", "Connecting to SQL database")
 
 	connection := types.SQLConnection{
-		DBAdapter:     c.Config.DBAdapter,
-		DBURL:         c.Config.DBURL,
-		DBSchema:      c.Config.DBSchema,
-		Log:           c.Log,
-		ChainID:       chainStatus.ChainID,
-		BurrowVersion: chainStatus.BurrowVersion,
+		DBAdapter: c.Config.DBAdapter,
+		DBURL:     c.Config.DBURL,
+		DBSchema:  c.Config.DBSchema,
+		Log:       c.Log,
 	}
 
 	c.DB, err = sqldb.NewSQLDB(connection)
@@ -97,9 +95,14 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 	}
 	defer c.DB.Close()
 
+	err = c.DB.Init(c.Burrow.ChainID, c.Burrow.BurrowVersion)
+	if err != nil {
+		return fmt.Errorf("could not clean tables after ChainID change: %v", err)
+	}
+
 	c.Log.Info("msg", "Synchronizing config and database projection structures")
 
-	err = c.DB.SynchronizeDB(projection.Tables)
+	err = c.DB.SynchronizeDB(c.Burrow.ChainID, projection.Tables)
 	if err != nil {
 		return errors.Wrap(err, "Error trying to synchronize database")
 	}
@@ -128,9 +131,9 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 		// right now there is no way to know if the last block of events was completely read
 		// so we have to begin processing from the last block number stored in database
 		// and update event data if already present
-		fromBlock, err := c.DB.GetLastBlockHeight()
+		fromBlock, err := c.DB.LastBlockHeight(c.Burrow.ChainID)
 		if err != nil {
-			errCh <- errors.Wrapf(err, "Error trying to get last processed block number from SQL log table")
+			errCh <- errors.Wrapf(err, "Error trying to get last processed block number")
 			return
 		}
 
@@ -229,31 +232,39 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 		// create a fresh new structure to store block data at this height
 		blockData := sqlsol.NewBlockData(fromBlock)
 
-		if c.Config.DBBlockTx {
+		if c.Config.SpecOpt&sqlsol.Block > 0 {
 			blkRawData, err := buildBlkData(projection.Tables, blockExecution)
 			if err != nil {
 				return errors.Wrapf(err, "Error building block raw data")
 			}
 			// set row in structure
-			blockData.AddRow(types.SQLBlockTableName, blkRawData)
+			blockData.AddRow(tables.Block, blkRawData)
 		}
 
 		// get transactions for a given block
 		for _, txe := range blockExecution.TxExecutions {
 			c.Log.Debug("msg", "Getting transaction", "TxHash", txe.TxHash, "num_events", len(txe.Events))
 
-			if c.Config.DBBlockTx {
+			if c.Config.SpecOpt&sqlsol.Tx > 0 {
 				txRawData, err := buildTxData(txe)
 				if err != nil {
 					return errors.Wrapf(err, "Error building tx raw data")
 				}
 				// set row in structure
-				blockData.AddRow(types.SQLTxTableName, txRawData)
+				blockData.AddRow(tables.Tx, txRawData)
 			}
 
 			// reverted transactions don't have to update event data tables
 			// so check that condition to filter them
 			if txe.Exception == nil {
+
+				origin := txe.Origin
+				if origin == nil {
+					origin = &exec.Origin{
+						ChainID: c.Burrow.ChainID,
+						Height:  txe.Height,
+					}
+				}
 
 				// get events for a given transaction
 				for _, event := range txe.Events {
@@ -275,7 +286,7 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 								"filter", eventClass.Filter)
 
 							// unpack, decode & build event data
-							eventData, err := buildEventData(projection, eventClass, event, abiSpec, c.Log)
+							eventData, err := buildEventData(projection, eventClass, event, origin, abiSpec, c.Log)
 							if err != nil {
 								return errors.Wrapf(err, "Error building event data")
 							}
@@ -304,7 +315,7 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 
 func (c *Consumer) commitBlock(projection *sqlsol.Projection, blockEvents types.EventData) error {
 	// upsert rows in specific SQL event tables and update block number
-	if err := c.DB.SetBlock(projection.Tables, blockEvents); err != nil {
+	if err := c.DB.SetBlock(c.Burrow.ChainID, projection.Tables, blockEvents); err != nil {
 		return fmt.Errorf("error upserting rows in database: %v", err)
 	}
 
@@ -354,8 +365,9 @@ func (c *Consumer) updateStatus(qcli rpcquery.QueryClient) {
 	stat, err := qcli.Status(context.Background(), &rpcquery.StatusParam{})
 	if err != nil {
 		c.Log.Error("msg", "could not get blockchain status", "err", err)
+		return
 	}
-	c.Status.Burrow = *stat
+	c.Status.Burrow = stat
 }
 
 func (c *Consumer) statusMessage() []interface{} {
@@ -366,8 +378,15 @@ func (c *Consumer) statusMessage() []interface{} {
 	return []interface{}{
 		"msg", "status",
 		"last_processed_height", c.LastProcessedHeight,
-		"burrow_latest_block_height", c.Burrow.SyncInfo.LatestBlockHeight,
 		"fraction_caught_up", catchUpRatio,
+		"burrow_latest_block_height", c.Burrow.SyncInfo.LatestBlockHeight,
+		"burrow_latest_block_duration", c.Burrow.SyncInfo.LatestBlockDuration,
+		"burrow_latest_block_hash", c.Burrow.SyncInfo.LatestBlockHash,
+		"burrow_latest_app_hash", c.Burrow.SyncInfo.LatestAppHash,
+		"burrow_latest_block_time", c.Burrow.SyncInfo.LatestBlockTime,
+		"burrow_latest_block_seen_time", c.Burrow.SyncInfo.LatestBlockSeenTime,
+		"burrow_node_info", c.Burrow.NodeInfo,
+		"burrow_catching_up", c.Burrow.CatchingUp,
 	}
 }
 

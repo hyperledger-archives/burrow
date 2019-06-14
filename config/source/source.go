@@ -41,12 +41,18 @@ const (
 	Unknown Format = ""
 )
 
+var LogWriter io.Writer
+
 var jsonRegex = regexp.MustCompile(`^\s*{`)
 
 type configSource struct {
 	from  string
 	skip  bool
 	apply func(baseConfig interface{}) error
+}
+
+func init() {
+	LogWriter = os.Stderr
 }
 
 func NewConfigProvider(from string, skip bool, apply func(baseConfig interface{}) error) *configSource {
@@ -82,7 +88,7 @@ func (cs *configSource) SetSkip(skip bool) ConfigProvider {
 // in two distinct modes: with shortCircuit true the first successful ConfigProvider source
 // is returned. With shortCircuit false sources appearing later are used to possibly override
 // those appearing earlier
-func Cascade(logWriter io.Writer, shortCircuit bool, providers ...ConfigProvider) *configSource {
+func Cascade(shortCircuit bool, providers ...ConfigProvider) *configSource {
 	var fromStrings []string
 	skip := true
 	for _, provider := range providers {
@@ -105,7 +111,7 @@ func Cascade(logWriter io.Writer, shortCircuit bool, providers ...ConfigProvider
 			}
 			for _, provider := range providers {
 				if !provider.Skip() {
-					writeLog(logWriter, fmt.Sprintf("Sourcing config from %s", provider.From()))
+					writeLog(LogWriter, fmt.Sprintf("Sourcing config from %s", provider.From()))
 					err := provider.Apply(baseConfig)
 					if err != nil {
 						return err
@@ -121,11 +127,11 @@ func Cascade(logWriter io.Writer, shortCircuit bool, providers ...ConfigProvider
 }
 
 func FirstOf(providers ...ConfigProvider) *configSource {
-	return Cascade(os.Stderr, true, providers...)
+	return Cascade(true, providers...)
 }
 
 func EachOf(providers ...ConfigProvider) *configSource {
-	return Cascade(os.Stderr, false, providers...)
+	return Cascade(false, providers...)
 }
 
 // Try to source config from provided file detecting the file format, is skipNonExistent is true then the provider will

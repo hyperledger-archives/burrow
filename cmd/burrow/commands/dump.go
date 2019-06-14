@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger/burrow/execution/state"
 
 	"github.com/hyperledger/burrow/rpc/rpcdump"
+	"github.com/hyperledger/burrow/rpc/rpcquery"
 	amino "github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/libs/db"
 
@@ -19,13 +20,14 @@ import (
 
 var cdc = amino.NewCodec()
 
+// Dump saves the state from a remote chain
 func Dump(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 		chainURLOpt := cmd.StringOpt("c chain", "127.0.0.1:10997", "chain to be used in IP:PORT format")
 		heightOpt := cmd.IntOpt("h height", 0, "Block height to dump to, defaults to latest block height")
 		filename := cmd.StringArg("FILE", "", "Save dump here")
 		useJSON := cmd.BoolOpt("j json", false, "Output in json")
-		timeoutOpt := cmd.IntOpt("t timeout", 0, "GRPC timeout in seconds")
+		timeoutOpt := cmd.IntOpt("t timeout", 0, "Timeout in seconds")
 
 		s := state.NewState(db.NewMemDB())
 
@@ -44,13 +46,24 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 				output.Fatalf("failed to connect: %v", err)
 				return
 			}
-			dc := rpcdump.NewDumpClient(conn)
 
+			dc := rpcdump.NewDumpClient(conn)
 			dump, err := dc.GetDump(ctx, &rpcdump.GetDumpParam{Height: uint64(*heightOpt)})
 			if err != nil {
 				output.Fatalf("failed to retrieve dump: %v", err)
 				return
 			}
+
+			qCli := rpcquery.NewQueryClient(conn)
+			chainStatus, err := qCli.Status(context.Background(), &rpcquery.StatusParam{})
+			if err != nil {
+				output.Logf("could not get chain status: %v", err)
+			}
+			stat, err := json.Marshal(chainStatus)
+			if err != nil {
+				output.Logf("failed to marshal: %v", err)
+			}
+			output.Logf(string(stat))
 
 			f, err := os.OpenFile(*filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 			if err != nil {

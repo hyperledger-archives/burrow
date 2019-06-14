@@ -16,7 +16,7 @@ import (
 )
 
 // buildEventData builds event data from transactions
-func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass, event *exec.Event, abiSpec *abi.AbiSpec,
+func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass, event *exec.Event, origin *exec.Origin, abiSpec *abi.AbiSpec,
 	l *logger.Logger) (types.EventDataRow, error) {
 
 	// a fresh new row to store column/value data
@@ -27,7 +27,7 @@ func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass,
 	eventLog := event.GetLog()
 
 	// decode event data using the provided abi specification
-	decodedData, err := decodeEvent(eventHeader, eventLog, abiSpec)
+	decodedData, err := decodeEvent(eventHeader, eventLog, origin, abiSpec)
 	if err != nil {
 		return types.EventDataRow{}, errors.Wrapf(err, "Error decoding event (filter: %s)", eventClass.Filter)
 	}
@@ -72,16 +72,16 @@ func buildBlkData(tbls types.EventTables, block *exec.BlockExecution) (types.Eve
 	row := make(map[string]interface{})
 
 	// block raw data
-	if _, ok := tbls[types.SQLBlockTableName]; ok {
+	if _, ok := tbls[tables.Block]; ok {
 		blockHeader, err := json.Marshal(block.Header)
 		if err != nil {
 			return types.EventDataRow{}, fmt.Errorf("Couldn't marshal BlockHeader in block %v", block)
 		}
 
-		row[types.SQLColumnLabelHeight] = fmt.Sprintf("%v", block.Height)
-		row[types.SQLColumnLabelBlockHeader] = string(blockHeader)
+		row[columns.Height] = fmt.Sprintf("%v", block.Height)
+		row[columns.BlockHeader] = string(blockHeader)
 	} else {
-		return types.EventDataRow{}, fmt.Errorf("table: %s not found in table structure %v", types.SQLBlockTableName, tbls)
+		return types.EventDataRow{}, fmt.Errorf("table: %s not found in table structure %v", tables.Block, tbls)
 	}
 
 	return types.EventDataRow{Action: types.ActionUpsert, RowData: row}, nil
@@ -117,15 +117,15 @@ func buildTxData(txe *exec.TxExecution) (types.EventDataRow, error) {
 	return types.EventDataRow{
 		Action: types.ActionUpsert,
 		RowData: map[string]interface{}{
-			types.SQLColumnLabelHeight:    txe.Height,
-			types.SQLColumnLabelTxHash:    txe.TxHash.String(),
-			types.SQLColumnLabelIndex:     txe.Index,
-			types.SQLColumnLabelTxType:    txe.TxType.String(),
-			types.SQLColumnLabelEnvelope:  string(envelope),
-			types.SQLColumnLabelEvents:    string(events),
-			types.SQLColumnLabelResult:    string(result),
-			types.SQLColumnLabelReceipt:   string(receipt),
-			types.SQLColumnLabelException: string(exception),
+			columns.Height:    txe.Height,
+			columns.TxHash:    txe.TxHash.String(),
+			columns.Index:     txe.Index,
+			columns.TxType:    txe.TxType.String(),
+			columns.Envelope:  string(envelope),
+			columns.Events:    string(events),
+			columns.Result:    string(result),
+			columns.Receipt:   string(receipt),
+			columns.Exception: string(exception),
 		},
 	}, nil
 }

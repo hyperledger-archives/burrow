@@ -1,17 +1,19 @@
 package adapters
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
+
+	"github.com/jmoiron/sqlx"
 
 	"github.com/hyperledger/burrow/vent/types"
 )
 
 // DBAdapter implements database dependent interface
 type DBAdapter interface {
-	// Open opens a db connection and creates a new schema if the adapter supports that
-	Open(dbURL string) (*sql.DB, error)
+	Open(dbURL string) (*sqlx.DB, error)
+	// TODO: incrementally refactor DBAdapter to be responsible for actually _doing_ the queries,
+	// TODO: legacy stringly queries:
 	// TypeMapping maps generic SQL column types to db adapter dependent column types
 	TypeMapping(sqlColumnType types.SQLColumnType) (string, error)
 	// ErrorEquals compares generic SQL errors to db adapter dependent errors
@@ -20,8 +22,6 @@ type DBAdapter interface {
 	SecureName(name string) string
 	// CreateTableQuery builds a CREATE TABLE query to create a new table
 	CreateTableQuery(tableName string, columns []*types.SQLTableColumn) (string, string)
-	// LastBlockIDQuery builds a SELECT query to return the last block# from the Log table
-	LastBlockIDQuery() string
 	// FindTableQuery builds a SELECT query to check if a table exists
 	FindTableQuery() string
 	// TableDefinitionQuery builds a SELECT query to get a table structure from the Dictionary table
@@ -44,6 +44,8 @@ type DBAdapter interface {
 	CleanDBQueries() types.SQLCleanDBQuery
 	// DropTableQuery builds a DROP TABLE query to delete a table
 	DropTableQuery(tableName string) string
+	// Get the schema qualified name of the given table
+	SchemaName(tableName string) string
 }
 
 type DBNotifyTriggerAdapter interface {

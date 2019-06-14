@@ -25,7 +25,7 @@ func TestSqliteConsumer(t *testing.T) {
 
 	t.Run("Group", func(t *testing.T) {
 		t.Run("Consume", func(t *testing.T) {
-			testConsumer(t, test.SqliteVentConfig(grpcAddress), tcli, inputAddress)
+			testConsumer(t, kern.Blockchain.ChainID(), test.SqliteVentConfig(grpcAddress), tcli, inputAddress)
 		})
 
 		t.Run("SqliteInvalidUTF8", func(t *testing.T) {
@@ -33,7 +33,7 @@ func TestSqliteConsumer(t *testing.T) {
 		})
 
 		t.Run("SqliteDeleteEvent", func(t *testing.T) {
-			testDeleteEvent(t, test.SqliteVentConfig(grpcAddress), tcli, inputAddress)
+			testDeleteEvent(t, kern.Blockchain.ChainID(), test.SqliteVentConfig(grpcAddress), tcli, inputAddress)
 		})
 
 		t.Run("SqliteResume", func(t *testing.T) {
