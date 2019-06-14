@@ -62,6 +62,9 @@ func burrow(output commands.Output) *cli.Cli {
 	app.Command("dump", "Dump chain state to backup",
 		commands.Dump(output))
 
+	app.Command("tx", "Submit a transaction to a burrow node",
+		commands.Tx(output))
+
 	app.Command("restore", "Restore new chain from backup",
 		commands.Restore(output))
 

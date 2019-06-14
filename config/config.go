@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
@@ -18,8 +20,8 @@ const DefaultGenesisDocJSONFileName = "genesis.json"
 
 type BurrowConfig struct {
 	// Set on startup
-	ValidatorAddress    *crypto.Address `json:",omitempty" toml:",omitempty"`
-	ValidatorPassphrase *string         `json:",omitempty" toml:",omitempty"`
+	Address    *crypto.Address `json:",omitempty" toml:",omitempty"`
+	Passphrase *string         `json:",omitempty" toml:",omitempty"`
 	// From config file
 	BurrowDir  string
 	GenesisDoc *genesis.GenesisDoc                `json:",omitempty" toml:",omitempty"`
@@ -39,6 +41,13 @@ func DefaultBurrowConfig() *BurrowConfig {
 		Execution:  execution.DefaultExecutionConfig(),
 		Logging:    logconfig.DefaultNodeLoggingConfig(),
 	}
+}
+
+func (conf *BurrowConfig) Verify() error {
+	if conf.Address == nil {
+		return fmt.Errorf("could not finalise address - please provide one in config or via --account-address")
+	}
+	return nil
 }
 
 func (conf *BurrowConfig) TendermintConfig() *tmConfig.Config {

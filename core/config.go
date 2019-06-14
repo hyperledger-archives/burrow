@@ -126,13 +126,13 @@ func LoadKernelFromConfig(conf *config.BurrowConfig) (*Kernel, error) {
 		return nil, fmt.Errorf("could not load state: %v", err)
 	}
 
-	if conf.ValidatorAddress == nil {
-		return nil, fmt.Errorf("ValidatorAddress must be set")
+	if conf.Address == nil {
+		return nil, fmt.Errorf("Address must be set")
 	}
 
-	privVal, err := kern.PrivValidator(*conf.ValidatorAddress)
+	privVal, err := kern.PrivValidator(*conf.Address)
 	if err != nil {
-		return nil, fmt.Errorf("could not form PrivValidator from ValidatorAddress: %v", err)
+		return nil, fmt.Errorf("could not form PrivValidator from Address: %v", err)
 	}
 
 	err = kern.LoadTendermintFromConfig(conf, privVal)

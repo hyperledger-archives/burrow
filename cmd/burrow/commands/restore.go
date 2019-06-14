@@ -5,37 +5,25 @@ import (
 	cli "github.com/jawher/mow.cli"
 )
 
+// Restore reads a state file and saves into a runnable dir
 func Restore(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
-		genesisOpt := cmd.StringOpt("g genesis", "",
-			"Use the specified genesis JSON file rather than a key in the main config, use - to read from STDIN")
-
-		configOpt := cmd.StringOpt("c config", "", "Use the specified burrow config file")
-
-		silentOpt := cmd.BoolOpt("s silent", false, "If state already exists don't throw error")
-
-		filename := cmd.StringArg("FILE", "", "Restore from this dump")
-
-		cmd.Spec = "[--config=<config file>] [--genesis=<genesis json file>] [--silent] [FILE]"
-
 		configOpts := addConfigOptions(cmd)
+		silentOpt := cmd.BoolOpt("s silent", false, "If state already exists don't throw error")
+		filename := cmd.StringArg("FILE", "", "Restore from this dump")
+		cmd.Spec += "[--silent] [FILE]"
 
 		cmd.Action = func() {
-			conf, err := obtainBurrowConfig(*configOpt, *genesisOpt)
+			conf, err := configOpts.obtainBurrowConfig()
 			if err != nil {
-				output.Fatalf("could not obtain config: %v", err)
+				output.Fatalf("could not set up config: %v", err)
 			}
 
-			err = configOpts.configure(conf)
-			if err != nil {
-				output.Fatalf("could not update burrow config: %v", err)
+			if err := conf.Verify(); err != nil {
+				output.Fatalf("cannot continue with config: %v", err)
 			}
 
-			if conf.ValidatorAddress == nil {
-				output.Fatalf("could not finalise validator address - please provide one in config or via --validator-address")
-			}
-
-			output.Logf("Using validator address: %s", *conf.ValidatorAddress)
+			output.Logf("Using validator address: %s", *conf.Address)
 
 			kern, err := core.NewKernel(conf.BurrowDir)
 			if err != nil {

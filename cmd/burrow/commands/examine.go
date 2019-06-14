@@ -12,12 +12,12 @@ import (
 
 func Examine(output Output) func(cmd *cli.Cmd) {
 	return func(dump *cli.Cmd) {
-		configOpt := dump.StringOpt("c config", "", "Use the a specified burrow config file")
+		configOpts := addConfigOptions(dump)
 
 		var explorer *bcm.BlockStore
 
 		dump.Before = func() {
-			conf, err := obtainBurrowConfig(*configOpt, "")
+			conf, err := configOpts.obtainBurrowConfig()
 			if err != nil {
 				output.Fatalf("Could not obtain config: %v", err)
 			}

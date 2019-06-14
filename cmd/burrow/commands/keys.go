@@ -5,37 +5,35 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
-
-	"github.com/hyperledger/burrow/deployment"
-	cli "github.com/jawher/mow.cli"
-
 	"time"
-
-	"io/ioutil"
 
 	"github.com/howeyc/gopass"
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/deployment"
 	"github.com/hyperledger/burrow/keys"
+	cli "github.com/jawher/mow.cli"
 	"google.golang.org/grpc"
 )
 
+// Keys runs as either client or server
 func Keys(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 		keysHost := cmd.String(cli.StringOpt{
 			Name:   "host",
 			Desc:   "set the host for talking to the key daemon",
 			Value:  keys.DefaultHost,
-			EnvVar: "MONAX_KEYS_HOST",
+			EnvVar: "BURROW_KEYS_HOST",
 		})
 
 		keysPort := cmd.String(cli.StringOpt{
 			Name:   "port",
 			Desc:   "set the port for key daemon",
 			Value:  keys.DefaultPort,
-			EnvVar: "MONAX_KEYS_PORT",
+			EnvVar: "BURROW_KEYS_PORT",
 		})
 
 		grpcKeysClient := func(output Output) keys.KeysClient {
@@ -57,7 +55,7 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 
 			cmd.Before = func() {
 				var err error
-				conf, err = obtainBurrowConfig(*configOpt, "")
+				conf, err = obtainDefaultConfig(*configOpt, "")
 				if err != nil {
 					output.Fatalf("Could not obtain config: %v", err)
 				}

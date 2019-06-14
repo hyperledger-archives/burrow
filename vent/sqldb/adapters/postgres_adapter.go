@@ -1,13 +1,15 @@
 package adapters
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 
+	"github.com/lib/pq"
+
 	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/types"
-	"github.com/lib/pq"
+	"github.com/jmoiron/sqlx"
+	"github.com/prometheus/common/log"
 )
 
 var pgDataTypes = map[types.SQLColumnType]string{
@@ -25,66 +27,72 @@ var pgDataTypes = map[types.SQLColumnType]string{
 
 // PostgresAdapter implements DBAdapter for Postgres
 type PostgresAdapter struct {
-	Log    *logger.Logger
 	Schema string
+	types.SQLNames
+	Log *logger.Logger
 }
 
+var _ DBAdapter = &PostgresAdapter{}
+
 // NewPostgresAdapter constructs a new db adapter
-func NewPostgresAdapter(schema string, log *logger.Logger) *PostgresAdapter {
+func NewPostgresAdapter(schema string, sqlNames types.SQLNames, log *logger.Logger) *PostgresAdapter {
 	return &PostgresAdapter{
-		Log:    log,
-		Schema: schema,
+		Schema:   schema,
+		SQLNames: sqlNames,
+		Log:      log,
 	}
 }
 
-// Open connects to a PostgreSQL database, opens it & create default schema if provided
-func (adapter *PostgresAdapter) Open(dbURL string) (*sql.DB, error) {
-	db, err := sql.Open("postgres", dbURL)
+func (pa *PostgresAdapter) Open(dbURL string) (*sqlx.DB, error) {
+	db, err := sqlx.Open("postgres", dbURL)
 	if err != nil {
-		adapter.Log.Info("msg", "Error creating database connection", "err", err)
+		log.Info("msg", "Error creating database connection", "err", err)
 		return nil, err
 	}
 
-	// if there is a supplied Schema
-	if adapter.Schema != "" {
-		if err = db.Ping(); err != nil {
-			adapter.Log.Info("msg", "Error opening database connection", "err", err)
-			return nil, err
-		}
+	if err := db.Ping(); err != nil {
+		log.Info("msg", "Error opening database connection", "err", err)
+		return nil, err
+	}
 
-		var found bool
-
-		query := Cleanf(`SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_namespace n WHERE n.nspname = '%s');`, adapter.Schema)
-		adapter.Log.Info("msg", "FIND SCHEMA", "query", query)
-
-		if err := db.QueryRow(query).Scan(&found); err == nil {
-			if !found {
-				adapter.Log.Warn("msg", "Schema not found")
-			}
-			adapter.Log.Info("msg", "Creating schema")
-
-			query = Cleanf("CREATE SCHEMA %s;", adapter.Schema)
-			adapter.Log.Info("msg", "CREATE SCHEMA", "query", query)
-
-			if _, err = db.Exec(query); err != nil {
-				if adapter.ErrorEquals(err, types.SQLErrorTypeDuplicatedSchema) {
-					adapter.Log.Warn("msg", "Duplicated schema")
-					return db, nil
-				}
-			}
-		} else {
-			adapter.Log.Info("msg", "Error searching schema", "err", err)
-			return nil, err
-		}
+	if pa.Schema != "" {
+		err = ensureSchema(db, pa.Schema, pa.Log)
 	} else {
 		return nil, fmt.Errorf("no schema supplied")
 	}
 
-	return db, err
+	return db, nil
+}
+
+func ensureSchema(db sqlx.Ext, schema string, log *logger.Logger) error {
+	query := Cleanf(`SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_namespace n WHERE n.nspname = '%s');`, schema)
+	log.Info("msg", "FIND SCHEMA", "query", query)
+
+	var found bool
+	if err := db.QueryRowx(query).Scan(&found); err == nil {
+		if !found {
+			log.Warn("msg", "Schema not found")
+		}
+		log.Info("msg", "Creating schema")
+
+		query = Cleanf("CREATE SCHEMA %s;", schema)
+		log.Info("msg", "CREATE SCHEMA", "query", query)
+
+		if _, err = db.Exec(query); err != nil {
+			if errorEquals(err, types.SQLErrorTypeDuplicatedSchema) {
+				log.Warn("msg", "Duplicated schema")
+				return nil
+			}
+		}
+	} else {
+		log.Info("msg", "Error searching schema", "err", err)
+		return err
+	}
+	return nil
 }
 
 // TypeMapping convert generic dataTypes to database dependent dataTypes
-func (adapter *PostgresAdapter) TypeMapping(sqlColumnType types.SQLColumnType) (string, error) {
+func (pa *PostgresAdapter) TypeMapping(sqlColumnType types.SQLColumnType) (string, error) {
 	if sqlDataType, ok := pgDataTypes[sqlColumnType]; ok {
 		return sqlDataType, nil
 	}
@@ -93,20 +101,20 @@ func (adapter *PostgresAdapter) TypeMapping(sqlColumnType types.SQLColumnType) (
 }
 
 // SecureColumnName return columns between appropriate security containers
-func (adapter *PostgresAdapter) SecureName(name string) string {
+func (pa *PostgresAdapter) SecureName(name string) string {
 	return secureName(name)
 }
 
 // CreateTableQuery builds query for creating a new table
-func (adapter *PostgresAdapter) CreateTableQuery(tableName string, columns []*types.SQLTableColumn) (string, string) {
+func (pa *PostgresAdapter) CreateTableQuery(tableName string, columns []*types.SQLTableColumn) (string, string) {
 	// build query
 	columnsDef := ""
 	primaryKey := ""
 	dictionaryValues := ""
 
 	for i, column := range columns {
-		secureColumn := adapter.SecureName(column.Name)
-		sqlType, _ := adapter.TypeMapping(column.Type)
+		secureColumn := pa.SecureName(column.Name)
+		sqlType, _ := pa.TypeMapping(column.Type)
 		pKey := 0
 
 		if columnsDef != "" {
@@ -138,54 +146,33 @@ func (adapter *PostgresAdapter) CreateTableQuery(tableName string, columns []*ty
 			i)
 	}
 
-	query := Cleanf("CREATE TABLE %s.%s (%s", adapter.Schema, adapter.SecureName(tableName), columnsDef)
+	query := Cleanf("CREATE TABLE %s.%s (%s", pa.Schema, pa.SecureName(tableName), columnsDef)
 	if primaryKey != "" {
 		query += "," + Cleanf("CONSTRAINT %s_pkey PRIMARY KEY (%s)", tableName, primaryKey)
 	}
 	query += ");"
 
 	dictionaryQuery := Cleanf("INSERT INTO %s.%s (%s,%s,%s,%s,%s,%s) VALUES %s;",
-		adapter.Schema, types.SQLDictionaryTableName,
-		types.SQLColumnLabelTableName, types.SQLColumnLabelColumnName,
-		types.SQLColumnLabelColumnType, types.SQLColumnLabelColumnLength,
-		types.SQLColumnLabelPrimaryKey, types.SQLColumnLabelColumnOrder,
+		pa.Schema, pa.Tables.Dictionary,
+		pa.Columns.TableName, pa.Columns.ColumnName,
+		pa.Columns.ColumnType, pa.Columns.ColumnLength,
+		pa.Columns.PrimaryKey, pa.Columns.ColumnOrder,
 		dictionaryValues)
 
 	return query, dictionaryQuery
 }
 
-// LastBlockIDQuery returns a query for last inserted blockId in log table
-func (adapter *PostgresAdapter) LastBlockIDQuery() string {
-	query := `
-		WITH ll AS (
-			SELECT MAX(%s) AS %s FROM %s.%s WHERE %s = $1
-		)
-		SELECT COALESCE(%s, '0') AS %s
-			FROM ll LEFT OUTER JOIN %s.%s log ON (ll.%s = log.%s);`
-
-	return Cleanf(query,
-		types.SQLColumnLabelId,                // max
-		types.SQLColumnLabelId,                // as
-		adapter.Schema, types.SQLLogTableName, // from
-		types.SQLColumnLabelChainID,           // where
-		types.SQLColumnLabelHeight,            // coalesce
-		types.SQLColumnLabelHeight,            // as
-		adapter.Schema, types.SQLLogTableName, // from
-		types.SQLColumnLabelId, types.SQLColumnLabelId) // on
-
-}
-
 // FindTableQuery returns a query that checks if a table exists
-func (adapter *PostgresAdapter) FindTableQuery() string {
+func (pa *PostgresAdapter) FindTableQuery() string {
 	query := "SELECT COUNT(*) found FROM %s.%s WHERE %s = $1;"
 
 	return Cleanf(query,
-		adapter.Schema, types.SQLDictionaryTableName, // from
-		types.SQLColumnLabelTableName) // where
+		pa.Schema, pa.Tables.Dictionary, // from
+		pa.Columns.TableName) // where
 }
 
 // TableDefinitionQuery returns a query with table structure
-func (adapter *PostgresAdapter) TableDefinitionQuery() string {
+func (pa *PostgresAdapter) TableDefinitionQuery() string {
 	query := `
 		SELECT
 			%s,%s,%s,%s
@@ -197,36 +184,36 @@ func (adapter *PostgresAdapter) TableDefinitionQuery() string {
 			%s;`
 
 	return Cleanf(query,
-		types.SQLColumnLabelColumnName, types.SQLColumnLabelColumnType, // select
-		types.SQLColumnLabelColumnLength, types.SQLColumnLabelPrimaryKey, // select
-		adapter.Schema, types.SQLDictionaryTableName, // from
-		types.SQLColumnLabelTableName,   // where
-		types.SQLColumnLabelColumnOrder) // order by
+		pa.Columns.ColumnName, pa.Columns.ColumnType, // select
+		pa.Columns.ColumnLength, pa.Columns.PrimaryKey, // select
+		pa.Schema, pa.Tables.Dictionary, // from
+		pa.Columns.TableName,   // where
+		pa.Columns.ColumnOrder) // order by
 
 }
 
 // AlterColumnQuery returns a query for adding a new column to a table
-func (adapter *PostgresAdapter) AlterColumnQuery(tableName, columnName string, sqlColumnType types.SQLColumnType, length, order int) (string, string) {
-	sqlType, _ := adapter.TypeMapping(sqlColumnType)
+func (pa *PostgresAdapter) AlterColumnQuery(tableName, columnName string, sqlColumnType types.SQLColumnType, length, order int) (string, string) {
+	sqlType, _ := pa.TypeMapping(sqlColumnType)
 	if length > 0 {
 		sqlType = Cleanf("%s(%d)", sqlType, length)
 	}
 
 	query := Cleanf("ALTER TABLE %s.%s ADD COLUMN %s %s;",
-		adapter.Schema,
-		adapter.SecureName(tableName),
-		adapter.SecureName(columnName),
+		pa.Schema,
+		pa.SecureName(tableName),
+		pa.SecureName(columnName),
 		sqlType)
 
 	dictionaryQuery := Cleanf(`
 		INSERT INTO %s.%s (%s,%s,%s,%s,%s,%s)
 		VALUES ('%s','%s',%d,%d,%d,%d);`,
 
-		adapter.Schema, types.SQLDictionaryTableName,
+		pa.Schema, pa.Tables.Dictionary,
 
-		types.SQLColumnLabelTableName, types.SQLColumnLabelColumnName,
-		types.SQLColumnLabelColumnType, types.SQLColumnLabelColumnLength,
-		types.SQLColumnLabelPrimaryKey, types.SQLColumnLabelColumnOrder,
+		pa.Columns.TableName, pa.Columns.ColumnName,
+		pa.Columns.ColumnType, pa.Columns.ColumnLength,
+		pa.Columns.PrimaryKey, pa.Columns.ColumnOrder,
 
 		tableName, columnName, sqlColumnType, length, 0, order)
 
@@ -234,43 +221,47 @@ func (adapter *PostgresAdapter) AlterColumnQuery(tableName, columnName string, s
 }
 
 // SelectRowQuery returns a query for selecting row values
-func (adapter *PostgresAdapter) SelectRowQuery(tableName, fields, indexValue string) string {
+func (pa *PostgresAdapter) SelectRowQuery(tableName, fields, indexValue string) string {
 	return Cleanf("SELECT %s FROM %s.%s WHERE %s = '%s';",
-		fields,                                        // select
-		adapter.Schema, adapter.SecureName(tableName), // from
-		types.SQLColumnLabelHeight, indexValue, // where
+		fields,                              // select
+		pa.Schema, pa.SecureName(tableName), // from
+		pa.Columns.Height, indexValue, // where
 	)
 }
 
 // SelectLogQuery returns a query for selecting all tables involved in a block trn
-func (adapter *PostgresAdapter) SelectLogQuery() string {
+func (pa *PostgresAdapter) SelectLogQuery() string {
 	query := `
 		SELECT DISTINCT %s,%s FROM %s.%s l WHERE %s = $1 AND %s = $2;`
 
 	return Cleanf(query,
-		types.SQLColumnLabelTableName, types.SQLColumnLabelEventName, // select
-		adapter.Schema, types.SQLLogTableName, // from
-		types.SQLColumnLabelHeight,
-		types.SQLColumnLabelChainID) // where
+		pa.Columns.TableName, pa.Columns.EventName, // select
+		pa.Schema, pa.Tables.Log, // from
+		pa.Columns.Height,
+		pa.Columns.ChainID) // where
 }
 
 // InsertLogQuery returns a query to insert a row in log table
-func (adapter *PostgresAdapter) InsertLogQuery() string {
+func (pa *PostgresAdapter) InsertLogQuery() string {
 	query := `
 		INSERT INTO %s.%s (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
 		VALUES (CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6 ,$7, $8, $9, $10);`
 
 	return Cleanf(query,
-		adapter.Schema, types.SQLLogTableName, // insert
+		pa.Schema, pa.Tables.Log, // insert
 		//fields
-		types.SQLColumnLabelTimeStamp,
-		types.SQLColumnLabelChainID, types.SQLColumnLabelTableName, types.SQLColumnLabelEventName, types.SQLColumnLabelEventFilter,
-		types.SQLColumnLabelHeight, types.SQLColumnLabelTxHash, types.SQLColumnLabelAction, types.SQLColumnLabelDataRow,
-		types.SQLColumnLabelSqlStmt, types.SQLColumnLabelSqlValues)
+		pa.Columns.TimeStamp,
+		pa.Columns.ChainID, pa.Columns.TableName, pa.Columns.EventName, pa.Columns.EventFilter,
+		pa.Columns.Height, pa.Columns.TxHash, pa.Columns.Action, pa.Columns.DataRow,
+		pa.Columns.SqlStmt, pa.Columns.SqlValues)
 }
 
 // ErrorEquals verify if an error is of a given SQL type
-func (adapter *PostgresAdapter) ErrorEquals(err error, sqlErrorType types.SQLErrorType) bool {
+func (pa *PostgresAdapter) ErrorEquals(err error, sqlErrorType types.SQLErrorType) bool {
+	return errorEquals(err, sqlErrorType)
+}
+
+func errorEquals(err error, sqlErrorType types.SQLErrorType) bool {
 	if err, ok := err.(*pq.Error); ok {
 		switch sqlErrorType {
 		case types.SQLErrorTypeGeneric:
@@ -293,7 +284,7 @@ func (adapter *PostgresAdapter) ErrorEquals(err error, sqlErrorType types.SQLErr
 	return false
 }
 
-func (adapter *PostgresAdapter) UpsertQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, interface{}, error) {
+func (pa *PostgresAdapter) UpsertQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, interface{}, error) {
 
 	pointers := make([]interface{}, 0)
 
@@ -307,7 +298,7 @@ func (adapter *PostgresAdapter) UpsertQuery(table *types.SQLTable, row types.Eve
 
 	// for each column in table
 	for _, column := range table.Columns {
-		secureColumn := adapter.SecureName(column.Name)
+		secureColumn := pa.SecureName(column.Name)
 
 		i++
 
@@ -323,7 +314,7 @@ func (adapter *PostgresAdapter) UpsertQuery(table *types.SQLTable, row types.Eve
 		//find data for column
 		if value, ok := row.RowData[column.Name]; ok {
 			//load hash value
-			if column.Name == types.SQLColumnLabelTxHash {
+			if column.Name == pa.Columns.TxHash {
 				txHash = value
 			}
 
@@ -352,7 +343,7 @@ func (adapter *PostgresAdapter) UpsertQuery(table *types.SQLTable, row types.Eve
 		}
 	}
 
-	query := Cleanf("INSERT INTO %s.%s (%s) VALUES (%s) ", adapter.Schema, adapter.SecureName(table.Name),
+	query := Cleanf("INSERT INTO %s.%s (%s) VALUES (%s) ", pa.Schema, pa.SecureName(table.Name),
 		columns, insValues)
 
 	if updValues != "" {
@@ -365,7 +356,7 @@ func (adapter *PostgresAdapter) UpsertQuery(table *types.SQLTable, row types.Eve
 	return types.UpsertDeleteQuery{Query: query, Values: values, Pointers: pointers}, txHash, nil
 }
 
-func (adapter *PostgresAdapter) DeleteQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, error) {
+func (pa *PostgresAdapter) DeleteQuery(table *types.SQLTable, row types.EventDataRow) (types.UpsertDeleteQuery, error) {
 
 	pointers := make([]interface{}, 0)
 	columns := ""
@@ -379,7 +370,7 @@ func (adapter *PostgresAdapter) DeleteQuery(table *types.SQLTable, row types.Eve
 		if column.Primary {
 			i++
 
-			secureColumn := adapter.SecureName(column.Name)
+			secureColumn := pa.SecureName(column.Name)
 
 			// WHERE ..........
 			if columns != "" {
@@ -407,22 +398,25 @@ func (adapter *PostgresAdapter) DeleteQuery(table *types.SQLTable, row types.Eve
 		return types.UpsertDeleteQuery{}, fmt.Errorf("error primary key not found for deletion")
 	}
 
-	query := Cleanf("DELETE FROM %s.%s WHERE %s;", adapter.Schema, adapter.SecureName(table.Name), columns)
+	query := Cleanf("DELETE FROM %s.%s WHERE %s;", pa.Schema, pa.SecureName(table.Name), columns)
 
 	return types.UpsertDeleteQuery{Query: query, Values: values, Pointers: pointers}, nil
 }
 
-func (adapter *PostgresAdapter) RestoreDBQuery() string {
-	return Cleanf(`SELECT %s, %s, %s, %s FROM %s.%s 
-								WHERE to_char(%s,'YYYY-MM-DD HH24:MI:SS')<=$1 
+func (pa *PostgresAdapter) RestoreDBQuery() string {
+	return Cleanf(`SELECT %s, %s, %s, %s, %s FROM %s 
+								WHERE %s != '%s' AND  %s != '%s' AND to_char(%s,'YYYY-MM-DD HH24:MI:SS')<=$1 
 								ORDER BY %s;`,
-		types.SQLColumnLabelTableName, types.SQLColumnLabelAction, types.SQLColumnLabelSqlStmt, types.SQLColumnLabelSqlValues,
-		adapter.Schema, types.SQLLogTableName,
-		types.SQLColumnLabelTimeStamp,
-		types.SQLColumnLabelId)
+		pa.Columns.Id, pa.Columns.TableName, pa.Columns.Action, // select id, table, action
+		pa.Columns.SqlStmt, pa.Columns.SqlValues, // select stmt, values
+		pa.SchemaName(pa.Tables.Log),          // from
+		pa.Columns.TableName, pa.Tables.Block, // where not _vent_block
+		pa.Columns.TableName, pa.Tables.Tx, // where not _vent_tx
+		pa.Columns.TimeStamp, // where time
+		pa.Columns.Id)
 }
 
-func (adapter *PostgresAdapter) CleanDBQueries() types.SQLCleanDBQuery {
+func (pa *PostgresAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 
 	// Chain info
 	selectChainIDQry := Cleanf(`
@@ -431,17 +425,17 @@ func (adapter *PostgresAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 		COALESCE(MAX(%s),'') CHAINID,
 		COALESCE(MAX(%s),'') BVERSION 
 		FROM %s.%s;`,
-		types.SQLColumnLabelChainID, types.SQLColumnLabelBurrowVer,
-		adapter.Schema, types.SQLChainInfoTableName)
+		pa.Columns.ChainID, pa.Columns.BurrowVersion,
+		pa.Schema, pa.Tables.ChainInfo)
 
 	deleteChainIDQry := Cleanf(`
-		DELETE FROM %s.%s;`,
-		adapter.Schema, types.SQLChainInfoTableName)
+		DELETE FROM %s;`,
+		pa.SchemaName(pa.Tables.ChainInfo))
 
 	insertChainIDQry := Cleanf(`
-		INSERT INTO %s.%s (%s,%s) VALUES($1,$2)`,
-		adapter.Schema, types.SQLChainInfoTableName,
-		types.SQLColumnLabelChainID, types.SQLColumnLabelBurrowVer)
+		INSERT INTO %s (%s,%s,%s) VALUES($1,$2,$3)`,
+		pa.SchemaName(pa.Tables.ChainInfo),
+		pa.Columns.ChainID, pa.Columns.BurrowVersion, pa.Columns.Height)
 
 	// Dictionary
 	selectDictionaryQry := Cleanf(`
@@ -449,23 +443,23 @@ func (adapter *PostgresAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 		FROM %s.%s 
  		WHERE %s
 		NOT IN ('%s','%s','%s');`,
-		types.SQLColumnLabelTableName,
-		adapter.Schema, types.SQLDictionaryTableName,
-		types.SQLColumnLabelTableName,
-		types.SQLLogTableName, types.SQLDictionaryTableName, types.SQLChainInfoTableName)
+		pa.Columns.TableName,
+		pa.Schema, pa.Tables.Dictionary,
+		pa.Columns.TableName,
+		pa.Tables.Log, pa.Tables.Dictionary, pa.Tables.ChainInfo)
 
 	deleteDictionaryQry := Cleanf(`
 		DELETE FROM %s.%s 
 		WHERE %s 
 		NOT IN ('%s','%s','%s');`,
-		adapter.Schema, types.SQLDictionaryTableName,
-		types.SQLColumnLabelTableName,
-		types.SQLLogTableName, types.SQLDictionaryTableName, types.SQLChainInfoTableName)
+		pa.Schema, pa.Tables.Dictionary,
+		pa.Columns.TableName,
+		pa.Tables.Log, pa.Tables.Dictionary, pa.Tables.ChainInfo)
 
 	// log
 	deleteLogQry := Cleanf(`
 		DELETE FROM %s.%s;`,
-		adapter.Schema, types.SQLLogTableName)
+		pa.Schema, pa.Tables.Log)
 
 	return types.SQLCleanDBQuery{
 		SelectChainIDQry:    selectChainIDQry,
@@ -477,14 +471,14 @@ func (adapter *PostgresAdapter) CleanDBQueries() types.SQLCleanDBQuery {
 	}
 }
 
-func (adapter *PostgresAdapter) DropTableQuery(tableName string) string {
+func (pa *PostgresAdapter) DropTableQuery(tableName string) string {
 	// We cascade here to drop any associated views and triggers. We work under the assumption that vent
 	// owns its database and any users need to be able to recreate objects that depend on vent tables in the event of
 	// table drops
-	return Cleanf(`DROP TABLE %s CASCADE;`, adapter.schemaName(tableName))
+	return Cleanf(`DROP TABLE IF EXISTS %s CASCADE;`, pa.SchemaName(tableName))
 }
 
-func (adapter *PostgresAdapter) CreateNotifyFunctionQuery(function, channel string, columns ...string) string {
+func (pa *PostgresAdapter) CreateNotifyFunctionQuery(function, channel string, columns ...string) string {
 	return Cleanf(`CREATE OR REPLACE FUNCTION %s() RETURNS trigger AS
 		$trigger$
 		BEGIN
@@ -500,30 +494,30 @@ func (adapter *PostgresAdapter) CreateNotifyFunctionQuery(function, channel stri
 		$trigger$
 		LANGUAGE 'plpgsql';
 		`,
-		adapter.schemaName(function),                                             // create function
-		channel, types.SQLColumnLabelAction, jsonBuildObjectArgs("OLD", columns), // case delete
-		channel, types.SQLColumnLabelAction, jsonBuildObjectArgs("NEW", columns), // case else
+		pa.SchemaName(function),                                         // create function
+		channel, pa.Columns.Action, jsonBuildObjectArgs("OLD", columns), // case delete
+		channel, pa.Columns.Action, jsonBuildObjectArgs("NEW", columns), // case else
 	)
 }
 
-func (adapter *PostgresAdapter) CreateTriggerQuery(triggerName, tableName, functionName string) string {
-	trigger := adapter.SecureName(triggerName)
-	table := adapter.schemaName(tableName)
+func (pa *PostgresAdapter) CreateTriggerQuery(triggerName, tableName, functionName string) string {
+	trigger := pa.SecureName(triggerName)
+	table := pa.SchemaName(tableName)
 	return Cleanf(`DROP TRIGGER IF EXISTS %s ON %s CASCADE; 
 		CREATE TRIGGER %s AFTER INSERT OR UPDATE OR DELETE ON %s
 		FOR EACH ROW 
 		EXECUTE PROCEDURE %s();
 		`,
-		trigger,                          // drop
-		table,                            // on
-		trigger,                          // create
-		table,                            // on
-		adapter.schemaName(functionName), // function
+		trigger,                     // drop
+		table,                       // on
+		trigger,                     // create
+		table,                       // on
+		pa.SchemaName(functionName), // function
 	)
 }
 
-func (adapter *PostgresAdapter) schemaName(tableName string) string {
-	return fmt.Sprintf("%s.%s", adapter.Schema, adapter.SecureName(tableName))
+func (pa *PostgresAdapter) SchemaName(tableName string) string {
+	return fmt.Sprintf("%s.%s", pa.Schema, pa.SecureName(tableName))
 }
 
 func secureName(columnName string) string {

@@ -102,11 +102,11 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 	contractName = strings.TrimSuffix(contractName, filepath.Ext(contractName))
 
 	// Use defaults
-	deploy.Source = useDefault(deploy.Source, deployScript.Account)
-	deploy.Instance = useDefault(deploy.Instance, contractName)
-	deploy.Amount = useDefault(deploy.Amount, do.DefaultAmount)
-	deploy.Fee = useDefault(deploy.Fee, do.DefaultFee)
-	deploy.Gas = useDefault(deploy.Gas, do.DefaultGas)
+	deploy.Source = FirstOf(deploy.Source, deployScript.Account)
+	deploy.Instance = FirstOf(deploy.Instance, contractName)
+	deploy.Amount = FirstOf(deploy.Amount, do.DefaultAmount)
+	deploy.Fee = FirstOf(deploy.Fee, do.DefaultFee)
+	deploy.Gas = FirstOf(deploy.Gas, do.DefaultGas)
 
 	// assemble contract
 	contractPath, err := findContractFile(deploy.Contract, deployScript.BinPath, deployScript.Path)
@@ -411,10 +411,10 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 		return nil, err
 	}
 	// Use default
-	call.Source = useDefault(call.Source, deployScript.Account)
-	call.Amount = useDefault(call.Amount, do.DefaultAmount)
-	call.Fee = useDefault(call.Fee, do.DefaultFee)
-	call.Gas = useDefault(call.Gas, do.DefaultGas)
+	call.Source = FirstOf(call.Source, deployScript.Account)
+	call.Amount = FirstOf(call.Amount, do.DefaultAmount)
+	call.Fee = FirstOf(call.Fee, do.DefaultFee)
+	call.Gas = FirstOf(call.Gas, do.DefaultGas)
 
 	// formulate call
 	var packedBytes []byte

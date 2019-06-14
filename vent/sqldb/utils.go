@@ -3,6 +3,7 @@ package sqldb
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -14,6 +15,11 @@ import (
 
 	"github.com/hyperledger/burrow/vent/types"
 )
+
+const maxUint64 uint64 = (1 << 64) - 1
+
+var tables = types.DefaultSQLTableNames
+var columns = types.DefaultSQLColumnNames
 
 // findTable checks if a table exists in the default schema
 func (db *SQLDB) findTable(tableName string) (bool, error) {
@@ -39,138 +45,129 @@ func (db *SQLDB) findTable(tableName string) (bool, error) {
 // getSysTablesDefinition returns log, chain info & dictionary structures
 func (db *SQLDB) getSysTablesDefinition() types.EventTables {
 	return types.EventTables{
-		types.SQLLogTableName: {
-			Name: types.SQLLogTableName,
+		tables.Log: {
+			Name: tables.Log,
 			Columns: []*types.SQLTableColumn{
 				{
-					Name:    types.SQLColumnLabelId,
+					Name:    columns.Id,
 					Type:    types.SQLColumnTypeSerial,
 					Primary: true,
 				},
 				{
-					Name:   types.SQLColumnLabelChainID,
+					Name:   columns.ChainID,
 					Type:   types.SQLColumnTypeVarchar,
 					Length: 100,
 				},
 				{
-					Name:    types.SQLColumnLabelTimeStamp,
-					Type:    types.SQLColumnTypeTimeStamp,
-					Primary: false,
+					Name: columns.TimeStamp,
+					Type: types.SQLColumnTypeTimeStamp,
 				},
 				{
-					Name:    types.SQLColumnLabelTableName,
-					Type:    types.SQLColumnTypeVarchar,
-					Length:  100,
-					Primary: false,
+					Name:   columns.TableName,
+					Type:   types.SQLColumnTypeVarchar,
+					Length: 100,
 				},
 				{
-					Name:    types.SQLColumnLabelEventName,
-					Type:    types.SQLColumnTypeVarchar,
-					Length:  100,
-					Primary: false,
+					Name:   columns.EventName,
+					Type:   types.SQLColumnTypeVarchar,
+					Length: 100,
 				},
 				{
-					Name:    types.SQLColumnLabelEventFilter,
-					Type:    types.SQLColumnTypeVarchar,
-					Length:  100,
-					Primary: false,
+					Name:   columns.EventFilter,
+					Type:   types.SQLColumnTypeVarchar,
+					Length: 100,
 				},
 				// We use varchar for height - there is no uint64 type though numeric could have been used. We obtain the
 				// maximum height by maxing over the serial ID type
 				{
-					Name:    types.SQLColumnLabelHeight,
-					Type:    types.SQLColumnTypeVarchar,
-					Length:  100,
-					Primary: false,
+					Name:   columns.Height,
+					Type:   types.SQLColumnTypeVarchar,
+					Length: 100,
 				},
 				{
-					Name:    types.SQLColumnLabelTxHash,
-					Type:    types.SQLColumnTypeVarchar,
-					Length:  txs.HashLengthHex,
-					Primary: false,
+					Name:   columns.TxHash,
+					Type:   types.SQLColumnTypeVarchar,
+					Length: txs.HashLengthHex,
 				},
 				{
-					Name:    types.SQLColumnLabelAction,
-					Type:    types.SQLColumnTypeVarchar,
-					Length:  20,
-					Primary: false,
+					Name:   columns.Action,
+					Type:   types.SQLColumnTypeVarchar,
+					Length: 20,
 				},
 				{
-					Name:    types.SQLColumnLabelDataRow,
-					Type:    types.SQLColumnTypeJSON,
-					Length:  0,
-					Primary: false,
+					Name:   columns.DataRow,
+					Type:   types.SQLColumnTypeJSON,
+					Length: 0,
 				},
 				{
-					Name:    types.SQLColumnLabelSqlStmt,
-					Type:    types.SQLColumnTypeText,
-					Length:  0,
-					Primary: false,
+					Name:   columns.SqlStmt,
+					Type:   types.SQLColumnTypeText,
+					Length: 0,
 				},
 				{
-					Name:    types.SQLColumnLabelSqlValues,
-					Type:    types.SQLColumnTypeText,
-					Length:  0,
-					Primary: false,
+					Name:   columns.SqlValues,
+					Type:   types.SQLColumnTypeText,
+					Length: 0,
 				},
 			},
-			NotifyChannels: map[string][]string{types.BlockHeightLabel: {types.SQLColumnLabelHeight}},
+			NotifyChannels: map[string][]string{types.BlockHeightLabel: {columns.Height}},
 		},
-		types.SQLDictionaryTableName: {
-			Name: types.SQLDictionaryTableName,
+		tables.Dictionary: {
+			Name: tables.Dictionary,
 			Columns: []*types.SQLTableColumn{
 				{
-					Name:    types.SQLColumnLabelTableName,
+					Name:    columns.TableName,
 					Type:    types.SQLColumnTypeVarchar,
 					Length:  100,
 					Primary: true,
 				},
 				{
-					Name:    types.SQLColumnLabelColumnName,
+					Name:    columns.ColumnName,
 					Type:    types.SQLColumnTypeVarchar,
 					Length:  100,
 					Primary: true,
 				},
 				{
-					Name:    types.SQLColumnLabelColumnType,
-					Type:    types.SQLColumnTypeInt,
-					Length:  0,
-					Primary: false,
+					Name:   columns.ColumnType,
+					Type:   types.SQLColumnTypeInt,
+					Length: 0,
 				},
 				{
-					Name:    types.SQLColumnLabelColumnLength,
-					Type:    types.SQLColumnTypeInt,
-					Length:  0,
-					Primary: false,
+					Name:   columns.ColumnLength,
+					Type:   types.SQLColumnTypeInt,
+					Length: 0,
 				},
 				{
-					Name:    types.SQLColumnLabelPrimaryKey,
-					Type:    types.SQLColumnTypeInt,
-					Length:  0,
-					Primary: false,
+					Name:   columns.PrimaryKey,
+					Type:   types.SQLColumnTypeInt,
+					Length: 0,
 				},
 				{
-					Name:    types.SQLColumnLabelColumnOrder,
-					Type:    types.SQLColumnTypeInt,
-					Length:  0,
-					Primary: false,
+					Name:   columns.ColumnOrder,
+					Type:   types.SQLColumnTypeInt,
+					Length: 0,
 				},
 			},
 		},
-		types.SQLChainInfoTableName: {
-			Name: types.SQLChainInfoTableName,
+		tables.ChainInfo: {
+			Name: tables.ChainInfo,
 			Columns: []*types.SQLTableColumn{
 				{
-					Name:    types.SQLColumnLabelChainID,
+					Name:    columns.ChainID,
 					Type:    types.SQLColumnTypeVarchar,
 					Length:  100,
 					Primary: true,
 				},
 				{
-					Name:    types.SQLColumnLabelBurrowVer,
-					Type:    types.SQLColumnTypeVarchar,
-					Length:  100,
-					Primary: false,
+					Name:   columns.BurrowVersion,
+					Type:   types.SQLColumnTypeVarchar,
+					Length: 100,
+				},
+				{
+					Name: columns.Height,
+					Type: types.SQLColumnTypeNumeric,
+					// Maps to numeric(20, 0) - a 20 digit integer value
+					Length: digits(maxUint64),
 				},
 			},
 		},
@@ -237,7 +234,7 @@ func (db *SQLDB) getTableDef(tableName string) (*types.SQLTable, error) {
 }
 
 // alterTable alters the structure of a SQL table & add info to the dictionary
-func (db *SQLDB) alterTable(table *types.SQLTable) error {
+func (db *SQLDB) alterTable(chainID string, table *types.SQLTable) error {
 	db.Log.Info("msg", "Altering table", "value", table.Name)
 
 	// prepare log query
@@ -250,7 +247,7 @@ func (db *SQLDB) alterTable(table *types.SQLTable) error {
 		return err
 	}
 
-	sqlValues, _ := db.getJSON(nil)
+	sqlValues, _ := getJSON(nil)
 
 	// for each column in the new table structure
 	for order, newColumn := range table.Columns {
@@ -291,13 +288,13 @@ func (db *SQLDB) alterTable(table *types.SQLTable) error {
 
 				// Marshal the table into a JSON string.
 				var jsonData []byte
-				jsonData, err = db.getJSON(newColumn)
+				jsonData, err = getJSON(newColumn)
 				if err != nil {
 					db.Log.Info("msg", "error marshaling column", "err", err, "value", fmt.Sprintf("%v", newColumn))
 					return err
 				}
 				//insert log
-				_, err = db.DB.Exec(logQuery, db.ChainID, table.Name, "", "", nil, nil, types.ActionAlterTable, jsonData, query, sqlValues)
+				_, err = db.DB.Exec(logQuery, chainID, table.Name, "", "", nil, nil, types.ActionAlterTable, jsonData, query, sqlValues)
 				if err != nil {
 					db.Log.Info("msg", "Error inserting log", "err", err)
 					return err
@@ -316,7 +313,7 @@ func (db *SQLDB) alterTable(table *types.SQLTable) error {
 }
 
 // createTable creates a new table
-func (db *SQLDB) createTable(table *types.SQLTable, isInitialise bool) error {
+func (db *SQLDB) createTable(chainID string, table *types.SQLTable, isInitialise bool) error {
 	db.Log.Info("msg", "Creating Table", "value", table.Name)
 
 	// prepare log query
@@ -355,15 +352,15 @@ func (db *SQLDB) createTable(table *types.SQLTable, isInitialise bool) error {
 	if !isInitialise {
 		// Marshal the table into a JSON string.
 		var jsonData []byte
-		jsonData, err = db.getJSON(table)
+		jsonData, err = getJSON(table)
 		if err != nil {
 			db.Log.Info("msg", "error marshaling table", "err", err, "value", fmt.Sprintf("%v", table))
 			return err
 		}
-		sqlValues, _ := db.getJSON(nil)
+		sqlValues, _ := getJSON(nil)
 
 		//insert log
-		_, err = db.DB.Exec(logQuery, db.ChainID, table.Name, "", "", nil, nil, types.ActionCreateTable, jsonData, query, sqlValues)
+		_, err = db.DB.Exec(logQuery, chainID, table.Name, "", "", nil, nil, types.ActionCreateTable, jsonData, query, sqlValues)
 		if err != nil {
 			db.Log.Info("msg", "Error inserting log", "err", err)
 			return err
@@ -469,7 +466,7 @@ func safe(parameter string) string {
 }
 
 //getJSON returns marshaled json from JSON single column
-func (db *SQLDB) getJSON(JSON interface{}) ([]byte, error) {
+func getJSON(JSON interface{}) ([]byte, error) {
 	if JSON != nil {
 		return json.Marshal(JSON)
 	}
@@ -477,7 +474,7 @@ func (db *SQLDB) getJSON(JSON interface{}) ([]byte, error) {
 }
 
 //getJSONFromValues returns marshaled json from query values
-func (db *SQLDB) getJSONFromValues(values []interface{}) ([]byte, error) {
+func getJSONFromValues(values []interface{}) ([]byte, error) {
 	if values != nil {
 		return json.Marshal(values)
 	}
@@ -485,9 +482,29 @@ func (db *SQLDB) getJSONFromValues(values []interface{}) ([]byte, error) {
 }
 
 //getValuesFromJSON returns query values from unmarshaled JSON column
-func (db *SQLDB) getValuesFromJSON(JSON string) ([]interface{}, error) {
+func getValuesFromJSON(JSON string) ([]interface{}, error) {
 	pointers := make([]interface{}, 0)
 	bytes := []byte(JSON)
 	err := json.Unmarshal(bytes, &pointers)
-	return pointers, err
+	if err != nil {
+		return nil, err
+	}
+	for i, ptr := range pointers {
+		switch v := ptr.(type) {
+		// Normalise integral floats
+		case float64:
+			i64 := int64(v)
+			if float64(i64) == v {
+				pointers[i] = i64
+			}
+		}
+	}
+	return pointers, nil
+}
+
+func digits(x uint64) int {
+	if x == 0 {
+		return 1
+	}
+	return int(math.Log10(float64(x))) + 1
 }

@@ -26,6 +26,8 @@ SOLIDITY_GO_FILES = $(patsubst %.sol, %.sol.go, $(SOLIDITY_FILES))
 
 CI_IMAGE="hyperledger/burrow:ci"
 
+export GO111MODULE=on
+
 ### Formatting, linting and vetting
 
 # check the code for style standards; currently enforces go formatting.

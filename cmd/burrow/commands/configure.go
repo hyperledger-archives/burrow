@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/deployment"
@@ -27,30 +26,28 @@ import (
 	"github.com/tendermint/tendermint/p2p"
 )
 
+// Configure generates burrow configuration(s)
 func Configure(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
+
 		genesisSpecOpt := cmd.StringOpt("s genesis-spec", "",
 			"A GenesisSpec to use as a template for a GenesisDoc that will be created along with keys")
 
 		jsonOutOpt := cmd.BoolOpt("j json", false, "Emit config in JSON rather than TOML "+
 			"suitable for further processing")
 
-		keysUrlOpt := cmd.StringOpt("k keys-url", "", fmt.Sprintf("Provide keys GRPC address, default: %s",
+		keysURLOpt := cmd.StringOpt("k keys-url", "", fmt.Sprintf("Provide keys GRPC address, default: %s",
 			keys.DefaultKeysConfig().RemoteAddress))
 
-		keysDir := cmd.StringOpt("keysdir", "", "Directory where keys are stored")
-
-		configOpt := cmd.StringOpt("c base-config", "", "Use the a specified burrow config file as a base")
-
-		genesisDocOpt := cmd.StringOpt("g genesis-doc", "", "GenesisDoc in JSON or TOML to embed in config")
+		keysDir := cmd.StringOpt("keys-dir", "", "Directory where keys are stored")
 
 		generateNodeKeys := cmd.BoolOpt("generate-node-keys", false, "Generate node keys for validators")
 
-		configTemplateIn := cmd.StringsOpt("t config-template-in", nil,
+		configTemplateIn := cmd.StringsOpt("config-template-in", nil,
 			fmt.Sprintf("Go text/template template input filename (left delim: %s right delim: %s) to generate config "+
 				"file specified with --config-out", deployment.LeftTemplateDelim, deployment.RightTemplateDelim))
 
-		configOut := cmd.StringsOpt("o config-out", nil,
+		configOut := cmd.StringsOpt("config-out", nil,
 			"Go text/template template output file. Template filename specified with --config-template-in "+
 				"file specified with --config-out")
 
@@ -73,24 +70,21 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 		pool := cmd.BoolOpt("pool", false, "Write config files for all the validators called burrowNNN.toml")
 
-		cmd.Spec = "[--keys-url=<keys URL> | --keysdir=<keys directory>] " +
-			"[--config-template-in=<text template> --config-out=<output file>]... " +
-			"[--genesis-spec=<GenesisSpec file> | --genesis-doc=<GenesisDoc file>] " +
-			"[--separate-genesis-doc=<genesis JSON file>] [--chain-name=<chain name>] [--json] " +
-			"[--generate-node-keys] [--restore-dump=<dump file>] " +
-			"[--logging=<logging program>] [--describe-logging] [--debug] [--pool]"
+		cmd.Spec = "[--keys-url=<keys URL> | --keys-dir=<keys directory>] " +
+			"[ --config-template-in=<text template> --config-out=<output file>]... " +
+			"[--genesis-spec=<GenesisSpec file>] [--separate-genesis-doc=<genesis JSON file>] " +
+			"[--chain-name=<chain name>] [--generate-node-keys] [--restore-dump=<dump file>] " +
+			"[--logging=<logging program>] [--describe-logging] [--json] [--debug] [--pool]"
 
+		// no sourcing logs
+		source.LogWriter = ioutil.Discard
+		// TODO: this has default, only set if explicit?
 		configOpts := addConfigOptions(cmd)
 
 		cmd.Action = func() {
-			conf := config.DefaultBurrowConfig()
-
-			if *configOpt != "" {
-				// If explicitly given a config file use it as a base:
-				err := source.FromFile(*configOpt, conf)
-				if err != nil {
-					output.Fatalf("could not read base config file (as TOML): %v", err)
-				}
+			conf, err := configOpts.obtainBurrowConfig()
+			if err != nil {
+				output.Fatalf("could not obtain config: %v", err)
 			}
 
 			if *describeLoggingOpt {
@@ -104,8 +98,8 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				return
 			}
 
-			if *keysUrlOpt != "" {
-				conf.Keys.RemoteAddress = *keysUrlOpt
+			if *keysURLOpt != "" {
+				conf.Keys.RemoteAddress = *keysURLOpt
 			}
 
 			if len(*configTemplateIn) != len(*configOut) {
@@ -197,13 +191,6 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				if err != nil {
 					output.Fatalf("could not realise GenesisSpec: %v", err)
 				}
-			} else if *genesisDocOpt != "" {
-				genesisDoc := new(genesis.GenesisDoc)
-				err := source.FromFile(*genesisDocOpt, genesisDoc)
-				if err != nil {
-					output.Fatalf("could not read GenesisDoc: %v", err)
-				}
-				conf.GenesisDoc = genesisDoc
 			}
 
 			if *chainNameOpt != "" {
@@ -288,11 +275,6 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				}
 			}
 
-			var validators []genesis.Validator
-			if conf.GenesisDoc != nil {
-				validators = conf.GenesisDoc.Validators
-			}
-
 			if *separateGenesisDoc != "" {
 				if conf.GenesisDoc == nil {
 					output.Fatalf("Cannot write separate genesis doc since no GenesisDoc/GenesisSpec provided.")
@@ -308,47 +290,36 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				conf.GenesisDoc = nil
 			}
 
-			err := configOpts.configure(conf)
-			if err != nil {
-				output.Fatalf("could not update burrow config: %v", err)
-			}
-
-			if *pool && len(validators) > 0 {
-				for i, v := range validators {
-					if v.NodeAddress == nil {
+			if *pool {
+				peers := make([]string, 0)
+				for i, val := range conf.GenesisDoc.Validators {
+					if val.NodeAddress == nil {
 						continue
 					}
-					seeds := ""
-					for n, v := range validators {
-						if i == n || v.NodeAddress == nil {
-							continue
-						}
-						if seeds != "" {
-							seeds += ","
-						}
-						seeds += fmt.Sprintf("tcp://%s@127.0.0.1:%d", strings.ToLower(v.NodeAddress.String()), 26656+n)
-					}
+					peers = append(peers, fmt.Sprintf("tcp://%s@127.0.0.1:%d", strings.ToLower(val.NodeAddress.String()), 26656+i))
+				}
+				for i, acc := range conf.GenesisDoc.Accounts {
 					// set stuff
-					conf.ValidatorAddress = &v.Address
-					conf.BurrowDir = fmt.Sprintf("burrow%03d", i)
-					conf.Tendermint.PersistentPeers = seeds
+					conf.Address = &acc.Address
+					conf.Tendermint.PersistentPeers = strings.Join(peers, ",")
 
+					conf.BurrowDir = fmt.Sprintf(".burrow%03d", i)
 					conf.Tendermint.ListenHost = rpc.LocalHost
 					conf.Tendermint.ListenPort = fmt.Sprint(26656 + i)
-
 					conf.RPC.Info.ListenHost = rpc.LocalHost
 					conf.RPC.Info.ListenPort = fmt.Sprint(26758 + i)
-
 					conf.RPC.GRPC.ListenHost = rpc.LocalHost
 					conf.RPC.GRPC.ListenPort = fmt.Sprint(10997 + i)
-
 					conf.RPC.Metrics.ListenHost = rpc.LocalHost
 					conf.RPC.Metrics.ListenPort = fmt.Sprint(9102 + i)
-
 					conf.Logging.RootSink.Output.OutputType = "file"
 					conf.Logging.RootSink.Output.FileConfig = &logconfig.FileConfig{Path: fmt.Sprintf("burrow%03d.log", i)}
 
-					ioutil.WriteFile(fmt.Sprintf("burrow%03d.toml", i), []byte(conf.TOMLString()), 0644)
+					if *jsonOutOpt {
+						ioutil.WriteFile(fmt.Sprintf("burrow%03d.json", i), []byte(conf.JSONString()), 0644)
+					} else {
+						ioutil.WriteFile(fmt.Sprintf("burrow%03d.toml", i), []byte(conf.TOMLString()), 0644)
+					}
 				}
 			} else if *jsonOutOpt {
 				output.Printf(conf.JSONString())

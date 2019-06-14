@@ -3,6 +3,8 @@ package config
 import (
 	"time"
 
+	"github.com/hyperledger/burrow/vent/sqlsol"
+
 	"github.com/hyperledger/burrow/vent/types"
 )
 
@@ -18,7 +20,7 @@ type VentConfig struct {
 	LogLevel       string
 	SpecFileOrDirs []string
 	AbiFileOrDirs  []string
-	DBBlockTx      bool
+	SpecOpt        sqlsol.SpecOpt
 	// Announce status every AnnouncePeriod
 	AnnounceEvery time.Duration
 }
@@ -32,7 +34,7 @@ func DefaultVentConfig() *VentConfig {
 		GRPCAddr:      "localhost:10997",
 		HTTPAddr:      "0.0.0.0:8080",
 		LogLevel:      "debug",
-		DBBlockTx:     false,
+		SpecOpt:       sqlsol.None,
 		AnnounceEvery: time.Second * 5,
 	}
 }

@@ -34,7 +34,7 @@ func TestServer(t *testing.T) {
 			cfg := config.DefaultVentConfig()
 
 			// create test db
-			_, closeDB := test.NewTestDB(t, kern.Blockchain.ChainID(), cfg)
+			_, closeDB := test.NewTestDB(t, cfg)
 			defer closeDB()
 
 			cfg.SpecFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_example.json"}
@@ -44,7 +44,7 @@ func TestServer(t *testing.T) {
 			log := logger.NewLogger(cfg.LogLevel)
 			consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
 
-			projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, false)
+			projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, sqlsol.None)
 			abiSpec, err := abi.LoadPath(cfg.AbiFileOrDirs...)
 
 			var wg sync.WaitGroup

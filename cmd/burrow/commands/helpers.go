@@ -20,7 +20,7 @@ type Output interface {
 	Fatalf(format string, args ...interface{})
 }
 
-func obtainBurrowConfig(configFile, genesisDocFile string) (*config.BurrowConfig, error) {
+func obtainDefaultConfig(configFile, genesisDocFile string) (*config.BurrowConfig, error) {
 	// We need to reflect on whether this obscures where values are coming from
 	conf := config.DefaultBurrowConfig()
 	// We treat logging a little differently in that if anything is set for logging we will not

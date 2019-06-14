@@ -59,7 +59,7 @@ If you haven't already, swap in the public key for your new validator and run th
 
 ```bash
 sed -i "s/NEW_VALIDATOR/$NEW_VALIDATOR/" deploy.yaml
-burrow deploy -u 127.0.0.1:10997 --mempool-signing=true --address=$OLD_VALIDATOR deploy.yaml
+burrow deploy -c 127.0.0.1:10997 --mempool-signing=true --address=$OLD_VALIDATOR deploy.yaml
 ```
 
 If this returns successfully, you'll be able to see that the new validator is now in the running set:

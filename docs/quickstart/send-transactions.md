@@ -16,7 +16,7 @@ SIGNING_ADDRESS=HERE_ONE_VALIDATOR_ADDRESS_OF_THE_GENESIS
 burrow deploy --address $SIGNING_ADDRESS test.yaml
 ```
 
-where you should replace the `--address` field with the `ValidatorAddress` at the top of your `burrow.toml`.
+where you should replace the `--address` field with the `Address` at the top of your `burrow.toml`.
 
 if you have updated the default burrow GRPC port, parameter `-u` `--chain` is your burrow running node ip:GRPCport.
 

@@ -129,7 +129,6 @@ func (kern *Kernel) LoadState(genesisDoc *genesis.GenesisDoc) (err error) {
 				"state gives %X, blockchain gives %X", kern.Blockchain.LastBlockHeight(),
 				kern.State.Hash(), kern.Blockchain.AppHashAfterLastBlock())
 		}
-
 	} else {
 		kern.Logger.InfoMsg("Creating new application state from genesis")
 		kern.State, err = state.MakeGenesisState(kern.database, genesisDoc)
