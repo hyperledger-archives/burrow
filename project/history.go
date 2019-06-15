@@ -49,7 +49,10 @@ func FullVersion() string {
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases(
 		"",
-		`### Fixed
+		`### Added
+- [WASM] Support for WASM contracts written in Solidity compiled using solang
+
+### Fixed
 -[RPC/Transact] CallCodeSim and CallTxSim were run against uncommitted checker state rather than committed state were all other reads are routed. They were also passed through Transactor for no particularly good reason. This changes them to run against committed DB state and removes the code path through Transactor.
 
 ### Changed

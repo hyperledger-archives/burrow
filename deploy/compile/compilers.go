@@ -226,6 +226,7 @@ func CompileWASM(file string, workDir string, logger *logging.Logger) (*Response
 	}
 	output, err := shellCmd.CombinedOutput()
 	if err != nil {
+		logger.InfoMsg("solang failed", "output", string(output))
 		return nil, err
 	}
 	logger.TraceMsg("Command Output", "result", string(output))

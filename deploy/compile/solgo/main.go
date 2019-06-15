@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path"
@@ -10,11 +11,25 @@ import (
 )
 
 func main() {
-	for _, solfile := range os.Args[1:] {
-		resp, err := compile.Compile(solfile, false, "", nil, logging.NewNoopLogger())
-		if err != nil {
-			fmt.Printf("failed compile solidity: %v\n", err)
-			os.Exit(1)
+	wasmPtr := flag.Bool("wasm", false, "Use solang rather than solc")
+	flag.Parse()
+
+	for _, solfile := range flag.Args() {
+		var resp *compile.Response
+		var err error
+
+		if *wasmPtr {
+			resp, err = compile.CompileWASM(solfile, "", logging.NewNoopLogger())
+			if err != nil {
+				fmt.Printf("failed compile solidity to wasm: %v\n", err)
+				os.Exit(1)
+			}
+		} else {
+			resp, err = compile.Compile(solfile, false, "", nil, logging.NewNoopLogger())
+			if err != nil {
+				fmt.Printf("failed compile solidity: %v\n", err)
+				os.Exit(1)
+			}
 		}
 
 		if resp.Error != "" {
@@ -37,8 +52,12 @@ func main() {
 		f.WriteString("import hex \"github.com/tmthrgd/go-hex\"\n\n")
 
 		for _, c := range resp.Objects {
+			code := c.Contract.Evm.Bytecode.Object
+			if code == "" {
+				code = c.Contract.EWasm.Wasm
+			}
 			f.WriteString(fmt.Sprintf("var Bytecode_%s = hex.MustDecodeString(\"%s\")\n",
-				c.Objectname, c.Contract.Evm.Bytecode.Object))
+				c.Objectname, code))
 			f.WriteString(fmt.Sprintf("var Abi_%s = []byte(`%s`)\n",
 				c.Objectname, c.Contract.Abi))
 		}
