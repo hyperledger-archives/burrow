@@ -28,36 +28,32 @@ var tt255 = new(big.Int).Lsh(big1, 255)
 
 //--------------------------------------------------------------------------------
 
-func PutUint64LE(dest []byte, i uint64) {
-	binary.LittleEndian.PutUint64(dest, i)
-}
-
-func GetUint64LE(src []byte) uint64 {
-	return binary.LittleEndian.Uint64(src)
-}
-
-func PutUint64BE(dest []byte, i uint64) {
+func PutUint64(dest []byte, i uint64) {
 	binary.BigEndian.PutUint64(dest, i)
 }
 
-func GetUint64BE(src []byte) uint64 {
+func GetUint64(src []byte) uint64 {
 	return binary.BigEndian.Uint64(src)
 }
 
-func PutInt64LE(dest []byte, i int64) {
-	binary.LittleEndian.PutUint64(dest, uint64(i))
+func Uint64Bytes(v uint64) []byte {
+	bs := make([]byte, 8)
+	binary.BigEndian.PutUint64(bs, v)
+	return bs
 }
 
-func GetInt64LE(src []byte) int64 {
-	return int64(binary.LittleEndian.Uint64(src))
-}
-
-func PutInt64BE(dest []byte, i int64) {
+func PutInt64(dest []byte, i int64) {
 	binary.BigEndian.PutUint64(dest, uint64(i))
 }
 
-func GetInt64BE(src []byte) int64 {
+func GetInt64(src []byte) int64 {
 	return int64(binary.BigEndian.Uint64(src))
+}
+
+func Int64Bytes(v int64) []byte {
+	bs := make([]byte, 8)
+	binary.BigEndian.PutUint64(bs, uint64(v))
+	return bs
 }
 
 // Returns whether a + b would be a uint64 overflow

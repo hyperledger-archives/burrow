@@ -12,4 +12,5 @@ make build
 
 This will build the `burrow` binary and put it in the `bin/` directory. It can be executed from there or put wherever is convenient.
 
-You can also install `burrow` into `$GOPATH/bin` with `make install_burrow`,
+You can also install `burrow` into `$BIN_PATH/bin` with `make install`, where `$BIN_PATH` defaults to `$HOME/go/bin`
+if not set in environment.

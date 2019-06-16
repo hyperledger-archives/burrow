@@ -190,7 +190,7 @@ func Nonce(caller Address, nonce []byte) []byte {
 // Obtain a nearly unique nonce based on a montonic account sequence number
 func SequenceNonce(address Address, sequence uint64) []byte {
 	bs := make([]byte, 8)
-	binary.PutUint64BE(bs, sequence)
+	binary.PutUint64(bs, sequence)
 	return Nonce(address, bs)
 }
 

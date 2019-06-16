@@ -791,7 +791,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 				vm.sequence++
 				nonce := make([]byte, txs.HashLength+uint64Length)
 				copy(nonce, vm.nonce)
-				PutUint64BE(nonce[txs.HashLength:], vm.sequence)
+				PutUint64(nonce[txs.HashLength:], vm.sequence)
 				newAccount = crypto.NewContractAddress(callee, nonce)
 			} else if op == CREATE2 {
 				salt := stack.Pop()

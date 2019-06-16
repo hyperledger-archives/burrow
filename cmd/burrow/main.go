@@ -24,7 +24,17 @@ func burrow(output commands.Output) *cli.Cli {
 	app.ErrorHandling = flag.ContinueOnError
 
 	versionOpt := app.BoolOpt("v version", false, "Print the Burrow version")
-	app.Spec = "[--version]"
+	chDirOpt := app.StringOpt("C directory", "", "Change directory before running")
+	app.Spec = "[--version] [--directory=<working directory>]"
+
+	app.Before = func() {
+		if *chDirOpt != "" {
+			err := os.Chdir(*chDirOpt)
+			if err != nil {
+				output.Fatalf("Could not change working directory to %s: %v", *chDirOpt, err)
+			}
+		}
+	}
 
 	app.Action = func() {
 		if *versionOpt {

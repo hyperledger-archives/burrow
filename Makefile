@@ -26,6 +26,9 @@ SOLIDITY_GO_FILES = $(patsubst %.sol, %.sol.go, $(SOLIDITY_FILES))
 
 CI_IMAGE="hyperledger/burrow:ci"
 
+GOPATH?=${HOME}/go
+BIN_PATH?=${GOPATH}/bin
+
 export GO111MODULE=on
 
 ### Formatting, linting and vetting
@@ -122,9 +125,10 @@ build_burrow_sqlite: commit_hash
 	-X github.com/hyperledger/burrow/project.date=$(shell date -I)" \
 	-o ${REPO}/bin/burrow-vent-sqlite ./cmd/burrow
 
-.PHONY: install_burrow
-install_burrow: build_burrow
-	cp ${REPO}/bin/burrow ${GOPATH}/bin/burrow
+.PHONY: install
+install: build_burrow
+	mkdir -p ${BIN_PATH}
+	cp ${REPO}/bin/burrow ${BIN_PATH}/burrow
 
 # build burrow with checks for race conditions
 .PHONY: build_race_db

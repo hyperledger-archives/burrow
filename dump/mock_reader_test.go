@@ -1,18 +1,12 @@
-package state
+package dump
 
 import (
 	"fmt"
 	"math/rand"
-	"testing"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/genesis"
-	"github.com/stretchr/testify/require"
-	dbm "github.com/tendermint/tendermint/libs/db"
-
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/dump"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 )
@@ -24,13 +18,12 @@ type MockDumpReader struct {
 	events   int
 }
 
-func (m *MockDumpReader) Next() (*dump.Dump, error) {
-	// acccounts
-	row := dump.Dump{Height: 102}
+func (m *MockDumpReader) Next() (*Dump, error) {
+	row := Dump{Height: 102}
 
 	if m.accounts > 0 {
 		var addr crypto.Address
-		binary.PutUint64BE(addr.Bytes(), uint64(m.accounts))
+		binary.PutUint64(addr.Bytes(), uint64(m.accounts))
 
 		row.Account = &acm.Account{
 			Address: addr,
@@ -45,16 +38,16 @@ func (m *MockDumpReader) Next() (*dump.Dump, error) {
 		m.accounts--
 	} else if m.storage > 0 {
 		var addr crypto.Address
-		binary.PutUint64BE(addr.Bytes(), uint64(m.storage))
+		binary.PutUint64(addr.Bytes(), uint64(m.storage))
 		storagelen := rand.Int() % 25
 
-		row.AccountStorage = &dump.AccountStorage{
+		row.AccountStorage = &AccountStorage{
 			Address: addr,
-			Storage: make([]*dump.Storage, storagelen),
+			Storage: make([]*Storage, storagelen),
 		}
 
 		for i := 0; i < storagelen; i++ {
-			row.AccountStorage.Storage[i] = &dump.Storage{}
+			row.AccountStorage.Storage[i] = &Storage{}
 		}
 
 		m.storage--
@@ -71,8 +64,8 @@ func (m *MockDumpReader) Next() (*dump.Dump, error) {
 		data := make([]byte, datalen*32)
 		topiclen := rand.Int() % 5
 		topics := make([]binary.Word256, topiclen)
-		row.EVMEvent = &dump.EVMEvent{
-			ChainID: "MockyChain",
+		row.EVMEvent = &EVMEvent{
+			ChainID: "MockChain",
 			Event: &exec.LogEvent{
 				Address: crypto.ZeroAddress,
 				Data:    data,
@@ -85,21 +78,4 @@ func (m *MockDumpReader) Next() (*dump.Dump, error) {
 	}
 
 	return &row, nil
-}
-
-func BenchmarkLoadDump(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		mock := MockDumpReader{
-			accounts: 2000,
-			storage:  1000,
-			names:    100,
-			events:   100000,
-		}
-		st, err := MakeGenesisState(dbm.NewMemDB(), &genesis.GenesisDoc{})
-		require.NoError(b, err)
-		err = st.LoadDump(&mock)
-		require.NoError(b, err)
-		err = st.InitialCommit()
-		require.NoError(b, err)
-	}
 }

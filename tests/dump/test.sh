@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # Test the dump restore functionality
-# 
+#
 # Steps taken:
 # - Create a chain
 # - Create some code and events
@@ -11,10 +11,12 @@
 # - Check all bits are present (account, namereg, code, events)
 
 set -e
+set -x
 
 burrow_dump="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 tmp_dir=$(mktemp -d 2>/dev/null || mktemp -d -t 'tmpdumpXXX')
-trap "rm -f $tmp_dir" EXIT
+trap "rm -rf $tmp_dir" EXIT
+
 cd $tmp_dir
 rm -rf .burrow genesis.json burrow.toml burrow.log
 
@@ -23,9 +25,10 @@ burrow_bin=${burrow_bin:-burrow}
 title="Creating new chain..."
 echo -e "\n${title//?/-}\n${title}\n${title//?/-}\n"
 
-$burrow_bin spec -n "Fresh Chain" -v1 | $burrow_bin configure -n BurrowTestDumpNode -s- --separate-genesis-doc genesis.json > burrow.toml
+$burrow_bin spec -n "Fresh Chain" -v1 | $burrow_bin configure -n BurrowTestDumpNode -e "always" -s- --separate-genesis-doc genesis.json > burrow.toml
 
 $burrow_bin start 2>> burrow.log &
+
 burrow_pid=$!
 function kill_burrow {
 	kill -KILL $burrow_pid
@@ -43,8 +46,8 @@ $burrow_bin deploy -o '' -a Validator_0 --dir $burrow_dump deploy.yaml
 title="Dumping chain..."
 echo -e "${title//?/-}\n${title}\n${title//?/-}\n"
 
-$burrow_bin dump dump.bin
-$burrow_bin dump -j dump.json
+$burrow_bin dump remote dump.bin
+$burrow_bin dump remote -j dump.json
 height=$(head -1  dump.json | jq .Height)
 
 kill $burrow_pid
@@ -57,7 +60,7 @@ rm -rf .burrow burrow.toml
 title="Create new chain based of dump with new name..."
 echo -e "\n${title//?/-}\n${title}\n${title//?/-}\n"
 
-$burrow_bin configure -m BurrowTestRestoreNode -n "Restored Chain" --genesis genesis-original.json --separate-genesis-doc genesis.json --restore-dump dump.json > burrow.toml
+$burrow_bin configure -m BurrowTestRestoreNode -e "always" -n "Restored Chain" --genesis genesis-original.json --separate-genesis-doc genesis.json --restore-dump dump.json > burrow.toml
 
 $burrow_bin restore dump.json
 $burrow_bin start 2>> burrow.log &
@@ -67,7 +70,7 @@ sleep 13
 title="Dumping restored chain for comparison..."
 echo -e "\n${title//?/-}\n${title}\n${title//?/-}\n"
 
-burrow dump -j --height $height dump-after-restore.json
+$burrow_bin dump remote -j --height $height dump-after-restore.json
 
 kill $burrow_pid
 

@@ -206,7 +206,7 @@ func (c *Client) SignAndBroadcast(tx payload.Payload, logger *logging.Logger) (*
 	if err != nil {
 		return nil, err
 	}
-	return c.BroadcastEnvelope(txEnv, logger)
+	return unifyErrors(c.BroadcastEnvelope(txEnv, logger))
 }
 
 func (c *Client) SignTx(tx payload.Payload, logger *logging.Logger) (*txs.Envelope, error) {
@@ -266,7 +266,7 @@ func (c *Client) Broadcast(tx payload.Payload, logger *logging.Logger) (*exec.Tx
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
-	return c.transactClient.BroadcastTxSync(ctx, &rpctransact.TxEnvelopeParam{Payload: tx.Any()})
+	return unifyErrors(c.transactClient.BroadcastTxSync(ctx, &rpctransact.TxEnvelopeParam{Payload: tx.Any()}))
 }
 
 // Broadcast envelope - can be locally signed or remote signing will be attempted
@@ -278,7 +278,7 @@ func (c *Client) BroadcastEnvelope(txEnv *txs.Envelope, logger *logging.Logger) 
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
-	return c.transactClient.BroadcastTxSync(ctx, &rpctransact.TxEnvelopeParam{Envelope: txEnv})
+	return unifyErrors(c.transactClient.BroadcastTxSync(ctx, &rpctransact.TxEnvelopeParam{Envelope: txEnv}))
 }
 
 func (c *Client) ParseUint64(amount string) (uint64, error) {
@@ -308,7 +308,7 @@ func (c *Client) QueryContract(arg *QueryArg, logger *logging.Logger) (*exec.TxE
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
-	return c.transactClient.CallTxSim(ctx, tx)
+	return unifyErrors(c.transactClient.CallTxSim(ctx, tx))
 }
 
 // Transaction types
@@ -646,4 +646,13 @@ func argMap(value interface{}) map[string]interface{} {
 		}
 	}
 	return fields
+}
+
+// In order to safely handle a TxExecution one must check the Exception field to account for committed transaction
+// (therefore having no error) that may have exceptional executions (therefore not having the normal return values)
+func unifyErrors(txe *exec.TxExecution, err error) (*exec.TxExecution, error) {
+	if err != nil {
+		return nil, err
+	}
+	return txe, txe.Exception.AsError()
 }
