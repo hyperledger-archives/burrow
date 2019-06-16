@@ -147,9 +147,9 @@ func mkBlock(height, numTxs, events uint64) *exec.BlockExecution {
 
 func mkTx(height, txIndex, events uint64) *exec.TxExecution {
 	hash := make([]byte, 32)
-	binary.PutUint64BE(hash[:8], height)
-	binary.PutUint64BE(hash[8:16], txIndex)
-	binary.PutUint64BE(hash[16:24], events)
+	binary.PutUint64(hash[:8], height)
+	binary.PutUint64(hash[8:16], txIndex)
+	binary.PutUint64(hash[16:24], events)
 	txe := &exec.TxExecution{
 		TxHeader: &exec.TxHeader{
 			TxHash: hash,

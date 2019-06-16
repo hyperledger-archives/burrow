@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/hyperledger/burrow/dump"
+
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/deployment"
@@ -66,6 +68,10 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 		chainNameOpt := cmd.StringOpt("n chain-name", "", "Default chain name")
 
+		emptyBlocksOpt := cmd.StringOpt("e empty-blocks", "",
+			"Whether to create empty blocks, one of: 'never' (always wait for transactions before proposing a "+
+				"block, 'always' (at end of each consensus round), or a duration like '1s', '5m', or '6h'")
+
 		restoreDumpOpt := cmd.StringOpt("restore-dump", "", "Including AppHash for restored file")
 
 		pool := cmd.BoolOpt("pool", false, "Write config files for all the validators called burrowNNN.toml")
@@ -74,7 +80,8 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 			"[ --config-template-in=<text template> --config-out=<output file>]... " +
 			"[--genesis-spec=<GenesisSpec file>] [--separate-genesis-doc=<genesis JSON file>] " +
 			"[--chain-name=<chain name>] [--generate-node-keys] [--restore-dump=<dump file>] " +
-			"[--logging=<logging program>] [--describe-logging] [--json] [--debug] [--pool]"
+			"[--logging=<logging program>] [--describe-logging] [--empty-blocks=<'always','never',duration>] " +
+			"[--json] [--debug] [--pool]"
 
 		// no sourcing logs
 		source.LogWriter = ioutil.Discard
@@ -114,9 +121,6 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				err := source.FromFile(*genesisSpecOpt, genesisSpec)
 				if err != nil {
 					output.Fatalf("Could not read GenesisSpec: %v", err)
-				}
-				if *restoreDumpOpt != "" {
-					output.Fatalf("Cannot restore using GenesisSpec, please provide GenesisDoc")
 				}
 				if conf.Keys.RemoteAddress == "" {
 					dir := conf.Keys.KeysDirectory
@@ -209,7 +213,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("On restore, validators must be provided in GenesisDoc or GenesisSpec")
 				}
 
-				reader, err := state.NewFileDumpReader(*restoreDumpOpt)
+				reader, err := dump.NewFileReader(*restoreDumpOpt)
 				if err != nil {
 					output.Fatalf("Failed to read restore dump: %v", err)
 				}
@@ -219,14 +223,9 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("could not generate state from genesis: %v", err)
 				}
 
-				err = st.LoadDump(reader)
+				err = dump.Load(reader, st)
 				if err != nil {
 					output.Fatalf("could not restore dump %s: %v", *restoreDumpOpt, err)
-				}
-
-				err = st.InitialCommit()
-				if err != nil {
-					output.Fatalf("could not commit: %v", err)
 				}
 
 				conf.GenesisDoc.AppHash = st.Hash()
@@ -288,6 +287,10 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("Could not write GenesisDoc JSON: %v", err)
 				}
 				conf.GenesisDoc = nil
+			}
+
+			if *emptyBlocksOpt != "" {
+				conf.Tendermint.CreateEmptyBlocks = *emptyBlocksOpt
 			}
 
 			if *pool {
