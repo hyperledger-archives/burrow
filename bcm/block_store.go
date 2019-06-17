@@ -11,23 +11,23 @@ import (
 	"github.com/tendermint/tendermint/types"
 )
 
-type BlockStore struct {
+type BlockExplorer struct {
 	txDecoder txs.Decoder
 	state.BlockStoreRPC
 }
 
-func NewBlockStore(blockStore state.BlockStoreRPC) *BlockStore {
-	return &BlockStore{
+func NewBlockStore(blockStore state.BlockStoreRPC) *BlockExplorer {
+	return &BlockExplorer{
 		txDecoder:     txs.NewAminoCodec(),
 		BlockStoreRPC: blockStore,
 	}
 }
 
-func NewBlockExplorer(dbBackendType db.DBBackendType, dbDir string) *BlockStore {
+func NewBlockExplorer(dbBackendType db.DBBackendType, dbDir string) *BlockExplorer {
 	return NewBlockStore(blockchain.NewBlockStore(db.NewDB("blockstore", dbBackendType, dbDir)))
 }
 
-func (bs *BlockStore) Block(height int64) (_ *Block, err error) {
+func (bs *BlockExplorer) Block(height int64) (_ *Block, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("BlockStore.Block(): could not get block at height %v: %v", height, r)
@@ -41,7 +41,7 @@ func (bs *BlockStore) Block(height int64) (_ *Block, err error) {
 	return NewBlock(bs.txDecoder, tmBlock), nil
 }
 
-func (bs *BlockStore) BlockMeta(height int64) (_ *types.BlockMeta, err error) {
+func (bs *BlockExplorer) BlockMeta(height int64) (_ *types.BlockMeta, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("BlockStore.BlockMeta() could not get BlockMeta at height %d: %v\n%s",
@@ -52,9 +52,9 @@ func (bs *BlockStore) BlockMeta(height int64) (_ *types.BlockMeta, err error) {
 }
 
 // Iterate over blocks between start (inclusive) and end (exclusive)
-func (bs *BlockStore) Blocks(start, end int64, iter func(*Block) (stop bool)) (stopped bool, err error) {
+func (bs *BlockExplorer) Blocks(start, end int64, iter func(*Block) error) error {
 	if end > 0 && start >= end {
-		return false, fmt.Errorf("end height must be strictly greater than start height")
+		return fmt.Errorf("end height must be strictly greater than start height")
 	}
 	if start <= 0 {
 		// From first block
@@ -68,12 +68,13 @@ func (bs *BlockStore) Blocks(start, end int64, iter func(*Block) (stop bool)) (s
 	for height := start; height <= end; height++ {
 		block, err := bs.Block(height)
 		if err != nil {
-			return false, err
+			return err
 		}
-		if iter(block) {
-			return true, nil
+		err = iter(block)
+		if err != nil {
+			return err
 		}
 	}
 
-	return false, nil
+	return nil
 }

@@ -92,7 +92,6 @@ func (cb *cacheBatch) Write() {
 }
 
 func (cb *cacheBatch) Close() {
-	cb.Close()
 }
 
 func (cb *cacheBatch) WriteSync() {

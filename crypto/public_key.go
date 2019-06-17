@@ -88,7 +88,8 @@ func (p PublicKey) Verify(msg []byte, signature *Signature) error {
 		if ed25519.Verify(p.PublicKey.Bytes(), msg, signature.Signature) {
 			return nil
 		}
-		return fmt.Errorf("'%X' is not a valid ed25519 signature for message: %X", signature, msg)
+		return fmt.Errorf("signature '%X' is not a valid ed25519 signature for message: %s",
+			signature.Signature, string(msg))
 	case CurveTypeSecp256k1:
 		pub, err := btcec.ParsePubKey(p.PublicKey, btcec.S256())
 		if err != nil {
@@ -101,7 +102,8 @@ func (p PublicKey) Verify(msg []byte, signature *Signature) error {
 		if sig.Verify(msg, pub) {
 			return nil
 		}
-		return fmt.Errorf("'%X' is not a valid secp256k1 signature for message: %X", signature, msg)
+		return fmt.Errorf("signature '%X' is not a valid secp256k1 signature for message: %s",
+			signature.Signature, string(msg))
 	default:
 		return fmt.Errorf("invalid curve type")
 	}

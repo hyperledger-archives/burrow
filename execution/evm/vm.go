@@ -134,12 +134,9 @@ func (vm *VM) fireCallEvent(eventSink EventSink, callType exec.CallType, errProv
 	errSink.PushError(eventErr)
 }
 
-// CONTRACT state is aware of caller and callee, so we can just mutate them.
-// CONTRACT code and input are not mutated.
-// CONTRACT returned 'ret' is a new compact slice.
-// value: To be transferred from caller to callee. Refunded upon errors.CodedError.
-// gas:   Available gas. No refunds for gas.
-// code: May be nil, since the CALL opcode may be used to send value from contracts to accounts
+// Initiate an EVM call against the provided state pushing events to eventSink. code should contain the EVM bytecode,
+// input the CallData (readable by CALLDATALOAD), value the amount of native token to transfer with the call
+// an quantity metering the number of computational steps available to the execution according to the gas schedule.
 func (vm *VM) Call(callState Interface, eventSink EventSink, caller, callee crypto.Address, code,
 	input []byte, value uint64, gas *uint64) (output []byte, err errors.CodedError) {
 
