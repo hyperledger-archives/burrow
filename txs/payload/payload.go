@@ -42,6 +42,15 @@ const (
 	TypeProposal    = Type(0x23)
 )
 
+type Payload interface {
+	String() string
+	GetInputs() []*TxInput
+	Type() Type
+	Any() *Any
+	// The serialised size in bytes
+	Size() int
+}
+
 var nameFromType = map[Type]string{
 	TypeUnknown:     "UnknownTx",
 	TypeSend:        "SendTx",
@@ -91,15 +100,6 @@ func (typ Type) Marshal() ([]byte, error) {
 
 func (typ *Type) Unmarshal(data []byte) error {
 	return typ.UnmarshalText(data)
-}
-
-type Payload interface {
-	String() string
-	GetInputs() []*TxInput
-	Type() Type
-	Any() *Any
-	// The serialised size in bytes
-	Size() int
 }
 
 func InputsString(inputs []*TxInput) string {

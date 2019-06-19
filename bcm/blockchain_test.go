@@ -77,6 +77,6 @@ func assertState(t *testing.T, blockchain *Blockchain, height uint64, blockTime 
 }
 
 func newGenesisDoc() *genesis.GenesisDoc {
-	genesisDoc, _, _ := genesis.NewDeterministicGenesis(3450976).GenesisDoc(23, true, 4, 10, true, 4)
+	genesisDoc, _, _ := genesis.NewDeterministicGenesis(3450976).GenesisDoc(23, 10)
 	return genesisDoc
 }
