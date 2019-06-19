@@ -48,60 +48,63 @@ type BlockchainInfo interface {
 
 type Blockchain struct {
 	sync.RWMutex
-	db                    dbm.DB
-	genesisHash           []byte
-	genesisDoc            genesis.GenesisDoc
-	chainID               string
-	lastBlockHeight       uint64
-	lastBlockTime         time.Time
-	lastBlockHash         []byte
-	lastCommitTime        time.Time
-	lastCommitDuration    time.Duration
-	appHashAfterLastBlock []byte
-	blockStore            *BlockExplorer
+	persistedState PersistedState
+	// Non-persisted state
+	db                 dbm.DB
+	blockStore         *BlockStore
+	genesisDoc         genesis.GenesisDoc
+	lastBlockHash      []byte
+	lastCommitTime     time.Time
+	lastCommitDuration time.Duration
 }
 
 var _ BlockchainInfo = &Blockchain{}
 
 type PersistedState struct {
 	AppHashAfterLastBlock []byte
+	LastBlockTime         time.Time
 	LastBlockHeight       uint64
 	GenesisHash           []byte
 }
 
 // LoadOrNewBlockchain returns true if state already exists
-func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc, logger *logging.Logger) (bool, *Blockchain, error) {
+func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc, logger *logging.Logger) (_ *Blockchain, exists bool, _ error) {
 	logger = logger.WithScope("LoadOrNewBlockchain")
 	logger.InfoMsg("Trying to load blockchain state from database",
 		"database_key", stateKey)
 	bc, err := loadBlockchain(db, genesisDoc)
 	if err != nil {
-		return false, nil, fmt.Errorf("error loading blockchain state from database: %v", err)
+		return nil, false, fmt.Errorf("error loading blockchain state from database: %v", err)
 	}
 	if bc != nil {
-		dbHash := bc.genesisHash
+		dbHash := bc.GenesisHash()
 		argHash := genesisDoc.Hash()
 		if !bytes.Equal(dbHash, argHash) {
-			return false, nil, fmt.Errorf("GenesisDoc passed to LoadOrNewBlockchain has hash: 0x%X, which does not "+
+			return nil, false, fmt.Errorf("GenesisDoc passed to LoadOrNewBlockchain has hash: 0x%X, which does not "+
 				"match the one found in database: 0x%X, database genesis:\n%v\npassed genesis:\n%v\n",
 				argHash, dbHash, bc.genesisDoc.JSONString(), genesisDoc.JSONString())
 		}
-		return true, bc, nil
+		if bc.LastBlockTime().Before(genesisDoc.GenesisTime) {
+			return nil, false, fmt.Errorf("LastBlockTime %v from loaded Blockchain is before GenesisTime %v",
+				bc.LastBlockTime(), genesisDoc.GenesisTime)
+		}
+		return bc, true, nil
 	}
 
 	logger.InfoMsg("No existing blockchain state found in database, making new blockchain")
-	return false, NewBlockchain(db, genesisDoc), nil
+	return NewBlockchain(db, genesisDoc), false, nil
 }
 
 // NewBlockchain returns a pointer to blockchain state initialised from genesis
 func NewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) *Blockchain {
 	bc := &Blockchain{
-		db:                    db,
-		genesisHash:           genesisDoc.Hash(),
-		genesisDoc:            *genesisDoc,
-		chainID:               genesisDoc.ChainID(),
-		lastBlockTime:         genesisDoc.GenesisTime,
-		appHashAfterLastBlock: genesisDoc.Hash(),
+		db: db,
+		persistedState: PersistedState{
+			AppHashAfterLastBlock: genesisDoc.Hash(),
+			GenesisHash:           genesisDoc.Hash(),
+			LastBlockTime:         genesisDoc.GenesisTime,
+		},
+		genesisDoc: *genesisDoc,
 	}
 	return bc
 }
@@ -131,7 +134,7 @@ func loadBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*Blockchain, err
 }
 
 func (bc *Blockchain) CommitBlock(blockTime time.Time, blockHash, appHash []byte) error {
-	return bc.CommitBlockAtHeight(blockTime, blockHash, appHash, bc.lastBlockHeight+1)
+	return bc.CommitBlockAtHeight(blockTime, blockHash, appHash, bc.persistedState.LastBlockHeight+1)
 }
 
 func (bc *Blockchain) CommitBlockAtHeight(blockTime time.Time, blockHash, appHash []byte, height uint64) error {
@@ -144,17 +147,17 @@ func (bc *Blockchain) CommitBlockAtHeight(blockTime time.Time, blockHash, appHas
 	if err != nil {
 		return err
 	}
-	bc.lastCommitDuration = blockTime.Sub(bc.lastBlockTime)
-	bc.lastBlockHeight = height
-	bc.lastBlockTime = blockTime
+	bc.lastCommitDuration = blockTime.Sub(bc.persistedState.LastBlockTime)
 	bc.lastBlockHash = blockHash
-	bc.appHashAfterLastBlock = appHash
+	bc.persistedState.LastBlockHeight = height
+	bc.persistedState.LastBlockTime = blockTime
+	bc.persistedState.AppHashAfterLastBlock = appHash
 	bc.lastCommitTime = time.Now().UTC()
 	return nil
 }
 
 func (bc *Blockchain) CommitWithAppHash(appHash []byte) error {
-	bc.appHashAfterLastBlock = appHash
+	bc.persistedState.AppHashAfterLastBlock = appHash
 	bc.Lock()
 	defer bc.Unlock()
 
@@ -175,12 +178,7 @@ func (bc *Blockchain) save() error {
 var cdc = amino.NewCodec()
 
 func (bc *Blockchain) Encode() ([]byte, error) {
-	persistedState := &PersistedState{
-		GenesisHash:           bc.genesisDoc.Hash(),
-		AppHashAfterLastBlock: bc.appHashAfterLastBlock,
-		LastBlockHeight:       bc.lastBlockHeight,
-	}
-	encodedState, err := cdc.MarshalBinaryBare(persistedState)
+	encodedState, err := cdc.MarshalBinaryBare(bc.persistedState)
 	if err != nil {
 		return nil, err
 	}
@@ -188,22 +186,16 @@ func (bc *Blockchain) Encode() ([]byte, error) {
 }
 
 func decodeBlockchain(encodedState []byte, genesisDoc *genesis.GenesisDoc) (*Blockchain, error) {
-	persistedState := new(PersistedState)
-	err := cdc.UnmarshalBinaryBare(encodedState, persistedState)
+	bc := NewBlockchain(nil, genesisDoc)
+	err := cdc.UnmarshalBinaryBare(encodedState, &bc.persistedState)
 	if err != nil {
 		return nil, err
 	}
-
-	bc := NewBlockchain(nil, genesisDoc)
-	bc.genesisHash = persistedState.GenesisHash
-	//bc.lastBlockHeight = persistedState.LastBlockHeight
-	bc.lastBlockHeight = persistedState.LastBlockHeight
-	bc.appHashAfterLastBlock = persistedState.AppHashAfterLastBlock
 	return bc, nil
 }
 
 func (bc *Blockchain) GenesisHash() []byte {
-	return bc.genesisHash
+	return bc.persistedState.GenesisHash
 }
 
 func (bc *Blockchain) GenesisDoc() genesis.GenesisDoc {
@@ -211,7 +203,7 @@ func (bc *Blockchain) GenesisDoc() genesis.GenesisDoc {
 }
 
 func (bc *Blockchain) ChainID() string {
-	return bc.chainID
+	return bc.genesisDoc.ChainID()
 }
 
 func (bc *Blockchain) LastBlockHeight() uint64 {
@@ -220,13 +212,13 @@ func (bc *Blockchain) LastBlockHeight() uint64 {
 	}
 	bc.RLock()
 	defer bc.RUnlock()
-	return bc.lastBlockHeight
+	return bc.persistedState.LastBlockHeight
 }
 
 func (bc *Blockchain) LastBlockTime() time.Time {
 	bc.RLock()
 	defer bc.RUnlock()
-	return bc.lastBlockTime
+	return bc.persistedState.LastBlockTime
 }
 
 func (bc *Blockchain) LastCommitTime() time.Time {
@@ -250,12 +242,12 @@ func (bc *Blockchain) LastBlockHash() []byte {
 func (bc *Blockchain) AppHashAfterLastBlock() []byte {
 	bc.RLock()
 	defer bc.RUnlock()
-	return bc.appHashAfterLastBlock
+	return bc.persistedState.AppHashAfterLastBlock
 }
 
 // Tendermint block access
 
-func (bc *Blockchain) SetBlockStore(bs *BlockExplorer) {
+func (bc *Blockchain) SetBlockStore(bs *BlockStore) {
 	bc.blockStore = bs
 }
 

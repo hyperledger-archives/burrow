@@ -14,7 +14,7 @@ func Examine(output Output) func(cmd *cli.Cmd) {
 	return func(dump *cli.Cmd) {
 		configOpts := addConfigOptions(dump)
 
-		var explorer *bcm.BlockExplorer
+		var explorer *bcm.BlockStore
 
 		dump.Before = func() {
 			conf, err := configOpts.obtainBurrowConfig()
