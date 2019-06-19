@@ -48,7 +48,7 @@ func TestKernelNoConsensus(t *testing.T) {
 func testKernel(t *testing.T, opts ...func(*config.BurrowConfig)) {
 	t.Run(fmt.Sprintf("Group"), func(t *testing.T) {
 		t.Parallel()
-		genesisDoc, privateAccounts, privateValidators := genesis.NewDeterministicGenesis(123).GenesisDoc(1, true, 1000, 1, true, 1000)
+		genesisDoc, privateAccounts, privateValidators := genesis.NewDeterministicGenesis(123).GenesisDoc(1, 1)
 		t.Run("BootThenShutdown", func(t *testing.T) {
 			conf, cleanup := integration.NewTestConfig(genesisDoc, opts...)
 			defer cleanup()

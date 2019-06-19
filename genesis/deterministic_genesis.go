@@ -21,14 +21,13 @@ func NewDeterministicGenesis(seed int64) *deterministicGenesis {
 	}
 }
 
-func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, minBalance uint64, numValidators int,
-	randBonded bool, minBonded int64) (*GenesisDoc, []*acm.PrivateAccount, []*acm.PrivateAccount) {
+func (dg *deterministicGenesis) GenesisDoc(numAccounts int, numValidators int) (*GenesisDoc, []*acm.PrivateAccount, []*acm.PrivateAccount) {
 
 	accounts := make([]Account, numAccounts)
 	privAccounts := make([]*acm.PrivateAccount, numAccounts)
 	defaultPerms := permission.DefaultAccountPermissions
 	for i := 0; i < numAccounts; i++ {
-		account, privAccount := dg.Account(randBalance, minBalance)
+		account, privAccount := dg.Account(9999999)
 		acc := Account{
 			BasicAccount: BasicAccount{
 				Address: account.GetAddress(),
@@ -69,7 +68,7 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, randBalance bool, mi
 
 }
 
-func (dg *deterministicGenesis) Account(randBalance bool, minBalance uint64) (*acm.Account, *acm.PrivateAccount) {
+func (dg *deterministicGenesis) Account(minBalance uint64) (*acm.Account, *acm.PrivateAccount) {
 	privateKey, err := crypto.GeneratePrivateKey(dg.random, crypto.CurveTypeEd25519)
 	if err != nil {
 		panic(fmt.Errorf("could not generate private key deterministically"))
@@ -87,8 +86,6 @@ func (dg *deterministicGenesis) Account(randBalance bool, minBalance uint64) (*a
 		Balance:     minBalance,
 		Permissions: perms,
 	}
-	if randBalance {
-		acc.Balance += uint64(dg.random.Int())
-	}
+	acc.Balance += uint64(dg.random.Int())
 	return acc, privAccount.PrivateAccount()
 }

@@ -127,7 +127,7 @@ var users = makeUsers(10)
 var logger = logging.NewNoopLogger()
 var deterministicGenesis = genesis.NewDeterministicGenesis(34059836243380576)
 var testGenesisDoc, testPrivAccounts, _ = deterministicGenesis.
-	GenesisDoc(3, true, 1000, 1, true, 1000)
+	GenesisDoc(3, 1)
 var testChainID = testGenesisDoc.ChainID()
 
 func TestSendFails(t *testing.T) {
@@ -1546,8 +1546,7 @@ func newBaseGenDoc(globalPerm, accountPerm permission.AccountPermissions) genesi
 
 func makeGenesisState(numAccounts int, randBalance bool, minBalance uint64, numValidators int, randBonded bool,
 	minBonded int64) (*state.State, []*acm.PrivateAccount) {
-	testGenesisDoc, privAccounts, _ := deterministicGenesis.GenesisDoc(numAccounts, randBalance, minBalance,
-		numValidators, randBonded, minBonded)
+	testGenesisDoc, privAccounts, _ := deterministicGenesis.GenesisDoc(numAccounts, numValidators)
 	s0, err := state.MakeGenesisState(dbm.NewMemDB(), testGenesisDoc)
 	if err != nil {
 		panic(fmt.Errorf("could not make genesis state: %v", err))

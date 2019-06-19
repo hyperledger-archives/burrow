@@ -76,7 +76,8 @@ type GenesisDoc struct {
 	Accounts          []Account
 	Validators        []Validator
 	// memo
-	hash []byte
+	hash    []byte
+	chainID string
 }
 
 func (genesisDoc *GenesisDoc) JSONString() string {
@@ -113,7 +114,10 @@ func (genesisDoc *GenesisDoc) ShortHash() []byte {
 }
 
 func (genesisDoc *GenesisDoc) ChainID() string {
-	return fmt.Sprintf("%s-%X", genesisDoc.ChainName, genesisDoc.ShortHash())
+	if genesisDoc.chainID == "" {
+		genesisDoc.chainID = fmt.Sprintf("%s-%X", genesisDoc.ChainName, genesisDoc.ShortHash())
+	}
+	return genesisDoc.chainID
 }
 
 //------------------------------------------------------------
