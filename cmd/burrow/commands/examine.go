@@ -14,7 +14,7 @@ func Examine(output Output) func(cmd *cli.Cmd) {
 	return func(dump *cli.Cmd) {
 		configOpts := addConfigOptions(dump)
 
-		var explorer *bcm.BlockStore
+		var explorer *bcm.BlockExplorer
 
 		dump.Before = func() {
 			conf, err := configOpts.obtainBurrowConfig()
@@ -38,14 +38,14 @@ func Examine(output Output) func(cmd *cli.Cmd) {
 			cmd.Action = func() {
 				start, end, err := parseRange(*rangeArg)
 
-				_, err = explorer.Blocks(start, end,
-					func(block *bcm.Block) (stop bool) {
+				err = explorer.Blocks(start, end,
+					func(block *bcm.Block) error {
 						bs, err := json.Marshal(block)
 						if err != nil {
 							output.Fatalf("Could not serialise block: %v", err)
 						}
 						output.Printf(string(bs))
-						return false
+						return nil
 					})
 				if err != nil {
 					output.Fatalf("Error iterating over blocks: %v", err)
@@ -62,9 +62,9 @@ func Examine(output Output) func(cmd *cli.Cmd) {
 			cmd.Action = func() {
 				start, end, err := parseRange(*rangeArg)
 
-				_, err = explorer.Blocks(start, end,
-					func(block *bcm.Block) (stop bool) {
-						stopped, err := block.Transactions(func(txEnv *txs.Envelope) (stop bool) {
+				err = explorer.Blocks(start, end,
+					func(block *bcm.Block) error {
+						err := block.Transactions(func(txEnv *txs.Envelope) error {
 							wrapper := struct {
 								Height int64
 								Tx     *txs.Envelope
@@ -77,13 +77,13 @@ func Examine(output Output) func(cmd *cli.Cmd) {
 								output.Fatalf("Could not deserialise transaction: %v", err)
 							}
 							output.Printf(string(bs))
-							return false
+							return nil
 						})
 						if err != nil {
 							output.Fatalf("Error iterating over transactions: %v", err)
 						}
 						// If we stopped transactions stop everything
-						return stopped
+						return nil
 					})
 				if err != nil {
 					output.Fatalf("Error iterating over blocks: %v", err)

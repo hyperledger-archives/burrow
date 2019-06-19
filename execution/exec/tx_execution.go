@@ -62,13 +62,15 @@ func (key *TxExecutionKey) Encode() ([]byte, error) {
 
 func (txe *TxExecution) StreamEvents() StreamEvents {
 	var ses StreamEvents
-	ses = append(ses, &StreamEvent{
-		BeginTx: &BeginTx{
-			TxHeader:  txe.TxHeader,
-			Exception: txe.Exception,
-			Result:    txe.Result,
+	ses = append(ses,
+		&StreamEvent{
+			BeginTx: &BeginTx{
+				TxHeader:  txe.TxHeader,
+				Exception: txe.Exception,
+				Result:    txe.Result,
+			},
 		},
-	})
+	)
 	for _, ev := range txe.Events {
 		ses = append(ses, &StreamEvent{
 			Event: ev,

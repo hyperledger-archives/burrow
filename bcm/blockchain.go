@@ -58,7 +58,7 @@ type Blockchain struct {
 	lastCommitTime        time.Time
 	lastCommitDuration    time.Duration
 	appHashAfterLastBlock []byte
-	blockStore            *BlockStore
+	blockStore            *BlockExplorer
 }
 
 var _ BlockchainInfo = &Blockchain{}
@@ -255,7 +255,7 @@ func (bc *Blockchain) AppHashAfterLastBlock() []byte {
 
 // Tendermint block access
 
-func (bc *Blockchain) SetBlockStore(bs *BlockStore) {
+func (bc *Blockchain) SetBlockStore(bs *BlockExplorer) {
 	bc.blockStore = bs
 }
 
