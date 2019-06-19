@@ -52,9 +52,9 @@ func (bs *BlockStore) BlockMeta(height int64) (_ *types.BlockMeta, err error) {
 }
 
 // Iterate over blocks between start (inclusive) and end (exclusive)
-func (bs *BlockStore) Blocks(start, end int64, iter func(*Block) (stop bool)) (stopped bool, err error) {
+func (bs *BlockStore) Blocks(start, end int64, iter func(*Block) error) error {
 	if end > 0 && start >= end {
-		return false, fmt.Errorf("end height must be strictly greater than start height")
+		return fmt.Errorf("end height must be strictly greater than start height")
 	}
 	if start <= 0 {
 		// From first block
@@ -68,12 +68,13 @@ func (bs *BlockStore) Blocks(start, end int64, iter func(*Block) (stop bool)) (s
 	for height := start; height <= end; height++ {
 		block, err := bs.Block(height)
 		if err != nil {
-			return false, err
+			return err
 		}
-		if iter(block) {
-			return true, nil
+		err = iter(block)
+		if err != nil {
+			return err
 		}
 	}
 
-	return false, nil
+	return nil
 }

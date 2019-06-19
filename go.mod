@@ -33,6 +33,7 @@ require (
 	github.com/jmhodges/levigo v1.0.0 // indirect
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.1.1
+	github.com/magiconair/properties v1.8.0
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/monax/relic v2.0.0+incompatible
 	github.com/pkg/errors v0.8.1
