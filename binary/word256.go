@@ -16,6 +16,7 @@ package binary
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"math/big"
 	"sort"
@@ -128,12 +129,12 @@ func (w Word256) Size() int {
 }
 
 func Uint64ToWord256(i uint64) (word Word256) {
-	PutUint64(word[24:], i)
+	binary.BigEndian.PutUint64(word[24:], i)
 	return
 }
 
 func Int64ToWord256(i int64) (word Word256) {
-	PutInt64(word[24:], i)
+	binary.BigEndian.PutUint64(word[24:], uint64(i))
 	return
 }
 
@@ -148,11 +149,11 @@ func LeftPadWord256(bz []byte) (word Word256) {
 }
 
 func Uint64FromWord256(word Word256) uint64 {
-	return GetUint64(word.Postfix(8))
+	return binary.BigEndian.Uint64(word.Postfix(8))
 }
 
 func Int64FromWord256(word Word256) int64 {
-	return GetInt64(word.Postfix(8))
+	return int64(Uint64FromWord256(word))
 }
 
 //-------------------------------------

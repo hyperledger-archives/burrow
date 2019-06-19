@@ -15,6 +15,7 @@
 package evm
 
 import (
+	bin "encoding/binary"
 	"strconv"
 	"testing"
 	"time"
@@ -833,7 +834,7 @@ func TestCreate(t *testing.T) {
 	// ensure pre-generated address has same sequence number
 	nonce := make([]byte, txs.HashLength+uint64Length)
 	copy(nonce, ourVm.nonce)
-	PutUint64(nonce[txs.HashLength:], ourVm.sequence+1)
+	bin.BigEndian.PutUint64(nonce[txs.HashLength:], ourVm.sequence+1)
 	addr := crypto.NewContractAddress(callee, nonce)
 
 	var gas uint64 = 100000

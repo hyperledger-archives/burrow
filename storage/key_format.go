@@ -1,10 +1,9 @@
 package storage
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strings"
-
-	"github.com/hyperledger/burrow/binary"
 )
 
 const (
@@ -236,9 +235,9 @@ func scan(a interface{}, value []byte) {
 		// Ignore - allows for omitted values
 	case *int64:
 		// Negative values will be mapped correctly when read in as uint64 and then type converted
-		*v = binary.GetInt64(value)
+		*v = int64(binary.BigEndian.Uint64(value))
 	case *uint64:
-		*v = binary.GetUint64(value)
+		*v = binary.BigEndian.Uint64(value)
 	case *[]byte:
 		*v = value
 	case *string:
@@ -251,14 +250,14 @@ func scan(a interface{}, value []byte) {
 func format(a interface{}) []byte {
 	switch v := a.(type) {
 	case uint64:
-		return binary.Uint64Bytes(v)
+		return uint64Bytes(v)
 	case int64:
-		return binary.Uint64Bytes(uint64(v))
+		return uint64Bytes(uint64(v))
 	// Provide formatting from int,uint as a convenience to avoid casting arguments
 	case uint:
-		return binary.Uint64Bytes(uint64(v))
+		return uint64Bytes(uint64(v))
 	case int:
-		return binary.Uint64Bytes(uint64(v))
+		return uint64Bytes(uint64(v))
 	case []byte:
 		return v
 	case ByteSlicable:
@@ -268,6 +267,12 @@ func format(a interface{}) []byte {
 	default:
 		panic(fmt.Errorf("KeyFormat format() does not support formatting value of type %T: %v", a, a))
 	}
+}
+
+func uint64Bytes(v uint64) []byte {
+	bs := make([]byte, 8)
+	binary.BigEndian.PutUint64(bs, v)
+	return bs
 }
 
 // MustKeyFormat for panicking early when a KeyFormat does not parse

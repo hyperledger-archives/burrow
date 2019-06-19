@@ -1,10 +1,9 @@
 package storage
 
 import (
+	bin "encoding/binary"
 	"math/rand"
 	"testing"
-
-	"github.com/hyperledger/burrow/binary"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -61,7 +60,7 @@ func benchmarkKVCache_Iterator(b *testing.B, inserts int) {
 	keyvals := make([][]byte, inserts)
 	for i := 0; i < inserts; i++ {
 		bs := make([]byte, 8)
-		binary.PutInt64(bs, rnd.Int63())
+		bin.BigEndian.PutUint64(bs, uint64(rnd.Int63()))
 		keyvals[i] = bs
 	}
 	for i := 0; i < inserts; i++ {

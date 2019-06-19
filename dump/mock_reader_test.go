@@ -1,6 +1,7 @@
 package dump
 
 import (
+	bin "encoding/binary"
 	"fmt"
 	"math/rand"
 
@@ -23,7 +24,7 @@ func (m *MockDumpReader) Next() (*Dump, error) {
 
 	if m.accounts > 0 {
 		var addr crypto.Address
-		binary.PutUint64(addr.Bytes(), uint64(m.accounts))
+		bin.BigEndian.PutUint64(addr.Bytes(), uint64(m.accounts))
 
 		row.Account = &acm.Account{
 			Address: addr,
@@ -38,7 +39,7 @@ func (m *MockDumpReader) Next() (*Dump, error) {
 		m.accounts--
 	} else if m.storage > 0 {
 		var addr crypto.Address
-		binary.PutUint64(addr.Bytes(), uint64(m.storage))
+		bin.BigEndian.PutUint64(addr.Bytes(), uint64(m.storage))
 		storagelen := rand.Int() % 25
 
 		row.AccountStorage = &AccountStorage{

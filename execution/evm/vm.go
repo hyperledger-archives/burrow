@@ -16,6 +16,7 @@ package evm
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -788,7 +789,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 				vm.sequence++
 				nonce := make([]byte, txs.HashLength+uint64Length)
 				copy(nonce, vm.nonce)
-				PutUint64(nonce[txs.HashLength:], vm.sequence)
+				binary.BigEndian.PutUint64(nonce[txs.HashLength:], vm.sequence)
 				newAccount = crypto.NewContractAddress(callee, nonce)
 			} else if op == CREATE2 {
 				salt := stack.Pop()
