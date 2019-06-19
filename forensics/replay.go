@@ -45,7 +45,7 @@ func (recap *ReplayCapture) String() string {
 }
 
 func NewReplay(dbDir string, genesisDoc *genesis.GenesisDoc, logger *logging.Logger) *Replay {
-	//burrowDB := core.NewBurrowDB(dbDir)
+	// burrowDB := core.NewBurrowDB(dbDir)
 	// Avoid writing through to underlying DB
 	db := dbm.NewDB(core.BurrowDBName, dbm.GoLevelDBBackend, dbDir)
 	cacheDB := storage.NewCacheDB(db)
