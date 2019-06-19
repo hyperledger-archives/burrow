@@ -7,6 +7,7 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -272,9 +273,9 @@ func (m *AccountPermissions) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintPermission(dAtA, i, uint64(m.Base.Size()))
-	n1, err := m.Base.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
+	n1, err1 := m.Base.MarshalTo(dAtA[i:])
+	if err1 != nil {
+		return 0, err1
 	}
 	i += n1
 	if len(m.Roles) > 0 {
@@ -347,9 +348,9 @@ func (m *PermArgs) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintPermission(dAtA, i, uint64(m.Target.Size()))
-		n2, err := m.Target.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		n2, err2 := m.Target.MarshalTo(dAtA[i:])
+		if err2 != nil {
+			return 0, err2
 		}
 		i += n2
 	}
@@ -445,14 +446,7 @@ func (m *PermArgs) Size() (n int) {
 }
 
 func sovPermission(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozPermission(x uint64) (n int) {
 	return sovPermission(uint64((x << 1) ^ uint64((int64(x) >> 63))))

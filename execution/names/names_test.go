@@ -9,20 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEncodeAmino(t *testing.T) {
-	entry := &Entry{
-		Name:    "Foo",
-		Data:    "oh noes",
-		Expires: 24423432,
-		Owner:   crypto.Address{1, 2, 0, 9, 8, 8, 1, 2},
-	}
-	encoded, err := entry.Encode()
-	require.NoError(t, err)
-	entryOut, err := DecodeEntry(encoded)
-	require.NoError(t, err)
-	assert.Equal(t, entry, entryOut)
-}
-
 func TestEncodeProtobuf(t *testing.T) {
 	entry := &Entry{
 		Name:    "Foo",

@@ -7,6 +7,7 @@ import (
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/encoding"
 )
 
 // Returns nil if account does not exist with given address.
@@ -19,7 +20,12 @@ func (s *ReadState) GetAccount(address crypto.Address) (*acm.Account, error) {
 	if accBytes == nil {
 		return nil, nil
 	}
-	return acm.Decode(accBytes)
+	account := new(acm.Account)
+	err = encoding.Decode(accBytes, account)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode Account: %v", err)
+	}
+	return account, nil
 }
 
 func (ws *writeState) statsAddAccount(acc *acm.Account) {
@@ -46,7 +52,7 @@ func (ws *writeState) UpdateAccount(account *acm.Account) error {
 	if account == nil {
 		return fmt.Errorf("UpdateAccount passed nil account in State")
 	}
-	encodedAccount, err := account.Encode()
+	bs, err := encoding.Encode(account)
 	if err != nil {
 		return fmt.Errorf("UpdateAccount could not encode account: %v", err)
 	}
@@ -54,7 +60,7 @@ func (ws *writeState) UpdateAccount(account *acm.Account) error {
 	if err != nil {
 		return err
 	}
-	updated := tree.Set(keys.Account.KeyNoPrefix(account.Address), encodedAccount)
+	updated := tree.Set(keys.Account.KeyNoPrefix(account.Address), bs)
 	if updated {
 		ws.statsAddAccount(account)
 	}
@@ -68,11 +74,12 @@ func (ws *writeState) RemoveAccount(address crypto.Address) error {
 	}
 	accBytes, deleted := tree.Delete(keys.Account.KeyNoPrefix(address))
 	if deleted {
-		acc, err := acm.Decode(accBytes)
+		account := new(acm.Account)
+		err := encoding.Decode(accBytes, account)
 		if err != nil {
 			return err
 		}
-		ws.statsRemoveAccount(acc)
+		ws.statsRemoveAccount(account)
 		// Delete storage associated with account too
 		_, err = ws.forest.Delete(keys.Storage.Key(address))
 		if err != nil {
@@ -88,7 +95,8 @@ func (s *ReadState) IterateAccounts(consumer func(*acm.Account) error) error {
 		return err
 	}
 	return tree.Iterate(nil, nil, true, func(key []byte, value []byte) error {
-		account, err := acm.Decode(value)
+		account := new(acm.Account)
+		err := encoding.Decode(value, account)
 		if err != nil {
 			return fmt.Errorf("IterateAccounts could not decode account: %v", err)
 		}

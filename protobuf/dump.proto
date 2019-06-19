@@ -11,6 +11,7 @@ import "names.proto";
 
 package dump;
 
+option (gogoproto.stable_marshaler_all) = true;
 // Enable custom Marshal method.
 option (gogoproto.marshaler_all) = true;
 // Enable custom Unmarshal method.
@@ -38,7 +39,7 @@ message EVMEvent {
     // The original block time for this transaction
     google.protobuf.Timestamp Time = 2 [(gogoproto.nullable)=false, (gogoproto.stdtime)=true];
     // The event itself
-    exec.LogEvent Event = 3; 
+    exec.LogEvent Event = 3;
 
 }
 

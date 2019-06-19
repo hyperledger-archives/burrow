@@ -7,6 +7,7 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -43,16 +44,12 @@ func (m *PublicKey) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *PublicKey) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_PublicKey.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalTo(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *PublicKey) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_PublicKey.Merge(m, src)
@@ -96,16 +93,12 @@ func (m *PrivateKey) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *PrivateKey) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_PrivateKey.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalTo(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *PrivateKey) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_PrivateKey.Merge(m, src)
@@ -140,16 +133,12 @@ func (m *Signature) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *Signature) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Signature.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalTo(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *Signature) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_Signature.Merge(m, src)
@@ -193,7 +182,7 @@ func init() { proto.RegisterFile("crypto.proto", fileDescriptor_527278fb02d03321
 func init() { golang_proto.RegisterFile("crypto.proto", fileDescriptor_527278fb02d03321) }
 
 var fileDescriptor_527278fb02d03321 = []byte{
-	// 278 bytes of a gzipped FileDescriptorProto
+	// 282 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x49, 0x2e, 0xaa, 0x2c,
 	0x28, 0xc9, 0xd7, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x83, 0xf0, 0xa4, 0x74, 0xd3, 0x33,
 	0x4b, 0x32, 0x4a, 0x93, 0xf4, 0x92, 0xf3, 0x73, 0xf5, 0xd3, 0xf3, 0xd3, 0xf3, 0xf5, 0xc1, 0xd2,
@@ -208,10 +197,10 @@ var fileDescriptor_527278fb02d03321 = []byte{
 	0xb1, 0x24, 0x95, 0x64, 0x67, 0xc9, 0x60, 0x38, 0x0b, 0xc9, 0x7c, 0x21, 0x39, 0x64, 0x83, 0x25,
 	0x98, 0xc1, 0xd2, 0x48, 0x22, 0x56, 0x1c, 0x1d, 0x0b, 0xe4, 0x19, 0xc0, 0x6e, 0x88, 0xe1, 0xe2,
 	0x0c, 0xce, 0x4c, 0xcf, 0x4b, 0x2c, 0x29, 0x2d, 0x4a, 0x25, 0xd9, 0x05, 0x70, 0x9d, 0x30, 0x17,
-	0xc0, 0x05, 0x20, 0x3e, 0x74, 0xb2, 0x3a, 0xf1, 0x48, 0x8e, 0xf1, 0xc2, 0x23, 0x39, 0xc6, 0x07,
-	0x8f, 0xe4, 0x18, 0x0f, 0x3c, 0x96, 0x63, 0x3c, 0xf1, 0x58, 0x8e, 0x31, 0x4a, 0x05, 0x7f, 0xb8,
-	0x41, 0xa2, 0x38, 0x89, 0x0d, 0x1c, 0x75, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xe4, 0xcc,
-	0x65, 0x14, 0x01, 0x02, 0x00, 0x00,
+	0xc0, 0x05, 0x20, 0x3e, 0x74, 0xb2, 0x3b, 0xf1, 0x48, 0x8e, 0xf1, 0xc2, 0x23, 0x39, 0xc6, 0x1b,
+	0x8f, 0xe4, 0x18, 0x1f, 0x3c, 0x92, 0x63, 0x3c, 0xf0, 0x58, 0x8e, 0xf1, 0xc4, 0x63, 0x39, 0xc6,
+	0x28, 0x15, 0xfc, 0x61, 0x07, 0x89, 0xe6, 0x24, 0x36, 0x70, 0xf4, 0x19, 0x03, 0x02, 0x00, 0x00,
+	0xff, 0xff, 0x20, 0x25, 0x33, 0xe2, 0x05, 0x02, 0x00, 0x00,
 }
 
 func (m *PublicKey) Marshal() (dAtA []byte, err error) {
@@ -237,9 +226,9 @@ func (m *PublicKey) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x12
 	i++
 	i = encodeVarintCrypto(dAtA, i, uint64(m.PublicKey.Size()))
-	n1, err := m.PublicKey.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
+	n1, err1 := m.PublicKey.MarshalTo(dAtA[i:])
+	if err1 != nil {
+		return 0, err1
 	}
 	i += n1
 	if m.XXX_unrecognized != nil {
@@ -387,14 +376,7 @@ func (m *Signature) Size() (n int) {
 }
 
 func sovCrypto(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozCrypto(x uint64) (n int) {
 	return sovCrypto(uint64((x << 1) ^ uint64((int64(x) >> 63))))

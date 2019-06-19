@@ -11,7 +11,7 @@ import (
 )
 
 func TestAminoEncodeTxDecodeTx(t *testing.T) {
-	codec := NewAminoCodec()
+	codec := NewProtobufCodec()
 	inputAddress := crypto.Address{1, 2, 3, 4, 5}
 	outputAddress := crypto.Address{5, 4, 3, 2, 1}
 	amount := uint64(2)
@@ -38,7 +38,7 @@ func TestAminoEncodeTxDecodeTx(t *testing.T) {
 }
 
 func TestAminoEncodeTxDecodeTx_CallTx(t *testing.T) {
-	codec := NewAminoCodec()
+	codec := NewProtobufCodec()
 	inputAccount := acm.GeneratePrivateAccountFromSecret("fooo")
 	amount := uint64(2)
 	sequence := uint64(3)
@@ -65,7 +65,7 @@ func TestAminoEncodeTxDecodeTx_CallTx(t *testing.T) {
 }
 
 func TestAminoTxEnvelope(t *testing.T) {
-	codec := NewAminoCodec()
+	codec := NewProtobufCodec()
 	privAccFrom := acm.GeneratePrivateAccountFromSecret("foo")
 	privAccTo := acm.GeneratePrivateAccountFromSecret("bar")
 	toAddress := privAccTo.GetAddress()

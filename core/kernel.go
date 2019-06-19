@@ -96,7 +96,7 @@ func NewKernel(dbDir string) (*Kernel, error) {
 		processes:      make(map[string]process.Process),
 		listeners:      make(map[string]net.Listener),
 		shutdownNotify: make(chan struct{}),
-		txCodec:        txs.NewAminoCodec(),
+		txCodec:        txs.NewProtobufCodec(),
 		database:       dbm.NewDB(BurrowDBName, dbm.GoLevelDBBackend, dbDir),
 	}, err
 }

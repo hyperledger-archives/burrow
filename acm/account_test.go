@@ -49,40 +49,6 @@ func TestAddress(t *testing.T) {
 	assert.Equal(t, addr, addrFromWord256)
 }
 
-func TestDecodeConcrete(t *testing.T) {
-	concreteAcc := NewAccountFromSecret("Super Semi Secret")
-	concreteAcc.Permissions = permission.AccountPermissions{
-		Base: permission.BasePermissions{
-			Perms:  permission.SetGlobal,
-			SetBit: permission.SetGlobal,
-		},
-		Roles: []string{"bums"},
-	}
-	acc := concreteAcc
-	encodedAcc, err := acc.Encode()
-	require.NoError(t, err)
-
-	concreteAccOut, err := Decode(encodedAcc)
-	require.NoError(t, err)
-
-	assert.Equal(t, concreteAcc, concreteAccOut)
-	_, err = Decode([]byte("flungepliffery munknut tolopops"))
-	assert.Error(t, err)
-}
-
-func TestDecode(t *testing.T) {
-	acc := NewAccountFromSecret("Super Semi Secret")
-	encodedAcc, err := acc.Encode()
-	require.NoError(t, err)
-	accOut, err := Decode(encodedAcc)
-	require.NoError(t, err)
-	assert.Equal(t, NewAccountFromSecret("Super Semi Secret"), accOut)
-
-	accOut, err = Decode([]byte("flungepliffery munknut tolopops"))
-	require.Error(t, err)
-	assert.Nil(t, accOut)
-}
-
 func TestMarshalJSON(t *testing.T) {
 	acc := NewAccountFromSecret("Super Semi Secret")
 	acc.EVMCode = []byte{60, 23, 45}

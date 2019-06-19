@@ -22,6 +22,7 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/txs/payload"
 )
@@ -200,19 +201,18 @@ func (tx *Tx) GenerateReceipt() *Receipt {
 	return receipt
 }
 
-var cdc = NewAminoCodec()
-
 func DecodeReceipt(bs []byte) (*Receipt, error) {
 	receipt := new(Receipt)
-	err := cdc.UnmarshalBinaryBare(bs, receipt)
+	err := encoding.Decode(bs, receipt)
 	if err != nil {
 		return nil, err
 	}
+
 	return receipt, nil
 }
 
 func (receipt *Receipt) Encode() ([]byte, error) {
-	return cdc.MarshalBinaryBare(receipt)
+	return encoding.Encode(receipt)
 }
 
 func EnvelopeFromAny(chainID string, p *payload.Any) *Envelope {

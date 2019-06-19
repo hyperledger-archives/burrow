@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 
+	"github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/execution/names"
 )
 
@@ -18,7 +19,8 @@ func (s *ReadState) GetName(name string) (*names.Entry, error) {
 		return nil, nil
 	}
 
-	return names.DecodeEntry(entryBytes)
+	entry := new(names.Entry)
+	return entry, encoding.Decode(entryBytes, entry)
 }
 
 func (ws *writeState) UpdateName(entry *names.Entry) error {
@@ -26,7 +28,7 @@ func (ws *writeState) UpdateName(entry *names.Entry) error {
 	if err != nil {
 		return err
 	}
-	bs, err := entry.Encode()
+	bs, err := encoding.Encode(entry)
 	if err != nil {
 		return err
 	}
@@ -49,7 +51,8 @@ func (s *ReadState) IterateNames(consumer func(*names.Entry) error) error {
 		return err
 	}
 	return tree.Iterate(nil, nil, true, func(key []byte, value []byte) error {
-		entry, err := names.DecodeEntry(value)
+		entry := new(names.Entry)
+		err := encoding.Decode(value, entry)
 		if err != nil {
 			return fmt.Errorf("State.IterateNames() could not iterate over names: %v", err)
 		}

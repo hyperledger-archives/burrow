@@ -9,6 +9,7 @@ import "google/protobuf/duration.proto";
 
 package bcm;
 
+option (gogoproto.stable_marshaler_all) = true;
 option (gogoproto.marshaler_all) = true;
 option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.sizer_all) = true;
@@ -25,4 +26,11 @@ message SyncInfo {
     google.protobuf.Timestamp LatestBlockSeenTime = 5 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
     // Time elapsed since last commit
     google.protobuf.Duration LatestBlockDuration = 6 [(gogoproto.nullable) = false, (gogoproto.stdduration) = true];
+}
+
+message PersistedState {
+    bytes AppHashAfterLastBlock = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
+    google.protobuf.Timestamp LastBlockTime = 2 [(gogoproto.nullable) = false, (gogoproto.stdtime) = true];
+    uint64 LastBlockHeight = 3;
+    bytes GenesisHash = 4 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
 }

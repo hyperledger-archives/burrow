@@ -3,6 +3,7 @@ package state
 import (
 	"math/big"
 
+	"github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/genesis"
 
 	"github.com/hyperledger/burrow/acm/validator"
@@ -98,7 +99,8 @@ func (s *ReadState) Power(id crypto.Address) (*big.Int, error) {
 	if len(bs) == 0 {
 		return new(big.Int), nil
 	}
-	v, err := validator.Decode(bs)
+	v := new(validator.Validator)
+	err = encoding.Decode(bs, v)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +113,8 @@ func (s *ReadState) IterateValidators(fn func(id crypto.Addressable, power *big.
 		return err
 	}
 	return tree.Iterate(nil, nil, true, func(_, value []byte) error {
-		v, err := validator.Decode(value)
+		v := new(validator.Validator)
+		err = encoding.Decode(value, v)
 		if err != nil {
 			return err
 		}
@@ -149,8 +152,7 @@ func (ws *writeState) setPower(id crypto.PublicKey, power *big.Int) error {
 		tree.Delete(key)
 		return nil
 	}
-	v := validator.New(id, power)
-	bs, err := v.Encode()
+	bs, err := encoding.Encode(validator.New(id, power))
 	if err != nil {
 		return err
 	}

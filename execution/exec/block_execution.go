@@ -11,8 +11,8 @@ import (
 func EventStringBlockExecution(height uint64) string { return fmt.Sprintf("Execution/Block/%v", height) }
 
 // Write out TxExecutions parenthetically
-func (be *BlockExecution) StreamEvents() StreamEvents {
-	var ses StreamEvents
+func (be *BlockExecution) StreamEvents() []*StreamEvent {
+	var ses []*StreamEvent
 	ses = append(ses, &StreamEvent{
 		BeginBlock: &BeginBlock{
 			Height: be.Height,
@@ -27,10 +27,6 @@ func (be *BlockExecution) StreamEvents() StreamEvents {
 			Height: be.Height,
 		},
 	})
-}
-
-func (be *BlockExecution) EncodeHeader() ([]byte, error) {
-	return cdc.MarshalBinaryBare(be.Header)
 }
 
 func (*BlockExecution) EventType() EventType {
