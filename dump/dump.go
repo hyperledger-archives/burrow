@@ -53,7 +53,7 @@ func NewDumper(state *state.State, blockchain bcm.BlockchainInfo, logger *loggin
 
 func (ds *Dumper) Transmit(stream Sender, startHeight, endHeight uint64, options Option) error {
 	height := endHeight
-	if height <= 0 {
+	if height == 0 {
 		height = ds.blockchain.LastBlockHeight()
 	}
 	st, err := ds.state.LoadHeight(height)

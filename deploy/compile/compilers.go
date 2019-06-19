@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/hyperledger/burrow/crypto"
@@ -156,10 +155,8 @@ func Compile(file string, optimize bool, workDir string, libraries map[string]st
 	input.Settings.Libraries = make(map[string]map[string]string)
 	input.Settings.Libraries[""] = make(map[string]string)
 
-	if libraries != nil {
-		for l, a := range libraries {
-			input.Settings.Libraries[""][l] = "0x" + a
-		}
+	for l, a := range libraries {
+		input.Settings.Libraries[""][l] = "0x" + a
 	}
 
 	command, err := json.Marshal(input)
@@ -252,17 +249,4 @@ func PrintResponse(resp Response, cli bool, logger *logging.Logger) {
 			)
 		}
 	}
-}
-
-func extractObjectNames(script []byte) ([]string, error) {
-	regExpression, err := regexp.Compile("(contract|library) (.+?) (is)?(.+?)?({)")
-	if err != nil {
-		return nil, err
-	}
-	objectNamesList := regExpression.FindAllSubmatch(script, -1)
-	var objects []string
-	for _, objectNames := range objectNamesList {
-		objects = append(objects, string(objectNames[2]))
-	}
-	return objects, nil
 }

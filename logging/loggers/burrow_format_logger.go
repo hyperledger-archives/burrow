@@ -16,13 +16,12 @@ package loggers
 
 import (
 	"fmt"
-	"time"
-
 	"sync"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging/structure"
-	hex "github.com/tmthrgd/go-hex"
+	"github.com/tmthrgd/go-hex"
 )
 
 // Logger that implements some formatting conventions for burrow and burrow-client
@@ -49,12 +48,12 @@ func (bfl *burrowFormatLogger) Log(keyvals ...interface{}) error {
 		func(key interface{}, value interface{}) (interface{}, interface{}) {
 			switch v := value.(type) {
 			case string:
+			case time.Time:
+				value = v.Format(time.RFC3339Nano)
 			case fmt.Stringer:
 				value = v.String()
 			case []byte:
 				value = hex.EncodeUpperToString(v)
-			case time.Time:
-				value = v.Format(time.RFC3339Nano)
 			}
 			return structure.StringifyKey(key), value
 		})

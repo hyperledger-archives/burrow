@@ -57,6 +57,9 @@ func (pa *PostgresAdapter) Open(dbURL string) (*sqlx.DB, error) {
 
 	if pa.Schema != "" {
 		err = ensureSchema(db, pa.Schema, pa.Log)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		return nil, fmt.Errorf("no schema supplied")
 	}

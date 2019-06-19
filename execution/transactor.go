@@ -196,6 +196,9 @@ func (trans *Transactor) SignTx(txEnv *txs.Envelope) (*txs.Envelope, error) {
 	signers := make([]acm.AddressableSigner, len(inputs))
 	for i, input := range inputs {
 		signers[i], err = trans.MempoolAccounts.SigningAccount(input.Address)
+		if err != nil {
+			return nil, err
+		}
 	}
 	err = txEnv.Sign(signers...)
 	if err != nil {

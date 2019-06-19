@@ -1,9 +1,11 @@
-package storage
+package forensics
 
 import (
 	bin "encoding/binary"
 	"math/rand"
 	"testing"
+
+	"github.com/hyperledger/burrow/storage"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -29,20 +31,20 @@ func TestKVCache_Iterator(t *testing.T) {
 }
 
 func TestKVCache_Iterator2(t *testing.T) {
-	assert.Equal(t, []string{"b"}, testIterate(bz("b"), bz("c"), false, "a", "b", "c", "d"))
-	assert.Equal(t, []string{"b", "c"}, testIterate(bz("b"), bz("cc"), false, "a", "b", "c", "d"))
-	assert.Equal(t, []string{"a", "b", "c", "d"}, testIterate(bz(""), nil, false, "a", "b", "c", "d"))
-	assert.Equal(t, []string{"d", "c", "b", "a"}, testIterate(bz(""), nil, true, "a", "b", "c", "d"))
+	assert.Equal(t, []string{"b"}, testIterate([]byte("b"), []byte("c"), false, "a", "b", "c", "d"))
+	assert.Equal(t, []string{"b", "c"}, testIterate([]byte("b"), []byte("cc"), false, "a", "b", "c", "d"))
+	assert.Equal(t, []string{"a", "b", "c", "d"}, testIterate([]byte(""), nil, false, "a", "b", "c", "d"))
+	assert.Equal(t, []string{"d", "c", "b", "a"}, testIterate([]byte(""), nil, true, "a", "b", "c", "d"))
 	assert.Equal(t, []string{"a", "b", "c", "d"}, testIterate(nil, nil, false, "a", "b", "c", "d"))
 
-	assert.Equal(t, []string{}, testIterate(bz(""), bz(""), false, "a", "b", "c", "d"))
-	assert.Equal(t, []string{}, testIterate(bz("ab"), bz("ab"), false, "a", "b", "c", "d"))
-	assert.Equal(t, []string{"a"}, testIterate(bz("0"), bz("ab"), true, "a", "b", "c", "d"))
-	assert.Equal(t, []string{"c", "b", "a"}, testIterate(bz("a"), bz("c1"), true, "a", "b", "c", "d"))
-	assert.Equal(t, []string{"b", "a"}, testIterate(bz("a"), bz("c"), true, "a", "b", "c", "d"))
-	assert.Equal(t, []string{"b", "a"}, testIterate(bz("a"), bz("c"), true, "a", "b", "c", "d"))
-	assert.Equal(t, []string{}, testIterate(bz("c"), bz("e"), true, "a", "b"))
-	assert.Equal(t, []string{}, testIterate(bz("c"), bz("e"), true, "z", "f"))
+	assert.Equal(t, []string{}, testIterate([]byte(""), []byte(""), false, "a", "b", "c", "d"))
+	assert.Equal(t, []string{}, testIterate([]byte("ab"), []byte("ab"), false, "a", "b", "c", "d"))
+	assert.Equal(t, []string{"a"}, testIterate([]byte("0"), []byte("ab"), true, "a", "b", "c", "d"))
+	assert.Equal(t, []string{"c", "b", "a"}, testIterate([]byte("a"), []byte("c1"), true, "a", "b", "c", "d"))
+	assert.Equal(t, []string{"b", "a"}, testIterate([]byte("a"), []byte("c"), true, "a", "b", "c", "d"))
+	assert.Equal(t, []string{"b", "a"}, testIterate([]byte("a"), []byte("c"), true, "a", "b", "c", "d"))
+	assert.Equal(t, []string{}, testIterate([]byte("c"), []byte("e"), true, "a", "b"))
+	assert.Equal(t, []string{}, testIterate([]byte("c"), []byte("e"), true, "z", "f"))
 }
 
 func BenchmarkKVCache_Iterator_1E6_Inserts(b *testing.B) {
@@ -81,7 +83,7 @@ func testIterate(low, high []byte, reverse bool, keys ...string) []string {
 		bs := []byte(k)
 		kvc.Set(bs, bs)
 	}
-	var it KVIterator
+	var it storage.KVIterator
 	if reverse {
 		it = kvc.ReverseIterator(low, high)
 	} else {

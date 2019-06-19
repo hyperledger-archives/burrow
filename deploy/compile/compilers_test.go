@@ -2,11 +2,14 @@ package compile
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/assert"
@@ -22,10 +25,6 @@ type SolcItem struct {
 type SolcResponse struct {
 	Contracts map[string]*SolcItem `mapstructure:"contracts" json:"contracts"`
 	Version   string               `mapstructure:"version" json:"version"` // json encoded
-}
-
-func BlankSolcItem() *SolcItem {
-	return &SolcItem{}
 }
 
 func BlankSolcResponse() *SolcResponse {
@@ -46,6 +45,7 @@ func TestLocalMulti(t *testing.T) {
 
 	warning, responseJSON := extractWarningJSON(strings.TrimSpace(string(actualOutput)))
 	err = json.Unmarshal([]byte(responseJSON), expectedSolcResponse)
+	require.NoError(t, err)
 
 	respItemArray := make([]ResponseItem, 0)
 
@@ -90,6 +90,7 @@ func TestLocalSingle(t *testing.T) {
 
 	warning, responseJSON := extractWarningJSON(strings.TrimSpace(string(actualOutput)))
 	err = json.Unmarshal([]byte(responseJSON), expectedSolcResponse)
+	require.NoError(t, err)
 
 	respItemArray := make([]ResponseItem, 0)
 
@@ -122,32 +123,23 @@ func TestLocalSingle(t *testing.T) {
 }
 
 func TestFaultyContract(t *testing.T) {
-	var expectedSolcResponse Response
-
-	actualOutput, err := exec.Command("solc", "--combined-json", "bin,abi", "faultyContract.sol").CombinedOutput()
-	err = json.Unmarshal(actualOutput, expectedSolcResponse)
-	t.Log(expectedSolcResponse.Error)
-	resp, err := Compile("faultyContract.sol", false, "", make(map[string]string), logging.NewNoopLogger())
-	t.Log(resp.Error)
+	const faultyContractFile = "tests/compilers_fixtures/faultyContract.sol"
+	actualOutput, err := exec.Command("solc", "--combined-json", "bin,abi", faultyContractFile).CombinedOutput()
+	require.EqualError(t, err, "exit status 1")
+	resp, err := Compile(faultyContractFile, false, "", make(map[string]string), logging.NewNoopLogger())
+	require.NoError(t, err)
 	if err != nil {
-		if expectedSolcResponse.Error != resp.Error {
-			t.Errorf("Expected %v got %v", expectedSolcResponse.Error, resp.Error)
+		if string(actualOutput) != resp.Error {
+			t.Errorf("Expected %v got %v", string(actualOutput), resp.Error)
 		}
 	}
 	output := strings.TrimSpace(string(actualOutput))
-	err = json.Unmarshal([]byte(output), expectedSolcResponse)
+	fmt.Println(output)
 }
 
 func testContractPath() string {
 	baseDir, _ := os.Getwd()
 	return filepath.Join(baseDir, "..", "..", "tests", "compilers_fixtures")
-}
-
-// The solidity 0.4.21 compiler appends something called auxdata to the end of the bin file (this is visible with
-// solc --asm). This is a swarm hash of the metadata, and it's always at the end. This includes the path of the
-// solidity source file, so it will differ.
-func trimAuxdata(bin string) string {
-	return bin[:len(bin)-86]
 }
 
 func extractWarningJSON(output string) (warning string, json string) {

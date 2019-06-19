@@ -66,7 +66,7 @@ func TestDecodeConcrete(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, concreteAcc, concreteAccOut)
-	concreteAccOut, err = Decode([]byte("flungepliffery munknut tolopops"))
+	_, err = Decode([]byte("flungepliffery munknut tolopops"))
 	assert.Error(t, err)
 }
 
@@ -116,7 +116,7 @@ func TestAccountTags(t *testing.T) {
 	assert.Equal(t, "send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | hasRole", str)
 	str, _ = tagged.Get("Roles")
 	assert.Equal(t, "frogs;dogs", str)
-	str, _ = tagged.Get("Code")
+	tagged.Get("Code")
 	qry, err := query.New("Code CONTAINS '0116002556001600360006101000A815'")
 	require.NoError(t, err)
 	assert.True(t, qry.Matches(tagged))

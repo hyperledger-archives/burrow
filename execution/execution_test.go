@@ -608,6 +608,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	}
 	tx.AddOutput(users[7].GetAddress(), 10)
 	err = exe.signExecuteCommit(tx, users[:2]...)
+	require.NoError(t, err)
 
 	// Two inputs, both with send, both with create, two outputs (one known, one unknown) should pass
 	tx = payload.NewSendTx()
@@ -1573,8 +1574,6 @@ func addressPtr(account *acm.Account) *crypto.Address {
 	accountAddresss := account.GetAddress()
 	return &accountAddresss
 }
-
-var ExceptionTimeOut = errors.NewException(errors.ErrorCodeGeneric, "timed out waiting for event")
 
 type testExecutor struct {
 	*executor

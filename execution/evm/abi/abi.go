@@ -451,10 +451,6 @@ func (e EVMInt) unpack(data []byte, offset int, v interface{}) (int, error) {
 	return ElementSize, nil
 }
 
-func (e EVMInt) fixedSize() int {
-	return ElementSize
-}
-
 func (e EVMInt) Dynamic() bool {
 	return false
 }
@@ -597,10 +593,6 @@ func (e EVMBytes) unpack(data []byte, offset int, v interface{}) (int, error) {
 	return ElementSize, nil
 }
 
-func (e EVMBytes) fixedSize() int {
-	return ElementSize
-}
-
 func (e EVMBytes) Dynamic() bool {
 	return e.M == 0
 }
@@ -689,10 +681,6 @@ func (e EVMFixed) unpack(data []byte, offset int, v interface{}) (int, error) {
 	return 0, fmt.Errorf("unpacking of %s not implemented, patches welcome", e.GetSignature())
 }
 
-func (e EVMFixed) fixedSize() int {
-	return ElementSize
-}
-
 func (e EVMFixed) Dynamic() bool {
 	return false
 }
@@ -763,7 +751,7 @@ func readArgSpec(argsJ []ArgumentJSON) ([]Argument, error) {
 		args[i].Indexed = a.Indexed
 
 		baseType := a.Type
-		isArray := regexp.MustCompile("(.*)\\[([0-9]+)\\]")
+		isArray := regexp.MustCompile(`(.*)\[([0-9]+)\]`)
 		m := isArray.FindStringSubmatch(a.Type)
 		if m != nil {
 			args[i].IsArray = true
@@ -818,7 +806,7 @@ func readArgSpec(argsJ []ArgumentJSON) ([]Argument, error) {
 			if M < 8 || M > 256 || (M%8) != 0 {
 				return nil, fmt.Errorf("%s is not valid type", baseType)
 			}
-			if N <= 0 || N > 80 {
+			if N == 0 || N > 80 {
 				return nil, fmt.Errorf("%s is not valid type", baseType)
 			}
 			if m[1] == "fixed" {
@@ -1366,7 +1354,7 @@ func unpack(argSpec []Argument, data []byte, getArg func(int) interface{}) error
 				return err
 			}
 			offset += l
-			l, err = a.EVM.unpack(data, int(o), e)
+			_, err = a.EVM.unpack(data, int(o), e)
 			if err != nil {
 				return err
 			}
@@ -1396,7 +1384,7 @@ func unpack(argSpec []Argument, data []byte, getArg func(int) interface{}) error
 					// We have been asked to return the value as a string; make intermediate
 					// array of strings; we will concatenate after
 					intermediate := make([]interface{}, a.ArrayLength)
-					for i, _ := range intermediate {
+					for i := range intermediate {
 						intermediate[i] = new(string)
 					}
 					array = &intermediate
@@ -1437,11 +1425,11 @@ func unpack(argSpec []Argument, data []byte, getArg func(int) interface{}) error
 				if _, ok := arg.(*string); ok {
 					// We have been asked to return the value as a string; make intermediate
 					// array of strings; we will concatenate after
-					for i, _ := range intermediate {
+					for i := range intermediate {
 						intermediate[i] = new(string)
 					}
 				} else {
-					for i, _ := range intermediate {
+					for i := range intermediate {
 						intermediate[i] = a.EVM.getGoType()
 					}
 				}

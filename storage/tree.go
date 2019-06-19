@@ -7,8 +7,13 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
+// We wrap IAVL's tree types in order to implement standard DB interface and iteration helpers
 type MutableTree struct {
 	*iavl.MutableTree
+}
+
+type ImmutableTree struct {
+	*iavl.ImmutableTree
 }
 
 func NewMutableTree(db dbm.DB, cacheSize int) *MutableTree {
@@ -39,6 +44,19 @@ func (mut *MutableTree) Load(version int64, overwriting bool) error {
 	return nil
 }
 
+func (mut *MutableTree) Iterate(start, end []byte, ascending bool, fn func(key []byte, value []byte) error) error {
+	return mut.asImmutable().Iterate(start, end, ascending, fn)
+}
+
+func (mut *MutableTree) IterateWriteTree(start, end []byte, ascending bool, fn func(key []byte, value []byte) error) error {
+	var err error
+	mut.MutableTree.IterateRange(start, end, ascending, func(key, value []byte) (stop bool) {
+		err = fn(key, value)
+		return err != nil
+	})
+	return err
+}
+
 func (mut *MutableTree) Get(key []byte) []byte {
 	_, bs := mut.MutableTree.Get(key)
 	return bs
@@ -52,24 +70,21 @@ func (mut *MutableTree) GetImmutable(version int64) (*ImmutableTree, error) {
 	return &ImmutableTree{tree}, nil
 }
 
+func (imt *ImmutableTree) Get(key []byte) []byte {
+	_, value := imt.ImmutableTree.Get(key)
+	return value
+}
+
+func (imt *ImmutableTree) Iterate(start, end []byte, ascending bool, fn func(key []byte, value []byte) error) error {
+	var err error
+	imt.ImmutableTree.IterateRange(start, end, ascending, func(key, value []byte) bool {
+		err = fn(key, value)
+		return err != nil
+	})
+	return err
+}
+
 // Get the current working tree as an ImmutableTree (for the methods - not immutable!)
 func (mut *MutableTree) asImmutable() *ImmutableTree {
 	return &ImmutableTree{mut.MutableTree.ImmutableTree}
-}
-
-func (mut *MutableTree) Iterate(start, end []byte, ascending bool, fn func(key []byte, value []byte) error) error {
-	return mut.asImmutable().Iterate(start, end, ascending, fn)
-}
-
-func (mut *MutableTree) IterateWriteTree(start, end []byte, ascending bool, fn func(key []byte, value []byte) error) error {
-	var err error
-	mut.MutableTree.IterateRange(start, end, ascending, func(key, value []byte) bool {
-		err = fn(key, value)
-		if err != nil {
-			// stop
-			return true
-		}
-		return false
-	})
-	return err
 }

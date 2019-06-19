@@ -34,8 +34,6 @@ type App struct {
 	// State
 	blockchain              *bcm.Blockchain
 	validators              Validators
-	checkTx                 func(txBytes []byte) types.ResponseCheckTx
-	deliverTx               func(txBytes []byte) types.ResponseCheckTx
 	mempoolLocker           sync.Locker
 	authorizedPeersProvider PeersFilterProvider
 	// We need to cache these from BeginBlock for when we need actually need it in Commit
@@ -125,6 +123,9 @@ func (app *App) InitChain(chain types.RequestInitChain) (respInitChain types.Res
 	}
 	for _, v := range chain.Validators {
 		pk, err := crypto.PublicKeyFromABCIPubKey(v.GetPubKey())
+		if err != nil {
+			panic(err)
+		}
 		err = app.checkValidatorMatches(currentSet, types.Validator{Address: pk.GetAddress().Bytes(), Power: v.Power})
 		if err != nil {
 			panic(err)

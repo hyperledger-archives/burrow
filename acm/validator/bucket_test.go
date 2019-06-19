@@ -31,10 +31,10 @@ func TestBucket_AlterPower(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, big3.Int64(), flow.Int64())
 
-	flow, err = bucket.AlterPower(pubA, new(big.Int).Add(maxTotalVotingPower, big1))
+	_, err = bucket.AlterPower(pubA, new(big.Int).Add(maxTotalVotingPower, big1))
 	require.Error(t, err, "should fail as we would breach total power")
 
-	flow, err = bucket.AlterPower(pubB, big1)
+	_, err = bucket.AlterPower(pubB, big1)
 	require.Error(t, err, "should fail as we would breach total power")
 
 	// Drop A and raise B - should now succeed

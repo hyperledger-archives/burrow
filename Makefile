@@ -247,3 +247,8 @@ push_ci_image: build_ci_image
 
 .PHONY: ready_for_pull_request
 ready_for_pull_request: docs fix
+
+.PHONY: staticcheck
+staticcheck:
+	go get honnef.co/go/tools/cmd/staticcheck
+	staticcheck ./...

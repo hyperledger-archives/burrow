@@ -17,6 +17,7 @@ package logging
 import (
 	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging/structure"
+	"github.com/hyperledger/burrow/util/slice"
 )
 
 // InfoTraceLogger maintains provides two logging 'channels' that are interlaced
@@ -149,6 +150,6 @@ func (l *Logger) WithScope(scopeName string) *Logger {
 
 // Record a structured log line with a message
 func Msg(logger log.Logger, message string, keyvals ...interface{}) error {
-	prepended := structure.CopyPrepend(keyvals, structure.MessageKey, message)
+	prepended := slice.CopyPrepend(keyvals, structure.MessageKey, message)
 	return logger.Log(prepended...)
 }

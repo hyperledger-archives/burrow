@@ -10,12 +10,11 @@ import (
 )
 
 type testTaggable struct {
-	Foo        string
-	Bar        string
-	Baz        binary.HexBytes
-	Address    crypto.Address
-	Indices    []int
-	unexported int
+	Foo     string
+	Bar     string
+	Baz     binary.HexBytes
+	Address crypto.Address
+	Indices []int
 }
 
 func TestReflectTagged_Keys(t *testing.T) {

@@ -26,7 +26,7 @@ import (
 
 func StartServer(service *rpc.Service, pattern string, listener net.Listener, logger *logging.Logger) (*http.Server, error) {
 	logger = logger.With(structure.ComponentKey, "RPC_Info")
-	routes := GetRoutes(service, logger)
+	routes := GetRoutes(service)
 	mux := http.NewServeMux()
 	wm := server.NewWebsocketManager(routes, logger)
 	mux.HandleFunc(pattern, wm.WebsocketHandler)

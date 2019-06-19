@@ -1,4 +1,4 @@
-package storage
+package forensics
 
 import (
 	"testing"

@@ -86,7 +86,7 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	gas := uint64(1000)
 
 	// Should fail since we have no permissions
-	retValue, err := contract.Dispatch(cache, caller.Address, bc.MustSplice(funcID[:], grantee.Address,
+	_, err = contract.Dispatch(cache, caller.Address, bc.MustSplice(funcID[:], grantee.Address,
 		permFlagToWord256(permission.CreateAccount)), &gas, logger)
 	if !assert.Error(t, err, "Should fail due to lack of permissions") {
 		return
@@ -96,7 +96,7 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	// Grant all permissions and dispatch should success
 	cache.SetPermission(caller.Address, permission.AddRole, true)
 	require.NoError(t, cache.Error())
-	retValue, err = contract.Dispatch(cache, caller.Address, bc.MustSplice(funcID[:],
+	retValue, err := contract.Dispatch(cache, caller.Address, bc.MustSplice(funcID[:],
 		grantee.Address.Word256(), permFlagToWord256(permission.CreateAccount)), &gas, logger)
 	assert.NoError(t, err)
 	assert.Equal(t, retValue, LeftPadBytes([]byte{1}, 32))
@@ -135,16 +135,6 @@ func funcIDFromHex(t *testing.T, hexString string) (funcID abi.FunctionID) {
 
 func permFlagToWord256(permFlag permission.PermFlag) Word256 {
 	return Uint64ToWord256(uint64(permFlag))
-}
-
-func allAccountPermissions() permission.AccountPermissions {
-	return permission.AccountPermissions{
-		Base: permission.BasePermissions{
-			Perms:  permission.AllPermFlags,
-			SetBit: permission.AllPermFlags,
-		},
-		Roles: []string{},
-	}
 }
 
 // turns the solidity compiler function summary into a map to drive signature

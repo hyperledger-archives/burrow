@@ -151,7 +151,7 @@ func (k *KeyStore) Hash(ctx context.Context, in *HashRequest) (*HashResponse, er
 		hasher = sha256.New()
 	// case "sha3":
 	default:
-		return nil, fmt.Errorf("Unknown hash type %v", in.GetHashtype())
+		return nil, fmt.Errorf("unknown hash type %v", in.GetHashtype())
 	}
 
 	hasher.Write(in.GetMessage())

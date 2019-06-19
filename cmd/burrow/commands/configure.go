@@ -190,11 +190,11 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 						output.Fatalf("Could not create remote key client: %v", err)
 					}
 					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient, *generateNodeKeys || *pool)
+					if err != nil {
+						output.Fatalf("could not realise GenesisSpec: %v", err)
+					}
 				}
 
-				if err != nil {
-					output.Fatalf("could not realise GenesisSpec: %v", err)
-				}
 			}
 
 			if *chainNameOpt != "" {

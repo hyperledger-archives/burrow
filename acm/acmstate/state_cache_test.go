@@ -231,6 +231,7 @@ func TestStateCache_Sync(t *testing.T) {
 	newAcc := acm.NewAccountFromSecret("newAcc")
 	// Create account
 	err := cache.UpdateAccount(newAcc)
+	require.NoError(t, err)
 
 	// Set balance for account
 	balance := uint64(24)

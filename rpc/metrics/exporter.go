@@ -250,8 +250,7 @@ func (e *Exporter) getPeers() error {
 
 func (e *Exporter) getBlocks() (*rpc.ResultBlocks, error) {
 	var minHeight uint64
-	var maxHeight uint64
-	maxHeight = uint64(e.datum.LatestBlockHeight)
+	maxHeight := uint64(e.datum.LatestBlockHeight)
 
 	if maxHeight >= e.blockSampleSize {
 		minHeight = maxHeight - (e.blockSampleSize - 1)

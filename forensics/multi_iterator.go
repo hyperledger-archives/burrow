@@ -1,21 +1,23 @@
-package storage
+package forensics
 
 import (
 	"bytes"
 	"container/heap"
+
+	"github.com/hyperledger/burrow/storage"
 )
 
 type MultiIterator struct {
 	start []byte
 	end   []byte
 	// Acts as priority queue based on sort order of current key in each iterator
-	iterators     []KVIterator
-	iteratorOrder map[KVIterator]int
+	iterators     []storage.KVIterator
+	iteratorOrder map[storage.KVIterator]int
 	lessComp      int
 }
 
 // MultiIterator iterates in order over a series o
-func NewMultiIterator(reverse bool, iterators ...KVIterator) *MultiIterator {
+func NewMultiIterator(reverse bool, iterators ...storage.KVIterator) *MultiIterator {
 	// reuse backing array
 	lessComp := -1
 	if reverse {
@@ -23,7 +25,7 @@ func NewMultiIterator(reverse bool, iterators ...KVIterator) *MultiIterator {
 	}
 	mi := &MultiIterator{
 		iterators:     iterators,
-		iteratorOrder: make(map[KVIterator]int),
+		iteratorOrder: make(map[storage.KVIterator]int),
 		lessComp:      lessComp,
 	}
 	mi.init()
@@ -37,10 +39,10 @@ func (mi *MultiIterator) init() {
 		if it.Valid() {
 			validIterators = append(validIterators, it)
 			start, end := it.Domain()
-			if i == 0 || CompareKeys(start, mi.start) == mi.lessComp {
+			if i == 0 || storage.CompareKeys(start, mi.start) == mi.lessComp {
 				mi.start = start
 			}
-			if i == 0 || CompareKeys(mi.end, end) == mi.lessComp {
+			if i == 0 || storage.CompareKeys(mi.end, end) == mi.lessComp {
 				mi.end = end
 			}
 		} else {
@@ -68,7 +70,7 @@ func (mi *MultiIterator) Swap(i, j int) {
 }
 
 func (mi *MultiIterator) Push(x interface{}) {
-	mi.iterators = append(mi.iterators, x.(KVIterator))
+	mi.iterators = append(mi.iterators, x.(storage.KVIterator))
 }
 
 func (mi *MultiIterator) Pop() interface{} {
@@ -88,7 +90,7 @@ func (mi *MultiIterator) Valid() bool {
 
 func (mi *MultiIterator) Next() {
 	// Always advance the lowest iterator - the same one we serve the KV pair from
-	it := heap.Pop(mi).(KVIterator)
+	it := heap.Pop(mi).(storage.KVIterator)
 	it.Next()
 	if it.Valid() {
 		heap.Push(mi, it)
@@ -103,7 +105,7 @@ func (mi *MultiIterator) Value() []byte {
 	return mi.Peek().Value()
 }
 
-func (mi *MultiIterator) Peek() KVIterator {
+func (mi *MultiIterator) Peek() storage.KVIterator {
 	return mi.iterators[0]
 }
 

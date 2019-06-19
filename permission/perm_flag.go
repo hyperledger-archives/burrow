@@ -58,16 +58,16 @@ const (
 	DefaultPermFlags PermFlag = Send | Call | CreateContract | CreateAccount | Bond | Name | HasBase | HasRole | Proposal | Input | Batch
 
 	// Chain permissions strings
-	RootString           string = "root"
-	SendString                  = "send"
-	CallString                  = "call"
-	CreateContractString        = "createContract"
-	CreateAccountString         = "createAccount"
-	BondString                  = "bond"
-	NameString                  = "name"
-	ProposalString              = "proposal"
-	InputString                 = "input"
-	BatchString                 = "batch"
+	RootString           = "root"
+	SendString           = "send"
+	CallString           = "call"
+	CreateContractString = "createContract"
+	CreateAccountString  = "createAccount"
+	BondString           = "bond"
+	NameString           = "name"
+	ProposalString       = "proposal"
+	InputString          = "input"
+	BatchString          = "batch"
 
 	// Moderator permissions strings
 	HasBaseString    = "hasBase"

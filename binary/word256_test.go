@@ -52,6 +52,7 @@ func TestWord256_MarshalText(t *testing.T) {
 	assert.Equal(t, "\"0102030405000000000000000000000000000000000000000000000000000000\"", string(out))
 	bs2 := new(Word256)
 	err = json.Unmarshal(out, bs2)
+	require.NoError(t, err)
 	assert.Equal(t, w, *bs2)
 }
 

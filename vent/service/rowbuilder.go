@@ -75,7 +75,7 @@ func buildBlkData(tbls types.EventTables, block *exec.BlockExecution) (types.Eve
 	if _, ok := tbls[tables.Block]; ok {
 		blockHeader, err := json.Marshal(block.Header)
 		if err != nil {
-			return types.EventDataRow{}, fmt.Errorf("Couldn't marshal BlockHeader in block %v", block)
+			return types.EventDataRow{}, fmt.Errorf("couldn not marshal BlockHeader in block %v", block)
 		}
 
 		row[columns.Height] = fmt.Sprintf("%v", block.Height)
