@@ -1,8 +1,7 @@
-# Burrow Permissions
+# Permissions
 Burrow supports permissions via permission flags and string tags called 'roles'.
-  
 
-The flag permissions are
+The flag permissions are:
 
 | Permission Flag | Capability | Purpose |
 |-----------------|------------|---------|
@@ -43,4 +42,4 @@ An example `genesis.json`:
 }
 ```
 
-See [genesis](genesis.md) for more details on constructing accounts and setting some useful presets
+See [genesis](genesis.md) for more details on constructing accounts and setting some useful presets.
