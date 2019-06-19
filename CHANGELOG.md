@@ -2,6 +2,11 @@
 ## [Unreleased]
 
 
+## [0.26.2] - 2019-06-19
+### Fixed
+- [Blockchain] Persist LastBlockTime in Blockchain - before this patch LastBlockTime would only be set correctly after the first block had been received after a node is restarted - this can lead to non-determinism in the EVM via the TIMESTAMP opcode that use the LastBlockTime which is itself sourced from Tendermint's block header (from their implementation of BFT time). Implementing no empty blocks made observing this bug more likely by increasing the amount of time spent in a bad state (LastBlockTime is initially set to GenesisTime).
+
+
 ## [0.26.1] - 2019-06-16
 ### Changed
 - [CLI] 'burrow dump' renamed 'burrow dump remote'
@@ -502,7 +507,8 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
-[Unreleased]: https://github.com/hyperledger/burrow/compare/v0.26.1...HEAD
+[Unreleased]: https://github.com/hyperledger/burrow/compare/v0.26.2...HEAD
+[0.26.2]: https://github.com/hyperledger/burrow/compare/v0.26.1...v0.26.2
 [0.26.1]: https://github.com/hyperledger/burrow/compare/v0.26.0...v0.26.1
 [0.26.0]: https://github.com/hyperledger/burrow/compare/v0.25.1...v0.26.0
 [0.25.1]: https://github.com/hyperledger/burrow/compare/v0.25.0...v0.25.1

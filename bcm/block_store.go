@@ -11,23 +11,23 @@ import (
 	"github.com/tendermint/tendermint/types"
 )
 
-type BlockExplorer struct {
+type BlockStore struct {
 	txDecoder txs.Decoder
 	state.BlockStoreRPC
 }
 
-func NewBlockStore(blockStore state.BlockStoreRPC) *BlockExplorer {
-	return &BlockExplorer{
+func NewBlockStore(blockStore state.BlockStoreRPC) *BlockStore {
+	return &BlockStore{
 		txDecoder:     txs.NewAminoCodec(),
 		BlockStoreRPC: blockStore,
 	}
 }
 
-func NewBlockExplorer(dbBackendType db.DBBackendType, dbDir string) *BlockExplorer {
+func NewBlockExplorer(dbBackendType db.DBBackendType, dbDir string) *BlockStore {
 	return NewBlockStore(blockchain.NewBlockStore(db.NewDB("blockstore", dbBackendType, dbDir)))
 }
 
-func (bs *BlockExplorer) Block(height int64) (_ *Block, err error) {
+func (bs *BlockStore) Block(height int64) (_ *Block, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("BlockStore.Block(): could not get block at height %v: %v", height, r)
@@ -41,7 +41,7 @@ func (bs *BlockExplorer) Block(height int64) (_ *Block, err error) {
 	return NewBlock(bs.txDecoder, tmBlock), nil
 }
 
-func (bs *BlockExplorer) BlockMeta(height int64) (_ *types.BlockMeta, err error) {
+func (bs *BlockStore) BlockMeta(height int64) (_ *types.BlockMeta, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("BlockStore.BlockMeta() could not get BlockMeta at height %d: %v\n%s",
@@ -52,7 +52,7 @@ func (bs *BlockExplorer) BlockMeta(height int64) (_ *types.BlockMeta, err error)
 }
 
 // Iterate over blocks between start (inclusive) and end (exclusive)
-func (bs *BlockExplorer) Blocks(start, end int64, iter func(*Block) error) error {
+func (bs *BlockStore) Blocks(start, end int64, iter func(*Block) error) error {
 	if end > 0 && start >= end {
 		return fmt.Errorf("end height must be strictly greater than start height")
 	}

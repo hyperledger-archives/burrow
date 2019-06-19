@@ -24,7 +24,7 @@ import (
 )
 
 type Replay struct {
-	Explorer   *bcm.BlockExplorer
+	Explorer   *bcm.BlockStore
 	db         dbm.DB
 	cacheDB    dbm.DB
 	blockchain *bcm.Blockchain
@@ -60,7 +60,7 @@ func NewReplay(dbDir string, genesisDoc *genesis.GenesisDoc, logger *logging.Log
 }
 
 func (re *Replay) LatestBlockchain() (*bcm.Blockchain, error) {
-	_, blockchain, err := bcm.LoadOrNewBlockchain(re.db, re.genesisDoc, re.logger)
+	blockchain, _, err := bcm.LoadOrNewBlockchain(re.db, re.genesisDoc, re.logger)
 	if err != nil {
 		return nil, err
 	}

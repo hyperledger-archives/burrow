@@ -113,7 +113,7 @@ func (kern *Kernel) SetLogger(logger *logging.Logger) {
 // LoadState starts from scratch or previous chain
 func (kern *Kernel) LoadState(genesisDoc *genesis.GenesisDoc) (err error) {
 	var existing bool
-	existing, kern.Blockchain, err = bcm.LoadOrNewBlockchain(kern.database, genesisDoc, kern.Logger)
+	kern.Blockchain, existing, err = bcm.LoadOrNewBlockchain(kern.database, genesisDoc, kern.Logger)
 	if err != nil {
 		return fmt.Errorf("error creating or loading blockchain state: %v", err)
 	}
@@ -154,7 +154,7 @@ func (kern *Kernel) LoadState(genesisDoc *genesis.GenesisDoc) (err error) {
 // LoadDump restores chain state from the given dump file
 func (kern *Kernel) LoadDump(genesisDoc *genesis.GenesisDoc, restoreFile string, silent bool) (err error) {
 	var exists bool
-	if exists, kern.Blockchain, err = bcm.LoadOrNewBlockchain(kern.database, genesisDoc, kern.Logger); err != nil {
+	if kern.Blockchain, exists, err = bcm.LoadOrNewBlockchain(kern.database, genesisDoc, kern.Logger); err != nil {
 		return fmt.Errorf("error creating or loading blockchain state: %v", err)
 	}
 
