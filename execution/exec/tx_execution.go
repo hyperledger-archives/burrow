@@ -70,6 +70,9 @@ func (txe *TxExecution) StreamEvents() StreamEvents {
 				Result:    txe.Result,
 			},
 		},
+		&StreamEvent{
+			Envelope: txe.Envelope,
+		},
 	)
 	for _, ev := range txe.Events {
 		ses = append(ses, &StreamEvent{
