@@ -23,7 +23,6 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
-	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -251,12 +250,4 @@ func (trans *Transactor) CheckTxAsync(txEnv *txs.Envelope, callback func(res *ab
 		return fmt.Errorf("error encoding transaction: %v", err)
 	}
 	return trans.CheckTxAsyncRaw(txBytes, callback)
-}
-
-func (trans *Transactor) CallCodeSim(fromAddress crypto.Address, code, data []byte) (*exec.TxExecution, error) {
-	return CallCodeSim(trans.MempoolAccounts, trans.BlockchainInfo, fromAddress, fromAddress, code, data, trans.logger)
-}
-
-func (trans *Transactor) CallSim(fromAddress, address crypto.Address, data []byte) (*exec.TxExecution, error) {
-	return CallSim(trans.MempoolAccounts, trans.BlockchainInfo, fromAddress, address, data, trans.logger)
 }

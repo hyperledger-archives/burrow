@@ -4,6 +4,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hyperledger/burrow/logging"
+
+	"github.com/hyperledger/burrow/acm/acmstate"
+	"github.com/hyperledger/burrow/bcm"
+
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/txs"
@@ -15,14 +20,21 @@ import (
 const maxBroadcastSyncTimeout = time.Hour
 
 type transactServer struct {
+	state      acmstate.Reader
+	blockchain bcm.BlockchainInfo
 	transactor *execution.Transactor
 	txCodec    txs.Codec
+	logger     *logging.Logger
 }
 
-func NewTransactServer(transactor *execution.Transactor, txCodec txs.Codec) TransactServer {
+func NewTransactServer(state acmstate.Reader, blockchain bcm.BlockchainInfo, transactor *execution.Transactor,
+	txCodec txs.Codec, logger *logging.Logger) TransactServer {
 	return &transactServer{
+		state:      state,
+		blockchain: blockchain,
 		transactor: transactor,
 		txCodec:    txCodec,
+		logger:     logger.WithScope("NewTransactServer()"),
 	}
 }
 
@@ -88,11 +100,12 @@ func (ts *transactServer) CallTxSim(ctx context.Context, param *payload.CallTx) 
 	if param.Address == nil {
 		return nil, fmt.Errorf("CallSim requires a non-nil address from which to retrieve code")
 	}
-	return ts.transactor.CallSim(param.Input.Address, *param.Address, param.Data)
+	return execution.CallSim(ts.state, ts.blockchain, param.Input.Address, *param.Address, param.Data, ts.logger)
 }
 
 func (ts *transactServer) CallCodeSim(ctx context.Context, param *CallCodeParam) (*exec.TxExecution, error) {
-	return ts.transactor.CallCodeSim(param.FromAddress, param.Code, param.Data)
+	return execution.CallCodeSim(ts.state, ts.blockchain, param.FromAddress, param.FromAddress, param.Code, param.Data,
+		ts.logger)
 }
 
 func (ts *transactServer) SendTxSync(ctx context.Context, param *payload.SendTx) (*exec.TxExecution, error) {

@@ -282,7 +282,8 @@ func GRPCLauncher(kern *Kernel, conf *rpc.ServerConfig, keyConfig *keys.KeysConf
 				kern.Blockchain, kern.State, nodeView, kern.Logger))
 
 			txCodec := txs.NewAminoCodec()
-			rpctransact.RegisterTransactServer(grpcServer, rpctransact.NewTransactServer(kern.Transactor, txCodec))
+			rpctransact.RegisterTransactServer(grpcServer,
+				rpctransact.NewTransactServer(kern.State, kern.Blockchain, kern.Transactor, txCodec, kern.Logger))
 
 			rpcevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer(kern.State,
 				kern.Emitter, kern.Blockchain, kern.Logger))
