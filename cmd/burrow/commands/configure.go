@@ -6,13 +6,11 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/hyperledger/burrow/consensus/tendermint"
-
-	"github.com/hyperledger/burrow/dump"
-
 	"github.com/hyperledger/burrow/config/deployment"
 	"github.com/hyperledger/burrow/config/source"
+	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/dump"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/genesis/spec"
@@ -43,10 +41,10 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 		keysDir := cmd.StringOpt("keys-dir", "", "Directory where keys are stored")
 
 		configTemplateIn := cmd.StringsOpt("config-template-in", nil,
-			fmt.Sprintf("Go text/template input filename to generate config file specified with --config-out"))
+			"Go text/template input filename to generate config file specified with --config-out")
 
 		configTemplateOut := cmd.StringsOpt("config-out", nil,
-			"Go text/template output file. Template filename specified with --config-template-in")
+			"Go text/template output filename. Template filename specified with --config-template-in")
 
 		separateGenesisDoc := cmd.StringOpt("w separate-genesis-doc", "", "Emit a separate genesis doc as JSON or TOML")
 
@@ -107,7 +105,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				output.Fatalf("--config-template-in and --config-out must be specified the same number of times")
 			}
 
-			pkg := deployment.Config{}
+			pkg := deployment.Config{Keys: make(map[crypto.Address]deployment.Key)}
 
 			// Genesis Spec
 			if *genesisSpecOpt != "" {
@@ -133,8 +131,6 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					if err != nil {
 						output.Fatalf("could get all keys: %v", err)
 					}
-
-					pkg = deployment.Config{Keys: make(map[crypto.Address]deployment.Key)}
 
 					for k := range allNames {
 						addr, err := crypto.AddressFromHexString(allNames[k])
@@ -198,36 +194,6 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				conf.GenesisDoc.AppHash = st.Hash()
 			}
 
-			if conf.GenesisDoc != nil {
-				pkg.GenesisDoc = conf.GenesisDoc
-
-				for _, v := range conf.GenesisDoc.Validators {
-					nodeKey := tendermint.NewNodeKey()
-					nodeAddress, _ := crypto.AddressFromHexString(string(nodeKey.ID()))
-
-					cdc := amino.NewCodec()
-					cryptoAmino.RegisterAmino(cdc)
-					json, err := cdc.MarshalJSON(nodeKey)
-					if err != nil {
-						output.Fatalf("go-amino failed to json marshall private key: %v", err)
-					}
-					pkg.Keys[nodeAddress] = deployment.Key{Name: v.Name, Address: nodeAddress, KeyJSON: json}
-
-					pkg.Validators = append(pkg.Validators, deployment.Validator{
-						Name:        v.Name,
-						Address:     v.Address,
-						NodeAddress: nodeAddress,
-					})
-				}
-
-				for ind := range *configTemplateIn {
-					err := processTemplate(&pkg, (*configTemplateIn)[ind], (*configTemplateOut)[ind])
-					if err != nil {
-						output.Fatalf("could not template from %s to %s: %v", (*configTemplateIn)[ind], (*configTemplateOut)[ind], err)
-					}
-				}
-			}
-
 			// Logging
 			if *loggingOpt != "" {
 				ops := strings.Split(*loggingOpt, ",")
@@ -266,24 +232,54 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				conf.Tendermint.CreateEmptyBlocks = *emptyBlocksOpt
 			}
 
+			peers := make([]string, 0)
+			if conf.GenesisDoc != nil {
+				cdc := amino.NewCodec()
+				cryptoAmino.RegisterAmino(cdc)
+				pkg.GenesisDoc = conf.GenesisDoc
+
+				for _, val := range conf.GenesisDoc.Validators {
+					nodeKey := tendermint.NewNodeKey()
+					nodeAddress, _ := crypto.AddressFromHexString(string(nodeKey.ID()))
+
+					json, err := cdc.MarshalJSON(nodeKey)
+					if err != nil {
+						output.Fatalf("go-amino failed to json marshal private key: %v", err)
+					}
+					pkg.Keys[nodeAddress] = deployment.Key{Name: val.Name, Address: nodeAddress, KeyJSON: json}
+
+					pkg.Validators = append(pkg.Validators, deployment.Validator{
+						Name:        val.Name,
+						Address:     val.Address,
+						NodeAddress: nodeAddress,
+					})
+				}
+
+				for ind := range *configTemplateIn {
+					err := processTemplate(&pkg, (*configTemplateIn)[ind], (*configTemplateOut)[ind])
+					if err != nil {
+						output.Fatalf("could not template from %s to %s: %v", (*configTemplateIn)[ind], (*configTemplateOut)[ind], err)
+					}
+				}
+			}
+
 			if *pool {
-				peers := make([]string, 0)
-				for i := range conf.GenesisDoc.Validators {
+				for i, val := range pkg.Validators {
 					tmConf, err := conf.Tendermint.Config(fmt.Sprintf(".burrow%03d", i), conf.Execution.TimeoutFactor)
 					if err != nil {
 						output.Fatalf("could not obtain config for %03d: %v", i, err)
 					}
-					nodeKey, err := tendermint.EnsureNodeKey(tmConf.NodeKeyFile())
+					nodeKey := pkg.Keys[val.NodeAddress]
+					err = tendermint.WriteNodeKey(tmConf.NodeKeyFile(), nodeKey.KeyJSON)
 					if err != nil {
 						output.Fatalf("failed to create node key for %03d: %v", i, err)
 					}
-					peers = append(peers, fmt.Sprintf("tcp://%s@127.0.0.1:%d", nodeKey.ID(), 26656+i))
+					peers = append(peers, fmt.Sprintf("tcp://%s@127.0.0.1:%d", nodeKey.Address.String(), 26656+i))
 				}
 				for i, acc := range conf.GenesisDoc.Accounts {
 					// set stuff
 					conf.Address = &acc.Address
 					conf.Tendermint.PersistentPeers = strings.Join(peers, ",")
-
 					conf.BurrowDir = fmt.Sprintf(".burrow%03d", i)
 					conf.Tendermint.ListenHost = rpc.LocalHost
 					conf.Tendermint.ListenPort = fmt.Sprint(26656 + i)
@@ -317,7 +313,6 @@ func processTemplate(pkg *deployment.Config, templateIn, templateOut string) err
 	if err != nil {
 		return err
 	}
-	fmt.Println(templateIn)
 	output, err := pkg.Dump(templateIn, string(data))
 	if err != nil {
 		return err

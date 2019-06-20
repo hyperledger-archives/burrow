@@ -1,6 +1,8 @@
 package tendermint
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"os"
 	"path"
 
@@ -111,6 +113,21 @@ func NewNodeInfo(ni p2p.DefaultNodeInfo) *NodeInfo {
 	}
 }
 
+func NewNodeKey() *p2p.NodeKey {
+	privKey := ed25519.GenPrivKey()
+	return &p2p.NodeKey{
+		PrivKey: privKey,
+	}
+}
+
+func WriteNodeKey(nodeKeyFile string, key json.RawMessage) error {
+	err := os.MkdirAll(path.Dir(nodeKeyFile), 0777)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(nodeKeyFile, key, 0600)
+}
+
 func EnsureNodeKey(nodeKeyFile string) (*p2p.NodeKey, error) {
 	err := os.MkdirAll(path.Dir(nodeKeyFile), 0777)
 	if err != nil {
@@ -118,11 +135,4 @@ func EnsureNodeKey(nodeKeyFile string) (*p2p.NodeKey, error) {
 	}
 
 	return p2p.LoadOrGenNodeKey(nodeKeyFile)
-}
-
-func NewNodeKey() *p2p.NodeKey {
-	privKey := ed25519.GenPrivKey()
-	return &p2p.NodeKey{
-		PrivKey: privKey,
-	}
 }
