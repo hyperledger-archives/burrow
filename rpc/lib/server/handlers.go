@@ -278,11 +278,11 @@ func httpParamsToArgs(rpcFunc *RPCFunc, r *http.Request) ([]reflect.Value, error
 		arg := GetParam(r, name)
 		// log.Notice("param to arg", "argType", argType, "name", name, "arg", arg)
 
-		if "" == arg {
+		if arg == "" {
 			continue
 		}
 
-		v, err, ok := nonJSONToArg(argType, arg)
+		v, ok, err := nonJSONToArg(argType, arg)
 		if err != nil {
 			return nil, err
 		}
@@ -310,7 +310,7 @@ func jsonStringToArg(ty reflect.Type, arg string) (reflect.Value, error) {
 	return v, nil
 }
 
-func nonJSONToArg(ty reflect.Type, arg string) (reflect.Value, error, bool) {
+func nonJSONToArg(ty reflect.Type, arg string) (reflect.Value, bool, error) {
 	expectingString := ty.Kind() == reflect.String
 	expectingBytes := (ty.Kind() == reflect.Slice || ty.Kind() == reflect.Array) && ty.Elem().Kind() == reflect.Uint8
 
@@ -318,7 +318,7 @@ func nonJSONToArg(ty reflect.Type, arg string) (reflect.Value, error, bool) {
 
 	// Throw quoted strings at JSON parser later... because it always has...
 	if expectingString && !isQuotedString {
-		return reflect.ValueOf(arg), nil, true
+		return reflect.ValueOf(arg), true, nil
 	}
 
 	if expectingBytes {
@@ -326,9 +326,9 @@ func nonJSONToArg(ty reflect.Type, arg string) (reflect.Value, error, bool) {
 			rv := reflect.New(ty)
 			err := json.Unmarshal([]byte(arg), rv.Interface())
 			if err != nil {
-				return reflect.ValueOf(nil), err, false
+				return reflect.ValueOf(nil), false, err
 			}
-			return rv.Elem(), nil, true
+			return rv.Elem(), true, nil
 		}
 		if strings.HasPrefix(strings.ToLower(arg), "0x") {
 			arg = arg[2:]
@@ -336,18 +336,18 @@ func nonJSONToArg(ty reflect.Type, arg string) (reflect.Value, error, bool) {
 		var value []byte
 		value, err := hex.DecodeString(arg)
 		if err != nil {
-			return reflect.ValueOf(nil), err, false
+			return reflect.ValueOf(nil), false, err
 		}
 		if ty.Kind() == reflect.Array {
 			// Gives us an empty array of the right type
 			rv := reflect.New(ty).Elem()
 			reflect.Copy(rv, reflect.ValueOf(value))
-			return rv, nil, true
+			return rv, true, nil
 		}
-		return reflect.ValueOf(value), nil, true
+		return reflect.ValueOf(value), true, nil
 	}
 
-	return reflect.ValueOf(nil), nil, false
+	return reflect.ValueOf(nil), false, nil
 }
 
 // rpc.http

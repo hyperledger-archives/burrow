@@ -90,9 +90,7 @@ func (s *Service) UnconfirmedTxs(maxTxs int64) (*ResultUnconfirmedTxs, error) {
 		return nil, err
 	}
 	wrappedTxs := make([]*txs.Envelope, len(transactions))
-	for i, tx := range transactions {
-		wrappedTxs[i] = tx
-	}
+	copy(wrappedTxs, transactions)
 	return &ResultUnconfirmedTxs{
 		NumTxs: len(transactions),
 		Txs:    wrappedTxs,

@@ -17,10 +17,6 @@ const (
 	defaultFormatName = TerminalFormat
 )
 
-const (
-	newline = '\n'
-)
-
 type Syncable interface {
 	Sync() error
 }

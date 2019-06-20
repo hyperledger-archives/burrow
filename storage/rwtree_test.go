@@ -13,14 +13,15 @@ import (
 func TestSave(t *testing.T) {
 	db := dbm.NewMemDB()
 	rwt := NewRWTree(db, 100)
-	foo := bz("foo")
-	gaa := bz("gaa")
-	dam := bz("dam")
+	foo := []byte("foo")
+	gaa := []byte("gaa")
+	dam := []byte("dam")
 	rwt.Set(foo, gaa)
-	rwt.Save()
+	_, _, err := rwt.Save()
+	require.NoError(t, err)
 	assert.Equal(t, gaa, rwt.Get(foo))
 	rwt.Set(foo, dam)
-	_, _, err := rwt.Save()
+	_, _, err = rwt.Save()
 	require.NoError(t, err)
 	assert.Equal(t, dam, rwt.Get(foo))
 }
@@ -34,12 +35,13 @@ func TestEmptyTree(t *testing.T) {
 func TestRollback(t *testing.T) {
 	db := dbm.NewMemDB()
 	rwt := NewRWTree(db, 100)
-	rwt.Set(bz("Raffle"), bz("Topper"))
+	rwt.Set([]byte("Raffle"), []byte("Topper"))
 	_, _, err := rwt.Save()
+	require.NoError(t, err)
 
-	foo := bz("foo")
-	gaa := bz("gaa")
-	dam := bz("dam")
+	foo := []byte("foo")
+	gaa := []byte("gaa")
+	dam := []byte("dam")
 	rwt.Set(foo, gaa)
 	hash1, version1, err := rwt.Save()
 	require.NoError(t, err)
@@ -48,7 +50,8 @@ func TestRollback(t *testing.T) {
 	rwt.Set(foo, gaa)
 	rwt.Set(gaa, dam)
 	hash2, version2, err := rwt.Save()
-	rwt.Iterate(nil, nil, true, func(key, value []byte) error {
+	require.NoError(t, err)
+	err = rwt.Iterate(nil, nil, true, func(key, value []byte) error {
 		fmt.Println(string(key), " => ", string(value))
 		return nil
 	})
@@ -66,10 +69,11 @@ func TestRollback(t *testing.T) {
 	rwt.Set(gaa, dam)
 	hash3, version3, err := rwt.Save()
 	require.NoError(t, err)
-	rwt.Iterate(nil, nil, true, func(key, value []byte) error {
+	err = rwt.Iterate(nil, nil, true, func(key, value []byte) error {
 		fmt.Println(string(key), " => ", string(value))
 		return nil
 	})
+	require.NoError(t, err)
 
 	// Expect the same hashes
 	assert.Equal(t, hash2, hash3)
@@ -79,18 +83,18 @@ func TestRollback(t *testing.T) {
 func TestVersionDivergence(t *testing.T) {
 	// This test serves as a reminder that IAVL nodes contain the version and a new node is created for every write
 	rwt1 := NewRWTree(dbm.NewMemDB(), 100)
-	rwt1.Set(bz("Raffle"), bz("Topper"))
+	rwt1.Set([]byte("Raffle"), []byte("Topper"))
 	hash11, _, err := rwt1.Save()
 	require.NoError(t, err)
 
 	rwt2 := NewRWTree(dbm.NewMemDB(), 100)
-	rwt2.Set(bz("Raffle"), bz("Topper"))
+	rwt2.Set([]byte("Raffle"), []byte("Topper"))
 	hash21, _, err := rwt2.Save()
 	require.NoError(t, err)
 
 	// The following 'ought' to be idempotent but isn't since it replaces the previous node with an identical one, but
 	// with an incremented version number
-	rwt2.Set(bz("Raffle"), bz("Topper"))
+	rwt2.Set([]byte("Raffle"), []byte("Topper"))
 	hash22, _, err := rwt2.Save()
 	require.NoError(t, err)
 
@@ -100,24 +104,24 @@ func TestVersionDivergence(t *testing.T) {
 
 func TestMutableTree_Iterate(t *testing.T) {
 	mut := NewMutableTree(dbm.NewMemDB(), 100)
-	mut.Set(bz("aa"), bz("1"))
-	mut.Set(bz("aab"), bz("2"))
-	mut.Set(bz("aac"), bz("3"))
-	mut.Set(bz("aad"), bz("4"))
-	mut.Set(bz("ab"), bz("5"))
+	mut.Set([]byte("aa"), []byte("1"))
+	mut.Set([]byte("aab"), []byte("2"))
+	mut.Set([]byte("aac"), []byte("3"))
+	mut.Set([]byte("aad"), []byte("4"))
+	mut.Set([]byte("ab"), []byte("5"))
 	_, _, err := mut.SaveVersion()
 	require.NoError(t, err)
-	mut.IterateRange(bz("aab"), bz("aad"), true, func(key []byte, value []byte) bool {
+	mut.IterateRange([]byte("aab"), []byte("aad"), true, func(key []byte, value []byte) bool {
 		fmt.Printf("%q -> %q\n", key, value)
 		return false
 	})
 	fmt.Println("foo")
-	mut.IterateRange(bz("aab"), bz("aad"), false, func(key []byte, value []byte) bool {
+	mut.IterateRange([]byte("aab"), []byte("aad"), false, func(key []byte, value []byte) bool {
 		fmt.Printf("%q -> %q\n", key, value)
 		return false
 	})
 	fmt.Println("foo")
-	mut.IterateRange(bz("aad"), bz("aab"), true, func(key []byte, value []byte) bool {
+	mut.IterateRange([]byte("aad"), []byte("aab"), true, func(key []byte, value []byte) bool {
 		fmt.Printf("%q -> %q\n", key, value)
 		return false
 	})

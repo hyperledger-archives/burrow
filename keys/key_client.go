@@ -56,7 +56,7 @@ type remoteKeyClient struct {
 }
 
 func (l *localKeyClient) Sign(signAddress crypto.Address, message []byte) (*crypto.Signature, error) {
-	resp, err := l.ks.Sign(nil, &SignRequest{Address: signAddress.String(), Message: message})
+	resp, err := l.ks.Sign(context.Background(), &SignRequest{Address: signAddress.String(), Message: message})
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (l *localKeyClient) Sign(signAddress crypto.Address, message []byte) (*cryp
 }
 
 func (l *localKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
-	resp, err := l.ks.PublicKey(nil, &PubRequest{Address: address.String()})
+	resp, err := l.ks.PublicKey(context.Background(), &PubRequest{Address: address.String()})
 	if err != nil {
 		return crypto.PublicKey{}, err
 	}
@@ -77,7 +77,7 @@ func (l *localKeyClient) PublicKey(address crypto.Address) (publicKey crypto.Pub
 
 // Generate requests that a key be generate within the keys instance and returns the address
 func (l *localKeyClient) Generate(keyName string, curveType crypto.CurveType) (keyAddress crypto.Address, err error) {
-	resp, err := l.ks.GenerateKey(nil, &GenRequest{KeyName: keyName, CurveType: curveType.String()})
+	resp, err := l.ks.GenerateKey(context.Background(), &GenRequest{KeyName: keyName, CurveType: curveType.String()})
 	if err != nil {
 		return crypto.Address{}, err
 	}

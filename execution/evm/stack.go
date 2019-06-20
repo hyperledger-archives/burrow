@@ -16,14 +16,11 @@ package evm
 
 import (
 	"fmt"
-
-	"github.com/hyperledger/burrow/crypto"
-
+	"math"
 	"math/big"
 
-	"math"
-
 	. "github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
 )
 

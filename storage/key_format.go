@@ -1,10 +1,10 @@
 package storage
 
 import (
+	"encoding/binary"
 	"fmt"
+	"reflect"
 	"strings"
-
-	"github.com/hyperledger/burrow/binary"
 )
 
 const (
@@ -59,6 +59,39 @@ func NewKeyFormat(prefix string, layout ...int) (*KeyFormat, error) {
 		return nil, err
 	}
 	return kf, nil
+}
+
+var expectedKeyFormatType = reflect.TypeOf(MustKeyFormat{})
+
+// Checks that a struct containing KeyFormat fields has no collisions on prefix and so acts as a sane 'KeyFormatStore'
+func EnsureKeyFormatStore(ks interface{}) error {
+	rv := reflect.ValueOf(ks)
+	if rv.Kind() == reflect.Ptr {
+		rv = rv.Elem()
+	}
+	rt := rv.Type()
+
+	keyFormats := make(map[string]MustKeyFormat)
+	for i := 0; i < rt.NumField(); i++ {
+		fv := rv.Field(i)
+		if fv.Kind() == reflect.Ptr {
+			if fv.IsNil() {
+				return fmt.Errorf("key format field '%s' is nil", rt.Field(i).Name)
+			}
+			fv = fv.Elem()
+		}
+		ft := fv.Type()
+		if ft == expectedKeyFormatType {
+			kf := fv.Interface().(MustKeyFormat)
+			prefix := kf.Prefix().String()
+			if kfDuplicate, ok := keyFormats[prefix]; ok {
+				return fmt.Errorf("duplicate prefix %q between key format %v and %v",
+					prefix, kfDuplicate, kf)
+			}
+			keyFormats[prefix] = kf
+		}
+	}
+	return nil
 }
 
 // Format the byte segments into the key format - will panic if the segment lengths do not match the layout.
@@ -236,9 +269,9 @@ func scan(a interface{}, value []byte) {
 		// Ignore - allows for omitted values
 	case *int64:
 		// Negative values will be mapped correctly when read in as uint64 and then type converted
-		*v = binary.GetInt64(value)
+		*v = int64(binary.BigEndian.Uint64(value))
 	case *uint64:
-		*v = binary.GetUint64(value)
+		*v = binary.BigEndian.Uint64(value)
 	case *[]byte:
 		*v = value
 	case *string:
@@ -251,14 +284,14 @@ func scan(a interface{}, value []byte) {
 func format(a interface{}) []byte {
 	switch v := a.(type) {
 	case uint64:
-		return binary.Uint64Bytes(v)
+		return uint64Bytes(v)
 	case int64:
-		return binary.Uint64Bytes(uint64(v))
+		return uint64Bytes(uint64(v))
 	// Provide formatting from int,uint as a convenience to avoid casting arguments
 	case uint:
-		return binary.Uint64Bytes(uint64(v))
+		return uint64Bytes(uint64(v))
 	case int:
-		return binary.Uint64Bytes(uint64(v))
+		return uint64Bytes(uint64(v))
 	case []byte:
 		return v
 	case ByteSlicable:
@@ -268,6 +301,12 @@ func format(a interface{}) []byte {
 	default:
 		panic(fmt.Errorf("KeyFormat format() does not support formatting value of type %T: %v", a, a))
 	}
+}
+
+func uint64Bytes(v uint64) []byte {
+	bs := make([]byte, 8)
+	binary.BigEndian.PutUint64(bs, v)
+	return bs
 }
 
 // MustKeyFormat for panicking early when a KeyFormat does not parse

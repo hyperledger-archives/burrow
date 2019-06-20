@@ -58,13 +58,13 @@ func NewLoggerFromLoggingConfig(loggingConfig *logconfig.LoggingConfig) (*loggin
 
 // Hot swap logging config by replacing output loggers of passed InfoTraceLogger
 // with those built from loggingConfig
-func SwapOutputLoggersFromLoggingConfig(logger *logging.Logger, loggingConfig *logconfig.LoggingConfig) (error, channels.Channel) {
+func SwapOutputLoggersFromLoggingConfig(logger *logging.Logger, loggingConfig *logconfig.LoggingConfig) (channels.Channel, error) {
 	outputLogger, errCh, err := loggerFromLoggingConfig(loggingConfig)
 	if err != nil {
-		return err, channels.NewDeadChannel()
+		return channels.NewDeadChannel(), err
 	}
 	logger.SwapOutput(outputLogger)
-	return nil, errCh
+	return errCh, nil
 }
 
 func NewStdErrLogger() (*logging.Logger, error) {

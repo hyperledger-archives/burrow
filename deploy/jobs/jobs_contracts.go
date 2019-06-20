@@ -223,7 +223,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 					return nil, nil, err
 				}
 				deployedCount++
-				if strings.ToLower(response.Objectname) == strings.ToLower(strings.TrimSuffix(filepath.Base(deploy.Contract), filepath.Ext(filepath.Base(deploy.Contract)))) {
+				if strings.EqualFold(response.Objectname, strings.TrimSuffix(filepath.Base(deploy.Contract), filepath.Ext(filepath.Base(deploy.Contract)))) {
 					baseObj = tx
 					baseContract = &resp.Objects[i]
 				} else {
@@ -310,7 +310,7 @@ func matchInstanceName(objectName, deployInstance string) bool {
 
 	objectNameParts := strings.Split(objectName, ":")
 	deployInstanceParts := strings.Split(deployInstance, "/")
-	return strings.ToLower(objectNameParts[len(objectNameParts)-1]) == strings.ToLower(deployInstanceParts[len(deployInstanceParts)-1])
+	return strings.EqualFold(objectNameParts[len(objectNameParts)-1], deployInstanceParts[len(deployInstanceParts)-1])
 }
 
 func findContractFile(contract, binPath string, deployPath string) (string, error) {

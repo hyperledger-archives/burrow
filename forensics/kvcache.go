@@ -1,9 +1,11 @@
-package storage
+package forensics
 
 import (
 	"bytes"
 	"sort"
 	"sync"
+
+	"github.com/hyperledger/burrow/storage"
 )
 
 type KVCache struct {
@@ -91,22 +93,22 @@ func (kvc *KVCache) Delete(key []byte) {
 	kvc.cache[skey] = vi
 }
 
-func (kvc *KVCache) Iterator(low, high []byte) KVIterator {
+func (kvc *KVCache) Iterator(low, high []byte) storage.KVIterator {
 	kvc.RLock()
 	defer kvc.RUnlock()
-	low, high = NormaliseDomain(low, high)
+	low, high = storage.NormaliseDomain(low, high)
 	return kvc.newIterator(low, high, false)
 }
 
-func (kvc *KVCache) ReverseIterator(low, high []byte) KVIterator {
+func (kvc *KVCache) ReverseIterator(low, high []byte) storage.KVIterator {
 	kvc.RLock()
 	defer kvc.RUnlock()
-	low, high = NormaliseDomain(low, high)
+	low, high = storage.NormaliseDomain(low, high)
 	return kvc.newIterator(low, high, true)
 }
 
 // Writes contents of cache to backend without flushing the cache
-func (kvc *KVCache) WriteTo(writer KVWriter) {
+func (kvc *KVCache) WriteTo(writer storage.KVWriter) {
 	kvc.Lock()
 	defer kvc.Unlock()
 	for k, vi := range kvc.cache {
@@ -133,7 +135,7 @@ func (kvc *KVCache) sortedKeysInDomain(low, high []byte) [][]byte {
 	startIndex := len(kvc.keys)
 	for i, key := range sortedKeys {
 		// !(key < start) => key >= start then include (inclusive start)
-		if CompareKeys(key, low) != -1 {
+		if storage.CompareKeys(key, low) != -1 {
 			startIndex = i
 			break
 		}
@@ -142,7 +144,7 @@ func (kvc *KVCache) sortedKeysInDomain(low, high []byte) [][]byte {
 	sortedKeys = sortedKeys[startIndex:]
 	for i, key := range sortedKeys {
 		// !(key < end) => key >= end then exclude (exclusive end)
-		if CompareKeys(key, high) != -1 {
+		if storage.CompareKeys(key, high) != -1 {
 			sortedKeys = sortedKeys[:i]
 			break
 		}
@@ -208,16 +210,4 @@ func (kvi *KVCacheIterator) sliceIndex() int {
 		return len(kvi.keys) - 1 - kvi.keyIndex
 	}
 	return kvi.keyIndex
-}
-
-func insertKey(sortedKeys [][]byte, key []byte) [][]byte {
-	i := sort.Search(len(sortedKeys), func(i int) bool {
-		// Smallest sortedKey such that key
-		return bytes.Compare(sortedKeys[i], key) > -1
-	})
-	// ensure space
-	sortedKeys = append(sortedKeys, nil)
-	copy(sortedKeys[i+1:], sortedKeys[i:])
-	sortedKeys[i] = key
-	return sortedKeys
 }

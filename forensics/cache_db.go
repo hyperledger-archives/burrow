@@ -1,15 +1,16 @@
-package storage
+package forensics
 
 import (
+	"github.com/hyperledger/burrow/storage"
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
 type CacheDB struct {
 	cache   *KVCache
-	backend KVIterableReader
+	backend storage.KVIterableReader
 }
 
-func NewCacheDB(backend KVIterableReader) *CacheDB {
+func NewCacheDB(backend storage.KVIterableReader) *CacheDB {
 	return &CacheDB{
 		cache:   NewKVCache(),
 		backend: backend,
@@ -33,13 +34,13 @@ func (cdb *CacheDB) Has(key []byte) bool {
 	return !deleted && (value != nil || cdb.backend.Has(key))
 }
 
-func (cdb *CacheDB) Iterator(low, high []byte) KVIterator {
+func (cdb *CacheDB) Iterator(low, high []byte) storage.KVIterator {
 	// Keys from cache will sort first because of order in MultiIterator and Uniq will take the first KVs so KVs
 	// appearing in cache will override values from backend.
 	return Uniq(NewMultiIterator(false, cdb.cache.Iterator(low, high), cdb.backend.Iterator(low, high)))
 }
 
-func (cdb *CacheDB) ReverseIterator(low, high []byte) KVIterator {
+func (cdb *CacheDB) ReverseIterator(low, high []byte) storage.KVIterator {
 	return Uniq(NewMultiIterator(true, cdb.cache.ReverseIterator(low, high), cdb.backend.ReverseIterator(low, high)))
 }
 
@@ -69,7 +70,7 @@ func (cdb *CacheDB) NewBatch() dbm.Batch {
 	}
 }
 
-func (cdb *CacheDB) Commit(writer KVWriter) {
+func (cdb *CacheDB) Commit(writer storage.KVWriter) {
 	cdb.cache.WriteTo(writer)
 	cdb.cache.Reset()
 }

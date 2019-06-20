@@ -2,6 +2,7 @@ package dump
 
 import (
 	"crypto/sha256"
+	bin "encoding/binary"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
@@ -98,6 +99,8 @@ func Load(reader Reader, st *state.State) error {
 func dumpTxHash(chainID string, lastHeight uint64) binary.HexBytes {
 	hasher := sha256.New()
 	hasher.Write([]byte(chainID))
-	hasher.Write(binary.Uint64Bytes(lastHeight))
+	bs := make([]byte, 8)
+	bin.BigEndian.PutUint64(bs, lastHeight)
+	hasher.Write(bs)
 	return hasher.Sum(nil)
 }

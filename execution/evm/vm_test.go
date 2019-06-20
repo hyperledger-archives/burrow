@@ -15,6 +15,7 @@
 package evm
 
 import (
+	bin "encoding/binary"
 	"strconv"
 	"testing"
 	"time"
@@ -833,7 +834,7 @@ func TestCreate(t *testing.T) {
 	// ensure pre-generated address has same sequence number
 	nonce := make([]byte, txs.HashLength+uint64Length)
 	copy(nonce, ourVm.nonce)
-	PutUint64(nonce[txs.HashLength:], ourVm.sequence+1)
+	bin.BigEndian.PutUint64(nonce[txs.HashLength:], ourVm.sequence+1)
 	addr := crypto.NewContractAddress(callee, nonce)
 
 	var gas uint64 = 100000
@@ -960,7 +961,7 @@ func TestMemoryBounds(t *testing.T) {
 		code = MustSplice(code, storeAtEnd(), MLOAD)
 	}
 	require.NoError(t, cache.Error())
-	output, err = ourVm.Call(cache, NewNoopEventSink(), caller, callee, MustSplice(code, storeAtEnd(), returnAfterStore()),
+	_, err = ourVm.Call(cache, NewNoopEventSink(), caller, callee, MustSplice(code, storeAtEnd(), returnAfterStore()),
 		nil, 0, &gas)
 	assert.Error(t, err, "Should hit memory out of bounds")
 }
@@ -1380,6 +1381,7 @@ func TestDataStackOverflow(t *testing.T) {
 
 	// Input is the function hash of `get()`
 	input, err := hex.DecodeString("6d4ce63c")
+	require.NoError(t, err)
 
 	_, err = ourVm.Call(cache, eventSink, account1, account2, contractCode, input, 0, &gas)
 	assertErrorCode(t, errors.ErrorCodeDataStackOverflow, err, "Should be stack overflow")

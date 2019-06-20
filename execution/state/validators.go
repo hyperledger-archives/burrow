@@ -35,6 +35,9 @@ func LoadValidatorRing(version int64, ringSize int,
 	ring := validator.NewRing(nil, ringSize)
 	// Load the IAVL state
 	rs.Forest, err = getImmutable(startVersion)
+	if err != nil {
+		return nil, err
+	}
 	// Write the validator state at startVersion from IAVL tree into the ring's current bucket delta
 	err = validator.Write(ring, rs)
 	if err != nil {

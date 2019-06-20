@@ -17,6 +17,8 @@ package structure
 import (
 	"testing"
 
+	"github.com/hyperledger/burrow/util/slice"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -99,8 +101,8 @@ func TestDelete(t *testing.T) {
 
 func TestCopyPrepend(t *testing.T) {
 	assert.Equal(t, []interface{}{"three", 4, 1, "two"},
-		CopyPrepend([]interface{}{1, "two"}, "three", 4))
-	assert.Equal(t, []interface{}{}, CopyPrepend(nil))
-	assert.Equal(t, []interface{}{1}, CopyPrepend(nil, 1))
-	assert.Equal(t, []interface{}{1}, CopyPrepend([]interface{}{1}))
+		slice.CopyPrepend([]interface{}{1, "two"}, "three", 4))
+	assert.Equal(t, []interface{}{}, slice.CopyPrepend(nil))
+	assert.Equal(t, []interface{}{1}, slice.CopyPrepend(nil, 1))
+	assert.Equal(t, []interface{}{1}, slice.CopyPrepend([]interface{}{1}))
 }

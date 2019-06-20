@@ -160,6 +160,9 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 				return err
 			}
 			job.Result, err = SendJob(job.Send, tx, playbook.Account, client, logger)
+			if err != nil {
+				return err
+			}
 		case *def.RegisterName:
 			announce(job.Name, "RegisterName", logger)
 			txs, err := FormulateRegisterNameJob(job.RegisterName, args, playbook, client, logger)
@@ -167,6 +170,9 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 				return err
 			}
 			job.Result, err = RegisterNameJob(job.RegisterName, args, playbook, txs, client, logger)
+			if err != nil {
+				return err
+			}
 		case *def.Permission:
 			announce(job.Name, "Permission", logger)
 			tx, err := FormulatePermissionJob(job.Permission, playbook.Account, client, logger)
@@ -174,6 +180,9 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 				return err
 			}
 			job.Result, err = PermissionJob(job.Permission, playbook.Account, tx, client, logger)
+			if err != nil {
+				return err
+			}
 
 		// Contracts jobs
 		case *def.Deploy:

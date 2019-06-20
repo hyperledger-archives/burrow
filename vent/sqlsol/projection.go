@@ -256,7 +256,7 @@ func getSQLType(evmSignature string, bytesToString bool) (types.SQLColumnType, i
 			return types.SQLColumnTypeNumeric, 0, nil
 		}
 	default:
-		return -1, 0, fmt.Errorf("Don't know how to map evmSignature: %s ", evmSignature)
+		return -1, 0, fmt.Errorf("do not know how to map evmSignature: %s ", evmSignature)
 	}
 }
 

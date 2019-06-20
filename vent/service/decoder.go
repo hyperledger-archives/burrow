@@ -21,7 +21,7 @@ func decodeEvent(header *exec.Header, log *exec.LogEvent, origin *exec.Origin, a
 
 	evAbi, ok := abiSpec.EventsById[eventID]
 	if !ok {
-		return nil, fmt.Errorf("Abi spec not found for event %x", eventID)
+		return nil, fmt.Errorf("abi spec not found for event %x", eventID)
 	}
 
 	// decode header to get context data for each event
@@ -36,7 +36,7 @@ func decodeEvent(header *exec.Header, log *exec.LogEvent, origin *exec.Origin, a
 
 	// unpack event data (topics & data part)
 	if err := abi.UnpackEvent(&evAbi, log.Topics, log.Data, unpackedData...); err != nil {
-		return nil, errors.Wrap(err, "Could not unpack event data")
+		return nil, errors.Wrap(err, "could not unpack event data")
 	}
 
 	// for each decoded item value, stores it in given item name

@@ -13,8 +13,7 @@ import (
 	"sync"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/logging"
-	hex "github.com/tmthrgd/go-hex"
+	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/scrypt"
 )
 
@@ -114,7 +113,6 @@ type KeyStore struct {
 	sync.Mutex
 	AllowBadFilePermissions bool
 	keysDirPath             string
-	logger                  *logging.Logger
 }
 
 func (ks *KeyStore) Gen(passphrase string, curveType crypto.CurveType) (key *Key, err error) {

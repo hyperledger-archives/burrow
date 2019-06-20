@@ -222,6 +222,6 @@ func TestNewProjectionFromEventSpec(t *testing.T) {
 	// Create a column conflict between burn and unreliable fields (both map to burnt so the SQL column def must be identical)
 	field = eventSpec[1].GetFieldMapping("unreliable")
 	field.Primary = !field.Primary
-	projection, err = sqlsol.NewProjectionFromEventSpec(eventSpec)
+	_, err = sqlsol.NewProjectionFromEventSpec(eventSpec)
 	require.Error(t, err)
 }

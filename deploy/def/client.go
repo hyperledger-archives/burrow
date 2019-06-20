@@ -598,6 +598,9 @@ func (c *Client) TxInput(inputString, amountString, sequenceString string, allow
 	var amount uint64
 	if amountString != "" {
 		amount, err = c.ParseUint64(amountString)
+		if err != nil {
+			return nil, err
+		}
 	}
 	var sequence uint64
 	sequence, err = c.getSequence(sequenceString, inputAddress, c.MempoolSigning && allowMempoolSigning, logger)

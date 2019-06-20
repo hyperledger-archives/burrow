@@ -52,9 +52,8 @@ func (ts TagMap) Keys() []string {
 }
 
 type CombinedTags struct {
-	keys   []string
-	ks     map[string][]Tagged
-	concat bool
+	keys []string
+	ks   map[string][]Tagged
 }
 
 func NewCombinedTags() *CombinedTags {
