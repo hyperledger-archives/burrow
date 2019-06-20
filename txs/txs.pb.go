@@ -5,10 +5,6 @@ package txs
 
 import (
 	fmt "fmt"
-	io "io"
-	math "math"
-	math_bits "math/bits"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
@@ -16,6 +12,8 @@ import (
 	crypto "github.com/hyperledger/burrow/crypto"
 	github_com_hyperledger_burrow_crypto "github.com/hyperledger/burrow/crypto"
 	github_com_hyperledger_burrow_txs_payload "github.com/hyperledger/burrow/txs/payload"
+	io "io"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -283,9 +281,9 @@ func (m *Envelope) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintTxs(dAtA, i, uint64(m.Tx.Size()))
-		n1, err1 := m.Tx.MarshalTo(dAtA[i:])
-		if err1 != nil {
-			return 0, err1
+		n1, err := m.Tx.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n1
 	}
@@ -314,9 +312,9 @@ func (m *Signatory) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintTxs(dAtA, i, uint64(m.Address.Size()))
-		n2, err2 := m.Address.MarshalTo(dAtA[i:])
-		if err2 != nil {
-			return 0, err2
+		n2, err := m.Address.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n2
 	}
@@ -324,9 +322,9 @@ func (m *Signatory) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintTxs(dAtA, i, uint64(m.PublicKey.Size()))
-		n3, err3 := m.PublicKey.MarshalTo(dAtA[i:])
-		if err3 != nil {
-			return 0, err3
+		n3, err := m.PublicKey.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n3
 	}
@@ -334,9 +332,9 @@ func (m *Signatory) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x22
 		i++
 		i = encodeVarintTxs(dAtA, i, uint64(m.Signature.Size()))
-		n4, err4 := m.Signature.MarshalTo(dAtA[i:])
-		if err4 != nil {
-			return 0, err4
+		n4, err := m.Signature.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n4
 	}
@@ -369,9 +367,9 @@ func (m *Receipt) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x12
 	i++
 	i = encodeVarintTxs(dAtA, i, uint64(m.TxHash.Size()))
-	n5, err5 := m.TxHash.MarshalTo(dAtA[i:])
-	if err5 != nil {
-		return 0, err5
+	n5, err := m.TxHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n5
 	if m.CreatesContract {
@@ -387,9 +385,9 @@ func (m *Receipt) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x22
 	i++
 	i = encodeVarintTxs(dAtA, i, uint64(m.ContractAddress.Size()))
-	n6, err6 := m.ContractAddress.MarshalTo(dAtA[i:])
-	if err6 != nil {
-		return 0, err6
+	n6, err := m.ContractAddress.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n6
 	if m.XXX_unrecognized != nil {
@@ -476,7 +474,14 @@ func (m *Receipt) Size() (n int) {
 }
 
 func sovTxs(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozTxs(x uint64) (n int) {
 	return sovTxs(uint64((x << 1) ^ uint64((int64(x) >> 63))))

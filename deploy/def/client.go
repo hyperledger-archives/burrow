@@ -504,6 +504,66 @@ func (c *Client) Send(arg *SendArg, logger *logging.Logger) (*payload.SendTx, er
 	return tx, nil
 }
 
+type BondArg struct {
+	Input       string
+	Amount      string
+	Sequence    string
+	Address     string
+	PublicKey   string
+	NodeAddress string
+	NetAddress  string
+}
+
+func (c *Client) Bond(arg *BondArg, logger *logging.Logger) (*payload.BondTx, error) {
+	logger.InfoMsg("BondTx", "account", arg)
+	err := c.dial(logger)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: disable mempool signing
+	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true, logger)
+	if err != nil {
+		return nil, err
+	}
+	val := &spec.TemplateAccount{}
+	err = c.getIdentity(val, arg.Address, arg.PublicKey, logger)
+	if err != nil {
+		return nil, err
+	}
+	return &payload.BondTx{
+		Input:     input,
+		Validator: val,
+	}, nil
+}
+
+type UnbondArg struct {
+	Input    string
+	Output   string
+	Sequence string
+}
+
+func (c *Client) Unbond(arg *UnbondArg, logger *logging.Logger) (*payload.UnbondTx, error) {
+	logger.InfoMsg("UnbondTx", "account", arg)
+	if err := c.dial(logger); err != nil {
+		return nil, err
+	}
+	input, err := c.TxInput(arg.Input, "", arg.Sequence, true, logger)
+	if err != nil {
+		return nil, err
+	}
+	addr, err := c.GetKeyAddress(arg.Output, logger)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse address: %v", err)
+	}
+	output := &payload.TxOutput{
+		Address: addr,
+	}
+	return &payload.UnbondTx{
+		Input:  input,
+		Output: output,
+	}, nil
+}
+
 type NameArg struct {
 	Input    string
 	Amount   string

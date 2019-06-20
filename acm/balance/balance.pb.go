@@ -5,13 +5,11 @@ package balance
 
 import (
 	fmt "fmt"
-	io "io"
-	math "math"
-	math_bits "math/bits"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
+	io "io"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -161,7 +159,14 @@ func (m *Balance) Size() (n int) {
 }
 
 func sovBalance(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozBalance(x uint64) (n int) {
 	return sovBalance(uint64((x << 1) ^ uint64((int64(x) >> 63))))

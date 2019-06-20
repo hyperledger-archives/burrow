@@ -173,6 +173,16 @@ func newExecutor(name string, runCall bool, params Params, backend ExecutorState
 			StateWriter:  exe.stateCache,
 			Logger:       exe.logger,
 		},
+		payload.TypeBond: &contexts.BondContext{
+			ValidatorSet: exe.validatorCache,
+			StateWriter:  exe.stateCache,
+			Logger:       exe.logger,
+		},
+		payload.TypeUnbond: &contexts.UnbondContext{
+			ValidatorSet: exe.validatorCache,
+			StateWriter:  exe.stateCache,
+			Logger:       exe.logger,
+		},
 	}
 
 	exe.contexts = map[payload.Type]contexts.Context{

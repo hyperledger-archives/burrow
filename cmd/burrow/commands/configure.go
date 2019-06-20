@@ -46,8 +46,6 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 		configTemplateOut := cmd.StringsOpt("config-out", nil,
 			"Go text/template output filename. Template filename specified with --config-template-in")
 
-		separateGenesisDoc := cmd.StringOpt("w separate-genesis-doc", "", "Emit a separate genesis doc as JSON or TOML")
-
 		loggingOpt := cmd.StringOpt("l logging", "",
 			"Comma separated list of logging instructions which form a 'program' which is a depth-first "+
 				"pre-order of instructions that will build the root logging sink. See 'burrow help' for more information.")

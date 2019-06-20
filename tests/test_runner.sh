@@ -77,7 +77,7 @@ test_setup(){
     echo
     rm -rf ${burrow_root}
     pushd "$chain_dir"
-    ${burrow_bin} start -v0 2> "$burrow_log"&
+    ${burrow_bin} start -i0 2> "$burrow_log"&
     burrow_pid=$!
     popd
   else

@@ -69,15 +69,71 @@ func Tx(output Output) func(cmd *cli.Cmd) {
 					}))
 				}
 			})
+
+			cmd.Command("bond", "bond a new validator", func(cmd *cli.Cmd) {
+				sourceOpt := cmd.StringOpt("source", "", "Account with bonding perm, if not set config is used")
+				targetOpt := cmd.StringOpt("target", "", "Validator account to bond, created if doesn't exist")
+				powerOpt := cmd.StringOpt("power", "", "Amount of value to bond, required")
+				nodeOpt := cmd.StringOpt("node", "", "Optional Tendermint node address")
+				urlOpt := cmd.StringOpt("url", "", "Optional network address for validator")
+				cmd.Spec += "[--source=<address>] [--target=<publicKey>] [--power=<value>] [--node=<address>] [--url=<ip address>]"
+
+				cmd.Action = func() {
+					bond := &def.Bond{
+						Source:  jobs.FirstOf(*sourceOpt, address),
+						Target:  jobs.FirstOf(*targetOpt, address),
+						Power:   *powerOpt,
+						Node:    *nodeOpt,
+						Network: *urlOpt,
+					}
+
+					if err := bond.Validate(); err != nil {
+						output.Fatalf("could not validate BondTx: %v", err)
+					}
+
+					tx, err := jobs.FormulateBondJob(bond, address, client, logger)
+					if err != nil {
+						output.Fatalf("could not formulate BondTx: %v", err)
+					}
+
+					output.Printf("%s", source.JSONString(payload.Any{
+						BondTx: tx,
+					}))
+				}
+			})
+
+			cmd.Command("unbond", "unbond an existing validator", func(cmd *cli.Cmd) {
+				sourceOpt := cmd.StringOpt("source", "", "Validator to unbond, if not set config is used")
+				targetOpt := cmd.StringOpt("target", "", "Account to receive tokens, created if doesn't exist")
+				cmd.Spec += "[--source=<address>] [--target=<address>]"
+
+				cmd.Action = func() {
+					unbond := &def.Unbond{
+						Source: jobs.FirstOf(*sourceOpt, address),
+						Target: jobs.FirstOf(*targetOpt, address),
+					}
+
+					if err := unbond.Validate(); err != nil {
+						output.Fatalf("could not validate UnbondTx: %v", err)
+					}
+
+					tx, err := jobs.FormulateUnbondJob(unbond, address, client, logger)
+					if err != nil {
+						output.Fatalf("could not formulate UnbondTx: %v", err)
+					}
+
+					output.Printf("%s", source.JSONString(payload.Any{
+						UnbondTx: tx,
+					}))
+				}
+			})
 		})
 
 		cmd.Command("commit", "read and send a tx to mempool", func(cmd *cli.Cmd) {
-			configOpts := addConfigOptions(cmd)
 			conf, err := configOpts.obtainBurrowConfig()
 			if err != nil {
 				output.Fatalf("could not set up config: %v", err)
 			}
-
 			fileOpt := cmd.StringOpt("f file", "", "Read the tx spec from a file")
 			cmd.Spec += "[--file=<location>]"
 
@@ -104,6 +160,10 @@ func Tx(output Output) func(cmd *cli.Cmd) {
 
 				switch tx := rawTx.GetValue().(type) {
 				case *payload.SendTx:
+					hash, err = makeTx(client, tx)
+				case *payload.BondTx:
+					hash, err = makeTx(client, tx)
+				case *payload.UnbondTx:
 					hash, err = makeTx(client, tx)
 				default:
 					output.Fatalf("payload type not recognized")

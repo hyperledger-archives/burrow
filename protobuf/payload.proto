@@ -108,17 +108,22 @@ message BondTx {
     option (gogoproto.goproto_stringer) = false;
     option (gogoproto.goproto_getters) = false;
 
-    repeated TxInput Inputs = 1;
-    repeated TxOutput UnbondTo = 2;
+    // Account with bonding permission
+    TxInput Input = 1;
+    // The validator to bond, public key must be known
+    spec.TemplateAccount Validator = 2 [(gogoproto.nullable) = true];
+    // Optional network address to identify
+    string NetAddress = 3;
 }
 
 message UnbondTx {
     option (gogoproto.goproto_stringer) = false;
     option (gogoproto.goproto_getters) = false;
 
+    // The validator to unbond
     TxInput Input = 1;
-    bytes Address = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
-    uint64 Height = 3;
+    // The account to unbond power to
+    TxOutput Output = 2;
 }
 
 message GovTx {
