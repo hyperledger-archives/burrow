@@ -136,6 +136,17 @@ func (ctx *UnbondContext) Execute(txe *exec.TxExecution, p payload.Payload) erro
 		return err
 	}
 
+	var signed bool
+	// ensure tx is signed by validator
+	for _, sig := range txe.Envelope.GetSignatories() {
+		if sender.GetPublicKey().String() == sig.GetPublicKey().String() {
+			signed = true
+		}
+	}
+	if !signed {
+		return fmt.Errorf("can't unbond, not signed by validator")
+	}
+
 	recipient, err := ctx.StateWriter.GetAccount(ctx.tx.Output.Address)
 	if err != nil {
 		return err

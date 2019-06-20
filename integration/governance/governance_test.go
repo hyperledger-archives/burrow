@@ -4,7 +4,6 @@ package governance
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"net"
 	"testing"
@@ -16,7 +15,6 @@ import (
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
-	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/genesis/spec"
 	"github.com/hyperledger/burrow/governance"
 	"github.com/hyperledger/burrow/integration"
@@ -24,18 +22,14 @@ import (
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
-	"github.com/hyperledger/burrow/rpc/rpctransact"
-	"github.com/hyperledger/burrow/txs"
-	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/p2p"
 	tmcore "github.com/tendermint/tendermint/rpc/core"
 	rpctypes "github.com/tendermint/tendermint/rpc/lib/types"
 )
 
 func TestGovernance(t *testing.T) {
-	privateAccounts := integration.MakePrivateAccounts(10) // make keys
+	privateAccounts := integration.MakePrivateAccounts("accounts", 10) // make keys
 	genesisDoc := integration.TestGenesisDoc(privateAccounts)
 	kernels := make([]*core.Kernel, len(privateAccounts))
 	genesisDoc.Accounts[4].Permissions = permission.NewAccountPermissions(permission.Send | permission.Call)
@@ -233,7 +227,7 @@ func TestGovernance(t *testing.T) {
 				Amounts: balance.New().Power(power),
 			}))
 			require.Error(t, err, "Should not be able to set power without providing public key")
-			assert.Contains(t, err.Error(), "GovTx must be provided with public key when updating validator power")
+			assert.Contains(t, err.Error(), "GovTx: must be provided with public key when updating validator power")
 		})
 
 		t.Run("InvalidSequenceNumber", func(t *testing.T) {
@@ -280,79 +274,4 @@ func TestGovernance(t *testing.T) {
 	// /home/sean/go/src/github.com/hyperledger/burrow/vendor/github.com/tendermint/tendermint/consensus/reactor.go:171 +0x23a
 
 	time.Sleep(4 * time.Second)
-}
-
-// Helpers
-
-func getMaxFlow(t testing.TB, qcli rpcquery.QueryClient) uint64 {
-	vs, err := qcli.GetValidatorSet(context.Background(), &rpcquery.GetValidatorSetParam{})
-	require.NoError(t, err)
-	set := validator.UnpersistSet(vs.Set)
-	totalPower := set.TotalPower()
-	maxFlow := new(big.Int)
-	return maxFlow.Sub(maxFlow.Div(totalPower, big.NewInt(3)), big.NewInt(1)).Uint64()
-}
-
-func getValidatorSet(t testing.TB, qcli rpcquery.QueryClient) *validator.Set {
-	vs, err := qcli.GetValidatorSet(context.Background(), &rpcquery.GetValidatorSetParam{})
-	require.NoError(t, err)
-	// Include the genesis validator and compare the sets
-	return validator.UnpersistSet(vs.Set)
-}
-
-func account(i int) *acm.PrivateAccount {
-	return rpctest.PrivateAccounts[i]
-}
-
-func govSync(cli rpctransact.TransactClient, tx *payload.GovTx) (*exec.TxExecution, error) {
-	return cli.BroadcastTxSync(context.Background(), &rpctransact.TxEnvelopeParam{
-		Payload: tx.Any(),
-	})
-}
-
-func assertValidatorsEqual(t testing.TB, expected, actual *validator.Set) {
-	require.NoError(t, expected.Equal(actual), "validator sets should be equal\nExpected: %v\n\nActual: %v\n",
-		expected, actual)
-}
-
-func changePower(vs *validator.Set, i int, power uint64) {
-	vs.ChangePower(account(i).GetPublicKey(), new(big.Int).SetUint64(power))
-}
-
-func setSequence(t testing.TB, qcli rpcquery.QueryClient, tx payload.Payload) {
-	for _, input := range tx.GetInputs() {
-		ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: input.Address})
-		require.NoError(t, err)
-		input.Sequence = ca.Sequence + 1
-	}
-}
-
-func localSignAndBroadcastSync(t testing.TB, tcli rpctransact.TransactClient, chainID string,
-	signer acm.AddressableSigner, tx payload.Payload) (*exec.TxExecution, error) {
-	txEnv := txs.Enclose(chainID, tx)
-	err := txEnv.Sign(signer)
-	require.NoError(t, err)
-
-	return tcli.BroadcastTxSync(context.Background(), &rpctransact.TxEnvelopeParam{Envelope: txEnv})
-}
-
-func connectKernels(k1, k2 *core.Kernel) {
-	k1Address, err := k1.Node.NodeInfo().NetAddress()
-	if err != nil {
-		panic(fmt.Errorf("could not get kernel address: %v", err))
-	}
-	k2Address, err := k2.Node.NodeInfo().NetAddress()
-	if err != nil {
-		panic(fmt.Errorf("could not get kernel address: %v", err))
-	}
-	fmt.Printf("Connecting %v -> %v\n", k1Address, k2Address)
-	err = k1.Node.Switch().DialPeerWithAddress(k2Address, false)
-	if err != nil {
-		switch e := err.(type) {
-		case p2p.ErrRejected:
-			panic(fmt.Errorf("connection between test kernels was rejected: %v", e))
-		default:
-			panic(fmt.Errorf("could not connect test kernels: %v", err))
-		}
-	}
 }
