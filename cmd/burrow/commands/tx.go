@@ -74,17 +74,13 @@ func Tx(output Output) func(cmd *cli.Cmd) {
 				sourceOpt := cmd.StringOpt("source", "", "Account with bonding perm, if not set config is used")
 				targetOpt := cmd.StringOpt("target", "", "Validator account to bond, created if doesn't exist")
 				powerOpt := cmd.StringOpt("power", "", "Amount of value to bond, required")
-				nodeOpt := cmd.StringOpt("node", "", "Optional Tendermint node address")
-				urlOpt := cmd.StringOpt("url", "", "Optional network address for validator")
-				cmd.Spec += "[--source=<address>] [--target=<publicKey>] [--power=<value>] [--node=<address>] [--url=<ip address>]"
+				cmd.Spec += "[--source=<address>] [--target=<publicKey>] [--power=<value>]"
 
 				cmd.Action = func() {
 					bond := &def.Bond{
-						Source:  jobs.FirstOf(*sourceOpt, address),
-						Target:  jobs.FirstOf(*targetOpt, address),
-						Power:   *powerOpt,
-						Node:    *nodeOpt,
-						Network: *urlOpt,
+						Source: jobs.FirstOf(*sourceOpt, address),
+						Target: jobs.FirstOf(*targetOpt, address),
+						Power:  *powerOpt,
 					}
 
 					if err := bond.Validate(); err != nil {

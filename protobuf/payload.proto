@@ -112,8 +112,6 @@ message BondTx {
     TxInput Input = 1;
     // The validator to bond, public key must be known
     spec.TemplateAccount Validator = 2 [(gogoproto.nullable) = true];
-    // Optional network address to identify
-    string NetAddress = 3;
 }
 
 message UnbondTx {

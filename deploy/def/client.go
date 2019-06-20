@@ -505,13 +505,11 @@ func (c *Client) Send(arg *SendArg, logger *logging.Logger) (*payload.SendTx, er
 }
 
 type BondArg struct {
-	Input       string
-	Amount      string
-	Sequence    string
-	Address     string
-	PublicKey   string
-	NodeAddress string
-	NetAddress  string
+	Input     string
+	Amount    string
+	Sequence  string
+	Address   string
+	PublicKey string
 }
 
 func (c *Client) Bond(arg *BondArg, logger *logging.Logger) (*payload.BondTx, error) {

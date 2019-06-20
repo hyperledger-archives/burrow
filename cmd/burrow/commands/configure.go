@@ -40,6 +40,8 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 		keysDir := cmd.StringOpt("keys-dir", "", "Directory where keys are stored")
 
+		separateGenesisDoc := cmd.StringOpt("w separate-genesis-doc", "", "Emit a separate genesis doc as JSON or TOML")
+
 		configTemplateIn := cmd.StringsOpt("config-template-in", nil,
 			"Go text/template input filename to generate config file specified with --config-out")
 

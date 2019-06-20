@@ -183,10 +183,6 @@ type Bond struct {
 	Target string `mapstructure:"target" json:"target" yaml:"target" toml:"target"`
 	// (Required) the Tendermint validator power to claim
 	Power string `mapstructure:"power" json:"power" yaml:"power" toml:"power"`
-	// (Optional) Tendermint node address of the validator
-	Node string `mapstructure:"node" json:"node" yaml:"node" toml:"node"`
-	// (Optional) network ip address of the validator
-	Network string `mapstructure:"network" json:"network" yaml:"network" toml:"network"`
 	// (Optional, advanced only) sequence to use when burrow keys signs the transaction
 	// (do not use unless you know what you're doing)
 	Sequence string `mapstructure:"sequence" json:"sequence" yaml:"sequence" toml:"sequence"`

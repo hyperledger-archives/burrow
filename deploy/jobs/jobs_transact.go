@@ -59,11 +59,9 @@ func FormulateBondJob(bond *def.Bond, account string, client *def.Client, logger
 		"power", bond.Power)
 
 	arg := &def.BondArg{
-		Input:       bond.Source,
-		Amount:      bond.Power,
-		Sequence:    bond.Sequence,
-		NodeAddress: bond.Node,
-		NetAddress:  bond.Network,
+		Input:    bond.Source,
+		Amount:   bond.Power,
+		Sequence: bond.Sequence,
 	}
 
 	if len(bond.Source) == crypto.AddressHexLength {
