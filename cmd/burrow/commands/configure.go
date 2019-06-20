@@ -10,12 +10,11 @@ import (
 
 	"github.com/hyperledger/burrow/dump"
 
+	"github.com/hyperledger/burrow/config/deployment"
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/deployment"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/state"
-	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/genesis/spec"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
@@ -44,12 +43,10 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 		keysDir := cmd.StringOpt("keys-dir", "", "Directory where keys are stored")
 
 		configTemplateIn := cmd.StringsOpt("config-template-in", nil,
-			fmt.Sprintf("Go text/template template input filename (left delim: %s right delim: %s) to generate config "+
-				"file specified with --config-out", deployment.LeftTemplateDelim, deployment.RightTemplateDelim))
+			fmt.Sprintf("Go text/template input filename to generate config file specified with --config-out"))
 
-		configOut := cmd.StringsOpt("config-out", nil,
-			"Go text/template template output file. Template filename specified with --config-template-in "+
-				"file specified with --config-out")
+		configTemplateOut := cmd.StringsOpt("config-out", nil,
+			"Go text/template output file. Template filename specified with --config-template-in")
 
 		separateGenesisDoc := cmd.StringOpt("w separate-genesis-doc", "", "Emit a separate genesis doc as JSON or TOML")
 
@@ -106,7 +103,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				conf.Keys.RemoteAddress = *keysURLOpt
 			}
 
-			if len(*configTemplateIn) != len(*configOut) {
+			if len(*configTemplateIn) != len(*configTemplateOut) {
 				output.Fatalf("--config-template-in and --config-out must be specified the same number of times")
 			}
 
@@ -137,30 +134,27 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 						output.Fatalf("could get all keys: %v", err)
 					}
 
-					cdc := amino.NewCodec()
-					cryptoAmino.RegisterAmino(cdc)
-
 					pkg = deployment.Config{Keys: make(map[crypto.Address]deployment.Key)}
 
 					for k := range allNames {
 						addr, err := crypto.AddressFromHexString(allNames[k])
 						if err != nil {
-							output.Fatalf("Address %s not valid: %v", k, err)
+							output.Fatalf("address %s not valid: %v", k, err)
 						}
 						key, err := keyStore.GetKey("", addr[:])
 						if err != nil {
-							output.Fatalf("Failed to get key: %s: %v", k, err)
+							output.Fatalf("failed to get key: %s: %v", k, err)
 						}
 						json, err := json.Marshal(key)
 						if err != nil {
-							output.Fatalf("could not json marshal key: %s: %v", k, err)
+							output.Fatalf("failed to json marshal key: %s: %v", k, err)
 						}
 						pkg.Keys[addr] = deployment.Key{Name: k, Address: addr, KeyJSON: json}
 					}
 				} else {
 					keyClient, err := keys.NewRemoteKeyClient(conf.Keys.RemoteAddress, logging.NewNoopLogger())
 					if err != nil {
-						output.Fatalf("Could not create remote key client: %v", err)
+						output.Fatalf("could not create remote key client: %v", err)
 					}
 					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
 					if err != nil {
@@ -172,7 +166,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 			if *chainNameOpt != "" {
 				if conf.GenesisDoc == nil {
-					output.Fatalf("Unable to set ChainName since no GenesisDoc/GenesisSpec provided.")
+					output.Fatalf("unable to set ChainName since no GenesisDoc/GenesisSpec provided.")
 				}
 				conf.GenesisDoc.ChainName = *chainNameOpt
 			}
@@ -183,12 +177,12 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				}
 
 				if len(conf.GenesisDoc.Validators) == 0 {
-					output.Fatalf("On restore, validators must be provided in GenesisDoc or GenesisSpec")
+					output.Fatalf("on restore, validators must be provided in GenesisDoc or GenesisSpec")
 				}
 
 				reader, err := dump.NewFileReader(*restoreDumpOpt)
 				if err != nil {
-					output.Fatalf("Failed to read restore dump: %v", err)
+					output.Fatalf("failed to read restore dump: %v", err)
 				}
 
 				st, err := state.MakeGenesisState(db.NewMemDB(), conf.GenesisDoc)
@@ -205,24 +199,31 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 			}
 
 			if conf.GenesisDoc != nil {
-				pkg.Config = conf.GenesisDoc
+				pkg.GenesisDoc = conf.GenesisDoc
 
 				for _, v := range conf.GenesisDoc.Validators {
-					tmplV := deployment.Validator{
-						Name:    v.Name,
-						Address: v.Address,
-					}
-
 					nodeKey := tendermint.NewNodeKey()
-					tmplV.NodeAddress, _ = crypto.AddressFromHexString(string(nodeKey.ID()))
+					nodeAddress, _ := crypto.AddressFromHexString(string(nodeKey.ID()))
 
-					pkg.Validators = append(pkg.Validators, tmplV)
+					cdc := amino.NewCodec()
+					cryptoAmino.RegisterAmino(cdc)
+					json, err := cdc.MarshalJSON(nodeKey)
+					if err != nil {
+						output.Fatalf("go-amino failed to json marshall private key: %v", err)
+					}
+					pkg.Keys[nodeAddress] = deployment.Key{Name: v.Name, Address: nodeAddress, KeyJSON: json}
+
+					pkg.Validators = append(pkg.Validators, deployment.Validator{
+						Name:        v.Name,
+						Address:     v.Address,
+						NodeAddress: nodeAddress,
+					})
 				}
 
 				for ind := range *configTemplateIn {
-					err := processTemplate(&pkg, conf.GenesisDoc, (*configTemplateIn)[ind], (*configOut)[ind])
+					err := processTemplate(&pkg, (*configTemplateIn)[ind], (*configTemplateOut)[ind])
 					if err != nil {
-						output.Fatalf("could not template from %s to %s: %v", (*configTemplateIn)[ind], (*configOut)[ind], err)
+						output.Fatalf("could not template from %s to %s: %v", (*configTemplateIn)[ind], (*configTemplateOut)[ind], err)
 					}
 				}
 			}
@@ -311,11 +312,12 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 	}
 }
 
-func processTemplate(pkg *deployment.Config, config *genesis.GenesisDoc, templateIn, templateOut string) error {
+func processTemplate(pkg *deployment.Config, templateIn, templateOut string) error {
 	data, err := ioutil.ReadFile(templateIn)
 	if err != nil {
 		return err
 	}
+	fmt.Println(templateIn)
 	output, err := pkg.Dump(templateIn, string(data))
 	if err != nil {
 		return err

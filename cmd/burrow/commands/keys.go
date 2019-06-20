@@ -13,7 +13,7 @@ import (
 	"github.com/howeyc/gopass"
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/deployment"
+	"github.com/hyperledger/burrow/config/deployment"
 	"github.com/hyperledger/burrow/keys"
 	cli "github.com/jawher/mow.cli"
 	"google.golang.org/grpc"
