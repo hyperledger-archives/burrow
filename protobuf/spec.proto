@@ -22,11 +22,10 @@ message TemplateAccount {
 
     string Name = 1;
     bytes Address = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
-    bytes NodeAddress = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
-    crypto.PublicKey PublicKey = 4 [(gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
-    repeated balance.Balance Amounts = 5 [(gogoproto.nullable) = false, (gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
-    repeated string Permissions = 6 [(gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
-    repeated string Roles = 7 [(gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
-    bytes Code = 8 [(gogoproto.nullable) = true, (gogoproto.customtype) = "github.com/hyperledger/burrow/acm.Bytecode"];
+    crypto.PublicKey PublicKey = 3 [(gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
+    repeated balance.Balance Amounts = 4 [(gogoproto.nullable) = false, (gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
+    repeated string Permissions = 5 [(gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
+    repeated string Roles = 6 [(gogoproto.jsontag) = ",omitempty", (gogoproto.moretags) = "toml:\",omitempty\""];
+    bytes Code = 7 [(gogoproto.nullable) = true, (gogoproto.customtype) = "github.com/hyperledger/burrow/acm.Bytecode"];
 }
 

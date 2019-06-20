@@ -52,9 +52,8 @@ type Account struct {
 
 type Validator struct {
 	BasicAccount
-	NodeAddress *crypto.Address `json:",omitempty" toml:",omitempty" yaml:",omitempty"`
-	Name        string
-	UnbondTo    []BasicAccount
+	Name     string
+	UnbondTo []BasicAccount
 }
 
 //------------------------------------------------------------
@@ -197,9 +196,8 @@ func (gv *Validator) Clone() Validator {
 			PublicKey: gv.PublicKey,
 			Amount:    gv.Amount,
 		},
-		Name:        gv.Name,
-		UnbondTo:    unbondToClone,
-		NodeAddress: gv.NodeAddress,
+		Name:     gv.Name,
+		UnbondTo: unbondToClone,
 	}
 }
 

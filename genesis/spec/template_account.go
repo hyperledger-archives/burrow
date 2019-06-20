@@ -10,20 +10,12 @@ import (
 	"github.com/hyperledger/burrow/permission"
 )
 
-func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int, generateNodeKeys bool) (*genesis.Validator, error) {
+func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int) (*genesis.Validator, error) {
 	var err error
 	gv := new(genesis.Validator)
 	gv.PublicKey, gv.Address, err = ta.RealisePublicKeyAndAddress(keyClient)
 	if err != nil {
 		return nil, err
-	}
-	if generateNodeKeys && ta.NodeAddress == nil {
-		// If neither PublicKey or Address set then generate a new one
-		address, err := keyClient.Generate("nodekey-"+ta.Name, crypto.CurveTypeEd25519)
-		if err != nil {
-			return nil, err
-		}
-		ta.NodeAddress = &address
 	}
 	gv.Amount = ta.Balances().GetPower(DefaultPower)
 	if ta.Name == "" {
@@ -37,7 +29,6 @@ func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int, generat
 		PublicKey: gv.PublicKey,
 		Amount:    gv.Amount,
 	}}
-	gv.NodeAddress = ta.NodeAddress
 	return gv, nil
 }
 

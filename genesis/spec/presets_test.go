@@ -13,7 +13,7 @@ import (
 func TestMergeGenesisSpecAccounts(t *testing.T) {
 	keyClient := mock.NewKeyClient()
 	gs := MergeGenesisSpecs(FullAccount("0"), ParticipantAccount("1"), ParticipantAccount("2"))
-	gd, err := gs.GenesisDoc(keyClient, false)
+	gd, err := gs.GenesisDoc(keyClient)
 	require.NoError(t, err)
 	assert.Len(t, gd.Validators, 1)
 	assert.Len(t, gd.Accounts, 3)

@@ -33,11 +33,8 @@ type Key struct {
 type Config struct {
 	Keys       map[crypto.Address]Key
 	Validators []Validator
-	Config     *genesis.GenesisDoc
+	*genesis.GenesisDoc
 }
-
-const LeftTemplateDelim = "<<"
-const RightTemplateDelim = ">>"
 
 var templateFuncs template.FuncMap = map[string]interface{}{
 	"base64": func(rv reflect.Value) string {
@@ -57,20 +54,18 @@ var templateFuncs template.FuncMap = map[string]interface{}{
 }
 
 const DefaultKeysExportFormat = `{
-	"CurveType": "<< .CurveType>>",
-	"Address": "<< .Address >>",
-	"PublicKey": "<< hex .PublicKey >>",
-	"PrivateKey": "<< hex .PrivateKey >>"
-}
-`
+	"CurveType": "{{ .CurveType }}",
+	"Address": "{{ .Address }}",
+	"PublicKey": "{{ hex .PublicKey }}",
+	"PrivateKey": "{{ hex .PrivateKey }}"
+}`
 
-var DefaultKeyExportTemplate = template.Must(template.New("KeysExport").Funcs(templateFuncs).
-	Delims(LeftTemplateDelim, RightTemplateDelim).
-	Parse(DefaultKeysExportFormat))
+var DefaultKeyExportTemplate = template.Must(template.New("KeysExport").
+	Funcs(templateFuncs).Parse(DefaultKeysExportFormat))
 
-func (pkg *Config) Dump(templateName, templateString string) (string, error) {
-	tmpl, err := template.New(templateName).Delims(LeftTemplateDelim, RightTemplateDelim).Funcs(templateFuncs).
-		Parse(templateString)
+// Dump a configuration to a template
+func (pkg *Config) Dump(templateName, templateData string) (string, error) {
+	tmpl, err := template.New(templateName).Funcs(templateFuncs).Parse(templateData)
 	if err != nil {
 		return "", errors.Wrap(err, "could not dump config to template")
 	}
@@ -82,9 +77,9 @@ func (pkg *Config) Dump(templateName, templateString string) (string, error) {
 	return buf.String(), nil
 }
 
-func (key *Key) Dump(templateString string) (string, error) {
-	tmpl, err := template.New("ExportKey").Delims(LeftTemplateDelim, RightTemplateDelim).Funcs(templateFuncs).
-		Parse(templateString)
+// Dump a key file to a template
+func (key *Key) Dump(templateData string) (string, error) {
+	tmpl, err := template.New("ExportKey").Funcs(templateFuncs).Parse(templateData)
 	if err != nil {
 		return "", errors.Wrap(err, "could not export key to template")
 	}
