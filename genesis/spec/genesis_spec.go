@@ -47,7 +47,7 @@ func (gs *GenesisSpec) RealiseKeys(keyClient keys.KeyClient) error {
 }
 
 // Produce a fully realised GenesisDoc from a template GenesisDoc that may omit values
-func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient, generateNodeKeys bool) (*genesis.GenesisDoc, error) {
+func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient) (*genesis.GenesisDoc, error) {
 	genesisDoc := new(genesis.GenesisDoc)
 	if gs.GenesisTime == nil {
 		genesisDoc.GenesisTime = time.Now()
@@ -94,7 +94,7 @@ func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient, generateNodeKeys boo
 		if templateAccount.Balances().HasPower() {
 			// Note this does not modify the input template
 			templateAccount.Address = &account.Address
-			validator, err := templateAccount.Validator(keyClient, i, generateNodeKeys)
+			validator, err := templateAccount.Validator(keyClient, i)
 			if err != nil {
 				return nil, fmt.Errorf("could not create Validator from template: %v", err)
 			}

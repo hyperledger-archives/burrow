@@ -6,14 +6,13 @@ package keys
 import (
 	context "context"
 	fmt "fmt"
-	io "io"
-	math "math"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
 	crypto "github.com/hyperledger/burrow/crypto"
 	grpc "google.golang.org/grpc"
+	io "io"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

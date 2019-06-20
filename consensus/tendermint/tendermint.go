@@ -45,27 +45,15 @@ func (n *Node) Close() {
 }
 
 func NewNode(conf *config.Config, privValidator tmTypes.PrivValidator, genesisDoc *tmTypes.GenesisDoc,
-	app *abci.App, metricsProvider node.MetricsProvider, marmotNodeKey *crypto.PrivateKey, logger *logging.Logger) (*Node, error) {
+	app *abci.App, metricsProvider node.MetricsProvider, logger *logging.Logger) (*Node, error) {
 
 	var err error
 	// disable Tendermint's RPC
 	conf.RPC.ListenAddress = ""
 
-	var nodeKey *p2p.NodeKey
-	if marmotNodeKey != nil && marmotNodeKey.CurveType == crypto.CurveTypeEd25519 {
-		var pkey ed25519.PrivKeyEd25519
-		copy(pkey[:], marmotNodeKey.PrivateKey)
-		nodeKey = &p2p.NodeKey{PrivKey: pkey}
-	} else {
-		err = os.MkdirAll(path.Dir(conf.NodeKeyFile()), 0777)
-		if err != nil {
-			return nil, err
-		}
-
-		nodeKey, err = p2p.LoadOrGenNodeKey(conf.NodeKeyFile())
-		if err != nil {
-			return nil, err
-		}
+	nodeKey, err := EnsureNodeKey(conf.NodeKeyFile())
+	if err != nil {
+		return nil, err
 	}
 
 	nde := &Node{}
@@ -120,5 +108,21 @@ func NewNodeInfo(ni p2p.DefaultNodeInfo) *NodeInfo {
 		Network:       ni.Network,
 		RPCAddress:    ni.Other.RPCAddress,
 		TxIndex:       ni.Other.TxIndex,
+	}
+}
+
+func EnsureNodeKey(nodeKeyFile string) (*p2p.NodeKey, error) {
+	err := os.MkdirAll(path.Dir(nodeKeyFile), 0777)
+	if err != nil {
+		return nil, err
+	}
+
+	return p2p.LoadOrGenNodeKey(nodeKeyFile)
+}
+
+func NewNodeKey() *p2p.NodeKey {
+	privKey := ed25519.GenPrivKey()
+	return &p2p.NodeKey{
+		PrivKey: privKey,
 	}
 }

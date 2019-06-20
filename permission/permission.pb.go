@@ -5,13 +5,12 @@ package permission
 
 import (
 	fmt "fmt"
-	io "io"
-	math "math"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
 	github_com_hyperledger_burrow_crypto "github.com/hyperledger/burrow/crypto"
+	io "io"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
