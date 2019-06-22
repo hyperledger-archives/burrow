@@ -200,7 +200,7 @@ func LoadState(db dbm.DB, version int64) (*State, error) {
 	}
 	// Populate stats. If this starts taking too long, store the value rather than the full scan at startup
 	err = s.IterateAccounts(func(acc *acm.Account) error {
-		if len(acc.Code) > 0 {
+		if len(acc.EVMCode) > 0 || len(acc.WASMCode) > 0 {
 			s.writeState.accountStats.AccountsWithCode++
 		} else {
 			s.writeState.accountStats.AccountsWithoutCode++

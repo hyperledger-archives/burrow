@@ -331,7 +331,7 @@ func TestCallPermission(t *testing.T) {
 	simpleAcc := &acm.Account{
 		Address:     simpleContractAddr,
 		Balance:     0,
-		Code:        []byte{0x60},
+		EVMCode:     []byte{0x60},
 		Sequence:    0,
 		Permissions: permission.ZeroAccountPermissions,
 	}
@@ -352,7 +352,7 @@ func TestCallPermission(t *testing.T) {
 	caller1Acc := &acm.Account{
 		Address:     caller1ContractAddr,
 		Balance:     10000,
-		Code:        contractCode,
+		EVMCode:     contractCode,
 		Sequence:    0,
 		Permissions: permission.ZeroAccountPermissions,
 	}
@@ -393,7 +393,7 @@ func TestCallPermission(t *testing.T) {
 	caller2Acc := &acm.Account{
 		Address:     caller2ContractAddr,
 		Balance:     1000,
-		Code:        contractCode2,
+		EVMCode:     contractCode2,
 		Sequence:    0,
 		Permissions: permission.ZeroAccountPermissions,
 	}
@@ -459,8 +459,8 @@ func TestCreatePermission(t *testing.T) {
 	if contractAcc == nil {
 		t.Fatalf("failed to create contract %s", contractAddr)
 	}
-	if !bytes.Equal(contractAcc.Code, contractCode) {
-		t.Fatalf("contract does not have correct code. Got %X, expected %X", contractAcc.Code, contractCode)
+	if !bytes.Equal(contractAcc.EVMCode, contractCode) {
+		t.Fatalf("contract does not have correct code. Got %X, expected %X", contractAcc.EVMCode, contractCode)
 	}
 
 	//------------------------------
@@ -483,8 +483,8 @@ func TestCreatePermission(t *testing.T) {
 	if contractAcc == nil {
 		t.Fatalf("failed to create contract %s", contractAddr)
 	}
-	if !bytes.Equal(contractAcc.Code, factoryCode) {
-		t.Fatalf("contract does not have correct code. Got %X, expected %X", contractAcc.Code, factoryCode)
+	if !bytes.Equal(contractAcc.EVMCode, factoryCode) {
+		t.Fatalf("contract does not have correct code. Got %X, expected %X", contractAcc.EVMCode, factoryCode)
 	}
 
 	//------------------------------
@@ -522,7 +522,7 @@ func TestCreatePermission(t *testing.T) {
 	contractAcc = &acm.Account{
 		Address:     contractAddr,
 		Balance:     1000,
-		Code:        code,
+		EVMCode:     code,
 		Sequence:    0,
 		Permissions: permission.ZeroAccountPermissions,
 	}
@@ -538,7 +538,7 @@ func TestCreatePermission(t *testing.T) {
 	_, err = execTxWaitAccountCall(t, exe, txEnv, crypto.Address{}) //
 	require.NoError(t, err)
 	zeroAcc := getAccount(exe.stateCache, crypto.Address{})
-	if len(zeroAcc.Code) != 0 {
+	if len(zeroAcc.EVMCode) != 0 {
 		t.Fatal("the zero account was given code from a CALL!")
 	}
 }
@@ -638,7 +638,7 @@ func TestCreateAccountPermission(t *testing.T) {
 	caller1Acc := &acm.Account{
 		Address:     caller1ContractAddr,
 		Balance:     0,
-		Code:        contractCode,
+		EVMCode:     contractCode,
 		Sequence:    0,
 		Permissions: permission.ZeroAccountPermissions,
 	}
@@ -703,7 +703,7 @@ func TestSNativeCALL(t *testing.T) {
 	doug := &acm.Account{
 		Address:     DougAddress,
 		Balance:     0,
-		Code:        nil,
+		EVMCode:     nil,
 		Sequence:    0,
 		Permissions: permission.ZeroAccountPermissions,
 	}
@@ -1141,9 +1141,9 @@ func TestCreates(t *testing.T) {
 	exe := makeExecutor(st)
 
 	newAcc1 := getAccount(st, acc1.Address)
-	newAcc1.Code = preFactoryCode
+	newAcc1.EVMCode = preFactoryCode
 	newAcc2 := getAccount(st, acc2.Address)
-	newAcc2.Code = factoryCode
+	newAcc2.EVMCode = factoryCode
 
 	exe.updateAccounts(t, newAcc1, newAcc2)
 
@@ -1211,7 +1211,7 @@ func TestContractSend(t *testing.T) {
 	acc2 := getAccount(st, privAccounts[2].GetAddress())
 
 	newAcc1 := getAccount(st, acc1.Address)
-	newAcc1.Code = callerCode
+	newAcc1.EVMCode = callerCode
 	_, _, err := st.Update(func(up state.Updatable) error {
 		return up.UpdateAccount(newAcc1)
 	})
@@ -1293,7 +1293,7 @@ func TestMerklePanic(t *testing.T) {
 	{
 		stateCallTx := makeExecutor(copyState(t, st))
 		newAcc1 := getAccount(stateCallTx, acc1.Address)
-		newAcc1.Code = []byte{0x60}
+		newAcc1.EVMCode = []byte{0x60}
 		err := stateCallTx.stateCache.UpdateAccount(newAcc1)
 		require.NoError(t, err)
 		tx := &payload.CallTx{
@@ -1356,7 +1356,7 @@ func TestTxs(t *testing.T) {
 	{
 		stateCallTx := copyState(t, st)
 		newAcc1 := getAccount(stateCallTx, acc1.Address)
-		newAcc1.Code = []byte{0x60}
+		newAcc1.EVMCode = []byte{0x60}
 		_, _, err := stateCallTx.Update(func(up state.Updatable) error {
 			return up.UpdateAccount(newAcc1)
 		})
@@ -1459,7 +1459,7 @@ func TestSelfDestruct(t *testing.T) {
 	contractCode := []byte{0x60, 0x01, 0x60, 0x01, 0x55, 0x73}
 	contractCode = append(contractCode, acc2.Address.Bytes()...)
 	contractCode = append(contractCode, 0xff)
-	newAcc1.Code = contractCode
+	newAcc1.EVMCode = contractCode
 	_, _, err := st.Update(func(up state.Updatable) error {
 		return up.UpdateAccount(newAcc1)
 	})
@@ -1695,7 +1695,7 @@ func testSNativeCALL(t *testing.T, expectPass bool, exe *testExecutor, doug *acm
 		doug.Permissions.Base.Set(snativePerm, true)
 	}
 
-	doug.Code = callContractCode(snativeAddress)
+	doug.EVMCode = callContractCode(snativeAddress)
 	dougAddress := doug.Address
 
 	exe.updateAccounts(t, doug)

@@ -222,7 +222,7 @@ func (s *Service) AccountHumanReadable(address crypto.Address) (*ResultAccountHu
 	if acc == nil {
 		return &ResultAccountHumanReadable{}, nil
 	}
-	tokens, err := acc.Code.Tokens()
+	tokens, err := acc.EVMCode.Tokens()
 	if err != nil {
 		return nil, err
 	}

@@ -764,7 +764,7 @@ func TestStaticCallReadOnly(t *testing.T) {
 				PUSH1, value, PUSH20, callee, PUSH2, gas1, gas2, STATICCALL, PUSH1, retSize,
 				PUSH1, retOff, RETURN))
 
-		txe := runVM(cache, ourVm, caller, callee, cache.GetCode(caller), 1000)
+		txe := runVM(cache, ourVm, caller, callee, cache.GetEVMCode(caller), 1000)
 		// the topmost caller can never *illegally* modify state
 		require.Error(t, txe.Exception)
 		assertErrorCode(t, errors.ErrorCodeIllegalWrite, txe.Exception,
@@ -792,7 +792,7 @@ func TestStaticCallWithValue(t *testing.T) {
 			PUSH1, retOff, RETURN))
 
 	cache.AddToBalance(callee, 100000)
-	txe := runVM(cache, ourVm, caller, callee, cache.GetCode(caller), 1000)
+	txe := runVM(cache, ourVm, caller, callee, cache.GetEVMCode(caller), 1000)
 	require.NotNil(t, txe.Exception)
 	assertErrorCode(t, errors.ErrorCodeIllegalWrite, txe.Exception, "expected static call violation because of call with value")
 }
@@ -817,7 +817,7 @@ func TestStaticCallNoValue(t *testing.T) {
 			PUSH1, retOff, RETURN))
 
 	cache.AddToBalance(callee, 100000)
-	txe := runVM(cache, ourVm, caller, callee, cache.GetCode(caller), 1000)
+	txe := runVM(cache, ourVm, caller, callee, cache.GetEVMCode(caller), 1000)
 	// no exceptions expected because value never set in children
 	require.NoError(t, txe.Exception.AsError())
 	exCalls := txe.ExceptionalCalls()
@@ -839,7 +839,7 @@ func TestCreate(t *testing.T) {
 
 	var gas uint64 = 100000
 	caller := newAccount(cache, "1, 2, 3")
-	output, err := ourVm.Call(cache, NewNoopEventSink(), caller, callee, cache.GetCode(callee), []byte{}, 0, &gas)
+	output, err := ourVm.Call(cache, NewNoopEventSink(), caller, callee, cache.GetEVMCode(callee), []byte{}, 0, &gas)
 	assert.NoError(t, err, "Should return new address without error")
 	assert.Equal(t, addr.Bytes(), output, "Addresses should be equal")
 }
@@ -853,11 +853,11 @@ func TestCreate2(t *testing.T) {
 	// salt of 0s
 	var salt [32]byte
 	callee := makeAccountWithCode(cache, "callee", MustSplice(PUSH1, 0x0, PUSH1, 0x0, PUSH1, 0x0, PUSH32, salt[:], CREATE2, PUSH1, 0, MSTORE, PUSH1, 20, PUSH1, 12, RETURN))
-	addr := crypto.NewContractAddress2(callee, salt, cache.GetCode(callee))
+	addr := crypto.NewContractAddress2(callee, salt, cache.GetEVMCode(callee))
 
 	var gas uint64 = 100000
 	caller := newAccount(cache, "1, 2, 3")
-	output, err := ourVm.Call(cache, NewNoopEventSink(), caller, callee, cache.GetCode(callee), []byte{}, 0, &gas)
+	output, err := ourVm.Call(cache, NewNoopEventSink(), caller, callee, cache.GetEVMCode(callee), []byte{}, 0, &gas)
 	assert.NoError(t, err, "Should return new address without error")
 	assert.Equal(t, addr.Bytes(), output, "Returned value not equal to create2 address")
 }
@@ -907,7 +907,7 @@ func TestDelegateCallGas(t *testing.T) {
 		delegateCallCost, callerCodeSuffix))
 
 	// Should pass
-	txe := runVM(cache, ourVm, caller, callee, cache.GetCode(caller), 100)
+	txe := runVM(cache, ourVm, caller, callee, cache.GetEVMCode(caller), 100)
 	assert.Nil(t, txe.Exception, "Should have sufficient funds for call")
 	assert.Equal(t, Int64ToWord256(calleeReturnValue).Bytes(), txe.Result.Return)
 
@@ -916,7 +916,7 @@ func TestDelegateCallGas(t *testing.T) {
 		delegateCallCost-1, callerCodeSuffix))
 
 	// Should fail
-	txe = runVM(cache, ourVm, caller2, callee, cache.GetCode(caller2), 100)
+	txe = runVM(cache, ourVm, caller2, callee, cache.GetEVMCode(caller2), 100)
 	assert.NotNil(t, txe.Exception, "Should have insufficient gas for call")
 }
 

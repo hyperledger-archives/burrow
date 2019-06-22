@@ -49,7 +49,7 @@ func CallCodeSim(reader acmstate.Reader, blockchain bcm.BlockchainInfo, fromAddr
 	cache := acmstate.NewCache(reader)
 	err := cache.UpdateAccount(&acm.Account{
 		Address: address,
-		Code:    code,
+		EVMCode: code,
 	})
 
 	if err != nil {

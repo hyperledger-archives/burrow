@@ -37,7 +37,7 @@ func solcRunner(jobs chan *compilerJob, logger *logging.Logger) {
 		if !ok {
 			break
 		}
-		resp, err := compilers.Compile(job.work.contractName, false, job.work.workDir, nil, logger)
+		resp, err := compilers.EVM(job.work.contractName, false, job.work.workDir, nil, logger)
 		(*job).compilerResp = resp
 		(*job).err = err
 		close(job.done)
@@ -48,9 +48,9 @@ func solangRunner(jobs chan *compilerJob, logger *logging.Logger) {
 	for {
 		job, ok := <-jobs
 		if !ok {
-			break
+			return
 		}
-		resp, err := compilers.CompileWASM(job.work.contractName, job.work.workDir, logger)
+		resp, err := compilers.WASM(job.work.contractName, job.work.workDir, logger)
 		(*job).compilerResp = resp
 		(*job).err = err
 		close(job.done)

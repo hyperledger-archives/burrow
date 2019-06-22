@@ -19,13 +19,13 @@ func main() {
 		var err error
 
 		if *wasmPtr {
-			resp, err = compile.CompileWASM(solfile, "", logging.NewNoopLogger())
+			resp, err = compile.WASM(solfile, "", logging.NewNoopLogger())
 			if err != nil {
 				fmt.Printf("failed compile solidity to wasm: %v\n", err)
 				os.Exit(1)
 			}
 		} else {
-			resp, err = compile.Compile(solfile, false, "", nil, logging.NewNoopLogger())
+			resp, err = compile.EVM(solfile, false, "", nil, logging.NewNoopLogger())
 			if err != nil {
 				fmt.Printf("failed compile solidity: %v\n", err)
 				os.Exit(1)

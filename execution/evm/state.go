@@ -27,7 +27,7 @@ type Reader interface {
 	GetStorage(address crypto.Address, key binary.Word256) []byte
 	GetBalance(address crypto.Address) uint64
 	GetPermissions(address crypto.Address) permission.AccountPermissions
-	GetCode(address crypto.Address) acm.Bytecode
+	GetEVMCode(address crypto.Address) acm.Bytecode
 	GetWASMCode(address crypto.Address) acm.Bytecode
 	GetSequence(address crypto.Address) uint64
 	Exists(address crypto.Address) bool
@@ -134,21 +134,21 @@ func (st *State) GetPermissions(address crypto.Address) permission.AccountPermis
 	return acc.Permissions
 }
 
-func (st *State) GetCode(address crypto.Address) acm.Bytecode {
+func (st *State) GetEVMCode(address crypto.Address) acm.Bytecode {
 	acc := st.account(address)
 	if acc == nil {
 		return nil
 	}
-	return acc.Code
+	return acc.EVMCode
 }
 
 func (st *State) GetWASMCode(address crypto.Address) acm.Bytecode {
 	acc := st.account(address)
-	if acc == nil || acc.WASM == nil {
+	if acc == nil {
 		return nil
 	}
 
-	return *acc.WASM
+	return acc.WASMCode
 }
 
 func (st *State) Exists(address crypto.Address) bool {
@@ -189,12 +189,12 @@ func (st *State) InitCode(address crypto.Address, code []byte) {
 			"tried to initialise code for an account that does not exist: %v", address))
 		return
 	}
-	if acc.Code != nil {
+	if acc.EVMCode != nil || acc.WASMCode != nil {
 		st.PushError(errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
 			"tried to initialise code for a contract that already exists: %v", address))
 		return
 	}
-	acc.Code = code
+	acc.EVMCode = code
 	st.updateAccount(acc)
 }
 
@@ -205,13 +205,12 @@ func (st *State) InitWASMCode(address crypto.Address, code []byte) {
 			"tried to initialise code for an account that does not exist: %v", address))
 		return
 	}
-	if acc.Code != nil {
+	if acc.EVMCode != nil || acc.WASMCode != nil {
 		st.PushError(errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
 			"tried to initialise code for a contract that already exists: %v", address))
 		return
 	}
-	bc, _ := acm.NewBytecode(code)
-	acc.WASM = &bc
+	acc.WASMCode = code
 	st.updateAccount(acc)
 }
 

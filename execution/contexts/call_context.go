@@ -152,7 +152,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 			"contract_address", callee,
 			"init_code", code)
 	} else {
-		if outAcc == nil || (len(outAcc.Code) == 0 && outAcc.WASM == nil) {
+		if outAcc == nil || (len(outAcc.EVMCode) == 0 && len(outAcc.WASMCode) == 0) {
 			// if you call an account that doesn't exist
 			// or an account with no code then we take fees (sorry pal)
 			// NOTE: it's fine to create a contract and call it within one
@@ -179,7 +179,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 			return nil
 		}
 		callee = outAcc.Address
-		code = txCache.GetCode(callee)
+		code = txCache.GetEVMCode(callee)
 		wcode = txCache.GetWASMCode(callee)
 		ctx.Logger.TraceMsg("Calling existing contract",
 			"contract_address", callee,

@@ -16,44 +16,50 @@ type execContext struct {
 	state   evm.Interface
 }
 
-// In EVM, the code for an account is created by the EVM code itself; the code in the EVM deploy transaction is run, and the EVM code
-// returns (via the RETURN) opcode) the code for the contract. In addition, when a new contract is created using the "new C()" construct
-// is soldity, the EVM itself passes the code for the new contract.
+// In EVM, the code for an account is created by the EVM code itself; the code in the EVM deploy transaction is run,
+// and the EVM code returns (via the RETURN) opcode) the code for the contract. In addition, when a new contract is
+// created using the "new C()" construct is soldity, the EVM itself passes the code for the new contract.
 
 // The compiler must embed any contract code for smart contracts it wants to create.
 // - This does not allow for circular references: contract A creates contract B, contract B creates contract A.
-// - This makes it very hard to support other languages; e.g. go or rust have no such bizarre concepts, and would require tricking into supporting this
-// - This makes it possible for tricksy contracts that create different contracts at differen times. Very hard to support static analysis on these contracts
+// - This makes it very hard to support other languages; e.g. go or rust have no such bizarre concepts, and would
+//   require tricking into supporting this
+// - This makes it possible for tricksy contracts that create different contracts at different times. Very hard to
+//   support static analysis on these contracts
 // - This makes it hard to know ahead-of-time what the code for a contract will be
 
-// Our WASM implememtation does not allow for this. The code passed to the deploy transaction, is the contract. Any child contracts must be passed
+// Our WASM implementation does not allow for this. The code passed to the deploy transaction, is the contract. Any child contracts must be passed
 // during the initial deployment (not implemented yet)
 
 // ABIs
-// Our WASM ABI is entirely compatible with Solidity. This means that solidity EVM can call wasm contracts and vice versa. However, in the EVM ABI model
-// the difference between constructor calls and function calls are implicit: the constructor code path is different from the function call code path,
-// and there is nothing visible in the binary ABI encoded arguments telling you that it is a function call or a constructor. Note function calls do
-// have a 4 byte prefix but this is not required; without it the fallback function should be called.
+// Our WASM ABI is entirely compatible with Solidity. This means that solidity EVM can call WASM contracts and vice
+// versa. However, in the EVM ABI model the difference between constructor calls and function calls are implicit: the
+// constructor code path is different from the function call code path, and there is nothing visible in the binary ABI
+// encoded arguments telling you that it is a function call or a constructor. Note function calls do have a 4 byte
+// prefix but this is not required; without it the fallback function should be called.
 
 // So in our WASM model the smart contract has two entry points: constructor and function.
 
 // ABIs memory space
-// In the EVM model, ABIs are passed via the calldata opcodes. This means that the ABI encoded data is not directly accessible and has to be copied to
-// smart contract memory. Solidity exposes this via the calldata and memory modifiers on variables.
+// In the EVM model, ABIs are passed via the calldata opcodes. This means that the ABI encoded data is not directly
+// accessible and has to be copied to smart contract memory. Solidity exposes this via the calldata and memory
+// modifiers on variables.
 
-// In our wasm model, the function and constructor wasm fuctions have one argument and return value. The argument is where in wasm memory the ABI encoded
-// arguments are and the return value is the offset where the return data can be found. At this offset we first find a 32 bit little endian encoded
-// length (since wasm is little endian and we are using 32 bit memory model) followed by the bytes themselves.
+// In our WASM model, the function and constructor WASM fuctions have one argument and return value. The argument is
+// where in WASM memory the ABI encoded arguments are and the return value is the offset where the return data can be
+// found. At this offset we first find a 32 bit little endian encoded length (since WASM is little endian and we are
+// using 32 bit memory model) followed by the bytes themselves.
 
 // Contract Storage
-// In the EVM model, contract storage is addressed via 256 bit key and the contents is a 256 bit value. For wasm, we've changed the contents to a
-// arbitary byte string. This makes it much easier to store/retrieve smaller values (e.g. int64) and dynamic length fields (e.g. strings/arrays).
+// In the EVM model, contract storage is addressed via 256 bit key and the contents is a 256 bit value. For WASM,
+// we've changed the contents to a arbitary byte string. This makes it much easier to store/retrieve smaller values
+// (e.g. int64) and dynamic length fields (e.g. strings/arrays).
 
-// Access to contract storage is via wasm externals.
+// Access to contract storage is via WASM externals.
 // - set_storage32(uint32 key, uint8* data, uint32 len) // set contract storage
 // - get_storage32(uint32 key, uint8* data, uint32 len) // get contract storage (right pad with zeros)
 
-// RunWASM creates a wasm VM, and executes the given wasm contract code
+// RunWASM creates a WASM VM, and executes the given WASM contract code
 func RunWASM(state evm.Interface, address crypto.Address, createContract bool, wasm, input []byte) (output []byte, cerr errors.CodedError) {
 	defer func() {
 		if r := recover(); r != nil {
