@@ -1,11 +1,12 @@
-package storage
+package forensics
 
 import (
-	"sort"
 	"strings"
 	"testing"
 
+	"github.com/hyperledger/burrow/storage"
 	"github.com/stretchr/testify/assert"
+	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
 func sendKVPair(ch chan<- KVPair, kvs []KVPair) {
@@ -15,7 +16,7 @@ func sendKVPair(ch chan<- KVPair, kvs []KVPair) {
 	close(ch)
 }
 
-func collectIterator(it KVIterator) KVPairs {
+func collectIterator(it storage.KVIterator) KVPairs {
 	var kvp []KVPair
 	for it.Valid() {
 		kvp = append(kvp, KVPair{it.Key(), it.Value()})
@@ -33,7 +34,7 @@ func kvPairs(kvs ...string) KVPairs {
 	return kvp
 }
 
-func assertIteratorSorted(t *testing.T, it KVIterator, reverse bool) {
+func assertIteratorSorted(t *testing.T, it storage.KVIterator, reverse bool) {
 	prev := ""
 	for it.Valid() {
 		strKey := string(it.Key())
@@ -52,22 +53,8 @@ func assertIteratorSorted(t *testing.T, it KVIterator, reverse bool) {
 	}
 }
 
-func iteratorOver(kvp []KVPair, reverse ...bool) *ChannelIterator {
-	var sortable sort.Interface = KVPairs(kvp)
-	if len(reverse) > 0 && reverse[0] {
-		sortable = sort.Reverse(sortable)
-	}
-	sort.Stable(sortable)
-	ch := make(chan KVPair)
-	var start, end []byte
-	if len(kvp) > 0 {
-		start, end = kvp[0].Key, kvp[len(kvp)-1].Key
-	}
-	go sendKVPair(ch, kvp)
-	ci := NewChannelIterator(ch, start, end)
-	return ci
-}
-
-func bz(s string) []byte {
-	return []byte(s)
+func checkItem(t *testing.T, itr dbm.Iterator, key []byte, value []byte) {
+	k, v := itr.Key(), itr.Value()
+	assert.Exactly(t, key, k)
+	assert.Exactly(t, value, v)
 }

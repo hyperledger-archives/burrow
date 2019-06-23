@@ -53,7 +53,7 @@ func NewDumper(state *state.State, blockchain bcm.BlockchainInfo, logger *loggin
 
 func (ds *Dumper) Transmit(stream Sender, startHeight, endHeight uint64, options Option) error {
 	height := endHeight
-	if height <= 0 {
+	if height == 0 {
 		height = ds.blockchain.LastBlockHeight()
 	}
 	st, err := ds.state.LoadHeight(height)
@@ -74,7 +74,7 @@ func (ds *Dumper) Transmit(stream Sender, startHeight, endHeight uint64, options
 				Storage: make([]*Storage, 0),
 			}
 
-			err = st.IterateStorage(acc.Address, func(key, value binary.Word256) error {
+			err = st.IterateStorage(acc.Address, func(key binary.Word256, value []byte) error {
 				storage.Storage = append(storage.Storage, &Storage{Key: key, Value: value})
 				return nil
 			})

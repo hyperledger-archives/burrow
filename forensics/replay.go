@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/storage"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/pkg/errors"
 	dbm "github.com/tendermint/tendermint/libs/db"
@@ -45,17 +44,17 @@ func (recap *ReplayCapture) String() string {
 }
 
 func NewReplay(dbDir string, genesisDoc *genesis.GenesisDoc, logger *logging.Logger) *Replay {
-	//burrowDB := core.NewBurrowDB(dbDir)
+	// burrowDB := core.NewBurrowDB(dbDir)
 	// Avoid writing through to underlying DB
 	db := dbm.NewDB(core.BurrowDBName, dbm.GoLevelDBBackend, dbDir)
-	cacheDB := storage.NewCacheDB(db)
+	cacheDB := NewCacheDB(db)
 	return &Replay{
-		Explorer: bcm.NewBlockExplorer(dbm.LevelDBBackend, path.Join(dbDir, "data")),
-		db:            db,
-		cacheDB:       cacheDB,
-		blockchain:    bcm.NewBlockchain(cacheDB, genesisDoc),
-		genesisDoc:    genesisDoc,
-		logger:        logger,
+		Explorer:   bcm.NewBlockExplorer(dbm.LevelDBBackend, path.Join(dbDir, "data")),
+		db:         db,
+		cacheDB:    cacheDB,
+		blockchain: bcm.NewBlockchain(cacheDB, genesisDoc),
+		genesisDoc: genesisDoc,
+		logger:     logger,
 	}
 }
 

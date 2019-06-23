@@ -30,19 +30,19 @@ type AccountUpdater interface {
 type StorageGetter interface {
 	// Retrieve a 32-byte value stored at key for the account at address, return Zero256 if key does not exist but
 	// error if address does not
-	GetStorage(address crypto.Address, key binary.Word256) (value binary.Word256, err error)
+	GetStorage(address crypto.Address, key binary.Word256) (value []byte, err error)
 }
 
 type StorageSetter interface {
 	// Store a 32-byte value at key for the account at address, setting to Zero256 removes the key
-	SetStorage(address crypto.Address, key, value binary.Word256) error
+	SetStorage(address crypto.Address, key binary.Word256, value []byte) error
 }
 
 type StorageIterable interface {
 	// Iterates through the storage of account ad address calling the passed function once per account,
 	// if the iterator function returns true the iteration breaks and returns true to indicate it iteration
 	// was escaped
-	IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) error) (err error)
+	IterateStorage(address crypto.Address, consumer func(key binary.Word256, value []byte) error) (err error)
 }
 
 type AccountStats struct {

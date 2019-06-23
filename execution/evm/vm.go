@@ -16,6 +16,7 @@ package evm
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -566,7 +567,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			address := stack.PopAddress()
 			useGasNegative(gas, GasGetAccount, callState)
 			if callState.Exists(address) {
-				code := callState.GetCode(address)
+				code := callState.GetEVMCode(address)
 				l := int64(len(code))
 				stack.Push64(l)
 				vm.Debugf(" => %d\n", l)
@@ -589,7 +590,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 				callState.PushError(errors.ErrorCodeUnknownAddress)
 				continue
 			}
-			code := callState.GetCode(address)
+			code := callState.GetEVMCode(address)
 			memOff := stack.PopBigInt()
 			codeOff := stack.Pop64()
 			length := stack.Pop64()
@@ -620,7 +621,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 				// In case the account does not exist 0 is pushed to the stack.
 				stack.PushU64(0)
 			} else {
-				code := callState.GetCode(address)
+				code := callState.GetEVMCode(address)
 				if code == nil {
 					// In case the account does not have code the keccak256 hash of empty data
 					code = acm.Bytecode{}
@@ -698,14 +699,14 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 
 		case SLOAD: // 0x54
 			loc := stack.Pop()
-			data := callState.GetStorage(callee, loc)
+			data := LeftPadWord256(callState.GetStorage(callee, loc))
 			stack.Push(data)
 			vm.Debugf("%s {0x%X = 0x%X}\n", callee, loc, data)
 
 		case SSTORE: // 0x55
 			loc, data := stack.Pop(), stack.Pop()
 			useGasNegative(gas, GasStorageUpdate, callState)
-			callState.SetStorage(callee, loc, data)
+			callState.SetStorage(callee, loc, data.Bytes())
 			vm.Debugf("%s {0x%X := 0x%X}\n", callee, loc, data)
 
 		case JUMP: // 0x56
@@ -788,11 +789,11 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 				vm.sequence++
 				nonce := make([]byte, txs.HashLength+uint64Length)
 				copy(nonce, vm.nonce)
-				PutUint64(nonce[txs.HashLength:], vm.sequence)
+				binary.BigEndian.PutUint64(nonce[txs.HashLength:], vm.sequence)
 				newAccount = crypto.NewContractAddress(callee, nonce)
 			} else if op == CREATE2 {
 				salt := stack.Pop()
-				newAccount = crypto.NewContractAddress2(callee, salt, callState.GetCode(callee))
+				newAccount = crypto.NewContractAddress2(callee, salt, callState.GetEVMCode(callee))
 			}
 
 			// Check the CreateContract permission for this account
@@ -888,23 +889,23 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 				switch op {
 				case CALL:
 					childCallState = callState.NewCache()
-					returnData, callErr = vm.call(childCallState, eventSink, callee, address, callState.GetCode(address),
+					returnData, callErr = vm.call(childCallState, eventSink, callee, address, callState.GetEVMCode(address),
 						args, value, &gasLimit, exec.CallTypeCall)
 
 				case CALLCODE:
 					childCallState = callState.NewCache()
-					returnData, callErr = vm.call(childCallState, eventSink, callee, callee, callState.GetCode(address),
+					returnData, callErr = vm.call(childCallState, eventSink, callee, callee, callState.GetEVMCode(address),
 						args, value, &gasLimit, exec.CallTypeCode)
 
 				case DELEGATECALL:
 					childCallState = callState.NewCache()
 					returnData, callErr = vm.delegateCall(childCallState, eventSink, caller, callee,
-						callState.GetCode(address), args, value, &gasLimit, exec.CallTypeDelegate)
+						callState.GetEVMCode(address), args, value, &gasLimit, exec.CallTypeDelegate)
 
 				case STATICCALL:
 					childCallState = callState.NewCache(acmstate.ReadOnly)
 					returnData, callErr = vm.delegateCall(childCallState, NewLogFreeEventSink(eventSink),
-						callee, address, callState.GetCode(address), args, value, &gasLimit, exec.CallTypeStatic)
+						callee, address, callState.GetEVMCode(address), args, value, &gasLimit, exec.CallTypeStatic)
 
 				default:
 					panic(fmt.Errorf("switch statement should be exhaustive so this should not have been reached"))

@@ -2,7 +2,6 @@ package rpcinfo
 
 import (
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/lib/server"
 )
@@ -41,8 +40,7 @@ const (
 	Consensus      = "consensus"
 )
 
-func GetRoutes(service *rpc.Service, logger *logging.Logger) map[string]*server.RPCFunc {
-	logger = logger.WithScope("GetRoutes")
+func GetRoutes(service *rpc.Service) map[string]*server.RPCFunc {
 	return map[string]*server.RPCFunc{
 		// Status
 		Status:  server.NewRPCFunc(service.StatusWithin, "block_time_within,block_seen_time_within"),

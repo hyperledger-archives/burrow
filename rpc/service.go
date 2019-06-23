@@ -90,9 +90,7 @@ func (s *Service) UnconfirmedTxs(maxTxs int64) (*ResultUnconfirmedTxs, error) {
 		return nil, err
 	}
 	wrappedTxs := make([]*txs.Envelope, len(transactions))
-	for i, tx := range transactions {
-		wrappedTxs[i] = tx
-	}
+	copy(wrappedTxs, transactions)
 	return &ResultUnconfirmedTxs{
 		NumTxs: len(transactions),
 		Txs:    wrappedTxs,
@@ -192,10 +190,7 @@ func (s *Service) Storage(address crypto.Address, key []byte) (*ResultStorage, e
 	if err != nil {
 		return nil, err
 	}
-	if value == binary.Zero256 {
-		return &ResultStorage{Key: key, Value: nil}, nil
-	}
-	return &ResultStorage{Key: key, Value: value.UnpadLeft()}, nil
+	return &ResultStorage{Key: key, Value: value}, nil
 }
 
 func (s *Service) DumpStorage(address crypto.Address) (*ResultDumpStorage, error) {
@@ -207,8 +202,8 @@ func (s *Service) DumpStorage(address crypto.Address) (*ResultDumpStorage, error
 		return nil, fmt.Errorf("UnknownAddress: %X", address)
 	}
 	var storageItems []StorageItem
-	err = s.state.IterateStorage(address, func(key, value binary.Word256) error {
-		storageItems = append(storageItems, StorageItem{Key: key.UnpadLeft(), Value: value.UnpadLeft()})
+	err = s.state.IterateStorage(address, func(key binary.Word256, value []byte) error {
+		storageItems = append(storageItems, StorageItem{Key: key.UnpadLeft(), Value: value})
 		return nil
 	})
 	if err != nil {
@@ -227,7 +222,7 @@ func (s *Service) AccountHumanReadable(address crypto.Address) (*ResultAccountHu
 	if acc == nil {
 		return &ResultAccountHumanReadable{}, nil
 	}
-	tokens, err := acc.Code.Tokens()
+	tokens, err := acc.EVMCode.Tokens()
 	if err != nil {
 		return nil, err
 	}

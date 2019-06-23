@@ -203,6 +203,8 @@ func StringFromValue(value interface{}) string {
 	switch v := value.(type) {
 	case string:
 		return v
+	case time.Time:
+		return timeString + " " + v.Format(time.RFC3339)
 	case encoding.TextMarshaler:
 		bs, _ := v.MarshalText()
 		return string(bs)
@@ -229,8 +231,6 @@ func StringFromValue(value interface{}) string {
 		return strconv.FormatFloat(float64(v), 'f', -1, 32)
 	case float64:
 		return strconv.FormatFloat(float64(v), 'f', -1, 64)
-	case time.Time:
-		return timeString + " " + v.Format(time.RFC3339)
 	default:
 		if rv.Kind() == reflect.Slice {
 			values := make([]string, rv.Len())

@@ -33,7 +33,7 @@ func (tx *BondTx) AddInput(st acmstate.AccountGetter, pubkey crypto.PublicKey, a
 		return err
 	}
 	if acc == nil {
-		return fmt.Errorf("Invalid address %s from pubkey %s", addr, pubkey)
+		return fmt.Errorf("invalid address %s from pubkey %s", addr, pubkey)
 	}
 	return tx.AddInputWithSequence(pubkey, amt, acc.Sequence+uint64(1))
 }

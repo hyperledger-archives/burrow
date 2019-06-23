@@ -29,7 +29,7 @@ func TestValidatorsRing_AlterPower(t *testing.T) {
 	vs = Copy(vsBase)
 	vw = NewRing(vs, 5)
 	powA, powB, powC = 7000, 23, 310
-	powerChange, totalFlow, err = alterPowers(t, vw, powA, powB, powC)
+	_, _, err = alterPowers(t, vw, powA, powB, powC)
 	require.Error(t, err)
 
 	powA, powB, powC = 7000, 23, 309

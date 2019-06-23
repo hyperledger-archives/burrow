@@ -19,7 +19,7 @@ func TestNewStreamLogger(t *testing.T) {
 	err = structure.Sync(logger)
 	require.NoError(t, err)
 
-	assert.Equal(t, "oh=my\n", string(buf.Bytes()))
+	assert.Equal(t, "oh=my\n", buf.String())
 }
 
 func TestNewTemplateLogger(t *testing.T) {

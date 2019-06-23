@@ -375,7 +375,7 @@ func (exe *executor) GetAccount(address crypto.Address) (*acm.Account, error) {
 }
 
 // Storage
-func (exe *executor) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
+func (exe *executor) GetStorage(address crypto.Address, key binary.Word256) ([]byte, error) {
 	exe.RLock()
 	defer exe.RUnlock()
 	return exe.stateCache.GetStorage(address, key)

@@ -52,9 +52,8 @@ type Account struct {
 
 type Validator struct {
 	BasicAccount
-	NodeAddress *crypto.Address `json:",omitempty" toml:",omitempty" yaml:",omitempty"`
-	Name        string
-	UnbondTo    []BasicAccount
+	Name     string
+	UnbondTo []BasicAccount
 }
 
 //------------------------------------------------------------
@@ -76,7 +75,8 @@ type GenesisDoc struct {
 	Accounts          []Account
 	Validators        []Validator
 	// memo
-	hash []byte
+	hash    []byte
+	chainID string
 }
 
 func (genesisDoc *GenesisDoc) JSONString() string {
@@ -113,7 +113,10 @@ func (genesisDoc *GenesisDoc) ShortHash() []byte {
 }
 
 func (genesisDoc *GenesisDoc) ChainID() string {
-	return fmt.Sprintf("%s-%X", genesisDoc.ChainName, genesisDoc.ShortHash())
+	if genesisDoc.chainID == "" {
+		genesisDoc.chainID = fmt.Sprintf("%s-%X", genesisDoc.ChainName, genesisDoc.ShortHash())
+	}
+	return genesisDoc.chainID
 }
 
 //------------------------------------------------------------
@@ -193,9 +196,8 @@ func (gv *Validator) Clone() Validator {
 			PublicKey: gv.PublicKey,
 			Amount:    gv.Amount,
 		},
-		Name:        gv.Name,
-		UnbondTo:    unbondToClone,
-		NodeAddress: gv.NodeAddress,
+		Name:     gv.Name,
+		UnbondTo: unbondToClone,
 	}
 }
 

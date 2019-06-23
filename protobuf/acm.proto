@@ -21,6 +21,7 @@ message Account {
     crypto.PublicKey PublicKey = 2 [(gogoproto.nullable) = false];
     uint64 Sequence = 3;
     uint64 Balance = 4;
-    bytes Code = 5 [(gogoproto.customtype) = "Bytecode", (gogoproto.nullable) = false];
+    bytes EVMCode = 5 [(gogoproto.customtype) = "Bytecode", (gogoproto.nullable) = false];
     permission.AccountPermissions Permissions = 6 [(gogoproto.nullable) = false];
+    bytes WASMCode = 7 [(gogoproto.customtype) = "Bytecode", (gogoproto.jsontag) = ",omitempty", (gogoproto.nullable) = false];
 }

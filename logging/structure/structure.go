@@ -237,19 +237,6 @@ func DeleteAt(slice []interface{}, i int) []interface{} {
 	return Delete(slice, i, 1)
 }
 
-// Prepend elements to slice in the order they appear
-func CopyPrepend(slice []interface{}, elements ...interface{}) []interface{} {
-	elementsLength := len(elements)
-	newSlice := make([]interface{}, len(slice)+elementsLength)
-	for i, e := range elements {
-		newSlice[i] = e
-	}
-	for i, e := range slice {
-		newSlice[elementsLength+i] = e
-	}
-	return newSlice
-}
-
 // Provides a canonical way to stringify keys
 func StringifyKey(key interface{}) string {
 	switch key {

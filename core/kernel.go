@@ -311,7 +311,7 @@ func (kern *Kernel) supervise() {
 	shutdownCh := make(chan os.Signal, 1)
 	reloadCh := make(chan os.Signal, 1)
 	syncCh := make(chan os.Signal, 1)
-	signal.Notify(shutdownCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	signal.Notify(shutdownCh, syscall.SIGINT, syscall.SIGTERM)
 	signal.Notify(reloadCh, syscall.SIGHUP)
 	signal.Notify(syncCh, syscall.SIGUSR1)
 	for {

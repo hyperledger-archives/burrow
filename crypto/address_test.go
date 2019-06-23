@@ -57,6 +57,7 @@ func TestAddress_MarshalJSON(t *testing.T) {
 
 	addrOut := new(Address)
 	err = json.Unmarshal(bs, addrOut)
+	require.NoError(t, err)
 
 	assert.Equal(t, addr, *addrOut)
 }
@@ -74,6 +75,7 @@ func TestAddress_MarshalText(t *testing.T) {
 
 	addrOut := new(Address)
 	err = addrOut.UnmarshalText(bs)
+	require.NoError(t, err)
 
 	assert.Equal(t, addr, *addrOut)
 }

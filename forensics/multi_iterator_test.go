@@ -1,6 +1,7 @@
-package storage
+package forensics
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,4 +47,20 @@ func TestDuplicateKeys(t *testing.T) {
 	}
 	assert.Equal(t, []string{"dogs", "frogs", "bar", "zfoo"}, as,
 		"duplicate keys should appear in iterator order")
+}
+
+func iteratorOver(kvp []KVPair, reverse ...bool) *ChannelIterator {
+	var sortable sort.Interface = KVPairs(kvp)
+	if len(reverse) > 0 && reverse[0] {
+		sortable = sort.Reverse(sortable)
+	}
+	sort.Stable(sortable)
+	ch := make(chan KVPair)
+	var start, end []byte
+	if len(kvp) > 0 {
+		start, end = kvp[0].Key, kvp[len(kvp)-1].Key
+	}
+	go sendKVPair(ch, kvp)
+	ci := NewChannelIterator(ch, start, end)
+	return ci
 }

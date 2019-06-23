@@ -35,8 +35,9 @@ import (
 //const criticalBlock uint64 = 6
 //
 const goodDir = "/home/silas/burrows/production-t9/dealspace/002"
-const badDir =  "/home/silas/burrows/production-t9/dealspace/001"
+const badDir = "/home/silas/burrows/production-t9/dealspace/001"
 const criticalBlock uint64 = 38
+
 //const criticalBlock uint64 = 52
 
 func TestState(t *testing.T) {

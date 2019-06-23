@@ -94,10 +94,6 @@ func (ctx *GovernanceContext) UpdateAccount(account *acm.Account, update *spec.T
 	if update.Balances().HasNative() {
 		account.Balance = update.Balances().GetNative(0)
 	}
-	if update.NodeAddress != nil {
-		// TODO: can we do something useful if provided with a NodeAddress for an account about to become a validator
-		// like add it to persistent peers or pre gossip so it gets inbound connections? If so under which circumstances?
-	}
 	if update.Balances().HasPower() {
 		if update.PublicKey == nil {
 			err = fmt.Errorf("updateAccount should have PublicKey by this point but appears not to for "+
@@ -115,7 +111,7 @@ func (ctx *GovernanceContext) UpdateAccount(account *acm.Account, update *spec.T
 		}
 	}
 	if update.Code != nil {
-		account.Code = *update.Code
+		account.EVMCode = *update.Code
 		if err != nil {
 			return ev, err
 		}

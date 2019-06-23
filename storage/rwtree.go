@@ -9,6 +9,9 @@ import (
 	"github.com/xlab/treeprint"
 )
 
+// RWTree provides an abstraction over IAVL that maintains separate read and write paths. Reads are routed to the most
+// recently saved version of the tree - which provides immutable access. Writes are routed to a working tree that is
+// mutable. On save the working tree is saved to DB, frozen, and replaces the previous immutable read tree.
 type RWTree struct {
 	// Working tree accumulating writes
 	tree *MutableTree

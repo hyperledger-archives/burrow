@@ -6,14 +6,13 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/hyperledger/burrow/dump"
-
+	"github.com/hyperledger/burrow/config/deployment"
 	"github.com/hyperledger/burrow/config/source"
+	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/deployment"
+	"github.com/hyperledger/burrow/dump"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/state"
-	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/genesis/spec"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
@@ -22,10 +21,8 @@ import (
 	"github.com/hyperledger/burrow/rpc"
 	cli "github.com/jawher/mow.cli"
 	amino "github.com/tendermint/go-amino"
-	tmEd25519 "github.com/tendermint/tendermint/crypto/ed25519"
 	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 	"github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/p2p"
 )
 
 // Configure generates burrow configuration(s)
@@ -43,15 +40,11 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 		keysDir := cmd.StringOpt("keys-dir", "", "Directory where keys are stored")
 
-		generateNodeKeys := cmd.BoolOpt("generate-node-keys", false, "Generate node keys for validators")
-
 		configTemplateIn := cmd.StringsOpt("config-template-in", nil,
-			fmt.Sprintf("Go text/template template input filename (left delim: %s right delim: %s) to generate config "+
-				"file specified with --config-out", deployment.LeftTemplateDelim, deployment.RightTemplateDelim))
+			"Go text/template input filename to generate config file specified with --config-out")
 
-		configOut := cmd.StringsOpt("config-out", nil,
-			"Go text/template template output file. Template filename specified with --config-template-in "+
-				"file specified with --config-out")
+		configTemplateOut := cmd.StringsOpt("config-out", nil,
+			"Go text/template output filename. Template filename specified with --config-template-in")
 
 		separateGenesisDoc := cmd.StringOpt("w separate-genesis-doc", "", "Emit a separate genesis doc as JSON or TOML")
 
@@ -79,9 +72,8 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 		cmd.Spec = "[--keys-url=<keys URL> | --keys-dir=<keys directory>] " +
 			"[ --config-template-in=<text template> --config-out=<output file>]... " +
 			"[--genesis-spec=<GenesisSpec file>] [--separate-genesis-doc=<genesis JSON file>] " +
-			"[--chain-name=<chain name>] [--generate-node-keys] [--restore-dump=<dump file>] " +
-			"[--logging=<logging program>] [--describe-logging] [--empty-blocks=<'always','never',duration>] " +
-			"[--json] [--debug] [--pool]"
+			"[--chain-name=<chain name>] [--restore-dump=<dump file>] [--json] [--debug] [--pool] " +
+			"[--logging=<logging program>] [--describe-logging] [--empty-blocks=<'always','never',duration>]"
 
 		// no sourcing logs
 		source.LogWriter = ioutil.Discard
@@ -109,11 +101,11 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				conf.Keys.RemoteAddress = *keysURLOpt
 			}
 
-			if len(*configTemplateIn) != len(*configOut) {
+			if len(*configTemplateIn) != len(*configTemplateOut) {
 				output.Fatalf("--config-template-in and --config-out must be specified the same number of times")
 			}
 
-			pkg := deployment.Config{}
+			pkg := deployment.Config{Keys: make(map[crypto.Address]deployment.Key)}
 
 			// Genesis Spec
 			if *genesisSpecOpt != "" {
@@ -130,9 +122,9 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					keyStore := keys.NewKeyStore(dir, conf.Keys.AllowBadFilePermissions)
 
 					keyClient := keys.NewLocalKeyClient(keyStore, logging.NewNoopLogger())
-					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient, *generateNodeKeys || *pool)
+					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
 					if err != nil {
-						output.Fatalf("Could not generate GenesisDoc from GenesisSpec using MockKeyClient: %v", err)
+						output.Fatalf("could not generate GenesisDoc from GenesisSpec using MockKeyClient: %v", err)
 					}
 
 					allNames, err := keyStore.GetAllNames()
@@ -140,66 +132,37 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 						output.Fatalf("could get all keys: %v", err)
 					}
 
-					cdc := amino.NewCodec()
-					cryptoAmino.RegisterAmino(cdc)
-
-					pkg = deployment.Config{Keys: make(map[crypto.Address]deployment.Key)}
-
 					for k := range allNames {
 						addr, err := crypto.AddressFromHexString(allNames[k])
 						if err != nil {
-							output.Fatalf("Address %s not valid: %v", k, err)
+							output.Fatalf("address %s not valid: %v", k, err)
 						}
 						key, err := keyStore.GetKey("", addr[:])
 						if err != nil {
-							output.Fatalf("Failed to get key: %s: %v", k, err)
+							output.Fatalf("failed to get key: %s: %v", k, err)
 						}
-
-						// Is this is a validator node key?
-						nodeKey := false
-						for _, a := range conf.GenesisDoc.Validators {
-							if a.NodeAddress != nil && addr == *a.NodeAddress {
-								nodeKey = true
-								break
-							}
+						json, err := json.Marshal(key)
+						if err != nil {
+							output.Fatalf("failed to json marshal key: %s: %v", k, err)
 						}
-
-						if nodeKey {
-							privKey := tmEd25519.GenPrivKey()
-							copy(privKey[:], key.PrivateKey.PrivateKey)
-							nodeKey := &p2p.NodeKey{
-								PrivKey: privKey,
-							}
-
-							json, err := cdc.MarshalJSON(nodeKey)
-							if err != nil {
-								output.Fatalf("go-amino failed to json marshall private key: %v", err)
-							}
-							pkg.Keys[addr] = deployment.Key{Name: k, Address: addr, KeyJSON: json}
-						} else {
-							json, err := json.Marshal(key)
-							if err != nil {
-								output.Fatalf("Failed to json marshal key: %s: %v", k, err)
-							}
-							pkg.Keys[addr] = deployment.Key{Name: k, Address: addr, KeyJSON: json}
-						}
+						pkg.Keys[addr] = deployment.Key{Name: k, Address: addr, KeyJSON: json}
 					}
 				} else {
 					keyClient, err := keys.NewRemoteKeyClient(conf.Keys.RemoteAddress, logging.NewNoopLogger())
 					if err != nil {
-						output.Fatalf("Could not create remote key client: %v", err)
+						output.Fatalf("could not create remote key client: %v", err)
 					}
-					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient, *generateNodeKeys || *pool)
+					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
+					if err != nil {
+						output.Fatalf("could not realise GenesisSpec: %v", err)
+					}
 				}
 
-				if err != nil {
-					output.Fatalf("could not realise GenesisSpec: %v", err)
-				}
 			}
 
 			if *chainNameOpt != "" {
 				if conf.GenesisDoc == nil {
-					output.Fatalf("Unable to set ChainName since no GenesisDoc/GenesisSpec provided.")
+					output.Fatalf("unable to set ChainName since no GenesisDoc/GenesisSpec provided.")
 				}
 				conf.GenesisDoc.ChainName = *chainNameOpt
 			}
@@ -210,12 +173,12 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				}
 
 				if len(conf.GenesisDoc.Validators) == 0 {
-					output.Fatalf("On restore, validators must be provided in GenesisDoc or GenesisSpec")
+					output.Fatalf("on restore, validators must be provided in GenesisDoc or GenesisSpec")
 				}
 
 				reader, err := dump.NewFileReader(*restoreDumpOpt)
 				if err != nil {
-					output.Fatalf("Failed to read restore dump: %v", err)
+					output.Fatalf("failed to read restore dump: %v", err)
 				}
 
 				st, err := state.MakeGenesisState(db.NewMemDB(), conf.GenesisDoc)
@@ -229,30 +192,6 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				}
 
 				conf.GenesisDoc.AppHash = st.Hash()
-			}
-
-			if conf.GenesisDoc != nil {
-				pkg.Config = conf.GenesisDoc
-
-				for _, v := range conf.GenesisDoc.Validators {
-					tmplV := deployment.Validator{
-						Name:    v.Name,
-						Address: v.Address,
-					}
-
-					if v.NodeAddress != nil {
-						tmplV.NodeAddress = *v.NodeAddress
-					}
-
-					pkg.Validators = append(pkg.Validators, tmplV)
-				}
-
-				for ind := range *configTemplateIn {
-					err := processTemplate(&pkg, conf.GenesisDoc, (*configTemplateIn)[ind], (*configOut)[ind])
-					if err != nil {
-						output.Fatalf("could not template from %s to %s: %v", (*configTemplateIn)[ind], (*configOut)[ind], err)
-					}
-				}
 			}
 
 			// Logging
@@ -276,15 +215,15 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 			if *separateGenesisDoc != "" {
 				if conf.GenesisDoc == nil {
-					output.Fatalf("Cannot write separate genesis doc since no GenesisDoc/GenesisSpec provided.")
+					output.Fatalf("cannot write separate genesis doc since no GenesisDoc/GenesisSpec was provided")
 				}
 				genesisDocJSON, err := conf.GenesisDoc.JSONBytes()
 				if err != nil {
-					output.Fatalf("Could not form GenesisDoc JSON: %v", err)
+					output.Fatalf("could not form GenesisDoc JSON: %v", err)
 				}
 				err = ioutil.WriteFile(*separateGenesisDoc, genesisDocJSON, 0644)
 				if err != nil {
-					output.Fatalf("Could not write GenesisDoc JSON: %v", err)
+					output.Fatalf("could not write GenesisDoc JSON: %v", err)
 				}
 				conf.GenesisDoc = nil
 			}
@@ -293,19 +232,54 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				conf.Tendermint.CreateEmptyBlocks = *emptyBlocksOpt
 			}
 
-			if *pool {
-				peers := make([]string, 0)
-				for i, val := range conf.GenesisDoc.Validators {
-					if val.NodeAddress == nil {
-						continue
+			peers := make([]string, 0)
+			if conf.GenesisDoc != nil {
+				cdc := amino.NewCodec()
+				cryptoAmino.RegisterAmino(cdc)
+				pkg.GenesisDoc = conf.GenesisDoc
+
+				for _, val := range conf.GenesisDoc.Validators {
+					nodeKey := tendermint.NewNodeKey()
+					nodeAddress, _ := crypto.AddressFromHexString(string(nodeKey.ID()))
+
+					json, err := cdc.MarshalJSON(nodeKey)
+					if err != nil {
+						output.Fatalf("go-amino failed to json marshal private key: %v", err)
 					}
-					peers = append(peers, fmt.Sprintf("tcp://%s@127.0.0.1:%d", strings.ToLower(val.NodeAddress.String()), 26656+i))
+					pkg.Keys[nodeAddress] = deployment.Key{Name: val.Name, Address: nodeAddress, KeyJSON: json}
+
+					pkg.Validators = append(pkg.Validators, deployment.Validator{
+						Name:        val.Name,
+						Address:     val.Address,
+						NodeAddress: nodeAddress,
+					})
+				}
+
+				for ind := range *configTemplateIn {
+					err := processTemplate(&pkg, (*configTemplateIn)[ind], (*configTemplateOut)[ind])
+					if err != nil {
+						output.Fatalf("could not template from %s to %s: %v", (*configTemplateIn)[ind], (*configTemplateOut)[ind], err)
+					}
+				}
+			}
+
+			if *pool {
+				for i, val := range pkg.Validators {
+					tmConf, err := conf.Tendermint.Config(fmt.Sprintf(".burrow%03d", i), conf.Execution.TimeoutFactor)
+					if err != nil {
+						output.Fatalf("could not obtain config for %03d: %v", i, err)
+					}
+					nodeKey := pkg.Keys[val.NodeAddress]
+					err = tendermint.WriteNodeKey(tmConf.NodeKeyFile(), nodeKey.KeyJSON)
+					if err != nil {
+						output.Fatalf("failed to create node key for %03d: %v", i, err)
+					}
+					peers = append(peers, fmt.Sprintf("tcp://%s@127.0.0.1:%d", nodeKey.Address.String(), 26656+i))
 				}
 				for i, acc := range conf.GenesisDoc.Accounts {
 					// set stuff
 					conf.Address = &acc.Address
 					conf.Tendermint.PersistentPeers = strings.Join(peers, ",")
-
 					conf.BurrowDir = fmt.Sprintf(".burrow%03d", i)
 					conf.Tendermint.ListenHost = rpc.LocalHost
 					conf.Tendermint.ListenPort = fmt.Sprint(26656 + i)
@@ -334,7 +308,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 	}
 }
 
-func processTemplate(pkg *deployment.Config, config *genesis.GenesisDoc, templateIn, templateOut string) error {
+func processTemplate(pkg *deployment.Config, templateIn, templateOut string) error {
 	data, err := ioutil.ReadFile(templateIn)
 	if err != nil {
 		return err

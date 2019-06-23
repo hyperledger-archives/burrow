@@ -15,7 +15,6 @@
 package binary
 
 import (
-	"encoding/binary"
 	"math"
 	"math/big"
 )
@@ -25,36 +24,6 @@ var Big256 = big.NewInt(256)
 var tt256 = new(big.Int).Lsh(big1, 256)
 var tt256m1 = new(big.Int).Sub(new(big.Int).Lsh(big1, 256), big1)
 var tt255 = new(big.Int).Lsh(big1, 255)
-
-//--------------------------------------------------------------------------------
-
-func PutUint64(dest []byte, i uint64) {
-	binary.BigEndian.PutUint64(dest, i)
-}
-
-func GetUint64(src []byte) uint64 {
-	return binary.BigEndian.Uint64(src)
-}
-
-func Uint64Bytes(v uint64) []byte {
-	bs := make([]byte, 8)
-	binary.BigEndian.PutUint64(bs, v)
-	return bs
-}
-
-func PutInt64(dest []byte, i int64) {
-	binary.BigEndian.PutUint64(dest, uint64(i))
-}
-
-func GetInt64(src []byte) int64 {
-	return int64(binary.BigEndian.Uint64(src))
-}
-
-func Int64Bytes(v int64) []byte {
-	bs := make([]byte, 8)
-	binary.BigEndian.PutUint64(bs, uint64(v))
-	return bs
-}
 
 // Returns whether a + b would be a uint64 overflow
 func IsUint64SumOverflow(a, b uint64) bool {

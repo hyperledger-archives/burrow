@@ -22,7 +22,7 @@ func TestGenesisSpec_GenesisDoc(t *testing.T) {
 		}},
 	}
 
-	genesisDoc, err := genesisSpec.GenesisDoc(keyClient, false)
+	genesisDoc, err := genesisSpec.GenesisDoc(keyClient)
 	require.NoError(t, err)
 	require.Len(t, genesisDoc.Accounts, 1)
 	// Should create validator
@@ -52,7 +52,7 @@ func TestGenesisSpec_GenesisDoc(t *testing.T) {
 			}},
 	}
 
-	genesisDoc, err = genesisSpec.GenesisDoc(keyClient, false)
+	genesisDoc, err = genesisSpec.GenesisDoc(keyClient)
 	require.NoError(t, err)
 
 	require.Len(t, genesisDoc.Accounts, 2)
@@ -67,7 +67,7 @@ func TestGenesisSpec_GenesisDoc(t *testing.T) {
 	// Try an empty spec
 	genesisSpec = GenesisSpec{}
 
-	genesisDoc, err = genesisSpec.GenesisDoc(keyClient, false)
+	genesisDoc, err = genesisSpec.GenesisDoc(keyClient)
 	require.NoError(t, err)
 
 	// Similar assersions to first case - should generate our default single identity chain

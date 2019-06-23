@@ -21,6 +21,7 @@ func TestPublicKeySerialisation(t *testing.T) {
 	require.NoError(t, err)
 	var pubOut PublicKey
 	err = proto.Unmarshal(bs, &pubOut)
+	require.NoError(t, err)
 	assert.Equal(t, pub, pubOut)
 
 	bs, err = json.Marshal(pub)

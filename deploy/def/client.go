@@ -140,10 +140,10 @@ func (c *Client) GetAccount(address crypto.Address) (*acm.Account, error) {
 	return c.queryClient.GetAccount(ctx, &rpcquery.GetAccountParam{Address: address})
 }
 
-func (c *Client) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
+func (c *Client) GetStorage(address crypto.Address, key binary.Word256) ([]byte, error) {
 	val, err := c.queryClient.GetStorage(context.Background(), &rpcquery.GetStorageParam{Address: address, Key: key})
 	if err != nil {
-		return binary.Word256{}, err
+		return []byte{}, err
 	}
 	return val.Value, err
 }
@@ -427,6 +427,7 @@ type CallArg struct {
 	Fee      string
 	Gas      string
 	Data     string
+	WASM     string
 }
 
 func (c *Client) Call(arg *CallArg, logger *logging.Logger) (*payload.CallTx, error) {
@@ -435,7 +436,8 @@ func (c *Client) Call(arg *CallArg, logger *logging.Logger) (*payload.CallTx, er
 		"amount", arg.Amount,
 		"sequence", arg.Sequence,
 		"address", arg.Address,
-		"data", arg.Data)
+		"data", arg.Data,
+		"wasm", arg.WASM)
 	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true, logger)
 	if err != nil {
 		return nil, err
@@ -460,10 +462,15 @@ func (c *Client) Call(arg *CallArg, logger *logging.Logger) (*payload.CallTx, er
 	if err != nil {
 		return nil, err
 	}
+	wasm, err := hex.DecodeString(arg.WASM)
+	if err != nil {
+		return nil, err
+	}
 	tx := &payload.CallTx{
 		Input:    input,
 		Address:  contractAddress,
 		Data:     code,
+		WASM:     wasm,
 		Fee:      fee,
 		GasLimit: gas,
 	}
@@ -598,6 +605,9 @@ func (c *Client) TxInput(inputString, amountString, sequenceString string, allow
 	var amount uint64
 	if amountString != "" {
 		amount, err = c.ParseUint64(amountString)
+		if err != nil {
+			return nil, err
+		}
 	}
 	var sequence uint64
 	sequence, err = c.getSequence(sequenceString, inputAddress, c.MempoolSigning && allowMempoolSigning, logger)

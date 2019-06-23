@@ -150,7 +150,7 @@ func readAbi(root, contract string, logger *logging.Logger) (string, error) {
 		p = path.Join(root, stripHex(contract)+".bin")
 		if _, err = os.Stat(p); err != nil {
 			logger.TraceMsg("abifile not found", "tried", p)
-			return "", fmt.Errorf("Abi doesn't exist for =>\t%s", p)
+			return "", fmt.Errorf("abi doesn't exist for =>\t%s", p)
 		}
 	}
 	logger.TraceMsg("Found ABI file", "path", p)

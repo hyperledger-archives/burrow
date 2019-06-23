@@ -1,13 +1,17 @@
-package storage
+package forensics
 
-import "bytes"
+import (
+	"bytes"
+
+	"github.com/hyperledger/burrow/storage"
+)
 
 type uniqueIterator struct {
-	source  KVIterator
+	source  storage.KVIterator
 	prevKey []byte
 }
 
-func Uniq(source KVIterator) *uniqueIterator {
+func Uniq(source storage.KVIterator) *uniqueIterator {
 	return &uniqueIterator{
 		source: source,
 	}

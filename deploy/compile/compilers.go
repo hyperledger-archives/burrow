@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/hyperledger/burrow/crypto"
@@ -55,6 +54,9 @@ type SolidityContract struct {
 			Opcodes        string
 			LinkReferences json.RawMessage
 		}
+	}
+	EWasm struct {
+		Wasm string
 	}
 	Devdoc   json.RawMessage
 	Userdoc  json.RawMessage
@@ -147,7 +149,15 @@ func (contract *SolidityContract) Link(libraries map[string]string) error {
 	return nil
 }
 
-func Compile(file string, optimize bool, workDir string, libraries map[string]string, logger *logging.Logger) (*Response, error) {
+func (contract *SolidityContract) Code() (code string) {
+	code = contract.Evm.Bytecode.Object
+	if code == "" {
+		code = contract.EWasm.Wasm
+	}
+	return
+}
+
+func EVM(file string, optimize bool, workDir string, libraries map[string]string, logger *logging.Logger) (*Response, error) {
 	input := SolidityInput{Language: "Solidity", Sources: make(map[string]SolidityInputSource)}
 
 	input.Sources[file] = SolidityInputSource{Urls: []string{file}}
@@ -156,10 +166,8 @@ func Compile(file string, optimize bool, workDir string, libraries map[string]st
 	input.Settings.Libraries = make(map[string]map[string]string)
 	input.Settings.Libraries[""] = make(map[string]string)
 
-	if libraries != nil {
-		for l, a := range libraries {
-			input.Settings.Libraries[""][l] = "0x" + a
-		}
+	for l, a := range libraries {
+		input.Settings.Libraries[""][l] = "0x" + a
 	}
 
 	command, err := json.Marshal(input)
@@ -196,6 +204,63 @@ func Compile(file string, optimize bool, workDir string, libraries map[string]st
 	warnings := ""
 	errors := ""
 	for _, msg := range output.Errors {
+		if msg.Type == "Warning" {
+			warnings += msg.FormattedMessage
+		} else {
+			errors += msg.FormattedMessage
+		}
+	}
+
+	for _, re := range respItemArray {
+		logger.TraceMsg("Response formulated",
+			"name", re.Objectname,
+			"bin", re.Contract.Code(),
+			"abi", string(re.Contract.Abi))
+	}
+
+	resp := Response{
+		Objects: respItemArray,
+		Warning: warnings,
+		Error:   errors,
+	}
+
+	return &resp, nil
+}
+
+func WASM(file string, workDir string, logger *logging.Logger) (*Response, error) {
+	shellCmd := exec.Command("solang", "--standard-json", file)
+	if workDir != "" {
+		shellCmd.Dir = workDir
+	}
+	output, err := shellCmd.CombinedOutput()
+	if err != nil {
+		logger.InfoMsg("solang failed", "output", string(output))
+		return nil, err
+	}
+	logger.TraceMsg("Command Output", "result", string(output))
+
+	wasmoutput := SolidityOutput{}
+	err = json.Unmarshal(output, &wasmoutput)
+	if err != nil {
+		return nil, err
+	}
+
+	respItemArray := make([]ResponseItem, 0)
+
+	for f, s := range wasmoutput.Contracts {
+		for contract, item := range s {
+			respItem := ResponseItem{
+				Filename:   f,
+				Objectname: objectName(contract),
+				Contract:   item,
+			}
+			respItemArray = append(respItemArray, respItem)
+		}
+	}
+
+	warnings := ""
+	errors := ""
+	for _, msg := range wasmoutput.Errors {
 		if msg.Type == "Warning" {
 			warnings += msg.FormattedMessage
 		} else {
@@ -246,23 +311,10 @@ func PrintResponse(resp Response, cli bool, logger *logging.Logger) {
 		for _, r := range resp.Objects {
 			logger.InfoMsg("Response",
 				"name", r.Objectname,
-				"bin", r.Contract.Evm.Bytecode,
+				"bin", r.Contract.Code(),
 				"abi", string(r.Contract.Abi[:]),
 				"link", string(r.Contract.Evm.Bytecode.LinkReferences[:]),
 			)
 		}
 	}
-}
-
-func extractObjectNames(script []byte) ([]string, error) {
-	regExpression, err := regexp.Compile("(contract|library) (.+?) (is)?(.+?)?({)")
-	if err != nil {
-		return nil, err
-	}
-	objectNamesList := regExpression.FindAllSubmatch(script, -1)
-	var objects []string
-	for _, objectNames := range objectNamesList {
-		objects = append(objects, string(objectNames[2]))
-	}
-	return objects, nil
 }

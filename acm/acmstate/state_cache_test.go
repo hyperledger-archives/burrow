@@ -171,7 +171,7 @@ func TestStateCache_GetStorage(t *testing.T) {
 	cache.UpdateAccount(acc)
 
 	//Check for correct cache storage value
-	assert.Equal(t, word("NO YOU ARE A KEY"), accStorage)
+	assert.Equal(t, "NO YOU ARE A KEY", string(accStorage))
 
 	//Sync account to backend
 	err = cache.Sync(writeBackend)
@@ -183,7 +183,7 @@ func TestStateCache_GetStorage(t *testing.T) {
 	require.NotNil(t, accStorage)
 
 	//Check for correct backend storage value
-	assert.Equal(t, word("NO YOU ARE A KEY"), accStorage)
+	assert.Equal(t, "NO YOU ARE A KEY", string(accStorage))
 }
 
 func TestStateCache_SetStorage(t *testing.T) {
@@ -195,13 +195,13 @@ func TestStateCache_SetStorage(t *testing.T) {
 	newAcc := acm.NewAccountFromSecret("newAcc")
 	err := cache.UpdateAccount(newAcc)
 	require.NoError(t, err)
-	err = cache.SetStorage(newAcc.Address, word("What?"), word("Huh?"))
+	err = cache.SetStorage(newAcc.Address, word("What?"), []byte("Huh?"))
 	require.NoError(t, err)
 
 	//Check for correct cache storage value
 	newAccStorage, err := cache.GetStorage(newAcc.Address, word("What?"))
 	require.NoError(t, err)
-	assert.Equal(t, word("Huh?"), newAccStorage)
+	assert.Equal(t, "Huh?", string(newAccStorage))
 
 	//Sync account to backend
 	err = cache.Sync(backend)
@@ -210,15 +210,15 @@ func TestStateCache_SetStorage(t *testing.T) {
 	//Check for correct backend storage value
 	newAccStorage, err = backend.GetStorage(newAcc.Address, word("What?"))
 	require.NoError(t, err)
-	assert.Equal(t, word("Huh?"), newAccStorage)
+	assert.Equal(t, "Huh?", string(newAccStorage))
 
 	noone := acm.NewAccountFromSecret("noone at all")
-	err = cache.SetStorage(noone.Address, binary.Word256{3, 4, 5}, binary.Word256{102, 103, 104})
+	err = cache.SetStorage(noone.Address, binary.Word256{3, 4, 5}, []byte{102, 103, 104})
 	require.Error(t, err, "should not be able to write to non-existent account")
 
 	err = cache.UpdateAccount(noone)
 	require.NoError(t, err)
-	err = cache.SetStorage(noone.Address, binary.Word256{3, 4, 5}, binary.Word256{102, 103, 104})
+	err = cache.SetStorage(noone.Address, binary.Word256{3, 4, 5}, []byte{102, 103, 104})
 	require.NoError(t, err, "should be able to update account after creating it")
 }
 
@@ -228,16 +228,17 @@ func TestStateCache_Sync(t *testing.T) {
 	cache := NewCache(backend)
 
 	// Create new account
-	newAcc := acm.NewAccountFromSecret("newAcc")
 	// Create account
+	newAcc := acm.NewAccountFromSecret("newAcc")
 	err := cache.UpdateAccount(newAcc)
+	require.NoError(t, err)
 
 	// Set balance for account
 	balance := uint64(24)
 	newAcc.Balance = balance
 
 	// Set storage for account
-	err = cache.SetStorage(newAcc.Address, word("God save"), word("the queen!"))
+	err = cache.SetStorage(newAcc.Address, word("God save"), []byte("the queen!"))
 	require.NoError(t, err)
 
 	//Update cache with account changes
@@ -252,7 +253,7 @@ func TestStateCache_Sync(t *testing.T) {
 	//Confirm changes to account storage in cache
 	newAccStorage, err := cache.GetStorage(newAcc.Address, word("God save"))
 	require.NoError(t, err)
-	assert.Equal(t, word("the queen!"), newAccStorage)
+	assert.Equal(t, "the queen!", string(newAccStorage))
 
 	//Sync account to backend
 	err = cache.Sync(backend)
@@ -266,7 +267,7 @@ func TestStateCache_Sync(t *testing.T) {
 	//Confirm changes to account storage synced correctly to backend
 	newAccStorage, err = cache.GetStorage(newAcc.Address, word("God save"))
 	require.NoError(t, err)
-	assert.Equal(t, word("the queen!"), newAccStorage)
+	assert.Equal(t, "the queen!", string(newAccStorage))
 
 	//Remove account from cache
 	err = cache.RemoveAccount(newAcc.Address)
@@ -316,7 +317,7 @@ func testAccounts() *MemoryState {
 	acc2 := acm.NewAccountFromSecret("acc2")
 	acc2.Permissions.Base.Perms = permission.AddRole | permission.Send
 	acc2.Permissions.Base.SetBit = acc1.Permissions.Base.Perms
-	acc2.Code, _ = acm.NewBytecode(asm.PUSH1, 0x20)
+	acc2.EVMCode, _ = acm.NewBytecode(asm.PUSH1, 0x20)
 
 	cache := combine(
 		account(acc1, "I AM A KEY", "NO YOU ARE A KEY"),
@@ -333,9 +334,9 @@ func addressOf(secret string) crypto.Address {
 func account(acc *acm.Account, keyvals ...string) *MemoryState {
 	ts := NewMemoryState()
 	ts.Accounts[acc.Address] = acc
-	ts.Storage[acc.Address] = make(map[binary.Word256]binary.Word256)
+	ts.Storage[acc.Address] = make(map[binary.Word256][]byte)
 	for i := 0; i < len(keyvals); i += 2 {
-		ts.Storage[acc.Address][word(keyvals[i])] = word(keyvals[i+1])
+		ts.Storage[acc.Address][word(keyvals[i])] = []byte(keyvals[i+1])
 	}
 	return ts
 }

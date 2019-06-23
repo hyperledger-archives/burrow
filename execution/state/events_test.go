@@ -1,6 +1,7 @@
 package state
 
 import (
+	bin "encoding/binary"
 	"fmt"
 	"testing"
 
@@ -147,9 +148,9 @@ func mkBlock(height, numTxs, events uint64) *exec.BlockExecution {
 
 func mkTx(height, txIndex, events uint64) *exec.TxExecution {
 	hash := make([]byte, 32)
-	binary.PutUint64(hash[:8], height)
-	binary.PutUint64(hash[8:16], txIndex)
-	binary.PutUint64(hash[16:24], events)
+	bin.BigEndian.PutUint64(hash[:8], height)
+	bin.BigEndian.PutUint64(hash[8:16], txIndex)
+	bin.BigEndian.PutUint64(hash[16:24], events)
 	txe := &exec.TxExecution{
 		TxHeader: &exec.TxHeader{
 			TxHash: hash,

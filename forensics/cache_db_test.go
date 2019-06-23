@@ -1,4 +1,4 @@
-package storage
+package forensics
 
 import (
 	"fmt"
@@ -11,10 +11,10 @@ import (
 func TestBatchCommit(t *testing.T) {
 	db := dbm.NewMemDB()
 	cdb := NewCacheDB(db)
-	foo := bz("foo")
-	bam := bz("bam")
-	bosh := bz("bosh")
-	boom := bz("boom")
+	foo := []byte("foo")
+	bam := []byte("bam")
+	bosh := []byte("bosh")
+	boom := []byte("boom")
 	db.Set(foo, bam)
 	assert.Equal(t, bam, cdb.Get(foo), "underlying writes should be seen")
 	cdb.Set(foo, bosh)
@@ -39,10 +39,10 @@ func TestBatchCommit(t *testing.T) {
 func TestCacheDB_Iterator(t *testing.T) {
 	db := dbm.NewMemDB()
 	cdb := NewCacheDB(db)
-	foo := bz("foo")
-	bam := bz("bam")
-	bosh := bz("bosh")
-	boom := bz("boom")
+	foo := []byte("foo")
+	bam := []byte("bam")
+	bosh := []byte("bosh")
+	boom := []byte("boom")
 
 	db.Set(append(foo, foo...), foo)
 	db.Set(append(foo, bam...), bam)

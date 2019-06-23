@@ -14,18 +14,18 @@ import (
 
 // Run a contract's code on an isolated and unpersisted state
 // Cannot be used to create new contracts
-func CallSim(reader acmstate.Reader, tip bcm.BlockchainInfo, fromAddress, address crypto.Address, data []byte,
+func CallSim(reader acmstate.Reader, blockchain bcm.BlockchainInfo, fromAddress, address crypto.Address, data []byte,
 	logger *logging.Logger) (*exec.TxExecution, error) {
 
 	cache := acmstate.NewCache(reader)
 	exe := contexts.CallContext{
 		RunCall:     true,
 		StateWriter: cache,
-		Blockchain:  tip,
+		Blockchain:  blockchain,
 		Logger:      logger,
 	}
 
-	txe := exec.NewTxExecution(txs.Enclose(tip.ChainID(), &payload.CallTx{
+	txe := exec.NewTxExecution(txs.Enclose(blockchain.ChainID(), &payload.CallTx{
 		Input: &payload.TxInput{
 			Address: fromAddress,
 		},
@@ -42,18 +42,18 @@ func CallSim(reader acmstate.Reader, tip bcm.BlockchainInfo, fromAddress, addres
 
 // Run the given code on an isolated and unpersisted state
 // Cannot be used to create new contracts.
-func CallCodeSim(reader acmstate.Reader, tip bcm.BlockchainInfo, fromAddress, address crypto.Address, code, data []byte,
+func CallCodeSim(reader acmstate.Reader, blockchain bcm.BlockchainInfo, fromAddress, address crypto.Address, code, data []byte,
 	logger *logging.Logger) (*exec.TxExecution, error) {
 
 	// Attach code to target account (overwriting target)
 	cache := acmstate.NewCache(reader)
 	err := cache.UpdateAccount(&acm.Account{
 		Address: address,
-		Code:    code,
+		EVMCode: code,
 	})
 
 	if err != nil {
 		return nil, err
 	}
-	return CallSim(cache, tip, fromAddress, address, data, logger)
+	return CallSim(cache, blockchain, fromAddress, address, data, logger)
 }

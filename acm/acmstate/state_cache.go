@@ -37,7 +37,7 @@ type Cache struct {
 type accountInfo struct {
 	sync.RWMutex
 	account *acm.Account
-	storage map[binary.Word256]binary.Word256
+	storage map[binary.Word256][]byte
 	removed bool
 	updated bool
 }
@@ -135,10 +135,10 @@ func (cache *Cache) IterateCachedAccount(consumer func(*acm.Account) (stop bool)
 	return false, nil
 }
 
-func (cache *Cache) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
+func (cache *Cache) GetStorage(address crypto.Address, key binary.Word256) ([]byte, error) {
 	accInfo, err := cache.get(address)
 	if err != nil {
-		return binary.Zero256, err
+		return []byte{}, err
 	}
 	// Check cache
 	accInfo.RLock()
@@ -152,7 +152,7 @@ func (cache *Cache) GetStorage(address crypto.Address, key binary.Word256) (bina
 			// Load from backend
 			value, err = cache.backend.GetStorage(address, key)
 			if err != nil {
-				return binary.Zero256, err
+				return []byte{}, err
 			}
 			accInfo.storage[key] = value
 		}
@@ -161,7 +161,7 @@ func (cache *Cache) GetStorage(address crypto.Address, key binary.Word256) (bina
 }
 
 // NOTE: Set value to zero to remove.
-func (cache *Cache) SetStorage(address crypto.Address, key binary.Word256, value binary.Word256) error {
+func (cache *Cache) SetStorage(address crypto.Address, key binary.Word256, value []byte) error {
 	if cache.readonly {
 		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
 			"SetStorage called in a read-only context on account %v", address)
@@ -186,7 +186,7 @@ func (cache *Cache) SetStorage(address crypto.Address, key binary.Word256, value
 
 // Iterates over all cached storage items first in cache and then in backend until consumer returns true for 'stop'
 func (cache *Cache) IterateCachedStorage(address crypto.Address,
-	consumer func(key, value binary.Word256) error) error {
+	consumer func(key binary.Word256, value []byte) error) error {
 	accInfo, err := cache.get(address)
 	if err != nil {
 		return err
@@ -294,7 +294,7 @@ func (cache *Cache) get(address crypto.Address) (*accountInfo, error) {
 			}
 			accInfo = &accountInfo{
 				account: account,
-				storage: make(map[binary.Word256]binary.Word256),
+				storage: make(map[binary.Word256][]byte),
 			}
 			cache.accounts[address] = accInfo
 		}

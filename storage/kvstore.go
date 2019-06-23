@@ -32,18 +32,6 @@ type KVCallbackIterable interface {
 	Iterate(low, high []byte, ascending bool, fn func(key []byte, value []byte) error) error
 }
 
-func KVCallbackIterator(rit KVCallbackIterable, ascending bool, low, high []byte) dbm.Iterator {
-	ch := make(chan KVPair)
-	go func() {
-		defer close(ch)
-		rit.Iterate(low, high, ascending, func(key, value []byte) (err error) {
-			ch <- KVPair{key, value}
-			return
-		})
-	}()
-	return NewChannelIterator(ch, low, high)
-}
-
 type KVReader interface {
 	// Get returns nil iff key doesn't exist. Panics on nil key.
 	Get(key []byte) []byte
@@ -79,14 +67,6 @@ type KVStore interface {
 	KVIterable
 }
 
-// NormaliseDomain encodes the assumption that when nil is used as a lower bound is interpreted as low rather than high
-func NormaliseDomain(low, high []byte) ([]byte, []byte) {
-	if len(low) == 0 {
-		low = []byte{}
-	}
-	return low, high
-}
-
 // KeyOrder maps []byte{} -> -1, []byte(nil) -> 1, and everything else to 0. This encodes the assumptions of the
 // KVIterator domain endpoints
 func KeyOrder(key []byte) int {
@@ -113,4 +93,12 @@ func CompareKeys(k1, k2 []byte) int {
 		return 1
 	}
 	return bytes.Compare(k1, k2)
+}
+
+// NormaliseDomain encodes the assumption that when nil is used as a lower bound is interpreted as low rather than high
+func NormaliseDomain(low, high []byte) ([]byte, []byte) {
+	if len(low) == 0 {
+		low = []byte{}
+	}
+	return low, high
 }

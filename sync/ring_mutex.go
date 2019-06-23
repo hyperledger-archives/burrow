@@ -45,8 +45,8 @@ func NewRingMutex(mutexCount int, hashMaker func() hash.Hash64) *RingMutex {
 	ringMutex := &RingMutex{
 		mutexCount: uint64(mutexCount),
 		// max slice length is bounded by max(int) thus the argument type
-		mutexes: make([]sync.RWMutex, mutexCount, mutexCount),
-		values:  make([]Value, mutexCount, mutexCount),
+		mutexes: make([]sync.RWMutex, mutexCount),
+		values:  make([]Value, mutexCount),
 		hash: func(address []byte) uint64 {
 			buf := make([]byte, 8)
 			copy(buf, address)

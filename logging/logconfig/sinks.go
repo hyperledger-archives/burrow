@@ -74,7 +74,7 @@ func (mode filterMode) Exclude() bool {
 
 // The predicate should evaluate true if at least one of the key value predicates matches
 func (mode filterMode) MatchAny() bool {
-	return !mode.MatchAny()
+	return !mode.MatchAll()
 }
 
 // Sink configuration types

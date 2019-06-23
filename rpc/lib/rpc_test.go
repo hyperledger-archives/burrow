@@ -15,7 +15,6 @@ import (
 
 	"github.com/hyperledger/burrow/process"
 
-	"github.com/go-kit/kit/log/term"
 	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/hyperledger/burrow/rpc/lib/client"
 	"github.com/hyperledger/burrow/rpc/lib/server"
@@ -85,19 +84,6 @@ func TestMain(m *testing.M) {
 	setup()
 	code := m.Run()
 	os.Exit(code)
-}
-
-var colorFn = func(keyvals ...interface{}) term.FgBgColor {
-	for i := 0; i < len(keyvals)-1; i += 2 {
-		if keyvals[i] == "socket" {
-			if keyvals[i+1] == "tcp" {
-				return term.FgBgColor{Fg: term.DarkBlue}
-			} else if keyvals[i+1] == "unix" {
-				return term.FgBgColor{Fg: term.DarkCyan}
-			}
-		}
-	}
-	return term.FgBgColor{}
 }
 
 // launch unix and tcp servers

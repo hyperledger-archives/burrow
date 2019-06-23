@@ -167,17 +167,3 @@ func mergeStrings(as, bs []string) []string {
 	sort.Strings(strs)
 	return strs
 }
-
-func addUint64Pointers(a, b *uint64) *uint64 {
-	if a == nil && b == nil {
-		return nil
-	}
-	amt := uint64(0)
-	if a != nil {
-		amt += *a
-	}
-	if b != nil {
-		amt += *b
-	}
-	return &amt
-}

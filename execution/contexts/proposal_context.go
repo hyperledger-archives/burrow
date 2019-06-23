@@ -259,7 +259,7 @@ func validateProposalStrings(proposal *payload.Proposal) error {
 }
 
 func validateStringPrintable(data string) bool {
-	for _, r := range []rune(data) {
+	for _, r := range data {
 		if !unicode.IsPrint(r) {
 			return false
 		}

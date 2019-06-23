@@ -24,6 +24,7 @@ func TestBytecode_MarshalJSON(t *testing.T) {
 
 	bytecodeOut := new(Bytecode)
 	err = json.Unmarshal(bs, bytecodeOut)
+	require.NoError(t, err)
 
 	assert.Equal(t, bytecode, *bytecodeOut)
 }
@@ -41,6 +42,7 @@ func TestBytecode_MarshalText(t *testing.T) {
 
 	bytecodeOut := new(Bytecode)
 	err = bytecodeOut.UnmarshalText(bs)
+	require.NoError(t, err)
 
 	assert.Equal(t, bytecode, *bytecodeOut)
 }
@@ -80,6 +82,6 @@ func TestBytecode_Tokens(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{}, tokens)
 
-	tokens, err = Bytecode(bc.MustSplice(asm.PUSH3, 1, 2)).Tokens()
+	_, err = Bytecode(bc.MustSplice(asm.PUSH3, 1, 2)).Tokens()
 	assert.Error(t, err, "not enough bytes to push")
 }

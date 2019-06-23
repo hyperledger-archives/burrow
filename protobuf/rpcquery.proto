@@ -55,7 +55,7 @@ message GetStorageParam {
 }
 
 message StorageValue {
-    bytes Value = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.Word256", (gogoproto.nullable) = false];
+    bytes Value = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
 }
 
 message ListAccountsParam {

@@ -39,7 +39,7 @@ func returnNamesDir(dir string) (string, error) {
 func writeKey(keyDir string, addr, keyJson []byte) ([]byte, error) {
 	dir, err := returnDataDir(keyDir)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get keys dir: %v", err)
+		return nil, fmt.Errorf("failed to get keys dir: %v", err)
 	}
 	if err := WriteKeyFile(addr, dir, keyJson); err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func coreNameAdd(keysDir, name, addr string) error {
 		return err
 	}
 	if _, err := os.Stat(path.Join(dataDir, addr+".json")); err != nil {
-		return fmt.Errorf("Unknown key %s", addr)
+		return fmt.Errorf("unknown key %s", addr)
 	}
 	return ioutil.WriteFile(path.Join(namesDir, name), []byte(addr), 0600)
 }
@@ -83,22 +83,6 @@ func coreNameList(keysDir string) (map[string]string, error) {
 		names[f.Name()] = string(b)
 	}
 	return names, nil
-}
-
-func coreAddrList(keysDir string) (map[int]string, error) {
-	dir, err := returnDataDir(keysDir)
-	if err != nil {
-		return nil, err
-	}
-	addrs := make(map[int]string)
-	fs, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-	for i := 0; i < len(fs); i++ {
-		addrs[i] = fs[i].Name()
-	}
-	return addrs, nil
 }
 
 func coreNameRm(keysDir string, name string) error {

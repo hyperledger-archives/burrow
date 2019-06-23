@@ -138,7 +138,7 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 		}
 	} else {
 		if expiresIn < names.MinNameRegistrationPeriod {
-			return fmt.Errorf("Names must be registered for at least %d blocks", names.MinNameRegistrationPeriod)
+			return fmt.Errorf("names must be registered for at least %d blocks", names.MinNameRegistrationPeriod)
 		}
 		// entry does not exist, so create it
 		entry = &names.Entry{

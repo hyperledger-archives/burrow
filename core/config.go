@@ -7,7 +7,6 @@ import (
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/consensus/abci"
 	"github.com/hyperledger/burrow/consensus/tendermint"
-	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging/lifecycle"
@@ -77,22 +76,6 @@ func (kern *Kernel) LoadTendermintFromConfig(conf *config.BurrowConfig, privVal 
 
 	genesisDoc := kern.Blockchain.GenesisDoc()
 
-	// find node key
-	var nodeKey *crypto.PrivateKey
-	for _, v := range genesisDoc.Validators {
-		thisAddress, err := crypto.AddressFromHexString(privVal.GetPubKey().Address().String())
-		if err != nil {
-			break
-		}
-		if v.Address == thisAddress && v.NodeAddress != nil {
-			k, err := kern.keyStore.GetKey("", v.NodeAddress.Bytes())
-			if err == nil {
-				nodeKey = &k.PrivateKey
-			}
-			break
-		}
-	}
-
 	tmGenesisDoc := tendermint.DeriveGenesisDoc(&genesisDoc, kern.Blockchain.AppHashAfterLastBlock())
 	heightValuer := log.Valuer(func() interface{} { return kern.Blockchain.LastBlockHeight() })
 	tmLogger := kern.Logger.With(structure.CallerKey, log.Caller(LoggingCallerDepth+1)).With("height", heightValuer)
@@ -100,7 +83,7 @@ func (kern *Kernel) LoadTendermintFromConfig(conf *config.BurrowConfig, privVal 
 	if err != nil {
 		return fmt.Errorf("could not build Tendermint config: %v", err)
 	}
-	kern.Node, err = tendermint.NewNode(tmConf, privVal, tmGenesisDoc, app, metricsProvider, nodeKey, tmLogger)
+	kern.Node, err = tendermint.NewNode(tmConf, privVal, tmGenesisDoc, app, metricsProvider, tmLogger)
 	return err
 }
 

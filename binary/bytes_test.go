@@ -15,5 +15,6 @@ func TestHexBytes_MarshalText(t *testing.T) {
 	assert.Equal(t, "\"0102030405\"", string(out))
 	bs2 := new(HexBytes)
 	err = json.Unmarshal(out, bs2)
+	require.NoError(t, err)
 	assert.Equal(t, bs, *bs2)
 }

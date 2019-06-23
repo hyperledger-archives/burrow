@@ -28,12 +28,8 @@ func EmptySlice() []interface{} {
 func CopyAppend(slice []interface{}, elements ...interface{}) []interface{} {
 	sliceLength := len(slice)
 	newSlice := make([]interface{}, sliceLength+len(elements))
-	for i, e := range slice {
-		newSlice[i] = e
-	}
-	for i, e := range elements {
-		newSlice[sliceLength+i] = e
-	}
+	copy(newSlice, slice)
+	copy(newSlice[sliceLength:], elements)
 	return newSlice
 }
 
@@ -41,12 +37,8 @@ func CopyAppend(slice []interface{}, elements ...interface{}) []interface{} {
 func CopyPrepend(slice []interface{}, elements ...interface{}) []interface{} {
 	elementsLength := len(elements)
 	newSlice := make([]interface{}, len(slice)+elementsLength)
-	for i, e := range elements {
-		newSlice[i] = e
-	}
-	for i, e := range slice {
-		newSlice[elementsLength+i] = e
-	}
+	copy(newSlice, elements)
+	copy(newSlice[elementsLength:], slice)
 	return newSlice
 }
 
@@ -71,11 +63,6 @@ func Concat(slices ...[]interface{}) []interface{} {
 // Beware uses append so the underlying backing array will be modified!
 func Delete(slice []interface{}, i int, n int) []interface{} {
 	return append(slice[:i], slice[i+n:]...)
-}
-
-// Delete an element at a specific index and return the contracted list
-func DeleteAt(slice []interface{}, i int) []interface{} {
-	return Delete(slice, i, 1)
 }
 
 // Flatten a slice by a list by splicing any elements of the list that are

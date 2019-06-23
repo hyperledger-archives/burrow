@@ -76,17 +76,17 @@ func (lsi *LastSignedInfo) SignProposal(sign tmCryptoSigner, chainID string, pro
 // returns error if HRS regression or no SignBytes. returns true if HRS is unchanged
 func (lsi *LastSignedInfo) checkHRS(height int64, round int, step int8) (bool, error) {
 	if lsi.Height > height {
-		return false, errors.New("Height regression")
+		return false, errors.New("height regression")
 	}
 
 	if lsi.Height == height {
 		if lsi.Round > round {
-			return false, errors.New("Round regression")
+			return false, errors.New("round regression")
 		}
 
 		if lsi.Round == round {
 			if lsi.Step > step {
-				return false, errors.New("Step regression")
+				return false, errors.New("step regression")
 			} else if lsi.Step == step {
 				if lsi.SignBytes != nil {
 					if lsi.Signature == nil {
@@ -94,7 +94,7 @@ func (lsi *LastSignedInfo) checkHRS(height int64, round int, step int8) (bool, e
 					}
 					return true, nil
 				}
-				return false, errors.New("No Signature found")
+				return false, errors.New("no Signature found")
 			}
 		}
 	}
@@ -125,7 +125,7 @@ func (lsi *LastSignedInfo) signVote(sign tmCryptoSigner, chainID string, vote *t
 			vote.Timestamp = timestamp
 			vote.Signature = lsi.Signature
 		} else {
-			err = fmt.Errorf("Conflicting data")
+			err = fmt.Errorf("conflicting data")
 		}
 		return err
 	}
@@ -161,7 +161,7 @@ func (lsi *LastSignedInfo) signProposal(sign tmCryptoSigner, chainID string, pro
 			proposal.Timestamp = timestamp
 			proposal.Signature = lsi.Signature
 		} else {
-			err = fmt.Errorf("Conflicting data")
+			err = fmt.Errorf("conflicting data")
 		}
 		return err
 	}

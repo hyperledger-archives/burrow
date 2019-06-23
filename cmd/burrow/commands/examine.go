@@ -37,6 +37,9 @@ func Examine(output Output) func(cmd *cli.Cmd) {
 
 			cmd.Action = func() {
 				start, end, err := parseRange(*rangeArg)
+				if err != nil {
+					output.Fatalf("could not parse range '%s': %v", *rangeArg, err)
+				}
 
 				err = explorer.Blocks(start, end,
 					func(block *bcm.Block) error {
@@ -61,6 +64,9 @@ func Examine(output Output) func(cmd *cli.Cmd) {
 
 			cmd.Action = func() {
 				start, end, err := parseRange(*rangeArg)
+				if err != nil {
+					output.Fatalf("could not parse range '%s': %v", *rangeArg, err)
+				}
 
 				err = explorer.Blocks(start, end,
 					func(block *bcm.Block) error {

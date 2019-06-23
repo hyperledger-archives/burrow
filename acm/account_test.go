@@ -66,7 +66,7 @@ func TestDecodeConcrete(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, concreteAcc, concreteAccOut)
-	concreteAccOut, err = Decode([]byte("flungepliffery munknut tolopops"))
+	_, err = Decode([]byte("flungepliffery munknut tolopops"))
 	assert.Error(t, err)
 }
 
@@ -85,7 +85,7 @@ func TestDecode(t *testing.T) {
 
 func TestMarshalJSON(t *testing.T) {
 	acc := NewAccountFromSecret("Super Semi Secret")
-	acc.Code = []byte{60, 23, 45}
+	acc.EVMCode = []byte{60, 23, 45}
 	acc.Permissions = permission.AccountPermissions{
 		Base: permission.BasePermissions{
 			Perms: permission.AllPermFlags,
@@ -96,7 +96,7 @@ func TestMarshalJSON(t *testing.T) {
 	bs, err := json.Marshal(acc)
 
 	expected := fmt.Sprintf(`{"Address":"%s","PublicKey":{"CurveType":"ed25519","PublicKey":"%s"},`+
-		`"Sequence":4,"Balance":10,"Code":"3C172D",`+
+		`"Sequence":4,"Balance":10,"EVMCode":"3C172D",`+
 		`"Permissions":{"Base":{"Perms":"root | send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole","SetBit":""}}}`,
 		acc.Address, acc.PublicKey)
 	assert.Equal(t, expected, string(bs))
@@ -108,16 +108,16 @@ func TestAccountTags(t *testing.T) {
 	perms.Roles = []string{"frogs", "dogs"}
 	acc := &Account{
 		Permissions: perms,
-		Code:        solidity.Bytecode_StrangeLoop,
+		EVMCode:     solidity.Bytecode_StrangeLoop,
 	}
 	tagged := acc.Tagged()
-	assert.Equal(t, []string{"Address", "Balance", "Sequence", "Code", "Permissions", "Roles"}, tagged.Keys())
+	assert.Equal(t, []string{"Address", "Balance", "Sequence", "EVMCode", "Permissions", "Roles"}, tagged.Keys())
 	str, _ := tagged.Get("Permissions")
 	assert.Equal(t, "send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | hasRole", str)
 	str, _ = tagged.Get("Roles")
 	assert.Equal(t, "frogs;dogs", str)
-	str, _ = tagged.Get("Code")
-	qry, err := query.New("Code CONTAINS '0116002556001600360006101000A815'")
+	tagged.Get("EVMCode")
+	qry, err := query.New("EVMCode CONTAINS '0116002556001600360006101000A815'")
 	require.NoError(t, err)
 	assert.True(t, qry.Matches(tagged))
 }

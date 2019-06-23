@@ -27,7 +27,6 @@ func (es *noopEventSink) Log(log *exec.LogEvent) error {
 
 type logFreeEventSink struct {
 	EventSink
-	error error
 }
 
 func NewLogFreeEventSink(eventSink EventSink) *logFreeEventSink {
