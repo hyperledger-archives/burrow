@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/execution/wasm"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -130,6 +131,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		caller  crypto.Address = inAcc.Address
 		callee  crypto.Address = crypto.ZeroAddress // initialized below
 		code    []byte         = nil
+		wcode   []byte         = nil
 		ret     []byte         = nil
 		txCache                = evm.NewState(ctx.StateWriter, ctx.Blockchain.BlockHash, acmstate.Named("TxCache"))
 		params                 = evm.Params{
@@ -144,12 +146,13 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		// We already checked for permission
 		callee = crypto.NewContractAddress(caller, ctx.txe.TxHash)
 		code = ctx.tx.Data
+		wcode = ctx.tx.WASM
 		txCache.CreateAccount(callee)
 		ctx.Logger.TraceMsg("Creating new contract",
 			"contract_address", callee,
 			"init_code", code)
 	} else {
-		if outAcc == nil || len(outAcc.Code) == 0 {
+		if outAcc == nil || (len(outAcc.EVMCode) == 0 && len(outAcc.WASMCode) == 0) {
 			// if you call an account that doesn't exist
 			// or an account with no code then we take fees (sorry pal)
 			// NOTE: it's fine to create a contract and call it within one
@@ -176,7 +179,8 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 			return nil
 		}
 		callee = outAcc.Address
-		code = txCache.GetCode(callee)
+		code = txCache.GetEVMCode(callee)
+		wcode = txCache.GetWASMCode(callee)
 		ctx.Logger.TraceMsg("Calling existing contract",
 			"contract_address", callee,
 			"input", ctx.tx.Data,
@@ -186,27 +190,52 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 
 	txHash := ctx.txe.Envelope.Tx.Hash()
 	logger := ctx.Logger.With(structure.TxHashKey, txHash)
-	vmach := evm.NewVM(params, caller, txHash, logger, ctx.VMOptions...)
-	ret, exception := vmach.Call(txCache, ctx.txe, caller, callee, code, ctx.tx.Data, value, &gas)
-	if exception != nil {
-		// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
-		ctx.Logger.InfoMsg("Error on execution",
-			structure.ErrorKey, exception)
-
-		ctx.txe.PushError(errors.ErrorCodef(exception.ErrorCode(), "call error: %s\nEVM call trace: %s",
-			exception.String(), ctx.txe.CallTrace()))
-	} else {
-		ctx.Logger.TraceMsg("Successful execution")
+	var exception errors.CodedError
+	if wcode != nil {
 		if createContract {
-			txCache.InitCode(callee, ret)
+			txCache.InitWASMCode(callee, wcode)
 		}
-		err := txCache.Sync()
-		if err != nil {
-			return err
+		ret, exception = wasm.RunWASM(txCache, callee, createContract, wcode, ctx.tx.Data)
+		if exception != nil {
+			// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
+			ctx.Logger.InfoMsg("Error on WASM execution",
+				structure.ErrorKey, exception)
+
+			ctx.txe.PushError(errors.ErrorCodef(exception.ErrorCode(), "call error: %s\n",
+				exception.String()))
+		} else {
+			ctx.Logger.TraceMsg("Successful execution")
+			err := txCache.Sync()
+			if err != nil {
+				return err
+			}
 		}
+		ctx.txe.Return(ret, ctx.tx.GasLimit-gas)
+	} else {
+		// EVM
+		vmach := evm.NewVM(params, caller, txHash, logger, ctx.VMOptions...)
+		ret, exception = vmach.Call(txCache, ctx.txe, caller, callee, code, ctx.tx.Data, value, &gas)
+		if exception != nil {
+			// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
+			ctx.Logger.InfoMsg("Error on EVM execution",
+				structure.ErrorKey, exception)
+
+			ctx.txe.PushError(errors.ErrorCodef(exception.ErrorCode(), "call error: %s\nEVM call trace: %s",
+				exception.String(), ctx.txe.CallTrace()))
+		} else {
+			ctx.Logger.TraceMsg("Successful execution")
+			if createContract {
+				txCache.InitCode(callee, ret)
+			}
+			err := txCache.Sync()
+			if err != nil {
+				return err
+			}
+		}
+		ctx.CallEvents(exception)
+		ctx.txe.Return(ret, ctx.tx.GasLimit-gas)
 	}
-	ctx.CallEvents(exception)
-	ctx.txe.Return(ret, ctx.tx.GasLimit-gas)
+
 	// Create a receipt from the ret and whether it erred.
 	ctx.Logger.TraceMsg("VM call complete",
 		"caller", caller,

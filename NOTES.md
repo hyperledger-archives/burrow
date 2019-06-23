@@ -1,3 +1,9 @@
+### Added
+- [WASM] Support for WASM contracts written in Solidity compiled using solang
+
 ### Fixed
-- [Blockchain] Persist LastBlockTime in Blockchain - before this patch LastBlockTime would only be set correctly after the first block had been received after a node is restarted - this can lead to non-determinism in the EVM via the TIMESTAMP opcode that use the LastBlockTime which is itself sourced from Tendermint's block header (from their implementation of BFT time). Implementing no empty blocks made observing this bug more likely by increasing the amount of time spent in a bad state (LastBlockTime is initially set to GenesisTime).
+-[RPC/Transact] CallCodeSim and CallTxSim were run against uncommitted checker state rather than committed state were all other reads are routed. They were also passed through Transactor for no particularly good reason. This changes them to run against committed DB state and removes the code path through Transactor.
+
+### Changed
+- [State] TxExecution's Envelope now stored in state so will be reproduced in Vent Tx tables and over RPC, and so matches TxExecutions served from *Sync rpctransact methods
 

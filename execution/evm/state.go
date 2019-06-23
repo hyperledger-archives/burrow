@@ -24,10 +24,11 @@ type Interface interface {
 }
 
 type Reader interface {
-	GetStorage(address crypto.Address, key binary.Word256) binary.Word256
+	GetStorage(address crypto.Address, key binary.Word256) []byte
 	GetBalance(address crypto.Address) uint64
 	GetPermissions(address crypto.Address) permission.AccountPermissions
-	GetCode(address crypto.Address) acm.Bytecode
+	GetEVMCode(address crypto.Address) acm.Bytecode
+	GetWASMCode(address crypto.Address) acm.Bytecode
 	GetSequence(address crypto.Address) uint64
 	Exists(address crypto.Address) bool
 	// GetBlockHash returns	hash of the specific block
@@ -37,8 +38,9 @@ type Reader interface {
 type Writer interface {
 	CreateAccount(address crypto.Address)
 	InitCode(address crypto.Address, code []byte)
+	InitWASMCode(address crypto.Address, code []byte)
 	RemoveAccount(address crypto.Address)
-	SetStorage(address crypto.Address, key, value binary.Word256)
+	SetStorage(address crypto.Address, key binary.Word256, value []byte)
 	AddToBalance(address crypto.Address, amount uint64)
 	SubtractFromBalance(address crypto.Address, amount uint64)
 	SetPermission(address crypto.Address, permFlag permission.PermFlag, value bool)
@@ -107,11 +109,11 @@ func (st *State) PushError(err error) {
 
 // Reader
 
-func (st *State) GetStorage(address crypto.Address, key binary.Word256) binary.Word256 {
+func (st *State) GetStorage(address crypto.Address, key binary.Word256) []byte {
 	value, err := st.cache.GetStorage(address, key)
 	if err != nil {
 		st.PushError(err)
-		return binary.Zero256
+		return []byte{}
 	}
 	return value
 }
@@ -132,12 +134,21 @@ func (st *State) GetPermissions(address crypto.Address) permission.AccountPermis
 	return acc.Permissions
 }
 
-func (st *State) GetCode(address crypto.Address) acm.Bytecode {
+func (st *State) GetEVMCode(address crypto.Address) acm.Bytecode {
 	acc := st.account(address)
 	if acc == nil {
 		return nil
 	}
-	return acc.Code
+	return acc.EVMCode
+}
+
+func (st *State) GetWASMCode(address crypto.Address) acm.Bytecode {
+	acc := st.account(address)
+	if acc == nil {
+		return nil
+	}
+
+	return acc.WASMCode
 }
 
 func (st *State) Exists(address crypto.Address) bool {
@@ -178,12 +189,28 @@ func (st *State) InitCode(address crypto.Address, code []byte) {
 			"tried to initialise code for an account that does not exist: %v", address))
 		return
 	}
-	if acc.Code != nil {
+	if acc.EVMCode != nil || acc.WASMCode != nil {
 		st.PushError(errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
 			"tried to initialise code for a contract that already exists: %v", address))
 		return
 	}
-	acc.Code = code
+	acc.EVMCode = code
+	st.updateAccount(acc)
+}
+
+func (st *State) InitWASMCode(address crypto.Address, code []byte) {
+	acc := st.mustAccount(address)
+	if acc == nil {
+		st.PushError(errors.ErrorCodef(errors.ErrorCodeInvalidAddress,
+			"tried to initialise code for an account that does not exist: %v", address))
+		return
+	}
+	if acc.EVMCode != nil || acc.WASMCode != nil {
+		st.PushError(errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+			"tried to initialise code for a contract that already exists: %v", address))
+		return
+	}
+	acc.WASMCode = code
 	st.updateAccount(acc)
 }
 
@@ -196,7 +223,7 @@ func (st *State) RemoveAccount(address crypto.Address) {
 	st.removeAccount(address)
 }
 
-func (st *State) SetStorage(address crypto.Address, key, value binary.Word256) {
+func (st *State) SetStorage(address crypto.Address, key binary.Word256, value []byte) {
 	err := st.cache.SetStorage(address, key, value)
 	if err != nil {
 		st.PushError(err)

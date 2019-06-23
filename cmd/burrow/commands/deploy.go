@@ -59,6 +59,8 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 
 		verboseOpt := cmd.BoolOpt("v verbose", false, "verbose output")
 
+		wasmOpt := cmd.BoolOpt("wasm", false, "Compile to WASM using solang (experimental)")
+
 		debugOpt := cmd.BoolOpt("d debug", false, "debug level output")
 
 		proposalVerify := cmd.BoolOpt("proposal-verify", false, "Verify any proposal, do NOT create new proposal or vote")
@@ -72,7 +74,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 		proposalList := cmd.StringOpt("list-proposals state", "", "List proposals, either all, executed, expired, or current")
 
 		cmd.Spec = "[--chain=<host:port>] [--keys=<host:port>] [--mempool-signing] [--dir=<root directory>] " +
-			"[--output=<output file>] [--set=<KEY=VALUE>]... [--bin-path=<path>] [--gas=<gas>] " +
+			"[--output=<output file>] [--wasm] [--set=<KEY=VALUE>]... [--bin-path=<path>] [--gas=<gas>] " +
 			"[--jobs=<concurrent playbooks>] [--address=<address>] [--fee=<fee>] [--amount=<amount>] " +
 			"[--verbose] [--debug] [--timeout=<timeout>] [--proposal-create|--proposal-verify|--proposal-create] FILE..."
 
@@ -95,6 +97,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			args.MempoolSign = *mempoolSigningOpt
 			args.Timeout = *timeoutSecondsOpt
 			args.Path = *pathOpt
+			args.Wasm = *wasmOpt
 			args.DefaultOutput = *defaultOutputOpt
 			args.DefaultSets = *defaultSetsOpt
 			args.BinPath = *binPathOpt

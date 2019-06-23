@@ -32,7 +32,7 @@ func (m *MockDumpReader) Next() (*Dump, error) {
 		}
 
 		if m.accounts%2 > 0 {
-			row.Account.Code = make([]byte, rand.Int()%10000)
+			row.Account.EVMCode = make([]byte, rand.Int()%10000)
 		} else {
 			row.Account.PublicKey = crypto.PublicKey{}
 		}

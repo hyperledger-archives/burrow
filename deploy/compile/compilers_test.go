@@ -62,7 +62,7 @@ func TestLocalMulti(t *testing.T) {
 		Version: "",
 		Error:   "",
 	}
-	resp, err := Compile("contractImport1.sol", false, "", make(map[string]string), logging.NewNoopLogger())
+	resp, err := EVM("contractImport1.sol", false, "", make(map[string]string), logging.NewNoopLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +110,7 @@ func TestLocalSingle(t *testing.T) {
 		Version: "",
 		Error:   "",
 	}
-	resp, err := Compile("simpleContract.sol", false, "", make(map[string]string), logging.NewNoopLogger())
+	resp, err := EVM("simpleContract.sol", false, "", make(map[string]string), logging.NewNoopLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +126,7 @@ func TestFaultyContract(t *testing.T) {
 	const faultyContractFile = "tests/compilers_fixtures/faultyContract.sol"
 	actualOutput, err := exec.Command("solc", "--combined-json", "bin,abi", faultyContractFile).CombinedOutput()
 	require.EqualError(t, err, "exit status 1")
-	resp, err := Compile(faultyContractFile, false, "", make(map[string]string), logging.NewNoopLogger())
+	resp, err := EVM(faultyContractFile, false, "", make(map[string]string), logging.NewNoopLogger())
 	require.NoError(t, err)
 	if err != nil {
 		if string(actualOutput) != resp.Error {

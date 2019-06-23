@@ -111,7 +111,7 @@ func (ctx *GovernanceContext) UpdateAccount(account *acm.Account, update *spec.T
 		}
 	}
 	if update.Code != nil {
-		account.Code = *update.Code
+		account.EVMCode = *update.Code
 		if err != nil {
 			return ev, err
 		}

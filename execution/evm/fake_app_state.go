@@ -27,7 +27,7 @@ import (
 
 type FakeAppState struct {
 	accounts map[crypto.Address]*acm.Account
-	storage  map[string]Word256
+	storage  map[string][]byte
 }
 
 var _ acmstate.ReaderWriter = &FakeAppState{}
@@ -53,7 +53,7 @@ func (fas *FakeAppState) RemoveAccount(address crypto.Address) error {
 	return nil
 }
 
-func (fas *FakeAppState) GetStorage(addr crypto.Address, key Word256) (Word256, error) {
+func (fas *FakeAppState) GetStorage(addr crypto.Address, key Word256) ([]byte, error) {
 	_, ok := fas.accounts[addr]
 	if !ok {
 		panic(fmt.Sprintf("Invalid account addr: %s", addr))
@@ -63,11 +63,11 @@ func (fas *FakeAppState) GetStorage(addr crypto.Address, key Word256) (Word256, 
 	if ok {
 		return value, nil
 	} else {
-		return Zero256, nil
+		return []byte{}, nil
 	}
 }
 
-func (fas *FakeAppState) SetStorage(addr crypto.Address, key Word256, value Word256) error {
+func (fas *FakeAppState) SetStorage(addr crypto.Address, key Word256, value []byte) error {
 	_, ok := fas.accounts[addr]
 	if !ok {
 

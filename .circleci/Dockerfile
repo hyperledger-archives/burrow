@@ -26,8 +26,8 @@ RUN apk add --update --no-cache \
 RUN pip install docker-compose
 # get docker client
 WORKDIR /usr/bin
-RUN curl -L https://download.docker.com/linux/static/stable/x86_64/docker-$DOCKER_VERSION.tgz | tar xz --strip-components 1 docker/docker
-RUN curl -L https://github.com/goreleaser/goreleaser/releases/download/$GORELEASER_VERSION/goreleaser_Linux_x86_64.tar.gz | tar xz goreleaser
+RUN curl -sS -L https://download.docker.com/linux/static/stable/x86_64/docker-$DOCKER_VERSION.tgz | tar xz --strip-components 1 docker/docker
+RUN curl -sS -L https://github.com/goreleaser/goreleaser/releases/download/$GORELEASER_VERSION/goreleaser_Linux_x86_64.tar.gz | tar xz goreleaser
 RUN npm install -g mocha
 RUN npm install -g mocha-circleci-reporter
 ENV CI=true

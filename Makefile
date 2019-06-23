@@ -23,6 +23,8 @@ PROTO_GO_FILES_REAL = $(shell find . -path ./vendor -prune -o -type f -name '*.p
 # Our own Go files containing the compiled bytecode of solidity files as a constant
 SOLIDITY_FILES = $(shell find . -path ./vendor -prune -o -path ./tests -prune -o -type f -name '*.sol' -print)
 SOLIDITY_GO_FILES = $(patsubst %.sol, %.sol.go, $(SOLIDITY_FILES))
+SOLANG_FILES = $(shell find . -path ./vendor -prune -o -path ./tests -prune -o -type f -name '*.solang' -print)
+SOLANG_GO_FILES = $(patsubst %.solang, %.solang.go, $(SOLANG_FILES))
 
 CI_IMAGE="hyperledger/burrow:ci"
 
@@ -148,8 +150,15 @@ docker_build: check commit_hash
 %.sol.go: %.sol
 	@go run ./deploy/compile/solgo/main.go $^
 
+# Solidity fixtures
+%.solang.go: %.solang
+	@go run ./deploy/compile/solgo/main.go -wasm $^
+
 .PHONY: solidity
 solidity: $(SOLIDITY_GO_FILES)
+
+.PHONY: solang
+solang: $(SOLANG_GO_FILES)
 
 # Test
 

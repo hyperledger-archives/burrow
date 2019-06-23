@@ -92,7 +92,7 @@ func FromAddressable(addressable crypto.Addressable) *Account {
 		Address:   addressable.GetAddress(),
 		PublicKey: addressable.GetPublicKey(),
 		// Since nil slices and maps compare differently to empty ones
-		Code: Bytecode{},
+		EVMCode: Bytecode{},
 		Permissions: permission.AccountPermissions{
 			Roles: []string{},
 		},
@@ -124,13 +124,13 @@ func (acc *Account) Equal(accOther *Account) bool {
 
 func (acc Account) String() string {
 	return fmt.Sprintf("Account{Address: %s; Sequence: %v; PublicKey: %v Balance: %v; CodeLength: %v; Permissions: %v}",
-		acc.Address, acc.Sequence, acc.PublicKey, acc.Balance, len(acc.Code), acc.Permissions)
+		acc.Address, acc.Sequence, acc.PublicKey, acc.Balance, len(acc.EVMCode), acc.Permissions)
 }
 
 func (acc *Account) Tagged() query.Tagged {
 	return &TaggedAccount{
 		Account: acc,
-		Tagged: query.MergeTags(query.MustReflectTags(acc, "Address", "Balance", "Sequence", "Code"),
+		Tagged: query.MergeTags(query.MustReflectTags(acc, "Address", "Balance", "Sequence", "EVMCode"),
 			query.TagMap{
 				"Permissions": acc.Permissions.Base.ResultantPerms(),
 				"Roles":       acc.Permissions.Roles,

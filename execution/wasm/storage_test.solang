@@ -1,0 +1,17 @@
+
+
+contract storage_test {
+	uint64 foo;
+
+	constructor() public {
+		foo = 102;
+	}
+
+	function getFooPlus2() public view returns (uint64) {
+		return foo + 2;
+	}
+
+	function incFoo() public {
+		foo += 1;
+	}
+}

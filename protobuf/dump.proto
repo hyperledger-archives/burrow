@@ -24,7 +24,7 @@ option (gogoproto.messagename_all) = true;
 
 message Storage {
     bytes Key = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.Word256", (gogoproto.nullable) = false];
-    bytes Value = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.Word256", (gogoproto.nullable) = false];
+    bytes Value = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
 }
 
 message AccountStorage {

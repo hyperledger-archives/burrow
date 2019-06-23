@@ -24,7 +24,7 @@ func (s *ReadState) GetAccount(address crypto.Address) (*acm.Account, error) {
 
 func (ws *writeState) statsAddAccount(acc *acm.Account) {
 	if acc != nil {
-		if len(acc.Code) > 0 {
+		if len(acc.EVMCode) > 0 || len(acc.WASMCode) > 0 {
 			ws.accountStats.AccountsWithCode++
 		} else {
 			ws.accountStats.AccountsWithoutCode++
@@ -34,7 +34,7 @@ func (ws *writeState) statsAddAccount(acc *acm.Account) {
 
 func (ws *writeState) statsRemoveAccount(acc *acm.Account) {
 	if acc != nil {
-		if len(acc.Code) > 0 {
+		if len(acc.EVMCode) > 0 || len(acc.WASMCode) > 0 {
 			ws.accountStats.AccountsWithCode--
 		} else {
 			ws.accountStats.AccountsWithoutCode--
@@ -102,30 +102,37 @@ func (s *State) GetAccountStats() acmstate.AccountStats {
 
 // Storage
 
-func (s *ReadState) GetStorage(address crypto.Address, key binary.Word256) (binary.Word256, error) {
+func (s *ReadState) GetStorage(address crypto.Address, key binary.Word256) ([]byte, error) {
 	keyFormat := keys.Storage.Fix(address)
 	tree, err := s.Forest.Reader(keyFormat.Prefix())
 	if err != nil {
-		return binary.Zero256, err
+		return []byte{}, err
 	}
-	return binary.LeftPadWord256(tree.Get(keyFormat.KeyNoPrefix(key))), nil
+	return tree.Get(keyFormat.KeyNoPrefix(key)), nil
 }
 
-func (ws *writeState) SetStorage(address crypto.Address, key, value binary.Word256) error {
+func (ws *writeState) SetStorage(address crypto.Address, key binary.Word256, value []byte) error {
 	keyFormat := keys.Storage.Fix(address)
 	tree, err := ws.forest.Writer(keyFormat.Prefix())
 	if err != nil {
 		return err
 	}
-	if value == binary.Zero256 {
+	zero := true
+	for _, b := range value {
+		if b != 0 {
+			zero = false
+			break
+		}
+	}
+	if zero {
 		tree.Delete(keyFormat.KeyNoPrefix(key))
 	} else {
-		tree.Set(keyFormat.KeyNoPrefix(key), value.Bytes())
+		tree.Set(keyFormat.KeyNoPrefix(key), value)
 	}
 	return nil
 }
 
-func (s *ReadState) IterateStorage(address crypto.Address, consumer func(key, value binary.Word256) error) error {
+func (s *ReadState) IterateStorage(address crypto.Address, consumer func(key binary.Word256, value []byte) error) error {
 	keyFormat := keys.Storage.Fix(address)
 	tree, err := s.Forest.Reader(keyFormat.Prefix())
 	if err != nil {
@@ -142,6 +149,6 @@ func (s *ReadState) IterateStorage(address crypto.Address, consumer func(key, va
 				return fmt.Errorf("value '%X' stored for account %s is not a %v-byte word",
 					key, address, binary.Word256Length)
 			}
-			return consumer(binary.LeftPadWord256(key), binary.LeftPadWord256(value))
+			return consumer(binary.LeftPadWord256(key), value)
 		})
 }
