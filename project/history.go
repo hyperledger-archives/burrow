@@ -48,7 +48,7 @@ func FullVersion() string {
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases(
-		"",
+		"0.27.0 - 2019-06-23",
 		`### Added
 - [WASM] Support for WASM contracts written in Solidity compiled using solang
 

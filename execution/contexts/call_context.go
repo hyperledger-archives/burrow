@@ -195,14 +195,20 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		if createContract {
 			txCache.InitWASMCode(callee, wcode)
 		}
-		ret, err := wasm.RunWASM(txCache, callee, createContract, wcode, ctx.tx.Data)
-		if err != nil {
-			ctx.Logger.InfoMsg("Error returned from WASM", "error", err)
-			return err
-		}
-		err = txCache.Sync()
-		if err != nil {
-			return err
+		ret, exception = wasm.RunWASM(txCache, callee, createContract, wcode, ctx.tx.Data)
+		if exception != nil {
+			// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
+			ctx.Logger.InfoMsg("Error on WASM execution",
+				structure.ErrorKey, exception)
+
+			ctx.txe.PushError(errors.ErrorCodef(exception.ErrorCode(), "call error: %s\n",
+				exception.String()))
+		} else {
+			ctx.Logger.TraceMsg("Successful execution")
+			err := txCache.Sync()
+			if err != nil {
+				return err
+			}
 		}
 		ctx.txe.Return(ret, ctx.tx.GasLimit-gas)
 	} else {
@@ -211,7 +217,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		ret, exception = vmach.Call(txCache, ctx.txe, caller, callee, code, ctx.tx.Data, value, &gas)
 		if exception != nil {
 			// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
-			ctx.Logger.InfoMsg("Error on execution",
+			ctx.Logger.InfoMsg("Error on EVM execution",
 				structure.ErrorKey, exception)
 
 			ctx.txe.PushError(errors.ErrorCodef(exception.ErrorCode(), "call error: %s\nEVM call trace: %s",

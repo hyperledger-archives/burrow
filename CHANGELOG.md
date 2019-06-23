@@ -1,5 +1,13 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
-## [Unreleased]
+## [0.27.0] - 2019-06-23
+### Added
+- [WASM] Support for WASM contracts written in Solidity compiled using solang
+
+### Fixed
+-[RPC/Transact] CallCodeSim and CallTxSim were run against uncommitted checker state rather than committed state were all other reads are routed. They were also passed through Transactor for no particularly good reason. This changes them to run against committed DB state and removes the code path through Transactor.
+
+### Changed
+- [State] TxExecution's Envelope now stored in state so will be reproduced in Vent Tx tables and over RPC, and so matches TxExecutions served from *Sync rpctransact methods
 
 
 ## [0.26.2] - 2019-06-19
@@ -507,7 +515,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
-[Unreleased]: https://github.com/hyperledger/burrow/compare/v0.26.2...HEAD
+[0.27.0]: https://github.com/hyperledger/burrow/compare/v0.26.2...v0.27.0
 [0.26.2]: https://github.com/hyperledger/burrow/compare/v0.26.1...v0.26.2
 [0.26.1]: https://github.com/hyperledger/burrow/compare/v0.26.0...v0.26.1
 [0.26.0]: https://github.com/hyperledger/burrow/compare/v0.25.1...v0.26.0
