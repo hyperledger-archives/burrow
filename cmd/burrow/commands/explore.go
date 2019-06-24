@@ -88,7 +88,7 @@ func Explore(output Output) func(cmd *cli.Cmd) {
 
 				if height, err := forensics.CompareCaptures(recap1, recap2); err != nil {
 					output.Printf("difference in capture: %v", err)
-					if err := forensics.CompareState(replay1, replay2, height); err != nil {
+					if err := forensics.CompareState(replay1.State, replay2.State, height); err != nil {
 						output.Fatalf("difference in state: %v", err)
 					}
 				}

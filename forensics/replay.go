@@ -31,12 +31,12 @@ import (
 // Replay is a kernel for state replaying
 type Replay struct {
 	Explorer   *bcm.BlockStore
+	State      *state.State
 	db         dbm.DB
 	cacheDB    dbm.DB
 	blockchain *bcm.Blockchain
 	genesisDoc *genesis.GenesisDoc
 	committer  execution.BatchCommitter
-	state      *state.State
 	logger     *logging.Logger
 }
 
@@ -88,7 +88,7 @@ func (re *Replay) Blocks(startHeight, endHeight uint64) ([]*ReplayCapture, error
 	}
 
 	// Get our commit machinery
-	re.committer = execution.NewBatchCommitter(re.state, execution.ParamsFromGenesis(re.genesisDoc), re.blockchain,
+	re.committer = execution.NewBatchCommitter(re.State, execution.ParamsFromGenesis(re.genesisDoc), re.blockchain,
 		event.NewEmitter(), re.logger)
 
 	recaps := make([]*ReplayCapture, 0, endHeight-startHeight+1)
@@ -116,9 +116,9 @@ func (re *Replay) Commit(height uint64) (*ReplayCapture, error) {
 		return nil, errors.Errorf("Tendermint block height %d != requested block height %d",
 			block.Height, height)
 	}
-	if height > 1 && !bytes.Equal(re.state.Hash(), block.AppHash) {
+	if height > 1 && !bytes.Equal(re.State.Hash(), block.AppHash) {
 		return nil, errors.Errorf("state hash %X does not match AppHash %X at height %d",
-			re.state.Hash(), block.AppHash[:], height)
+			re.State.Hash(), block.AppHash[:], height)
 	}
 
 	recap.AppHashBefore = binary.HexBytes(block.AppHash)
@@ -156,52 +156,59 @@ func (re *Replay) LoadAt(height uint64) (err error) {
 			return err
 		}
 	}
-	re.state, err = state.LoadState(re.cacheDB, execution.VersionAtHeight(height))
+	re.State, err = state.LoadState(re.cacheDB, execution.VersionAtHeight(height))
 	return err
 }
 
-func iterateTrees(exp, act *state.State, tree treeprint.Tree, prefix string) error {
+func iterComp(exp, act *state.ReadState, tree treeprint.Tree, prefix string) (uint, error) {
 	reader1, err := exp.Forest.Reader([]byte(prefix))
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	reader2, err := act.Forest.Reader([]byte(prefix))
 	if err != nil {
-		return err
+		return 0, err
 	}
 
+	var diffs uint
 	branch := tree.AddBranch(prefix)
-	err = reader1.Iterate(nil, nil, true,
+	return diffs, reader1.Iterate(nil, nil, true,
 		func(key, value []byte) error {
 			actual := reader2.Get(key)
 			if !bytes.Equal(actual, value) {
+				diffs++
 				branch.AddNode(color.GreenString("%q -> %q", hex.EncodeToString(key), hex.EncodeToString(value)))
 				branch.AddNode(color.RedString("%q -> %q", hex.EncodeToString(key), hex.EncodeToString(actual)))
 			}
 			return nil
 		})
-	return err
 }
 
 // CompareState of two replays at given height
-func CompareState(exp, act *Replay, height uint64) error {
-	if err := exp.LoadAt(height); err != nil {
+func CompareState(exp, act *state.State, height uint64) error {
+	rs1, err := exp.LoadHeight(height)
+	if err != nil {
 		return errors.Wrap(err, "could not load expected state")
 	}
-	if err := act.LoadAt(height); err != nil {
+	rs2, err := act.LoadHeight(height)
+	if err != nil {
 		return errors.Wrap(err, "could not load actual state")
 	}
 
+	var diffs uint
 	tree := treeprint.New()
-	err := iterateTrees(exp.state, act.state, tree, "a")
-	err = iterateTrees(exp.state, act.state, tree, "s")
-	err = iterateTrees(exp.state, act.state, tree, "n")
-	err = iterateTrees(exp.state, act.state, tree, "p")
-	err = iterateTrees(exp.state, act.state, tree, "v")
-	err = iterateTrees(exp.state, act.state, tree, "e")
-	err = iterateTrees(exp.state, act.state, tree, "th")
+	prefixes := []string{"a", "s", "n", "p", "v", "e", "th"}
+	for _, p := range prefixes {
+		n, err := iterComp(rs1, rs2, tree, p)
+		if err != nil {
+			return err
+		}
+		diffs += n
+	}
 
-	fmt.Println(tree.String())
-	return err
+	if diffs > 0 {
+		return fmt.Errorf("found %d difference(s): \n%v", diffs, tree.String())
+	}
+	return nil
 }
