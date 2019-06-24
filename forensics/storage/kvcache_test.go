@@ -1,4 +1,4 @@
-package forensics
+package storage
 
 import (
 	bin "encoding/binary"
