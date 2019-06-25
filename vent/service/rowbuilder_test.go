@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hyperledger/burrow/vent/logger"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/assert"
 	hex "github.com/tmthrgd/go-hex"
 )
@@ -30,7 +30,7 @@ func TestUTF8StringFromBytes(t *testing.T) {
 func TestSanitiseBytesForString(t *testing.T) {
 	goodString := "Cliente - Doc. identificación"
 	badString := BadStringToHexFunction(goodString)
-	str := sanitiseBytesForString([]byte(badString), logger.NewLogger("error"))
+	str := sanitiseBytesForString([]byte(badString), logging.NewNoopLogger())
 	assert.Equal(t, "Cliente - Doc. identificaci�n", str)
 }
 

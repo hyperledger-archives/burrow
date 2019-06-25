@@ -9,7 +9,7 @@ import (
 
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/exec"
-	"github.com/hyperledger/burrow/vent/logger"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/types"
 	"github.com/pkg/errors"
@@ -17,7 +17,7 @@ import (
 
 // buildEventData builds event data from transactions
 func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass, event *exec.Event, origin *exec.Origin, abiSpec *abi.AbiSpec,
-	l *logger.Logger) (types.EventDataRow, error) {
+	l *logging.Logger) (types.EventDataRow, error) {
 
 	// a fresh new row to store column/value data
 	row := make(map[string]interface{})
@@ -32,7 +32,7 @@ func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass,
 		return types.EventDataRow{}, errors.Wrapf(err, "Error decoding event (filter: %s)", eventClass.Filter)
 	}
 
-	l.Info("msg", fmt.Sprintf("Unpacked data: %v", decodedData), "eventName", decodedData[types.EventNameLabel])
+	l.InfoMsg(fmt.Sprintf("Unpacked data: %v", decodedData), "eventName", decodedData[types.EventNameLabel])
 
 	rowAction := types.ActionUpsert
 
@@ -59,7 +59,7 @@ func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass,
 			}
 			row[column.Name] = value
 		} else {
-			l.Debug("msg", "could not get column", "err", err)
+			l.TraceMsg("could not get column", "err", err)
 		}
 	}
 
@@ -137,10 +137,10 @@ func buildTxData(txe *exec.TxExecution) (types.EventDataRow, error) {
 	}, nil
 }
 
-func sanitiseBytesForString(bs []byte, l *logger.Logger) string {
+func sanitiseBytesForString(bs []byte, l *logging.Logger) string {
 	str, err := UTF8StringFromBytes(bs)
 	if err != nil {
-		l.Error("msg", "buildEventData() received invalid bytes for utf8 string - proceeding with sanitised version",
+		l.InfoMsg("buildEventData() received invalid bytes for utf8 string - proceeding with sanitised version",
 			"err", err)
 	}
 	// The only null bytes in utf8 are for the null code point/character so this is fine in general

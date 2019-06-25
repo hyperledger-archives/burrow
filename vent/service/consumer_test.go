@@ -10,11 +10,10 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/rpc/rpctransact"
-
 	"github.com/hyperledger/burrow/execution/evm/abi"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/rpc/rpctransact"
 	"github.com/hyperledger/burrow/vent/config"
-	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/service"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/test"
@@ -194,9 +193,8 @@ func newConsumer(t *testing.T, cfg *config.VentConfig) *service.Consumer {
 	cfg.AbiFileOrDirs = []string{path.Join(testDir, "EventsTest.abi")}
 	cfg.SpecOpt = sqlsol.BlockTx
 
-	log := logger.NewLogger(cfg.LogLevel)
 	ch := make(chan types.EventData, 100)
-	return service.NewConsumer(cfg, log, ch)
+	return service.NewConsumer(cfg, logging.NewNoopLogger(), ch)
 }
 
 // Run consumer to listen to events

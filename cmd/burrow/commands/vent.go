@@ -8,10 +8,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hyperledger/burrow/logging/lifecycle"
+
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/vent/config"
-	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/service"
 	"github.com/hyperledger/burrow/vent/sqldb"
 	"github.com/hyperledger/burrow/vent/sqlsol"
@@ -68,7 +69,12 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					"[--blocks] [--txs] [--grpc-addr] [--http-addr] [--log-level] [--announce-every=<duration>]"
 
 				cmd.Action = func() {
-					log := logger.NewLogger(cfg.LogLevel)
+					log, err := lifecycle.NewStdErrLogger()
+					if err != nil {
+						output.Fatalf("failed to load logger: %v", err)
+					}
+
+					log = log.With("service", "vent")
 					consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
 					server := service.NewServer(cfg, log, consumer)
 
@@ -155,11 +161,15 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				}
 
 				cmd.Action = func() {
+					log, err := lifecycle.NewStdErrLogger()
+					if err != nil {
+						output.Fatalf("failed to load logger: %v", err)
+					}
 					db, err := sqldb.NewSQLDB(types.SQLConnection{
 						DBAdapter: *dbOpts.adapter,
 						DBURL:     *dbOpts.url,
 						DBSchema:  *dbOpts.schema,
-						Log:       logger.NewLogger("debug"),
+						Log:       log.With("service", "vent"),
 					})
 					if err != nil {
 						output.Fatalf("Could not connect to SQL DB: %v", err)
