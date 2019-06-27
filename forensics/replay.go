@@ -23,6 +23,8 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/pkg/errors"
+	"github.com/tendermint/tendermint/blockchain"
+	"github.com/tendermint/tendermint/libs/db"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/types"
 	"github.com/xlab/treeprint"
@@ -40,18 +42,47 @@ type Replay struct {
 	logger     *logging.Logger
 }
 
-func NewReplay(logger *logging.Logger, genesisDoc *genesis.GenesisDoc, dbDir string) *Replay {
+func NewReplay(burrowDB, tmDB dbm.DB, genesisDoc *genesis.GenesisDoc) *Replay {
 	// Avoid writing through to underlying DB
-	db := dbm.NewDB(core.BurrowDBName, dbm.GoLevelDBBackend, dbDir)
-	cacheDB := storage.NewCacheDB(db)
+	cacheDB := storage.NewCacheDB(burrowDB)
 	return &Replay{
-		Explorer:   bcm.NewBlockExplorer(dbm.LevelDBBackend, path.Join(dbDir, "data")),
-		db:         db,
+		Explorer:   bcm.NewBlockStore(blockchain.NewBlockStore(tmDB)),
+		db:         burrowDB,
 		cacheDB:    cacheDB,
 		blockchain: bcm.NewBlockchain(cacheDB, genesisDoc),
 		genesisDoc: genesisDoc,
-		logger:     logger,
+		logger:     logging.NewNoopLogger(),
 	}
+}
+
+func NewReplayFromDir(genesisDoc *genesis.GenesisDoc, dbDir string) *Replay {
+	burrowDB := dbm.NewDB(core.BurrowDBName, dbm.GoLevelDBBackend, dbDir)
+	tmDB := db.NewDB("blockstore", dbm.LevelDBBackend, path.Join(dbDir, "data"))
+	return NewReplay(burrowDB, tmDB, genesisDoc)
+}
+
+// LoadAt height
+func (re *Replay) LoadAt(height uint64) (err error) {
+	if height >= 1 {
+		// Load and commit previous block
+		block, err := re.Explorer.Block(int64(height))
+		if err != nil {
+			return err
+		}
+		err = re.blockchain.CommitBlockAtHeight(block.Time, block.Hash(), block.Header.AppHash, uint64(block.Height))
+		if err != nil {
+			return err
+		}
+	}
+	re.State, err = state.LoadState(re.cacheDB, execution.VersionAtHeight(height))
+	if err != nil {
+		return err
+	}
+
+	// Get our commit machinery
+	re.committer = execution.NewBatchCommitter(re.State, execution.ParamsFromGenesis(re.genesisDoc), re.blockchain,
+		event.NewEmitter(), re.logger)
+	return nil
 }
 
 func (re *Replay) LatestHeight() (uint64, error) {
@@ -86,10 +117,6 @@ func (re *Replay) Blocks(startHeight, endHeight uint64) ([]*ReplayCapture, error
 	if err := re.LoadAt(startHeight - 1); err != nil {
 		return nil, errors.Wrap(err, "State()")
 	}
-
-	// Get our commit machinery
-	re.committer = execution.NewBatchCommitter(re.State, execution.ParamsFromGenesis(re.genesisDoc), re.blockchain,
-		event.NewEmitter(), re.logger)
 
 	recaps := make([]*ReplayCapture, 0, endHeight-startHeight+1)
 	for height := startHeight; height < endHeight; height++ {
@@ -143,23 +170,6 @@ func (re *Replay) Commit(height uint64) (*ReplayCapture, error) {
 	return recap, err
 }
 
-// LoadAt height
-func (re *Replay) LoadAt(height uint64) (err error) {
-	if height >= 1 {
-		// Load and commit previous block
-		block, err := re.Explorer.Block(int64(height))
-		if err != nil {
-			return err
-		}
-		err = re.blockchain.CommitBlockAtHeight(block.Time, block.Hash(), block.Header.AppHash, uint64(block.Height))
-		if err != nil {
-			return err
-		}
-	}
-	re.State, err = state.LoadState(re.cacheDB, execution.VersionAtHeight(height))
-	return err
-}
-
 func iterComp(exp, act *state.ReadState, tree treeprint.Tree, prefix string) (uint, error) {
 	reader1, err := exp.Forest.Reader([]byte(prefix))
 	if err != nil {
@@ -185,8 +195,8 @@ func iterComp(exp, act *state.ReadState, tree treeprint.Tree, prefix string) (ui
 		})
 }
 
-// CompareState of two replays at given height
-func CompareState(exp, act *state.State, height uint64) error {
+// CompareStateAtHeight of two replays
+func CompareStateAtHeight(exp, act *state.State, height uint64) error {
 	rs1, err := exp.LoadHeight(height)
 	if err != nil {
 		return errors.Wrap(err, "could not load expected state")
@@ -208,7 +218,8 @@ func CompareState(exp, act *state.State, height uint64) error {
 	}
 
 	if diffs > 0 {
-		return fmt.Errorf("found %d difference(s): \n%v", diffs, tree.String())
+		return fmt.Errorf("found %d difference(s): \n%v",
+			diffs, tree.String())
 	}
 	return nil
 }

@@ -7,7 +7,6 @@ import (
 
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/forensics"
-	"github.com/hyperledger/burrow/logging"
 
 	"github.com/hyperledger/burrow/bcm"
 
@@ -55,9 +54,8 @@ func Explore(output Output) func(cmd *cli.Cmd) {
 			}
 
 			cmd.Action = func() {
-				logger := logging.NewNoopLogger()
-				replay1 := forensics.NewReplay(logger, conf.GenesisDoc, *goodDir)
-				replay2 := forensics.NewReplay(logger, conf.GenesisDoc, *badDir)
+				replay1 := forensics.NewReplayFromDir(conf.GenesisDoc, *goodDir)
+				replay2 := forensics.NewReplayFromDir(conf.GenesisDoc, *badDir)
 
 				h1, err := replay1.LatestHeight()
 				if err != nil {
@@ -88,7 +86,7 @@ func Explore(output Output) func(cmd *cli.Cmd) {
 
 				if height, err := forensics.CompareCaptures(recap1, recap2); err != nil {
 					output.Printf("difference in capture: %v", err)
-					if err := forensics.CompareState(replay1.State, replay2.State, height); err != nil {
+					if err := forensics.CompareStateAtHeight(replay1.State, replay2.State, height); err != nil {
 						output.Fatalf("difference in state: %v", err)
 					}
 				}
