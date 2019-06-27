@@ -15,6 +15,7 @@ import (
 	"github.com/tendermint/tendermint/libs/db"
 )
 
+// Explore chain state(s)
 func Explore(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 		configOpts := addConfigOptions(cmd)
@@ -39,10 +40,40 @@ func Explore(output Output) func(cmd *cli.Cmd) {
 			explorer = bcm.NewBlockExplorer(db.DBBackendType(tmConf.DBBackend), tmConf.DBDir())
 		}
 
-		cmd.Command("compare", "granularly compare the state from two .burrow directories", func(cmd *cli.Cmd) {
+		cmd.Command("dump", "pretty print the state tree at the given height", func(cmd *cli.Cmd) {
+			heightOpt := cmd.IntOpt("height", 0, "The height to read, defaults to latest")
+			stateDir := cmd.StringArg("STATE", "", "Directory containing burrow state")
+			cmd.Spec = "[--height] [STATE]"
+
+			cmd.Before = func() {
+				if err := isDir(*stateDir); err != nil {
+					output.Fatalf("could not obtain state: %v", err)
+				}
+			}
+
+			cmd.Action = func() {
+				replay := forensics.NewReplayFromDir(conf.GenesisDoc, *stateDir)
+				height := uint64(*heightOpt)
+				if height == 0 {
+					height, err = replay.LatestHeight()
+					if err != nil {
+						output.Fatalf("could not read latest height: %v", err)
+					}
+				}
+				err := replay.LoadAt(height)
+				if err != nil {
+					output.Fatalf("could not load state: %v", err)
+				}
+
+				fmt.Println(replay.State.Dump())
+			}
+		})
+
+		cmd.Command("compare", "diff the state of two .burrow directories", func(cmd *cli.Cmd) {
 			goodDir := cmd.StringArg("GOOD", "", "Directory containing expected state")
 			badDir := cmd.StringArg("BAD", "", "Directory containing invalid state")
-			cmd.Spec = "[GOOD] [BAD]"
+			heightOpt := cmd.IntOpt("height", 0, "The height to read, defaults to latest")
+			cmd.Spec = "[--height] [GOOD] [BAD]"
 
 			cmd.Before = func() {
 				if err := isDir(*goodDir); err != nil {
@@ -67,11 +98,13 @@ func Explore(output Output) func(cmd *cli.Cmd) {
 				}
 
 				height := h1
-				if h2 < h1 {
+				if *heightOpt != 0 {
+					height = uint64(*heightOpt)
+				} else if h2 < h1 {
 					height = h2
 					output.Printf("States do not agree on last height, using min: %d", h2)
 				} else {
-					output.Printf("Using last height: %d", h1)
+					output.Printf("Using default last height: %d", h1)
 				}
 
 				recap1, err := replay1.Blocks(1, height)
@@ -86,6 +119,7 @@ func Explore(output Output) func(cmd *cli.Cmd) {
 
 				if height, err := forensics.CompareCaptures(recap1, recap2); err != nil {
 					output.Printf("difference in capture: %v", err)
+					// TODO: compare at every height?
 					if err := forensics.CompareStateAtHeight(replay1.State, replay2.State, height); err != nil {
 						output.Fatalf("difference in state: %v", err)
 					}
