@@ -1,13 +1,13 @@
 package types
 
-import "github.com/hyperledger/burrow/vent/logger"
+import "github.com/hyperledger/burrow/logging"
 
 // SQLConnection stores parameters to build a new db connection & initialize the database
 type SQLConnection struct {
 	DBAdapter string
 	DBURL     string
 	DBSchema  string
-	Log       *logger.Logger
+	Log       *logging.Logger
 }
 
 // SQLCleanDBQuery stores queries needed to clean the database

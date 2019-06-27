@@ -28,14 +28,14 @@ func (db *SQLDB) findTable(tableName string) (bool, error) {
 	safeTable := safe(tableName)
 	query := db.DBAdapter.FindTableQuery()
 
-	db.Log.Info("msg", "FIND TABLE", "query", query, "value", safeTable)
+	db.Log.InfoMsg("FIND TABLE", "query", query, "value", safeTable)
 	if err := db.DB.QueryRow(query, tableName).Scan(&found); err != nil {
-		db.Log.Info("msg", "Error finding table", "err", err)
+		db.Log.InfoMsg("Error finding table", "err", err)
 		return false, err
 	}
 
 	if found == 0 {
-		db.Log.Warn("msg", "Table not found", "value", safeTable)
+		db.Log.InfoMsg("Table not found", "value", safeTable)
 		return false, nil
 	}
 
@@ -185,16 +185,16 @@ func (db *SQLDB) getTableDef(tableName string) (*types.SQLTable, error) {
 	}
 
 	if !found {
-		db.Log.Info("msg", "Error table not found", "value", table.Name)
+		db.Log.InfoMsg("Error table not found", "value", table.Name)
 		return nil, errors.New("Error table not found " + table.Name)
 	}
 
 	query := db.DBAdapter.TableDefinitionQuery()
 
-	db.Log.Info("msg", "QUERY STRUCTURE", "query", query, "value", table.Name)
+	db.Log.InfoMsg("QUERY STRUCTURE", "query", query, "value", table.Name)
 	rows, err := db.DB.Query(query, safe(tableName))
 	if err != nil {
-		db.Log.Info("msg", "Error querying table structure", "err", err)
+		db.Log.InfoMsg("Error querying table structure", "err", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -208,7 +208,7 @@ func (db *SQLDB) getTableDef(tableName string) (*types.SQLTable, error) {
 		var columnLength int
 
 		if err = rows.Scan(&columnName, &columnSQLType, &columnLength, &columnIsPK); err != nil {
-			db.Log.Info("msg", "Error scanning table structure", "err", err)
+			db.Log.InfoMsg("Error scanning table structure", "err", err)
 			return nil, err
 		}
 
@@ -225,7 +225,7 @@ func (db *SQLDB) getTableDef(tableName string) (*types.SQLTable, error) {
 	}
 
 	if err = rows.Err(); err != nil {
-		db.Log.Info("msg", "Error during rows iteration", "err", err)
+		db.Log.InfoMsg("Error during rows iteration", "err", err)
 		return nil, err
 	}
 
@@ -235,7 +235,7 @@ func (db *SQLDB) getTableDef(tableName string) (*types.SQLTable, error) {
 
 // alterTable alters the structure of a SQL table & add info to the dictionary
 func (db *SQLDB) alterTable(chainID string, table *types.SQLTable) error {
-	db.Log.Info("msg", "Altering table", "value", table.Name)
+	db.Log.InfoMsg("Altering table", "value", table.Name)
 
 	// prepare log query
 	logQuery := db.DBAdapter.InsertLogQuery()
@@ -267,22 +267,22 @@ func (db *SQLDB) alterTable(chainID string, table *types.SQLTable) error {
 			query, dictionary := db.DBAdapter.AlterColumnQuery(safeTable, safeCol, newColumn.Type, newColumn.Length, order)
 
 			//alter column
-			db.Log.Info("msg", "ALTER TABLE", "query", safe(query))
+			db.Log.InfoMsg("ALTER TABLE", "query", safe(query))
 			_, err = db.DB.Exec(safe(query))
 
 			if err != nil {
 				if db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeDuplicatedColumn) {
-					db.Log.Warn("msg", "Duplicate column", "value", safeCol)
+					db.Log.InfoMsg("Duplicate column", "value", safeCol)
 				} else {
-					db.Log.Info("msg", "Error altering table", "err", err)
+					db.Log.InfoMsg("Error altering table", "err", err)
 					return err
 				}
 			} else {
 				//store dictionary
-				db.Log.Info("msg", "STORE DICTIONARY", "query", dictionary)
+				db.Log.InfoMsg("STORE DICTIONARY", "query", dictionary)
 				_, err = db.DB.Exec(dictionary)
 				if err != nil {
-					db.Log.Info("msg", "Error storing  dictionary", "err", err)
+					db.Log.InfoMsg("Error storing  dictionary", "err", err)
 					return err
 				}
 
@@ -290,13 +290,13 @@ func (db *SQLDB) alterTable(chainID string, table *types.SQLTable) error {
 				var jsonData []byte
 				jsonData, err = getJSON(newColumn)
 				if err != nil {
-					db.Log.Info("msg", "error marshaling column", "err", err, "value", fmt.Sprintf("%v", newColumn))
+					db.Log.InfoMsg("error marshaling column", "err", err, "value", fmt.Sprintf("%v", newColumn))
 					return err
 				}
 				//insert log
 				_, err = db.DB.Exec(logQuery, chainID, table.Name, "", "", nil, nil, types.ActionAlterTable, jsonData, query, sqlValues)
 				if err != nil {
-					db.Log.Info("msg", "Error inserting log", "err", err)
+					db.Log.InfoMsg("Error inserting log", "err", err)
 					return err
 				}
 			}
@@ -306,7 +306,7 @@ func (db *SQLDB) alterTable(chainID string, table *types.SQLTable) error {
 	// Ensure triggers are defined
 	err = db.createTableTriggers(table)
 	if err != nil {
-		db.Log.Info("msg", "error creating notification triggers", "err", err, "value", fmt.Sprintf("%v", table))
+		db.Log.InfoMsg("error creating notification triggers", "err", err, "value", fmt.Sprintf("%v", table))
 		return fmt.Errorf("could not create table notification triggers: %v", err)
 	}
 	return nil
@@ -314,7 +314,7 @@ func (db *SQLDB) alterTable(chainID string, table *types.SQLTable) error {
 
 // createTable creates a new table
 func (db *SQLDB) createTable(chainID string, table *types.SQLTable, isInitialise bool) error {
-	db.Log.Info("msg", "Creating Table", "value", table.Name)
+	db.Log.InfoMsg("Creating Table", "value", table.Name)
 
 	// prepare log query
 	logQuery := db.DBAdapter.InsertLogQuery()
@@ -323,28 +323,28 @@ func (db *SQLDB) createTable(chainID string, table *types.SQLTable, isInitialise
 	safeTable := safe(table.Name)
 	query, dictionary := db.DBAdapter.CreateTableQuery(safeTable, table.Columns)
 	if query == "" {
-		db.Log.Info("msg", "empty CREATE TABLE query")
+		db.Log.InfoMsg("empty CREATE TABLE query")
 		return errors.New("empty CREATE TABLE query")
 	}
 
 	// create table
-	db.Log.Info("msg", "CREATE TABLE", "query", query)
+	db.Log.InfoMsg("CREATE TABLE", "query", query)
 	_, err := db.DB.Exec(query)
 	if err != nil {
 		return err
 	}
 
 	//store dictionary
-	db.Log.Info("msg", "STORE DICTIONARY", "query", dictionary)
+	db.Log.InfoMsg("STORE DICTIONARY", "query", dictionary)
 	_, err = db.DB.Exec(dictionary)
 	if err != nil {
-		db.Log.Info("msg", "Error storing  dictionary", "err", err)
+		db.Log.InfoMsg("Error storing  dictionary", "err", err)
 		return err
 	}
 
 	err = db.createTableTriggers(table)
 	if err != nil {
-		db.Log.Info("msg", "error creating notification triggers", "err", err, "value", fmt.Sprintf("%v", table))
+		db.Log.InfoMsg("error creating notification triggers", "err", err, "value", fmt.Sprintf("%v", table))
 		return fmt.Errorf("could not create table notification triggers: %v", err)
 	}
 
@@ -354,7 +354,7 @@ func (db *SQLDB) createTable(chainID string, table *types.SQLTable, isInitialise
 		var jsonData []byte
 		jsonData, err = getJSON(table)
 		if err != nil {
-			db.Log.Info("msg", "error marshaling table", "err", err, "value", fmt.Sprintf("%v", table))
+			db.Log.InfoMsg("error marshaling table", "err", err, "value", fmt.Sprintf("%v", table))
 			return err
 		}
 		sqlValues, _ := getJSON(nil)
@@ -362,7 +362,7 @@ func (db *SQLDB) createTable(chainID string, table *types.SQLTable, isInitialise
 		//insert log
 		_, err = db.DB.Exec(logQuery, chainID, table.Name, "", "", nil, nil, types.ActionCreateTable, jsonData, query, sqlValues)
 		if err != nil {
-			db.Log.Info("msg", "Error inserting log", "err", err)
+			db.Log.InfoMsg("Error inserting log", "err", err)
 			return err
 		}
 	}
@@ -378,7 +378,7 @@ func (db *SQLDB) createTableTriggers(table *types.SQLTable) error {
 			function := fmt.Sprintf("%s_%s_notify_function", table.Name, channel)
 
 			query := dbNotify.CreateNotifyFunctionQuery(function, channel, columns...)
-			db.Log.Info("msg", "CREATE NOTIFICATION FUNCTION", "query", query)
+			db.Log.InfoMsg("CREATE NOTIFICATION FUNCTION", "query", query)
 			_, err := db.DB.Exec(query)
 			if err != nil {
 				return fmt.Errorf("could not create notification function: %v", err)
@@ -386,7 +386,7 @@ func (db *SQLDB) createTableTriggers(table *types.SQLTable) error {
 
 			trigger := fmt.Sprintf("%s_%s_notify_trigger", table.Name, channel)
 			query = dbNotify.CreateTriggerQuery(trigger, table.Name, function)
-			db.Log.Info("msg", "CREATE NOTIFICATION TRIGGER", "query", query)
+			db.Log.InfoMsg("CREATE NOTIFICATION TRIGGER", "query", query)
 			_, err = db.DB.Exec(query)
 			if err != nil {
 				return fmt.Errorf("could not create notification trigger: %v", err)
@@ -422,11 +422,11 @@ func (db *SQLDB) getBlockTables(chainid string, height uint64) (types.EventTable
 	tables := make(types.EventTables)
 
 	query := db.DBAdapter.SelectLogQuery()
-	db.Log.Info("msg", "QUERY LOG", "query", query, "height", height, "chainid", chainid)
+	db.Log.InfoMsg("QUERY LOG", "query", query, "height", height, "chainid", chainid)
 
 	rows, err := db.DB.Query(query, height, chainid)
 	if err != nil {
-		db.Log.Info("msg", "Error querying log", "err", err)
+		db.Log.InfoMsg("Error querying log", "err", err)
 		return tables, err
 	}
 
@@ -438,13 +438,13 @@ func (db *SQLDB) getBlockTables(chainid string, height uint64) (types.EventTable
 
 		err = rows.Scan(&tableName, &eventName)
 		if err != nil {
-			db.Log.Info("msg", "Error scanning table structure", "err", err)
+			db.Log.InfoMsg("Error scanning table structure", "err", err)
 			return tables, err
 		}
 
 		err = rows.Err()
 		if err != nil {
-			db.Log.Info("msg", "Error scanning table structure", "err", err)
+			db.Log.InfoMsg("Error scanning table structure", "err", err)
 			return tables, err
 		}
 

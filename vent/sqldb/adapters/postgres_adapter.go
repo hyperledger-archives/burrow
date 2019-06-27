@@ -6,7 +6,7 @@ import (
 
 	"github.com/lib/pq"
 
-	"github.com/hyperledger/burrow/vent/logger"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/vent/types"
 	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/common/log"
@@ -29,13 +29,13 @@ var pgDataTypes = map[types.SQLColumnType]string{
 type PostgresAdapter struct {
 	Schema string
 	types.SQLNames
-	Log *logger.Logger
+	Log *logging.Logger
 }
 
 var _ DBAdapter = &PostgresAdapter{}
 
 // NewPostgresAdapter constructs a new db adapter
-func NewPostgresAdapter(schema string, sqlNames types.SQLNames, log *logger.Logger) *PostgresAdapter {
+func NewPostgresAdapter(schema string, sqlNames types.SQLNames, log *logging.Logger) *PostgresAdapter {
 	return &PostgresAdapter{
 		Schema:   schema,
 		SQLNames: sqlNames,
@@ -67,28 +67,28 @@ func (pa *PostgresAdapter) Open(dbURL string) (*sqlx.DB, error) {
 	return db, nil
 }
 
-func ensureSchema(db sqlx.Ext, schema string, log *logger.Logger) error {
+func ensureSchema(db sqlx.Ext, schema string, log *logging.Logger) error {
 	query := Cleanf(`SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_namespace n WHERE n.nspname = '%s');`, schema)
-	log.Info("msg", "FIND SCHEMA", "query", query)
+	log.InfoMsg("FIND SCHEMA", "query", query)
 
 	var found bool
 	if err := db.QueryRowx(query).Scan(&found); err == nil {
 		if !found {
-			log.Warn("msg", "Schema not found")
+			log.InfoMsg("Schema not found")
 		}
-		log.Info("msg", "Creating schema")
+		log.InfoMsg("Creating schema")
 
 		query = Cleanf("CREATE SCHEMA %s;", schema)
-		log.Info("msg", "CREATE SCHEMA", "query", query)
+		log.InfoMsg("CREATE SCHEMA", "query", query)
 
 		if _, err = db.Exec(query); err != nil {
 			if errorEquals(err, types.SQLErrorTypeDuplicatedSchema) {
-				log.Warn("msg", "Duplicated schema")
+				log.InfoMsg("Duplicated schema")
 				return nil
 			}
 		}
 	} else {
-		log.Info("msg", "Error searching schema", "err", err)
+		log.InfoMsg("Error searching schema", "err", err)
 		return err
 	}
 	return nil

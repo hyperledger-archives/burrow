@@ -8,13 +8,12 @@ import (
 
 	"github.com/hyperledger/burrow/rpc"
 
-	"github.com/hyperledger/burrow/execution/exec"
-
 	"github.com/hyperledger/burrow/execution/evm/abi"
+	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	"github.com/hyperledger/burrow/vent/config"
-	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/sqldb"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/types"
@@ -26,7 +25,7 @@ import (
 // Consumer contains basic configuration for consumer to run
 type Consumer struct {
 	Config         *config.VentConfig
-	Log            *logger.Logger
+	Log            *logging.Logger
 	Closing        bool
 	DB             *sqldb.SQLDB
 	GRPCConnection *grpc.ClientConn
@@ -44,7 +43,7 @@ type Status struct {
 // NewConsumer constructs a new consumer configuration.
 // The event channel will be passed a collection of rows generated from all of the events in a single block
 // It will be closed by the consumer when it is finished
-func NewConsumer(cfg *config.VentConfig, log *logger.Logger, eventChannel chan types.EventData) *Consumer {
+func NewConsumer(cfg *config.VentConfig, log *logging.Logger, eventChannel chan types.EventData) *Consumer {
 	return &Consumer{
 		Config:        cfg,
 		Log:           log,
@@ -59,7 +58,7 @@ func NewConsumer(cfg *config.VentConfig, log *logger.Logger, eventChannel chan t
 func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stream bool) error {
 	var err error
 
-	c.Log.Info("msg", "Connecting to Burrow gRPC server")
+	c.Log.InfoMsg("Connecting to Burrow gRPC server")
 
 	c.GRPCConnection, err = grpc.Dial(c.Config.GRPCAddr, grpc.WithInsecure())
 	if err != nil {
@@ -76,11 +75,11 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 	}
 
 	if len(projection.EventSpec) == 0 {
-		c.Log.Info("msg", "No events specifications found")
+		c.Log.InfoMsg("No events specifications found")
 		return nil
 	}
 
-	c.Log.Info("msg", "Connecting to SQL database")
+	c.Log.InfoMsg("Connecting to SQL database")
 
 	connection := types.SQLConnection{
 		DBAdapter: c.Config.DBAdapter,
@@ -100,7 +99,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 		return fmt.Errorf("could not clean tables after ChainID change: %v", err)
 	}
 
-	c.Log.Info("msg", "Synchronizing config and database projection structures")
+	c.Log.InfoMsg("Synchronizing config and database projection structures")
 
 	err = c.DB.SynchronizeDB(c.Burrow.ChainID, projection.Tables)
 	if err != nil {
@@ -119,7 +118,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 		}()
 		go c.announceEvery(doneCh)
 
-		c.Log.Info("msg", "Getting last processed block number from SQL log table")
+		c.Log.InfoMsg("Getting last processed block number from SQL log table")
 
 		// NOTE [Silas]: I am preserving the comment below that dates from the early days of Vent. I have looked at the
 		// bosmarmot git history and I cannot see why the original author thought that it was the case that there was
@@ -166,16 +165,16 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 
 		// get blocks
 
-		c.Log.Debug("msg", "Waiting for blocks...")
+		c.Log.TraceMsg("Waiting for blocks...")
 
 		err = rpcevents.ConsumeBlockExecutions(stream, c.makeBlockConsumer(projection, abiSpec, eventCh))
 
 		if err != nil {
 			if err == io.EOF {
-				c.Log.Info("msg", "EOF stream received...")
+				c.Log.InfoMsg("EOF stream received...")
 			} else {
 				if c.Closing {
-					c.Log.Debug("msg", "GRPC connection closed")
+					c.Log.TraceMsg("GRPC connection closed")
 				} else {
 					errCh <- errors.Wrapf(err, "Error receiving blocks")
 					return
@@ -190,7 +189,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 		case blk := <-eventCh:
 			err := c.commitBlock(projection, blk)
 			if err != nil {
-				c.Log.Info("msg", "error committing block", "err", err)
+				c.Log.InfoMsg("error committing block", "err", err)
 				return err
 			}
 
@@ -200,12 +199,12 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 
 			// Select possible error
 			case err := <-errCh:
-				c.Log.Info("msg", "finished with error", "err", err)
+				c.Log.InfoMsg("finished with error", "err", err)
 				return err
 
 			// Or fallback to success
 			default:
-				c.Log.Info("msg", "finished successfully")
+				c.Log.InfoMsg("finished successfully")
 				return nil
 			}
 		}
@@ -227,7 +226,7 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 			c.Status.LastProcessedHeight = fromBlock
 		}()
 
-		c.Log.Debug("msg", "Block received", "height", blockExecution.Height, "num_txs", len(blockExecution.TxExecutions))
+		c.Log.TraceMsg("Block received", "height", blockExecution.Height, "num_txs", len(blockExecution.TxExecutions))
 
 		// create a fresh new structure to store block data at this height
 		blockData := sqlsol.NewBlockData(fromBlock)
@@ -243,7 +242,7 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 
 		// get transactions for a given block
 		for _, txe := range blockExecution.TxExecutions {
-			c.Log.Debug("msg", "Getting transaction", "TxHash", txe.TxHash, "num_events", len(txe.Events))
+			c.Log.TraceMsg("Getting transaction", "TxHash", txe.TxHash, "num_events", len(txe.Events))
 
 			if c.Config.SpecOpt&sqlsol.Tx > 0 {
 				txRawData, err := buildTxData(txe)
@@ -282,7 +281,7 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 						// there's a matching filter, add data to the rows
 						if qry.Matches(taggedEvent) {
 
-							c.Log.Info("msg", fmt.Sprintf("Matched event header: %v", event.Header),
+							c.Log.InfoMsg(fmt.Sprintf("Matched event header: %v", event.Header),
 								"filter", eventClass.Filter)
 
 							// unpack, decode & build event data
@@ -305,7 +304,7 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 			// gets block data to upsert
 			blk := blockData.Data
 
-			c.Log.Info("msg", fmt.Sprintf("Upserting rows in SQL tables %v", blk), "block", fromBlock)
+			c.Log.InfoMsg(fmt.Sprintf("Upserting rows in SQL tables %v", blk), "block", fromBlock)
 
 			eventCh <- blk
 		}
@@ -356,7 +355,7 @@ func (c *Consumer) Health() error {
 
 // Shutdown gracefully shuts down the events consumer
 func (c *Consumer) Shutdown() {
-	c.Log.Info("msg", "Shutting down vent consumer...")
+	c.Log.InfoMsg("Shutting down vent consumer...")
 	c.Closing = true
 	c.GRPCConnection.Close()
 }
@@ -364,7 +363,7 @@ func (c *Consumer) Shutdown() {
 func (c *Consumer) updateStatus(qcli rpcquery.QueryClient) {
 	stat, err := qcli.Status(context.Background(), &rpcquery.StatusParam{})
 	if err != nil {
-		c.Log.Error("msg", "could not get blockchain status", "err", err)
+		c.Log.InfoMsg("could not get blockchain status", "err", err)
 		return
 	}
 	c.Status.Burrow = stat
@@ -398,7 +397,7 @@ func (c *Consumer) announceEvery(doneCh <-chan struct{}) {
 			select {
 			case <-ticker.C:
 				c.updateStatus(qcli)
-				c.Log.Info(c.statusMessage()...)
+				c.Log.InfoMsg("Announcement", c.statusMessage()...)
 			case <-doneCh:
 				ticker.Stop()
 				return

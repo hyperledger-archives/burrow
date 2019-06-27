@@ -6,19 +6,19 @@ package adapters
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/vent/logger"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/vent/types"
 	"github.com/jmoiron/sqlx"
 )
 
 // This is a no-op version of SQLiteAdapter
 type SQLiteAdapter struct {
-	Log *logger.Logger
+	Log *logging.Logger
 }
 
 var _ DBAdapter = &SQLiteAdapter{}
 
-func NewSQLiteAdapter(names types.SQLNames, log *logger.Logger) *SQLiteAdapter {
+func NewSQLiteAdapter(names types.SQLNames, log *logging.Logger) *SQLiteAdapter {
 	panic(fmt.Errorf("vent has been built without sqlite support. To use the sqlite DBAdapter build with the 'sqlite' build tag enabled"))
 }
 

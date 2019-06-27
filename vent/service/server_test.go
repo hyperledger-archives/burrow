@@ -14,8 +14,8 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/integration/rpctest"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/vent/config"
-	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/service"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/test"
@@ -41,9 +41,8 @@ func TestServer(t *testing.T) {
 			cfg.AbiFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/EventsTest.abi"}
 			cfg.GRPCAddr = kern.GRPCListenAddress().String()
 
-			log := logger.NewLogger(cfg.LogLevel)
+			log := logging.NewNoopLogger()
 			consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
-
 			projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, sqlsol.None)
 			abiSpec, err := abi.LoadPath(cfg.AbiFileOrDirs...)
 

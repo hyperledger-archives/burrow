@@ -4,18 +4,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"os"
 	"syscall"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
-	"os"
-
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/vent/config"
-	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/sqldb"
 	"github.com/hyperledger/burrow/vent/types"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -45,7 +43,7 @@ func NewTestDB(t *testing.T, cfg *config.VentConfig) (*sqldb.SQLDB, func()) {
 		DBURL:     cfg.DBURL,
 		DBSchema:  cfg.DBSchema,
 
-		Log: logger.NewLogger(""),
+		Log: logging.NewNoopLogger(),
 	}
 
 	db, err := sqldb.NewSQLDB(connection)
@@ -95,13 +93,13 @@ func PostgresVentConfig(grpcAddress string) *config.VentConfig {
 }
 
 func destroySchema(db *sqldb.SQLDB, dbSchema string) error {
-	db.Log.Info("msg", "Dropping schema")
+	db.Log.InfoMsg("Dropping schema")
 	query := fmt.Sprintf("DROP SCHEMA %s CASCADE;", dbSchema)
 
-	db.Log.Info("msg", "Drop schema", "query", query)
+	db.Log.InfoMsg("Drop schema", "query", query)
 
 	if _, err := db.DB.Exec(query); err != nil {
-		db.Log.Info("msg", "Error dropping schema", "err", err)
+		db.Log.InfoMsg("Error dropping schema", "err", err)
 		return err
 	}
 

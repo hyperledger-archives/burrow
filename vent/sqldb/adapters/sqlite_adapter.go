@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hyperledger/burrow/vent/logger"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/vent/types"
 	"github.com/jmoiron/sqlx"
 	sqlite3 "github.com/mattn/go-sqlite3"
@@ -29,13 +29,13 @@ var sqliteDataTypes = map[types.SQLColumnType]string{
 // SQLiteAdapter implements DBAdapter for SQLiteDB
 type SQLiteAdapter struct {
 	types.SQLNames
-	Log *logger.Logger
+	Log *logging.Logger
 }
 
 var _ DBAdapter = &SQLiteAdapter{}
 
 // NewSQLiteAdapter constructs a new db adapter
-func NewSQLiteAdapter(sqlNames types.SQLNames, log *logger.Logger) *SQLiteAdapter {
+func NewSQLiteAdapter(sqlNames types.SQLNames, log *logging.Logger) *SQLiteAdapter {
 	return &SQLiteAdapter{
 		SQLNames: sqlNames,
 		Log:      log,
@@ -45,7 +45,7 @@ func NewSQLiteAdapter(sqlNames types.SQLNames, log *logger.Logger) *SQLiteAdapte
 func (sla *SQLiteAdapter) Open(dbURL string) (*sqlx.DB, error) {
 	db, err := sqlx.Open("sqlite3", dbURL)
 	if err != nil {
-		sla.Log.Info("msg", "Error creating database connection", "err", err)
+		sla.Log.InfoMsg("Error creating database connection", "err", err)
 		return nil, err
 	}
 	return db, nil

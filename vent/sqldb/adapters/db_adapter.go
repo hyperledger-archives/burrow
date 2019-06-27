@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jmoiron/sqlx"
-
 	"github.com/hyperledger/burrow/vent/types"
+	"github.com/jmoiron/sqlx"
 )
 
 // DBAdapter implements database dependent interface
