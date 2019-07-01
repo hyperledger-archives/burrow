@@ -6,8 +6,7 @@ import (
 
 // Get bounds suitable for events.Provider
 func (br *BlockRange) Bounds(latestBlockHeight uint64) (startHeight, endHeight uint64, streaming bool) {
-	// End bound is exclusive in state.GetEvents so we increment the height
-	return br.GetStart().Bound(latestBlockHeight), br.GetEnd().Bound(latestBlockHeight) + 1,
+	return br.GetStart().Bound(latestBlockHeight), br.GetEnd().Bound(latestBlockHeight),
 		br.GetEnd().GetType() == Bound_STREAM
 }
 

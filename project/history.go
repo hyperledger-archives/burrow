@@ -48,6 +48,19 @@ func FullVersion() string {
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases(
+		"",
+		`### Fixed
+- [Dump] Fix dump missing events emitted at end height provided
+
+### Changed
+- [State] IterateStreamEvents now takes inclusive start and end points (end used to be exclusive) avoid bug-prone conversion
+- [Dump] Improved structure and API
+- [Dump] Default to JSON output and use protobuf for binary output
+
+### Added
+- [Dump] Better tests, mock, and benchmarks - suitable for profiling IAVL
+
+`,
 		"0.27.0 - 2019-06-23",
 		`### Added
 - [WASM] Support for WASM contracts written in Solidity compiled using solang

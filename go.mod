@@ -52,7 +52,7 @@ require (
 	github.com/spf13/viper v1.3.2
 	github.com/streadway/simpleuuid v0.0.0-20130420165545-6617b501e485
 	github.com/stretchr/testify v1.3.0
-	github.com/syndtr/goleveldb v1.0.0 // indirect
+	github.com/syndtr/goleveldb v1.0.0
 	github.com/tendermint/go-amino v0.14.1
 	github.com/tendermint/iavl v0.12.2
 	github.com/tendermint/tendermint v0.31.5

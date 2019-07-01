@@ -29,7 +29,6 @@ import (
 	"github.com/hyperledger/burrow/execution/proposal"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/storage"
 	"github.com/hyperledger/burrow/txs"
 	dbm "github.com/tendermint/tendermint/libs/db"
@@ -72,7 +71,7 @@ var keys = KeyFormatStore{
 	Proposal: storage.NewMustKeyFormat("p", sha256.Size),
 	// ValidatorAddress -> Power
 	Validator: storage.NewMustKeyFormat("v", crypto.AddressLength),
-	// Height, EventIndex -> StreamEvent
+	// Height -> StreamEvent
 	Event: storage.NewMustKeyFormat("e", uint64Length),
 	// TxHash -> TxHeight, TxIndex
 	TxHash: storage.NewMustKeyFormat("th", txs.HashLength),
@@ -167,20 +166,8 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 	if err != nil {
 		return nil, fmt.Errorf("%s %v", errHeader, err)
 	}
-	// global permissions are saved as the 0 address
-	// so they are included in the accounts tree
-	globalPerms := permission.DefaultAccountPermissions
-	globalPerms = genesisDoc.GlobalPermissions
-	// XXX: make sure the set bits are all true
-	// Without it the HasPermission() functions will fail
-	globalPerms.Base.SetBit = permission.AllPermFlags
-
-	permsAcc := &acm.Account{
-		Address:     acm.GlobalPermissionsAddress,
-		Balance:     1337,
-		Permissions: globalPerms,
-	}
-	err = s.writeState.UpdateAccount(permsAcc)
+	// Set up fallback global permissions
+	err = s.writeState.UpdateAccount(genesisDoc.GlobalPermissionsAccount())
 	if err != nil {
 		return nil, fmt.Errorf("%s %v", errHeader, err)
 	}

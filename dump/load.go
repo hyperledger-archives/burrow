@@ -3,6 +3,7 @@ package dump
 import (
 	"crypto/sha256"
 	bin "encoding/binary"
+	"io"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
@@ -12,20 +13,19 @@ import (
 )
 
 // Load a dump into state
-func Load(reader Reader, st *state.State) error {
+func Load(source Source, st *state.State) error {
 	_, _, err := st.Update(func(s state.Updatable) error {
 		txs := make([]*exec.TxExecution, 0)
 
 		var tx *exec.TxExecution
 
 		for {
-			row, err := reader.Next()
+			row, err := source.Recv()
+			if err == io.EOF {
+				break
+			}
 			if err != nil {
 				return err
-			}
-
-			if row == nil {
-				break
 			}
 
 			if row.Account != nil {
