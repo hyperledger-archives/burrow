@@ -125,13 +125,19 @@ func NewState(db dbm.DB) *State {
 	}
 	plain := storage.NewPrefixDB(db, plainPrefix)
 	ring := validator.NewRing(nil, DefaultValidatorsWindowSize)
-	rs := ReadState{Forest: forest, Plain: plain, History: ring}
-	ws := writeState{forest: forest, plain: plain, ring: ring}
 	return &State{
-		db:         db,
-		ReadState:  rs,
-		writeState: ws,
-		logger:     logging.NewNoopLogger(),
+		db: db,
+		ReadState: ReadState{
+			Forest:  forest,
+			Plain:   plain,
+			History: ring,
+		},
+		writeState: writeState{
+			forest: forest,
+			plain:  plain,
+			ring:   ring,
+		},
+		logger: logging.NewNoopLogger(),
 	}
 }
 

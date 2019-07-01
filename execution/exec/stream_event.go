@@ -8,15 +8,12 @@ type EventStream interface {
 	Recv() (*StreamEvent, error)
 }
 
-type StreamEvents []*StreamEvent
-
 func (ses *StreamEvents) Recv() (*StreamEvent, error) {
-	evs := *ses
-	if len(evs) == 0 {
+	if len(ses.StreamEvents) == 0 {
 		return nil, io.EOF
 	}
-	ev := evs[0]
-	*ses = evs[1:]
+	ev := ses.StreamEvents[0]
+	ses.StreamEvents = ses.StreamEvents[1:]
 	return ev, nil
 }
 

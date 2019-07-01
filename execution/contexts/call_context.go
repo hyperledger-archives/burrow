@@ -191,7 +191,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 	txHash := ctx.txe.Envelope.Tx.Hash()
 	logger := ctx.Logger.With(structure.TxHashKey, txHash)
 	var exception errors.CodedError
-	if wcode != nil {
+	if len(wcode) != 0 {
 		if createContract {
 			txCache.InitWASMCode(callee, wcode)
 		}

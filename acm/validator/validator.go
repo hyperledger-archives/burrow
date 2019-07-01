@@ -7,7 +7,6 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 
 	"github.com/hyperledger/burrow/acm"
-	amino "github.com/tendermint/go-amino"
 )
 
 func New(publicKey crypto.PublicKey, power *big.Int) *Validator {
@@ -45,19 +44,4 @@ func FromAccount(acc *acm.Account, power uint64) *Validator {
 		PublicKey: acc.GetPublicKey(),
 		Power:     power,
 	}
-}
-
-var cdc = amino.NewCodec()
-
-func (v *Validator) Encode() ([]byte, error) {
-	return cdc.MarshalBinaryBare(v)
-}
-
-func Decode(bs []byte) (*Validator, error) {
-	v := new(Validator)
-	err := cdc.UnmarshalBinaryBare(bs, v)
-	if err != nil {
-		return nil, err
-	}
-	return v, nil
 }

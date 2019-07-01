@@ -234,6 +234,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 			peers := make([]string, 0)
 			if conf.GenesisDoc != nil {
+				// NOTE: amino is needed here to add type metadata to JSON envelope for deserialisation to work
 				cdc := amino.NewCodec()
 				cryptoAmino.RegisterAmino(cdc)
 				pkg.GenesisDoc = conf.GenesisDoc

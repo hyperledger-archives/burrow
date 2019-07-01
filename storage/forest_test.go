@@ -50,7 +50,7 @@ func TestMutableForest_Save(t *testing.T) {
 	assertDump(t, forest, `
         	            	.
         	            	├── "Commits"
-        	            	│   └── "fooos" -> "\n ym.\xb8fw\xdcIK\xe8QQ\xb6\x8a\x1fT\x15\xff\x80\xd5\xd91\xf6YKf\x12wx\x16l\xf5\x10\x01"
+        	            	│   └── "fooos" -> "\b\x01\x12 ym.\xb8fw\xdcIK\xe8QQ\xb6\x8a\x1fT\x15\xff\x80\xd5\xd91\xf6YKf\x12wx\x16l\xf5"
         	            	└── "fooos"
         	            	    └── "bar" -> "nog"
         	            	`)
@@ -70,8 +70,8 @@ func TestMutableForest_Save(t *testing.T) {
 	assertDump(t, forest, `
         	            	.
         	            	├── "Commits"
-        	            	│   ├── "fooos" -> "\n ym.\xb8fw\xdcIK\xe8QQ\xb6\x8a\x1fT\x15\xff\x80\xd5\xd91\xf6YKf\x12wx\x16l\xf5\x10\x01"
-        	            	│   └── "prefixo" -> "\n E\xb2\xa4{аA\xddf\xcc\x02ȭ\xfa\xd1\xceZ\xa0nP\xe0\xd3\\X\x9c\x16M\xc1\x88t\x15\x8c\x10\x01"
+        	            	│   ├── "fooos" -> "\b\x01\x12 ym.\xb8fw\xdcIK\xe8QQ\xb6\x8a\x1fT\x15\xff\x80\xd5\xd91\xf6YKf\x12wx\x16l\xf5"
+        	            	│   └── "prefixo" -> "\b\x01\x12 E\xb2\xa4{аA\xddf\xcc\x02ȭ\xfa\xd1\xceZ\xa0nP\xe0\xd3\\X\x9c\x16M\xc1\x88t\x15\x8c"
         	            	├── "fooos"
         	            	│   └── "bar" -> "nog"
         	            	└── "prefixo"
@@ -133,9 +133,9 @@ func TestSorted(t *testing.T) {
 	assertDump(t, forest, `
         	            	.
         	            	├── "Commits"
-        	            	│   ├── "age" -> "\n \x1dwd_\xbaRB\xf5\xa6\xf0\n\xab\x9aWY\xf7\t\x16t웿\xb6\x89O\n\xcf&\xf7\xe6\xcd\n\x10\x01"
-        	            	│   ├── "balances" -> "\n \x9f\xab\xd3s\x18{\xbc\xe8\x98\xdai\xf5\x9f\x16\xden\xac(\xc9ԷU\x99\x17\xda'\xfa3-\x98\xd4\xc9\x10\x02"
-        	            	│   └── "names" -> "\n \xbf\xf8\xf9vt>\xbc\x06@C\xe9I\x01C\xa3\xc3O \xbc\xaf\xbf\xb3\b\xb2UHh\xe8TM\xb3\xba\x10\x01"
+        	            	│   ├── "age" -> "\b\x01\x12 \x1dwd_\xbaRB\xf5\xa6\xf0\n\xab\x9aWY\xf7\t\x16t웿\xb6\x89O\n\xcf&\xf7\xe6\xcd\n"
+        	            	│   ├── "balances" -> "\b\x02\x12 \x9f\xab\xd3s\x18{\xbc\xe8\x98\xdai\xf5\x9f\x16\xden\xac(\xc9ԷU\x99\x17\xda'\xfa3-\x98\xd4\xc9"
+        	            	│   └── "names" -> "\b\x01\x12 \xbf\xf8\xf9vt>\xbc\x06@C\xe9I\x01C\xa3\xc3O \xbc\xaf\xbf\xb3\b\xb2UHh\xe8TM\xb3\xba"
         	            	├── "age"
         	            	│   ├── "Cora" -> "1"
         	            	│   └── "Lindsay" -> "34"

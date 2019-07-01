@@ -40,7 +40,7 @@ func TestTransactor_BroadcastTxSync(t *testing.T) {
 	bc := &bcm.Blockchain{}
 	evc := event.NewEmitter()
 	evc.SetLogger(logging.NewNoopLogger())
-	txCodec := txs.NewAminoCodec()
+	txCodec := txs.NewProtobufCodec()
 	privAccount := acm.GeneratePrivateAccountFromSecret("frogs")
 	tx := &payload.CallTx{
 		Input: &payload.TxInput{

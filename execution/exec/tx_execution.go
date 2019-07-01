@@ -34,34 +34,8 @@ func NewTxExecution(txEnv *txs.Envelope) *TxExecution {
 	}
 }
 
-func DecodeTxExecution(bs []byte) (*TxExecution, error) {
-	txe := new(TxExecution)
-	err := cdc.UnmarshalBinaryBare(bs, txe)
-	if err != nil {
-		return nil, err
-	}
-	return txe, nil
-}
-
-func DecodeTxExecutionKey(bs []byte) (*TxExecutionKey, error) {
-	be := new(TxExecutionKey)
-
-	err := cdc.UnmarshalBinaryLengthPrefixed(bs, be)
-	if err != nil {
-		return nil, err
-	}
-	return be, nil
-}
-
-func (key *TxExecutionKey) Encode() ([]byte, error) {
-	// At height 0 index 0, the B cdc.MarshalBinaryBase() returns a string of 0 bytes,
-	// which cannot be stored in iavl. So, abuse MarshalBinaryLengthPrefixed() to
-	// ensure we have > 0 bytes.
-	return cdc.MarshalBinaryLengthPrefixed(key)
-}
-
-func (txe *TxExecution) StreamEvents() StreamEvents {
-	var ses StreamEvents
+func (txe *TxExecution) StreamEvents() []*StreamEvent {
+	var ses []*StreamEvent
 	ses = append(ses,
 		&StreamEvent{
 			BeginTx: &BeginTx{
@@ -87,10 +61,6 @@ func (txe *TxExecution) StreamEvents() StreamEvents {
 			TxHash: txe.TxHash,
 		},
 	})
-}
-
-func (txe *TxExecution) Encode() ([]byte, error) {
-	return cdc.MarshalBinaryBare(txe)
 }
 
 func (*TxExecution) EventType() EventType {

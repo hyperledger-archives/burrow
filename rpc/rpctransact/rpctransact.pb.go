@@ -8,6 +8,7 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 	time "time"
 
 	_ "github.com/gogo/protobuf/gogoproto"
@@ -21,6 +22,8 @@ import (
 	txs "github.com/hyperledger/burrow/txs"
 	payload "github.com/hyperledger/burrow/txs/payload"
 	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -441,6 +444,47 @@ type TransactServer interface {
 	NameTxAsync(context.Context, *payload.NameTx) (*txs.Receipt, error)
 }
 
+// UnimplementedTransactServer can be embedded to have forward compatible implementations.
+type UnimplementedTransactServer struct {
+}
+
+func (*UnimplementedTransactServer) BroadcastTxSync(ctx context.Context, req *TxEnvelopeParam) (*exec.TxExecution, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BroadcastTxSync not implemented")
+}
+func (*UnimplementedTransactServer) BroadcastTxAsync(ctx context.Context, req *TxEnvelopeParam) (*txs.Receipt, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BroadcastTxAsync not implemented")
+}
+func (*UnimplementedTransactServer) SignTx(ctx context.Context, req *TxEnvelopeParam) (*TxEnvelope, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SignTx not implemented")
+}
+func (*UnimplementedTransactServer) FormulateTx(ctx context.Context, req *payload.Any) (*TxEnvelope, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FormulateTx not implemented")
+}
+func (*UnimplementedTransactServer) CallTxSync(ctx context.Context, req *payload.CallTx) (*exec.TxExecution, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CallTxSync not implemented")
+}
+func (*UnimplementedTransactServer) CallTxAsync(ctx context.Context, req *payload.CallTx) (*txs.Receipt, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CallTxAsync not implemented")
+}
+func (*UnimplementedTransactServer) CallTxSim(ctx context.Context, req *payload.CallTx) (*exec.TxExecution, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CallTxSim not implemented")
+}
+func (*UnimplementedTransactServer) CallCodeSim(ctx context.Context, req *CallCodeParam) (*exec.TxExecution, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CallCodeSim not implemented")
+}
+func (*UnimplementedTransactServer) SendTxSync(ctx context.Context, req *payload.SendTx) (*exec.TxExecution, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendTxSync not implemented")
+}
+func (*UnimplementedTransactServer) SendTxAsync(ctx context.Context, req *payload.SendTx) (*txs.Receipt, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendTxAsync not implemented")
+}
+func (*UnimplementedTransactServer) NameTxSync(ctx context.Context, req *payload.NameTx) (*exec.TxExecution, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NameTxSync not implemented")
+}
+func (*UnimplementedTransactServer) NameTxAsync(ctx context.Context, req *payload.NameTx) (*txs.Receipt, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NameTxAsync not implemented")
+}
+
 func RegisterTransactServer(s *grpc.Server, srv TransactServer) {
 	s.RegisterService(&_Transact_serviceDesc, srv)
 }
@@ -736,9 +780,9 @@ func (m *CallCodeParam) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintRpctransact(dAtA, i, uint64(m.FromAddress.Size()))
-	n1, err := m.FromAddress.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
+	n1, err1 := m.FromAddress.MarshalTo(dAtA[i:])
+	if err1 != nil {
+		return 0, err1
 	}
 	i += n1
 	if len(m.Code) > 0 {
@@ -778,9 +822,9 @@ func (m *TxEnvelope) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintRpctransact(dAtA, i, uint64(m.Envelope.Size()))
-		n2, err := m.Envelope.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		n2, err2 := m.Envelope.MarshalTo(dAtA[i:])
+		if err2 != nil {
+			return 0, err2
 		}
 		i += n2
 	}
@@ -809,9 +853,9 @@ func (m *TxEnvelopeParam) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintRpctransact(dAtA, i, uint64(m.Envelope.Size()))
-		n3, err := m.Envelope.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		n3, err3 := m.Envelope.MarshalTo(dAtA[i:])
+		if err3 != nil {
+			return 0, err3
 		}
 		i += n3
 	}
@@ -819,18 +863,18 @@ func (m *TxEnvelopeParam) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintRpctransact(dAtA, i, uint64(m.Payload.Size()))
-		n4, err := m.Payload.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		n4, err4 := m.Payload.MarshalTo(dAtA[i:])
+		if err4 != nil {
+			return 0, err4
 		}
 		i += n4
 	}
 	dAtA[i] = 0x1a
 	i++
 	i = encodeVarintRpctransact(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdDuration(m.Timeout)))
-	n5, err := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.Timeout, dAtA[i:])
-	if err != nil {
-		return 0, err
+	n5, err5 := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.Timeout, dAtA[i:])
+	if err5 != nil {
+		return 0, err5
 	}
 	i += n5
 	if m.XXX_unrecognized != nil {
@@ -909,14 +953,7 @@ func (m *TxEnvelopeParam) Size() (n int) {
 }
 
 func sovRpctransact(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozRpctransact(x uint64) (n int) {
 	return sovRpctransact(uint64((x << 1) ^ uint64((int64(x) >> 63))))
