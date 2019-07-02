@@ -4,6 +4,8 @@
 [![GoDoc](https://godoc.org/github.com/burrow?status.png)](https://godoc.org/github.com/hyperledger/burrow)
 [![license](https://img.shields.io/github/license/hyperledger/burrow.svg)](LICENSE.md)
 [![LoC](https://tokei.rs/b1/github/hyperledger/burrow?category=lines)](https://github.com/hyperledger/burrow)
+[![codecov](https://codecov.io/gh/hyperledger/burrow/branch/develop/graph/badge.svg)](https://codecov.io/gh/hyperledger/burrow)
+
 
 Branch    | Linux
 ----------|------

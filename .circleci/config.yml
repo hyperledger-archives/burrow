@@ -13,9 +13,21 @@ tag_filters: &tags_filters
 setup_docker: &setup_docker
   version: 17.11.0-ce
 
+orbs:
+  codecov: codecov/codecov@1.0.4
+
 # Start of CircleCI 2.0 config
 version: 2
 jobs:
+  cover:
+    <<: *defaults
+    steps:
+      - checkout
+      - run: go test -coverprofile=c.out
+      - run: go tool cover -html=c.out -o coverage.html
+      - codecov/upload:
+          file: coverage.html
+
   test:
     <<: *defaults
     steps:
