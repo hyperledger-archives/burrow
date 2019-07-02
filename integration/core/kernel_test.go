@@ -49,6 +49,8 @@ func testKernel(t *testing.T, opts ...func(*config.BurrowConfig)) {
 	t.Run(fmt.Sprintf("Group"), func(t *testing.T) {
 		t.Parallel()
 		genesisDoc, privateAccounts, privateValidators := genesis.NewDeterministicGenesis(123).GenesisDoc(1, 1)
+		require.NotNil(t, privateAccounts)
+		require.NotNil(t, privateValidators)
 		t.Run("BootThenShutdown", func(t *testing.T) {
 			conf, cleanup := integration.NewTestConfig(genesisDoc, opts...)
 			defer cleanup()

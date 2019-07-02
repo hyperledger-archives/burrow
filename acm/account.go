@@ -24,7 +24,6 @@ import (
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/permission"
-	amino "github.com/tendermint/go-amino"
 )
 
 var GlobalPermissionsAddress = crypto.Address(binary.Zero160)

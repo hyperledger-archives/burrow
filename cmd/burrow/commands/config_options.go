@@ -58,7 +58,7 @@ func addConfigOptions(cmd *cli.Cmd) *configOptions {
 			Name:   "v validator",
 			Desc:   "Validator index (in validators list - GenesisSpec or GenesisDoc) from which to set Address",
 			Value:  -1,
-			EnvVar: "BURROW_NODE_INDEX",
+			EnvVar: "BURROW_VALIDATOR_INDEX",
 		}),
 
 		initAddressOpt: cmd.String(cli.StringOpt{
