@@ -170,13 +170,13 @@ func (re *Replay) Commit(height uint64) (*ReplayCapture, error) {
 	return recap, err
 }
 
-func iterComp(exp, act *state.ReadState, tree treeprint.Tree, prefix string) (uint, error) {
-	reader1, err := exp.Forest.Reader([]byte(prefix))
+func iterComp(exp, act *state.ReadState, tree treeprint.Tree, prefix []byte) (uint, error) {
+	reader1, err := exp.Forest.Reader(prefix)
 	if err != nil {
 		return 0, err
 	}
 
-	reader2, err := act.Forest.Reader([]byte(prefix))
+	reader2, err := act.Forest.Reader(prefix)
 	if err != nil {
 		return 0, err
 	}
@@ -208,8 +208,8 @@ func CompareStateAtHeight(exp, act *state.State, height uint64) error {
 
 	var diffs uint
 	tree := treeprint.New()
-	prefixes := []string{"a", "s", "n", "p", "v", "e", "th"}
-	for _, p := range prefixes {
+
+	for _, p := range state.Prefixes {
 		n, err := iterComp(rs1, rs2, tree, p)
 		if err != nil {
 			return err

@@ -96,7 +96,7 @@ func makeChain(t *testing.T, max uint64) (*genesis.GenesisDoc, dbm.DB, dbm.DB) {
 	for i := uint64(1); i < max; i++ {
 		makeBlock(t, st, bs, func(block *types.Block) {
 
-			decoder := txs.NewAminoCodec()
+			decoder := txs.NewProtobufCodec()
 			err = bcm.NewBlock(decoder, block).Transactions(func(txEnv *txs.Envelope) error {
 				_, err := committer.Execute(txEnv)
 				require.NoError(t, err)
@@ -141,7 +141,7 @@ func makeTx(t *testing.T, chainID string, height int64, val *acm.PrivateAccount)
 	err := txEnv.Sign(val)
 	require.NoError(t, err)
 
-	data, err := txs.NewAminoCodec().EncodeTx(txEnv)
+	data, err := txs.NewProtobufCodec().EncodeTx(txEnv)
 	require.NoError(t, err)
 	return types.Tx(data)
 }
