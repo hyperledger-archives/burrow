@@ -164,7 +164,8 @@ solang: $(SOLANG_GO_FILES)
 
 .PHONY: test
 test: check bin/solc
-	@tests/scripts/bin_wrapper.sh go test ./... ${GOPACKAGES_NOVENDOR}
+# limit parallelism with -p to prevent OOM on circleci
+	@tests/scripts/bin_wrapper.sh go test ./... -p 2
 
 .PHONY: test_keys
 test_keys: build_burrow
