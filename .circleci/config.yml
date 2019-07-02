@@ -79,6 +79,10 @@ workflows:
 
   test_and_release:
     jobs:
+      - cover:
+          filters:
+            <<: *tags_filters
+
       - test:
           filters:
             <<: *tags_filters
