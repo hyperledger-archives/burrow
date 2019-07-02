@@ -52,7 +52,8 @@ func testKernel(t *testing.T, opts ...func(*config.BurrowConfig)) {
 		t.Run("BootThenShutdown", func(t *testing.T) {
 			conf, cleanup := integration.NewTestConfig(genesisDoc, opts...)
 			defer cleanup()
-			//logger, _ := lifecycle.NewStdErrLogger()
+			require.NotNil(t, privateAccounts)
+			require.NotNil(t, privateValidators)
 			assert.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, conf, nil, nil))
 		})
 

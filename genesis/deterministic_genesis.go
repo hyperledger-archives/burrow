@@ -23,7 +23,7 @@ func NewDeterministicGenesis(seed int64) *deterministicGenesis {
 
 func (dg *deterministicGenesis) GenesisDoc(numAccounts int, numValidators int) (*GenesisDoc, []*acm.PrivateAccount, []*acm.PrivateAccount) {
 	accounts := make([]Account, numAccounts+numValidators)
-	privAccounts := make([]*acm.PrivateAccount, numAccounts+numValidators)
+	privAccounts := make([]*acm.PrivateAccount, numAccounts)
 	defaultPerms := permission.DefaultAccountPermissions
 	for i := 0; i < numAccounts; i++ {
 		account, privAccount := dg.Account(9999999)
