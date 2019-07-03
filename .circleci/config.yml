@@ -5,6 +5,8 @@ defaults: &defaults
   working_directory: /go/src/github.com/hyperledger/burrow
   docker:
     - image: hyperledger/burrow:ci
+  environment:
+    - GO_TEST_ARGS: -p 2
 
 tag_filters: &tags_filters
   tags:
@@ -28,8 +30,6 @@ jobs:
       - run: make test
       # In case we miss compile errors not pulled into test paths
       - run: make build
-    environment:
-      - GO_TEST_ARGS: -p 2
 
   test_cover:
     <<: *defaults
