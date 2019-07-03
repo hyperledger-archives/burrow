@@ -167,6 +167,11 @@ test: check bin/solc
 # limit parallelism with -p to prevent OOM on circleci
 	@tests/scripts/bin_wrapper.sh go test ./... -p 2
 
+.PHONY: test_cover
+test_cover: check bin/solc
+	@tests/scripts/bin_wrapper.sh go test -coverprofile=c.out ./... -p 2
+	@tests/scripts/bin_wrapper.sh go tool cover -html=c.out -o coverage.html
+
 .PHONY: test_keys
 test_keys: build_burrow
 	burrow_bin="${REPO}/bin/burrow" tests/keys_server/test.sh
