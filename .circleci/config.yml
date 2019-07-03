@@ -28,6 +28,8 @@ jobs:
       - run: make test
       # In case we miss compile errors not pulled into test paths
       - run: make build
+    environment:
+      - GO_TEST_ARGS: -p 2
 
   test_cover:
     <<: *defaults

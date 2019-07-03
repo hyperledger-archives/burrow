@@ -164,12 +164,12 @@ solang: $(SOLANG_GO_FILES)
 
 .PHONY: test
 test: check bin/solc
-# limit parallelism with -p to prevent OOM on circleci
-	@tests/scripts/bin_wrapper.sh go test ./... -p 2
+# on circleci we might want to limit memory usage through GO_TEST_ARGS
+	@tests/scripts/bin_wrapper.sh go test ./... ${GO_TEST_ARGS}
 
 .PHONY: test_cover
 test_cover: check bin/solc
-	@tests/scripts/bin_wrapper.sh go test -coverprofile=c.out ./... -p 2
+	@tests/scripts/bin_wrapper.sh go test -coverprofile=c.out ./... ${GO_TEST_ARGS}
 	@tests/scripts/bin_wrapper.sh go tool cover -html=c.out -o coverage.html
 
 .PHONY: test_keys
