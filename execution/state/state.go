@@ -78,8 +78,11 @@ var keys = KeyFormatStore{
 	TxHash: storage.NewMustKeyFormat("th", txs.HashLength),
 }
 
+var Prefixes [][]byte
+
 func init() {
-	err := storage.EnsureKeyFormatStore(keys)
+	var err error
+	Prefixes, err = storage.EnsureKeyFormatStore(keys)
 	if err != nil {
 		panic(fmt.Errorf("KeyFormatStore is invalid: %v", err))
 	}

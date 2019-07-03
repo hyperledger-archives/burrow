@@ -1,4 +1,4 @@
-package forensics
+package storage
 
 import (
 	"strings"
