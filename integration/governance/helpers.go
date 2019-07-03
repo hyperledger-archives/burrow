@@ -27,38 +27,43 @@ import (
 	"github.com/tendermint/tendermint/p2p"
 )
 
-func startNode(kernel *core.Kernel, genesisDoc *genesis.GenesisDoc,
-	account *acm.PrivateAccount, keysAccounts ...*acm.PrivateAccount) error {
+func createKernel(genesisDoc *genesis.GenesisDoc, account *acm.PrivateAccount,
+	keysAccounts ...*acm.PrivateAccount) (kernel *core.Kernel, err error) {
 
+	// FIXME: some combination of cleanup and shutdown seems to make tests fail on CI
+	//testConfig, cleanup := integration.NewTestConfig(genesisDoc)
 	testConfig, _ := integration.NewTestConfig(genesisDoc)
+	//defer cleanup()
+
 	logconf := logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
 		return sink.SetTransform(logconfig.FilterTransform(logconfig.IncludeWhenAllMatch,
 			"total_validator")).SetOutput(logconfig.StdoutOutput())
 	})
 
+	// Try and grab a free port - this is not foolproof since there is race between other concurrent tests after we close
+	// the listener and start the node
 	l, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	host, port, err := net.SplitHostPort(l.Addr().String())
 	if err != nil {
-		return err
+		return nil, err
 	}
 	testConfig.Tendermint.ListenHost = host
 	testConfig.Tendermint.ListenPort = port
 
-	kern, err := integration.TestKernel(account, keysAccounts, testConfig, logconf)
+	kernel, err = integration.TestKernel(account, keysAccounts, testConfig, logconf)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	*kernel = *kern
 
 	err = l.Close()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return kernel.Boot()
+	return kernel, kernel.Boot()
 }
 
 func createBondTx(address crypto.Address, amount uint64, pubKey crypto.PublicKey) *payload.BondTx {
@@ -82,6 +87,12 @@ func createUnbondTx(validator, account crypto.Address) *payload.UnbondTx {
 			Address: account,
 		},
 	}
+}
+
+func signTx(t *testing.T, tx payload.Payload, chainID string, from acm.AddressableSigner) (txEnv *txs.Envelope) {
+	txEnv = txs.Enclose(chainID, tx)
+	require.NoError(t, txEnv.Sign(from))
+	return
 }
 
 func getValidators(t testing.TB, qcli rpcquery.QueryClient) map[crypto.Address]*validator.Validator {
@@ -113,7 +124,7 @@ func account(i int) *acm.PrivateAccount {
 	return rpctest.PrivateAccounts[i]
 }
 
-func sendPayload(cli rpctransact.TransactClient, tx payload.Payload) (*exec.TxExecution, error) {
+func payloadSync(cli rpctransact.TransactClient, tx payload.Payload) (*exec.TxExecution, error) {
 	return cli.BroadcastTxSync(context.Background(), &rpctransact.TxEnvelopeParam{
 		Payload: tx.Any(),
 	})
@@ -149,6 +160,13 @@ func connectKernels(k1, k2 *core.Kernel) {
 	}
 }
 
+func connectAllKernels(ks []*core.Kernel) {
+	source := ks[0]
+	for _, dest := range ks[1:] {
+		connectKernels(source, dest)
+	}
+}
+
 func getMaxFlow(t testing.TB, qcli rpcquery.QueryClient) uint64 {
 	vs, err := qcli.GetValidatorSet(context.Background(), &rpcquery.GetValidatorSetParam{})
 	require.NoError(t, err)
@@ -156,12 +174,6 @@ func getMaxFlow(t testing.TB, qcli rpcquery.QueryClient) uint64 {
 	totalPower := set.TotalPower()
 	maxFlow := new(big.Int)
 	return maxFlow.Sub(maxFlow.Div(totalPower, big.NewInt(3)), big.NewInt(1)).Uint64()
-}
-
-func govSync(cli rpctransact.TransactClient, tx *payload.GovTx) (*exec.TxExecution, error) {
-	return cli.BroadcastTxSync(context.Background(), &rpctransact.TxEnvelopeParam{
-		Payload: tx.Any(),
-	})
 }
 
 func setSequence(t testing.TB, qcli rpcquery.QueryClient, tx payload.Payload) {

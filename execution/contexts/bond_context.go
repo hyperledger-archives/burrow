@@ -28,22 +28,28 @@ func (ctx *BondContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 		return fmt.Errorf("payload must be BondTx, but is: %v", txe.Envelope.Tx.Payload)
 	}
 
-	// the account initiating the bond (may be validator)
+	// the account initiating the bond
 	account, err := ctx.StateWriter.GetAccount(ctx.tx.Input.Address)
 	if err != nil {
 		return err
 	}
 
-	// check if account is validator
-	power, err := ctx.ValidatorSet.Power(account.Address)
-	if err != nil {
-		return err
-	} else if power != nil && power.Cmp(big.NewInt(0)) == 1 {
-		// TODO: something with nodekey
-		// ctx.tx.NetAddress
+	// ensure pubKey of validator is set
+	val := ctx.tx.Validator
+	if err := GetIdentity(ctx.StateWriter, val); err != nil {
+		return fmt.Errorf("couldn't retrieve identity: %v", err)
 	}
 
-	// account is not validator, can it bond someone?
+	// check if validator already exists
+	power, err := ctx.ValidatorSet.Power(*val.Address)
+	if err != nil {
+		return err
+	} else if power != nil && power.Cmp(big.NewInt(0)) == 1 && account.Address != *val.Address {
+		// we currently do not support delegated bonding
+		return fmt.Errorf("%s is already bonded", val.Address)
+	}
+
+	// can the account bond?
 	if !hasBondPermission(ctx.StateWriter, account, ctx.Logger) {
 		return fmt.Errorf("account '%s' lacks bond permission", account.Address)
 	}
@@ -55,13 +61,6 @@ func (ctx *BondContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 	} else if account.Balance < amount {
 		return fmt.Errorf("insufficient funds, account %s only has balance %v and "+
 			"we are deducting %v", account.Address, account.Balance, amount)
-	}
-
-	// ensure pubKey of validator is set
-	val := ctx.tx.Validator
-	err = GetIdentity(ctx.StateWriter, val)
-	if err != nil {
-		return fmt.Errorf("BondTx: %v", err)
 	}
 
 	// can power be added?
@@ -80,24 +79,20 @@ func (ctx *BondContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 			"so is not supported by Tendermint", *val.Address)
 	}
 
-	// create the account if not bonder
-	if *val.Address != account.Address {
-		valAcc, err := ctx.StateWriter.GetAccount(*val.Address)
-		if err != nil {
-			return err
-		} else if valAcc == nil {
-			// validator account doesn't exist
-			valAcc = &acm.Account{
-				Address:     *val.Address,
-				Sequence:    0,
-				Balance:     0,
-				Permissions: permission.ZeroAccountPermissions,
-			}
+	// create the account if it doesn't exist
+	valAcc, err := ctx.StateWriter.GetAccount(*val.Address)
+	if err != nil {
+		return err
+	} else if valAcc == nil {
+		valAcc = &acm.Account{
+			Address:     *val.Address,
+			PublicKey:   *val.PublicKey,
+			Sequence:    0,
+			Balance:     0,
+			Permissions: permission.NewAccountPermissions(permission.Bond),
 		}
 		// pk must be known later to unbond
-		valAcc.PublicKey = *val.PublicKey
-		err = ctx.StateWriter.UpdateAccount(valAcc)
-		if err != nil {
+		if err = ctx.StateWriter.UpdateAccount(valAcc); err != nil {
 			return err
 		}
 	}
@@ -157,6 +152,7 @@ func (ctx *UnbondContext) Execute(txe *exec.TxExecution, p payload.Payload) erro
 	if err != nil {
 		return err
 	} else if power == nil || power.Cmp(big.NewInt(0)) == 0 {
+		// TODO: remove custom amount?
 		return fmt.Errorf("nothing bonded for validator '%s'", sender.Address)
 	}
 

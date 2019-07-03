@@ -26,7 +26,7 @@ import (
 const UpsieDownsieCallCount = 1 + (34 - 17) + 1 + (34 - 23)
 
 var PrivateAccounts = integration.MakePrivateAccounts("mysecret", 10) // make keys
-var GenesisDoc = integration.TestGenesisDoc(PrivateAccounts)
+var GenesisDoc = integration.TestGenesisDoc(PrivateAccounts, 0)
 
 // Helpers
 func NewTransactClient(t testing.TB, listenAddress string) rpctransact.TransactClient {

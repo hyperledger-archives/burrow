@@ -170,7 +170,9 @@ func EnterTestDirectory() (testDir string, cleanup func()) {
 	return testDir, func() { os.RemoveAll(testDir) }
 }
 
-func TestGenesisDoc(addressables []*acm.PrivateAccount) *genesis.GenesisDoc {
+// TestGenesisDoc creates genesis from a set of accounts
+// and validators from indices within that slice
+func TestGenesisDoc(addressables []*acm.PrivateAccount, vals ...int) *genesis.GenesisDoc {
 	accounts := make(map[string]*acm.Account, len(addressables))
 	for i, pa := range addressables {
 		account := acm.FromAddressable(pa)
@@ -182,10 +184,14 @@ func TestGenesisDoc(addressables []*acm.PrivateAccount) *genesis.GenesisDoc {
 	if err != nil {
 		panic("could not parse test genesis time")
 	}
-	return genesis.MakeGenesisDocFromAccounts(ChainName, nil, genesisTime, accounts,
-		map[string]*validator.Validator{
-			"genesis_validator": validator.FromAccount(accounts["user_0"], 1<<16),
-		})
+
+	validators := make(map[string]*validator.Validator)
+	for _, i := range vals {
+		name := fmt.Sprintf("user_%d", i)
+		validators[name] = validator.FromAccount(accounts[name], 1<<16)
+	}
+
+	return genesis.MakeGenesisDocFromAccounts(ChainName, nil, genesisTime, accounts, validators)
 }
 
 // Deterministic account generation helper. Pass number of accounts to make

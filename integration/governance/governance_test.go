@@ -5,7 +5,6 @@ package governance
 import (
 	"context"
 	"math/big"
-	"net"
 	"testing"
 	"time"
 
@@ -19,7 +18,6 @@ import (
 	"github.com/hyperledger/burrow/governance"
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/integration/rpctest"
-	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	"github.com/stretchr/testify/assert"
@@ -29,55 +27,29 @@ import (
 )
 
 func TestGovernance(t *testing.T) {
-	privateAccounts := integration.MakePrivateAccounts("accounts", 10) // make keys
-	genesisDoc := integration.TestGenesisDoc(privateAccounts)
-	kernels := make([]*core.Kernel, len(privateAccounts))
+	genesisAccounts := integration.MakePrivateAccounts("mysecret", 10) // make keys
+	genesisKernels := make([]*core.Kernel, len(genesisAccounts))
+	genesisDoc := integration.TestGenesisDoc(genesisAccounts, 0)
 	genesisDoc.Accounts[4].Permissions = permission.NewAccountPermissions(permission.Send | permission.Call)
+	var err error
 
-	for i, acc := range privateAccounts {
-		// FIXME: some combination of cleanup and shutdown seems to make tests fail on CI
-		//testConfig, cleanup := integration.NewTestConfig(genesisDoc)
-		testConfig, _ := integration.NewTestConfig(genesisDoc)
-		//defer cleanup()
-
-		logconf := logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
-			return sink.SetTransform(logconfig.FilterTransform(logconfig.IncludeWhenAllMatch,
-				"total_validator")).SetOutput(logconfig.StdoutOutput())
-		})
-
-		// Try and grab a free port - this is not foolproof since there is race between other concurrent tests after we close
-		// the listener and start the node
-		l, err := net.Listen("tcp", "localhost:0")
+	for i, acc := range genesisAccounts {
+		genesisKernels[i], err = createKernel(genesisDoc, acc, genesisAccounts...)
 		require.NoError(t, err)
-		host, port, err := net.SplitHostPort(l.Addr().String())
-		require.NoError(t, err)
-
-		testConfig.Tendermint.ListenHost = host
-		testConfig.Tendermint.ListenPort = port
-
-		kernels[i], err = integration.TestKernel(acc, privateAccounts, testConfig, logconf)
-		require.NoError(t, err)
-
-		err = l.Close()
-		require.NoError(t, err)
-
-		err = kernels[i].Boot()
-		require.NoError(t, err)
-
-		defer integration.Shutdown(kernels[i])
+		defer integration.Shutdown(genesisKernels[i])
 	}
 
 	time.Sleep(1 * time.Second)
-	for i := 0; i < len(kernels); i++ {
-		for j := i + 1; j < len(kernels); j++ {
-			connectKernels(kernels[i], kernels[j])
+	for i := 0; i < len(genesisKernels); i++ {
+		for j := i + 1; j < len(genesisKernels); j++ {
+			connectKernels(genesisKernels[i], genesisKernels[j])
 		}
 	}
 
 	t.Run("Group", func(t *testing.T) {
 		t.Run("AlterValidators", func(t *testing.T) {
-			inputAddress := privateAccounts[0].GetAddress()
-			grpcAddress := kernels[0].GRPCListenAddress().String()
+			inputAddress := genesisAccounts[0].GetAddress()
+			grpcAddress := genesisKernels[0].GRPCListenAddress().String()
 			tcli := rpctest.NewTransactClient(t, grpcAddress)
 			qcli := rpctest.NewQueryClient(t, grpcAddress)
 			ecli := rpctest.NewExecutionEventsClient(t, grpcAddress)
@@ -90,7 +62,7 @@ func TestGovernance(t *testing.T) {
 			changePower(vs, 8, 9931)
 
 			err := vs.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
-				_, err := govSync(tcli, governance.AlterPowerTx(inputAddress, id, power.Uint64()))
+				_, err := payloadSync(tcli, governance.AlterPowerTx(inputAddress, id, power.Uint64()))
 				return err
 			})
 			require.NoError(t, err)
@@ -101,7 +73,7 @@ func TestGovernance(t *testing.T) {
 			assertValidatorsEqual(t, vs, vsOut)
 
 			// Remove validator from chain
-			_, err = govSync(tcli, governance.AlterPowerTx(inputAddress, account(3), 0))
+			_, err = payloadSync(tcli, governance.AlterPowerTx(inputAddress, account(3), 0))
 			require.NoError(t, err)
 
 			// Mirror in our check set
@@ -112,8 +84,8 @@ func TestGovernance(t *testing.T) {
 			// Now check Tendermint
 			err = rpctest.WaitNBlocks(ecli, 6)
 			require.NoError(t, err)
-			height := int64(kernels[0].Blockchain.LastBlockHeight())
-			kernels[0].Node.ConfigureRPC()
+			height := int64(genesisKernels[0].Blockchain.LastBlockHeight())
+			genesisKernels[0].Node.ConfigureRPC()
 			tmVals, err := tmcore.Validators(&rpctypes.Context{}, &height)
 			require.NoError(t, err)
 			vsOut = validator.NewTrimSet()
@@ -127,15 +99,15 @@ func TestGovernance(t *testing.T) {
 		})
 
 		t.Run("WaitBlocks", func(t *testing.T) {
-			grpcAddress := kernels[0].GRPCListenAddress().String()
+			grpcAddress := genesisKernels[0].GRPCListenAddress().String()
 			ecli := rpctest.NewExecutionEventsClient(t, grpcAddress)
 			err := rpctest.WaitNBlocks(ecli, 2)
 			require.NoError(t, err)
 		})
 
 		t.Run("AlterValidatorsTooQuickly", func(t *testing.T) {
-			grpcAddress := kernels[0].GRPCListenAddress().String()
-			inputAddress := privateAccounts[0].GetAddress()
+			grpcAddress := genesisKernels[0].GRPCListenAddress().String()
+			inputAddress := genesisAccounts[0].GetAddress()
 			tcli := rpctest.NewTransactClient(t, grpcAddress)
 			qcli := rpctest.NewQueryClient(t, grpcAddress)
 
@@ -143,7 +115,7 @@ func TestGovernance(t *testing.T) {
 			acc1 := acm.GeneratePrivateAccountFromSecret("Foo1")
 			t.Logf("Changing power of new account %v to MaxFlow = %d that should succeed", acc1.GetAddress(), maxFlow)
 
-			_, err := govSync(tcli, governance.AlterPowerTx(inputAddress, acc1, maxFlow))
+			_, err := payloadSync(tcli, governance.AlterPowerTx(inputAddress, acc1, maxFlow))
 			require.NoError(t, err)
 
 			maxFlow = getMaxFlow(t, qcli)
@@ -151,28 +123,28 @@ func TestGovernance(t *testing.T) {
 			acc2 := acm.GeneratePrivateAccountFromSecret("Foo2")
 			t.Logf("Changing power of new account %v to MaxFlow + 1 = %d that should fail", acc2.GetAddress(), power)
 
-			_, err = govSync(tcli, governance.AlterPowerTx(inputAddress, acc2, power))
+			_, err = payloadSync(tcli, governance.AlterPowerTx(inputAddress, acc2, power))
 			require.Error(t, err)
 		})
 
 		t.Run("NoRootPermission", func(t *testing.T) {
-			grpcAddress := kernels[0].GRPCListenAddress().String()
+			grpcAddress := genesisKernels[0].GRPCListenAddress().String()
 			tcli := rpctest.NewTransactClient(t, grpcAddress)
 			// Account does not have Root permission
-			inputAddress := privateAccounts[4].GetAddress()
-			_, err := govSync(tcli, governance.AlterPowerTx(inputAddress, account(5), 3433))
+			inputAddress := genesisAccounts[4].GetAddress()
+			_, err := payloadSync(tcli, governance.AlterPowerTx(inputAddress, account(5), 3433))
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), errors.PermissionDenied{Address: inputAddress, Perm: permission.Root}.Error())
 		})
 
 		t.Run("AlterAmount", func(t *testing.T) {
-			inputAddress := privateAccounts[0].GetAddress()
-			grpcAddress := kernels[0].GRPCListenAddress().String()
+			inputAddress := genesisAccounts[0].GetAddress()
+			grpcAddress := genesisKernels[0].GRPCListenAddress().String()
 			tcli := rpctest.NewTransactClient(t, grpcAddress)
 			qcli := rpctest.NewQueryClient(t, grpcAddress)
 			var amount uint64 = 18889
 			acc := account(5)
-			_, err := govSync(tcli, governance.AlterBalanceTx(inputAddress, acc, balance.New().Native(amount)))
+			_, err := payloadSync(tcli, governance.AlterBalanceTx(inputAddress, acc, balance.New().Native(amount)))
 			require.NoError(t, err)
 			ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: acc.GetAddress()})
 			require.NoError(t, err)
@@ -182,12 +154,12 @@ func TestGovernance(t *testing.T) {
 		})
 
 		t.Run("AlterPermissions", func(t *testing.T) {
-			inputAddress := privateAccounts[0].GetAddress()
-			grpcAddress := kernels[0].GRPCListenAddress().String()
+			inputAddress := genesisAccounts[0].GetAddress()
+			grpcAddress := genesisKernels[0].GRPCListenAddress().String()
 			tcli := rpctest.NewTransactClient(t, grpcAddress)
 			qcli := rpctest.NewQueryClient(t, grpcAddress)
 			acc := account(5)
-			_, err := govSync(tcli, governance.AlterPermissionsTx(inputAddress, acc, permission.Send))
+			_, err := payloadSync(tcli, governance.AlterPermissionsTx(inputAddress, acc, permission.Send))
 			require.NoError(t, err)
 			ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: acc.GetAddress()})
 			require.NoError(t, err)
@@ -200,13 +172,14 @@ func TestGovernance(t *testing.T) {
 		})
 
 		t.Run("CreateAccount", func(t *testing.T) {
-			inputAddress := privateAccounts[0].GetAddress()
-			grpcAddress := kernels[0].GRPCListenAddress().String()
+			inputAddress := genesisAccounts[0].GetAddress()
+			grpcAddress := genesisKernels[0].GRPCListenAddress().String()
 			tcli := rpctest.NewTransactClient(t, grpcAddress)
 			qcli := rpctest.NewQueryClient(t, grpcAddress)
 			var amount uint64 = 18889
 			acc := acm.GeneratePrivateAccountFromSecret("we almost certainly don't exist")
-			_, err := govSync(tcli, governance.AlterBalanceTx(inputAddress, acc, balance.New().Native(amount)))
+			govTx := governance.AlterBalanceTx(inputAddress, acc, balance.New().Native(amount))
+			_, err := payloadSync(tcli, govTx)
 			require.NoError(t, err)
 			ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: acc.GetAddress()})
 			require.NoError(t, err)
@@ -215,14 +188,14 @@ func TestGovernance(t *testing.T) {
 
 		t.Run("ChangePowerByAddress", func(t *testing.T) {
 			// Should use the key client to look up public key
-			inputAddress := privateAccounts[0].GetAddress()
-			grpcAddress := kernels[0].GRPCListenAddress().String()
+			inputAddress := genesisAccounts[0].GetAddress()
+			grpcAddress := genesisKernels[0].GRPCListenAddress().String()
 			tcli := rpctest.NewTransactClient(t, grpcAddress)
 
 			acc := account(2)
 			address := acc.GetAddress()
 			power := uint64(2445)
-			_, err := govSync(tcli, governance.UpdateAccountTx(inputAddress, &spec.TemplateAccount{
+			_, err := payloadSync(tcli, governance.UpdateAccountTx(inputAddress, &spec.TemplateAccount{
 				Address: &address,
 				Amounts: balance.New().Power(power),
 			}))
@@ -231,10 +204,10 @@ func TestGovernance(t *testing.T) {
 		})
 
 		t.Run("InvalidSequenceNumber", func(t *testing.T) {
-			inputAddress := privateAccounts[0].GetAddress()
-			tcli1 := rpctest.NewTransactClient(t, kernels[0].GRPCListenAddress().String())
-			tcli2 := rpctest.NewTransactClient(t, kernels[4].GRPCListenAddress().String())
-			qcli := rpctest.NewQueryClient(t, kernels[0].GRPCListenAddress().String())
+			inputAddress := genesisAccounts[0].GetAddress()
+			tcli1 := rpctest.NewTransactClient(t, genesisKernels[0].GRPCListenAddress().String())
+			tcli2 := rpctest.NewTransactClient(t, genesisKernels[4].GRPCListenAddress().String())
+			qcli := rpctest.NewQueryClient(t, genesisKernels[0].GRPCListenAddress().String())
 
 			acc := account(2)
 			address := acc.GetAddress()
@@ -247,12 +220,12 @@ func TestGovernance(t *testing.T) {
 			})
 
 			setSequence(t, qcli, tx)
-			_, err := localSignAndBroadcastSync(t, tcli1, genesisDoc.ChainID(), privateAccounts[0], tx)
+			_, err := localSignAndBroadcastSync(t, tcli1, genesisDoc.ChainID(), genesisAccounts[0], tx)
 			require.NoError(t, err)
 
 			// Make it a different Tx hash so it can enter cache but keep sequence number
 			tx.AccountUpdates[0].Amounts = balance.New().Power(power).Native(1)
-			_, err = localSignAndBroadcastSync(t, tcli2, genesisDoc.ChainID(), privateAccounts[0], tx)
+			_, err = localSignAndBroadcastSync(t, tcli2, genesisDoc.ChainID(), genesisAccounts[0], tx)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "invalid sequence")
 		})
