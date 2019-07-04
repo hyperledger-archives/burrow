@@ -91,7 +91,9 @@ func NoConsensusLauncher(kern *Kernel) process.Launcher {
 		Launch: func() (process.Process, error) {
 			accountState := kern.State
 			nameRegState := kern.State
-			kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, kern.State, nil, kern.Logger)
+			nodeRegState := kern.State
+			validatorSet := kern.State
+			kern.Service = rpc.NewService(accountState, nameRegState, nodeRegState, kern.Blockchain, validatorSet, nil, kern.Logger)
 			// TimeoutFactor scales in units of seconds
 			blockDuration := time.Duration(kern.timeoutFactor * float64(time.Second))
 			//proc := abci.NewProcess(kern.checker, kern.committer, kern.Blockchain, kern.txCodec, blockDuration, kern.Panic)
@@ -119,7 +121,9 @@ func TendermintLauncher(kern *Kernel) process.Launcher {
 
 			accountState := kern.State
 			nameRegState := kern.State
-			kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, kern.State, nodeView, kern.Logger)
+			nodeRegState := kern.State
+			validatorSet := kern.State
+			kern.Service = rpc.NewService(accountState, nameRegState, nodeRegState, kern.Blockchain, validatorSet, nodeView, kern.Logger)
 
 			kern.Blockchain.SetBlockStore(bcm.NewBlockStore(nodeView.BlockStore()))
 			// Provide execution accounts against checker state so that we can assign sequence numbers
@@ -277,8 +281,9 @@ func GRPCLauncher(kern *Kernel, conf *rpc.ServerConfig, keyConfig *keys.KeysConf
 			}
 
 			nameRegState := kern.State
+			nodeRegState := kern.State
 			proposalRegState := kern.State
-			rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(kern.State, nameRegState, proposalRegState,
+			rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(kern.State, nameRegState, nodeRegState, proposalRegState,
 				kern.Blockchain, kern.State, nodeView, kern.Logger))
 
 			txCodec := txs.NewProtobufCodec()

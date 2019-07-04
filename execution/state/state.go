@@ -59,6 +59,7 @@ type KeyFormatStore struct {
 	Validator *storage.MustKeyFormat
 	Event     *storage.MustKeyFormat
 	TxHash    *storage.MustKeyFormat
+	Registry  *storage.MustKeyFormat
 }
 
 var keys = KeyFormatStore{
@@ -76,6 +77,8 @@ var keys = KeyFormatStore{
 	Event: storage.NewMustKeyFormat("e", uint64Length),
 	// TxHash -> TxHeight, TxIndex
 	TxHash: storage.NewMustKeyFormat("th", txs.HashLength),
+	// Validator -> RegisteredNode
+	Registry: storage.NewMustKeyFormat("r", crypto.AddressLength),
 }
 
 var Prefixes [][]byte

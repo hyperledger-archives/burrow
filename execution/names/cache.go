@@ -37,8 +37,7 @@ type nameInfo struct {
 var _ Writer = &Cache{}
 
 // Returns a Cache that wraps an underlying NameRegCacheGetter to use on a cache miss, can write to an
-// output Writer via Sync.
-// Not goroutine safe, use syncStateCache if you need concurrent access
+// output Writer via Sync. Not goroutine safe, use syncStateCache if you need concurrent access
 func NewCache(backend Reader) *Cache {
 	return &Cache{
 		backend: backend,

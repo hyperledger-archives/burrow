@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/execution/proposal"
+	"github.com/hyperledger/burrow/execution/registry"
 	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
@@ -23,6 +24,7 @@ import (
 type queryServer struct {
 	accounts    acmstate.IterableStatsReader
 	nameReg     names.IterableReader
+	nodeReg     registry.IterableReader
 	proposalReg proposal.IterableReader
 	blockchain  bcm.BlockchainInfo
 	validators  validator.History
@@ -32,11 +34,12 @@ type queryServer struct {
 
 var _ QueryServer = &queryServer{}
 
-func NewQueryServer(state acmstate.IterableStatsReader, nameReg names.IterableReader, proposalReg proposal.IterableReader,
+func NewQueryServer(state acmstate.IterableStatsReader, nameReg names.IterableReader, nodeReg registry.IterableReader, proposalReg proposal.IterableReader,
 	blockchain bcm.BlockchainInfo, validators validator.History, nodeView *tendermint.NodeView, logger *logging.Logger) *queryServer {
 	return &queryServer{
 		accounts:    state,
 		nameReg:     nameReg,
+		nodeReg:     nodeReg,
 		proposalReg: proposalReg,
 		blockchain:  blockchain,
 		validators:  validators,
@@ -145,7 +148,7 @@ func (qs *queryServer) GetValidatorSetHistory(ctx context.Context, param *GetVal
 	return history, nil
 }
 
-// proposals
+// Proposals
 
 func (qs *queryServer) GetProposal(ctx context.Context, param *GetProposalParam) (proposal *payload.Ballot, err error) {
 	proposal, err = qs.proposalReg.GetProposal(param.Hash)

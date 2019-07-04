@@ -20,13 +20,9 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/hyperledger/burrow/acm/validator"
-	"github.com/hyperledger/burrow/genesis"
-
-	"github.com/hyperledger/burrow/execution/state"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
+	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
@@ -36,6 +32,9 @@ import (
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/execution/proposal"
+	"github.com/hyperledger/burrow/execution/registry"
+	"github.com/hyperledger/burrow/execution/state"
+	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/permission"
@@ -57,6 +56,7 @@ func (f ExecutorFunc) Execute(txEnv *txs.Envelope) (*exec.TxExecution, error) {
 type ExecutorState interface {
 	Update(updater func(ws state.Updatable) error) (hash []byte, version int64, err error)
 	names.Reader
+	registry.Reader
 	proposal.Reader
 	acmstate.IterableReader
 	validator.IterableReader
@@ -87,6 +87,7 @@ type executor struct {
 	state            ExecutorState
 	stateCache       *acmstate.Cache
 	nameRegCache     *names.Cache
+	netRegCache      *registry.Cache
 	proposalRegCache *proposal.Cache
 	validatorCache   *validator.Cache
 	emitter          *event.Emitter
@@ -134,6 +135,7 @@ func newExecutor(name string, runCall bool, params Params, backend ExecutorState
 		state:            backend,
 		stateCache:       acmstate.NewCache(backend, acmstate.Named(name)),
 		nameRegCache:     names.NewCache(backend),
+		netRegCache:      registry.NewCache(backend),
 		proposalRegCache: proposal.NewCache(backend),
 		validatorCache:   validator.NewCache(backend),
 		emitter:          emitter,
@@ -171,6 +173,12 @@ func newExecutor(name string, runCall bool, params Params, backend ExecutorState
 		payload.TypeGovernance: &contexts.GovernanceContext{
 			ValidatorSet: exe.validatorCache,
 			StateWriter:  exe.stateCache,
+			Logger:       exe.logger,
+		},
+		payload.TypeIdentify: &contexts.IdentifyContext{
+			NodeWriter:   exe.netRegCache,
+			StateReader:  exe.stateCache,
+			ValidatorSet: exe.validatorCache,
 			Logger:       exe.logger,
 		},
 	}

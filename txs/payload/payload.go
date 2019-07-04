@@ -40,6 +40,7 @@ const (
 	TypePermissions = Type(0x21)
 	TypeGovernance  = Type(0x22)
 	TypeProposal    = Type(0x23)
+	TypeIdentify    = Type(0x24)
 )
 
 type Payload interface {

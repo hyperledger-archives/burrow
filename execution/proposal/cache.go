@@ -24,7 +24,7 @@ import (
 	"github.com/hyperledger/burrow/txs/payload"
 )
 
-// The Cache helps prevent unnecessary IAVLTree updates and garbage generation.
+// Cache helps prevent unnecessary IAVLTree updates and garbage generation.
 type Cache struct {
 	sync.RWMutex
 	backend   Reader
@@ -63,8 +63,7 @@ func (p ProposalHashArray) Less(i, j int) bool {
 
 var _ Writer = &Cache{}
 
-// Returns a Cache that wraps an underlying NameRegCacheGetter to use on a cache miss, can write to an
-// output Writer via Sync.
+// Returns a Cache, can write to an output Writer via Sync.
 // Not goroutine safe, use syncStateCache if you need concurrent access
 func NewCache(backend Reader) *Cache {
 	return &Cache{

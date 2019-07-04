@@ -28,6 +28,7 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/names"
+	"github.com/hyperledger/burrow/execution/registry"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/permission"
@@ -47,6 +48,7 @@ const MaxBlockLookback = 1000
 type Service struct {
 	state      acmstate.IterableStatsReader
 	nameReg    names.IterableReader
+	nodeReg    registry.IterableReader
 	blockchain bcm.BlockchainInfo
 	validators validator.History
 	nodeView   *tendermint.NodeView
@@ -55,12 +57,13 @@ type Service struct {
 
 // Service provides an internal query and information service with serialisable return types on which can accomodate
 // a number of transport front ends
-func NewService(state acmstate.IterableStatsReader, nameReg names.IterableReader, blockchain bcm.BlockchainInfo,
+func NewService(state acmstate.IterableStatsReader, nameReg names.IterableReader, nodeReg registry.IterableReader, blockchain bcm.BlockchainInfo,
 	validators validator.History, nodeView *tendermint.NodeView, logger *logging.Logger) *Service {
 
 	return &Service{
 		state:      state,
 		nameReg:    nameReg,
+		nodeReg:    nodeReg,
 		blockchain: blockchain,
 		validators: validators,
 		nodeView:   nodeView,
@@ -145,6 +148,22 @@ func (s *Service) Network() (*ResultNetwork, error) {
 			Peers:     peers,
 		},
 	}, nil
+}
+
+func (s *Service) NetworkRegistry() ([]*ResultNetworkRegistry, error) {
+	if s.nodeView == nil {
+		return nil, fmt.Errorf("cannot return network registry info because NodeView not mounted")
+	}
+
+	rnr := make([]*ResultNetworkRegistry, 0)
+	err := s.nodeReg.IterateNodes(func(val crypto.Address, rn *registry.RegisteredNode) error {
+		rnr = append(rnr, &ResultNetworkRegistry{
+			Address:        val,
+			RegisteredNode: *rn,
+		})
+		return nil
+	})
+	return rnr, err
 }
 
 func (s *Service) Genesis() (*ResultGenesis, error) {
