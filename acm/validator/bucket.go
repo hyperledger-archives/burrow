@@ -121,9 +121,9 @@ func (vc *Bucket) Equal(vwOther *Bucket) error {
 }
 
 func checkPower(power *big.Int) error {
-	if power.Sign() == -1 {
-		return fmt.Errorf("cannot set negative validator power: %v", power)
-	}
+	// if power.Sign() == -1 {
+	// 	return fmt.Errorf("cannot set negative validator power: %v", power)
+	// }
 	if !power.IsInt64() {
 		return fmt.Errorf("for tendermint compatibility validator power must fit within an int but %v "+
 			"does not", power)

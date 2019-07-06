@@ -8,8 +8,8 @@ import (
 
 func NewUnbondTx(address crypto.Address, height uint64) *UnbondTx {
 	return &UnbondTx{
-		Input:  &TxInput{},
-		Output: &TxOutput{},
+		Input:     &TxInput{},
+		PublicKey: &crypto.PublicKey{},
 	}
 }
 
@@ -22,7 +22,7 @@ func (tx *UnbondTx) GetInputs() []*TxInput {
 }
 
 func (tx *UnbondTx) String() string {
-	return fmt.Sprintf("UnbondTx{%v -> %v}", tx.Input.Address, tx.Output.Address)
+	return fmt.Sprintf("UnbondTx{%v}", tx.Input.Address)
 }
 
 func (tx *UnbondTx) Any() *Any {

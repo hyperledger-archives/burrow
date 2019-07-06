@@ -179,7 +179,7 @@ type Bond struct {
 	// (Optional, if account job or global account set) address of the account from which to bond (the
 	// public key for the account must be available to burrow keys)
 	Source string `mapstructure:"source" json:"source" yaml:"source" toml:"source"`
-	// (Required) the identity of the bonding validator
+	// (Optional, if key client enabled) the public key of the bonding validator
 	Target string `mapstructure:"target" json:"target" yaml:"target" toml:"target"`
 	// (Required) the Tendermint validator power to claim
 	Power string `mapstructure:"power" json:"power" yaml:"power" toml:"power"`
@@ -190,7 +190,6 @@ type Bond struct {
 
 func (job *Bond) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Target, validation.Required),
 		validation.Field(&job.Power, validation.Required),
 		validation.Field(&job.Sequence, rule.Uint64OrPlaceholder),
 	)
@@ -200,8 +199,10 @@ type Unbond struct {
 	// (Optional, if account job or global account set) address of the validator to unbond (the
 	// public key for the validator must be available to burrow keys)
 	Source string `mapstructure:"source" json:"source" yaml:"source" toml:"source"`
-	// (Required) the identity of the unbonding validator
+	// (Optional, if key client enabled) the public key of the unbonding validator
 	Target string `mapstructure:"target" json:"target" yaml:"target" toml:"target"`
+	// (Required) the Tendermint validator power to unclaim
+	Power string `mapstructure:"power" json:"power" yaml:"power" toml:"power"`
 	// (Optional, advanced only) sequence to use when burrow keys signs the transaction (do not use unless you
 	// know what you're doing)
 	Sequence string `mapstructure:"sequence" json:"sequence" yaml:"sequence" toml:"sequence"`
@@ -209,7 +210,7 @@ type Unbond struct {
 
 func (job *Unbond) Validate() error {
 	return validation.ValidateStruct(job,
-		validation.Field(&job.Target, validation.Required),
+		validation.Field(&job.Power, validation.Required),
 		validation.Field(&job.Sequence, rule.Uint64OrPlaceholder),
 	)
 }

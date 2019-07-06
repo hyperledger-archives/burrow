@@ -5,13 +5,12 @@ import (
 
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/genesis/spec"
 )
 
 func NewBondTx(pubkey crypto.PublicKey) (*BondTx, error) {
 	return &BondTx{
 		Input:     &TxInput{},
-		Validator: &spec.TemplateAccount{},
+		PublicKey: &crypto.PublicKey{},
 	}, nil
 }
 
@@ -24,7 +23,7 @@ func (tx *BondTx) GetInputs() []*TxInput {
 }
 
 func (tx *BondTx) String() string {
-	return fmt.Sprintf("BondTx{%v -> %v}", tx.Input, tx.Validator)
+	return fmt.Sprintf("BondTx{%v}", tx.Input)
 }
 
 func (tx *BondTx) AddInput(st acmstate.AccountGetter, pubkey crypto.PublicKey, amt uint64) error {

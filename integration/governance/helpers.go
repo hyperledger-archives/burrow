@@ -1,3 +1,5 @@
+// +build integration
+
 package governance
 
 import (
@@ -13,7 +15,6 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/genesis"
-	"github.com/hyperledger/burrow/genesis/spec"
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/integration/rpctest"
 	"github.com/hyperledger/burrow/logging/logconfig"
@@ -64,26 +65,23 @@ func createKernel(genesisDoc *genesis.GenesisDoc, account *acm.PrivateAccount,
 	return kernel, kernel.Boot()
 }
 
-func createBondTx(address crypto.Address, amount uint64, pubKey crypto.PublicKey) *payload.BondTx {
+func createBondTx(address crypto.Address, pubKey crypto.PublicKey, amount uint64) *payload.BondTx {
 	return &payload.BondTx{
 		Input: &payload.TxInput{
 			Address: address,
 			Amount:  amount,
 		},
-		Validator: &spec.TemplateAccount{
-			PublicKey: &pubKey,
-		},
+		PublicKey: &pubKey,
 	}
 }
 
-func createUnbondTx(validator, account crypto.Address) *payload.UnbondTx {
+func createUnbondTx(address crypto.Address, pubKey crypto.PublicKey, amount uint64) *payload.UnbondTx {
 	return &payload.UnbondTx{
 		Input: &payload.TxInput{
-			Address: validator,
+			Address: address,
+			Amount:  amount,
 		},
-		Output: &payload.TxOutput{
-			Address: account,
-		},
+		PublicKey: &pubKey,
 	}
 }
 

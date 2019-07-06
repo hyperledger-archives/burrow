@@ -72,14 +72,12 @@ func Tx(output Output) func(cmd *cli.Cmd) {
 
 			cmd.Command("bond", "bond a new validator", func(cmd *cli.Cmd) {
 				sourceOpt := cmd.StringOpt("source", "", "Account with bonding perm, if not set config is used")
-				targetOpt := cmd.StringOpt("target", "", "Validator account to bond, created if doesn't exist")
 				powerOpt := cmd.StringOpt("power", "", "Amount of value to bond, required")
-				cmd.Spec += "[--source=<address>] [--target=<publicKey>] [--power=<value>]"
+				cmd.Spec += "[--source=<address>] [--power=<value>]"
 
 				cmd.Action = func() {
 					bond := &def.Bond{
 						Source: jobs.FirstOf(*sourceOpt, address),
-						Target: jobs.FirstOf(*targetOpt, address),
 						Power:  *powerOpt,
 					}
 
@@ -100,13 +98,13 @@ func Tx(output Output) func(cmd *cli.Cmd) {
 
 			cmd.Command("unbond", "unbond an existing validator", func(cmd *cli.Cmd) {
 				sourceOpt := cmd.StringOpt("source", "", "Validator to unbond, if not set config is used")
-				targetOpt := cmd.StringOpt("target", "", "Account to receive tokens, created if doesn't exist")
-				cmd.Spec += "[--source=<address>] [--target=<address>]"
+				powerOpt := cmd.StringOpt("power", "", "Amount of value to unbond, required")
+				cmd.Spec += "[--source=<address>] [--power=<value>]"
 
 				cmd.Action = func() {
 					unbond := &def.Unbond{
 						Source: jobs.FirstOf(*sourceOpt, address),
-						Target: jobs.FirstOf(*targetOpt, address),
+						Power:  *powerOpt,
 					}
 
 					if err := unbond.Validate(); err != nil {

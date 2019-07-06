@@ -50,7 +50,7 @@ func (ctx *GovernanceContext) Execute(txe *exec.TxExecution, p payload.Payload) 
 	}
 
 	for _, update := range ctx.tx.AccountUpdates {
-		err := GetIdentity(ctx.StateWriter, update)
+		err := VerifyIdentity(ctx.StateWriter, update)
 		if err != nil {
 			return fmt.Errorf("GovTx: %v", err)
 		}
@@ -115,7 +115,7 @@ func (ctx *GovernanceContext) UpdateAccount(account *acm.Account, update *spec.T
 	return
 }
 
-func GetIdentity(sw acmstate.ReaderWriter, account *spec.TemplateAccount) (err error) {
+func VerifyIdentity(sw acmstate.ReaderWriter, account *spec.TemplateAccount) (err error) {
 	if account.Address == nil && account.PublicKey == nil {
 		// We do not want to generate a key
 		return fmt.Errorf("could not execute Tx since account template %v contains neither "+

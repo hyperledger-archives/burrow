@@ -24,7 +24,6 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event/query"
-	"github.com/hyperledger/burrow/genesis/spec"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
@@ -120,22 +119,21 @@ func TestBondTxSignable(t *testing.T) {
 			Amount:   12345,
 			Sequence: 67890,
 		},
-		Validator: &spec.TemplateAccount{
-			PublicKey: &val,
-		},
+		PublicKey: &val,
 	}
 	testTxMarshalJSON(t, bondTx)
 	testTxSignVerify(t, bondTx)
 }
 
 func TestUnbondTxSignable(t *testing.T) {
+	val := makePrivateAccount("output1").GetPublicKey()
 	unbondTx := &payload.UnbondTx{
 		Input: &payload.TxInput{
-			Address: makePrivateAccount("output1").GetAddress(),
+			Address:  makePrivateAccount("input1").GetAddress(),
+			Amount:   12345,
+			Sequence: 67890,
 		},
-		Output: &payload.TxOutput{
-			Address: makePrivateAccount("input1").GetAddress(),
-		},
+		PublicKey: &val,
 	}
 	testTxMarshalJSON(t, unbondTx)
 	testTxSignVerify(t, unbondTx)

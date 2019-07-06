@@ -1,3 +1,5 @@
+// +build integration
+
 package governance
 
 import (
@@ -15,11 +17,11 @@ import (
 )
 
 func TestBonding(t *testing.T) {
-	genesisAccounts := integration.MakePrivateAccounts("accounts", 4)
+	genesisAccounts := integration.MakePrivateAccounts("accounts", 6)
 	genesisKernels := make([]*core.Kernel, len(genesisAccounts))
-	genesisDoc := integration.TestGenesisDoc(genesisAccounts, 0, 1)
+	genesisDoc := integration.TestGenesisDoc(genesisAccounts, 0, 1, 2, 3)
 	genesisDoc.GlobalPermissions = permission.NewAccountPermissions(permission.Input)
-	genesisDoc.Accounts[3].Permissions = permission.ZeroAccountPermissions.Clone()
+	genesisDoc.Accounts[4].Permissions = permission.ZeroAccountPermissions.Clone()
 	var err error
 
 	// we need at least one validator to start
@@ -33,71 +35,56 @@ func TestBonding(t *testing.T) {
 
 	t.Run("NoPermission", func(t *testing.T) {
 		val := acm.GeneratePrivateAccountFromSecret("validator_1")
-		localAddress := genesisKernels[3].GRPCListenAddress().String()
-		inputAccount := genesisAccounts[3].GetAddress()
+		localAddress := genesisKernels[4].GRPCListenAddress().String()
+		inputAccount := genesisAccounts[4].GetAddress()
 		tcli := rpctest.NewTransactClient(t, localAddress)
-		bondTx := createBondTx(inputAccount, uint64(1<<2), val.GetPublicKey())
+		bondTx := createBondTx(inputAccount, val.GetPublicKey(), uint64(1<<2))
 		_, err = payloadSync(tcli, bondTx)
 		require.Error(t, err)
 	})
 
 	t.Run("BondFromNonVal", func(t *testing.T) {
 		// lets do the bond tx from a non-validator node
-		localAddress := genesisKernels[2].GRPCListenAddress().String()
-		inputAccount := genesisAccounts[2].GetAddress()
+		valAccount := genesisAccounts[5]
+		valKernel := genesisKernels[5]
+
+		localAddress := valKernel.GRPCListenAddress().String()
+		inputAccount := valAccount.GetAddress()
 		tcli := rpctest.NewTransactClient(t, localAddress)
 		qcli := rpctest.NewQueryClient(t, localAddress)
 
-		// make a new validator to grant power to
-		val := acm.GeneratePrivateAccountFromSecret("validator_2")
 		accBefore := getAccount(t, qcli, inputAccount)
 		var power uint64 = 1 << 16
 
-		bondTx := createBondTx(inputAccount, power, val.GetPublicKey())
+		bondTx := createBondTx(inputAccount, valAccount.GetPublicKey(), power)
 		_, err = payloadSync(tcli, bondTx)
 		require.NoError(t, err)
 		accAfter := getAccount(t, qcli, inputAccount)
 		// ensure power is subtracted from original account balance
 		require.Equal(t, accBefore.GetBalance()-power, accAfter.GetBalance())
 
-		valAfter := getAccount(t, qcli, val.GetAddress())
-		// validator must have associated account
-		// typically without balance if just created
-		require.NotEmpty(t, valAfter.GetAddress())
-		require.Equal(t, uint64(0), valAfter.GetBalance())
-
 		// make sure our new validator exists in the set
 		vsOut := getValidators(t, qcli)
-		require.Contains(t, vsOut, val.GetAddress())
-		require.Equal(t, vsOut[val.GetAddress()].GetPower(), power)
-
-		// start the new validator
-		valKernel, err := createKernel(genesisDoc, val, append(genesisAccounts, val)...)
-		require.NoError(t, err)
-		connectKernels(genesisKernels[0], valKernel)
+		require.Contains(t, vsOut, valAccount.GetAddress())
+		require.Equal(t, vsOut[valAccount.GetAddress()].GetPower(), power)
 
 		// wait for new validator to see themself in set
 		waitFor(3, valKernel.Blockchain)
-		grpcBondedVal := valKernel.GRPCListenAddress().String()
-		qcli = rpctest.NewQueryClient(t, grpcBondedVal)
 		vsOut = getValidators(t, qcli)
-		require.Contains(t, vsOut, val.GetAddress())
-		require.Equal(t, vsOut[val.GetAddress()].GetPower(), power)
+		require.Contains(t, vsOut, valAccount.GetAddress())
+		require.Equal(t, vsOut[valAccount.GetAddress()].GetPower(), power)
 
 		// wait for validator to propose a block
 		waitFor(7, valKernel.Blockchain)
-		checkProposed(t, genesisKernels[0], val.GetPublicKey().GetAddress().Bytes())
+		checkProposed(t, genesisKernels[0], valAccount.GetPublicKey().GetAddress().Bytes())
 
-		unbondTx := createUnbondTx(val.GetAddress(), inputAccount)
-		tcli = rpctest.NewTransactClient(t, grpcBondedVal)
+		unbondTx := createUnbondTx(inputAccount, valAccount.GetPublicKey(), power)
 		_, err = payloadSync(tcli, unbondTx)
 		require.NoError(t, err)
 
-		waitFor(2, genesisKernels[0].Blockchain)
-		tcli = rpctest.NewTransactClient(t, localAddress)
-		qcli = rpctest.NewQueryClient(t, localAddress)
+		waitFor(2, valKernel.Blockchain)
 		vsOut = getValidators(t, qcli)
-		require.NotContains(t, vsOut, val.GetAddress())
+		require.NotContains(t, vsOut, valAccount.GetAddress())
 		accAfter = getAccount(t, qcli, inputAccount)
 		require.Equal(t, accBefore.GetBalance(), accAfter.GetBalance())
 	})

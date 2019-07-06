@@ -77,7 +77,7 @@ func (vs *Set) MaxFlow() *big.Int {
 
 // Returns the flow that would be induced by a validator power change
 func (vs *Set) Flow(id crypto.PublicKey, power *big.Int) *big.Int {
-	return new(big.Int).Sub(power, vs.GetPower(id.GetAddress()))
+	return new(big.Int).Sub(new(big.Int).Abs(power), vs.GetPower(id.GetAddress()))
 }
 
 // Returns the power of id but only if it is set
