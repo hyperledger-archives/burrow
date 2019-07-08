@@ -2,20 +2,12 @@ package dump
 
 import "io"
 
-// Implements both Sender and Receiver
+// Implements both Sink and Source
 type Pipe chan msg
 
 type msg struct {
 	dump *Dump
 	err  error
-}
-
-type Sender interface {
-	Send(*Dump) error
-}
-
-type Receiver interface {
-	Recv() (*Dump, error)
 }
 
 func (p Pipe) Recv() (*Dump, error) {

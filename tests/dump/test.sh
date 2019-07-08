@@ -46,8 +46,8 @@ $burrow_bin deploy -o '' -a Validator_0 --dir $burrow_dump deploy.yaml
 title="Dumping chain..."
 echo -e "${title//?/-}\n${title}\n${title//?/-}\n"
 
-$burrow_bin dump remote dump.bin
-$burrow_bin dump remote -j dump.json
+$burrow_bin dump remote -b dump.bin
+$burrow_bin dump remote dump.json
 height=$(head -1  dump.json | jq .Height)
 
 kill $burrow_pid
@@ -70,7 +70,7 @@ sleep 13
 title="Dumping restored chain for comparison..."
 echo -e "\n${title//?/-}\n${title}\n${title//?/-}\n"
 
-$burrow_bin dump remote -j --height $height dump-after-restore.json
+$burrow_bin dump remote --height $height dump-after-restore.json
 
 kill $burrow_pid
 

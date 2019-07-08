@@ -15,7 +15,6 @@ import (
 
 const DefaultAmount uint64 = 1000000
 const DefaultPower uint64 = 10000
-const DefaultProposalThreshold uint64 = 3
 
 // A GenesisSpec is schematic representation of a genesis state, that is it is a template
 // for a GenesisDoc excluding that which needs to be instantiated at the point of genesis
@@ -62,7 +61,7 @@ func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient) (*genesis.GenesisDoc
 	}
 
 	if gs.Params.ProposalThreshold != 0 {
-		genesisDoc.Params.ProposalThreshold = DefaultProposalThreshold
+		genesisDoc.Params.ProposalThreshold = genesis.DefaultProposalThreshold
 	}
 
 	if len(gs.GlobalPermissions) == 0 {

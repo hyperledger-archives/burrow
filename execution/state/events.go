@@ -46,17 +46,19 @@ func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
 	return nil
 }
 
-func (s *ReadState) IterateStreamEvents(start, end *uint64, consumer func(*exec.StreamEvent) error) error {
+// Iterate SteamEvents over the closed interval [startHeight, endHeight] - i.e. startHeight and endHeight inclusive
+func (s *ReadState) IterateStreamEvents(startHeight, endHeight *uint64, consumer func(*exec.StreamEvent) error) error {
 	tree, err := s.Forest.Reader(keys.Event.Prefix())
 	if err != nil {
 		return err
 	}
 	var startKey, endKey []byte
-	if start != nil {
-		startKey = keys.Event.KeyNoPrefix(*start)
+	if startHeight != nil {
+		startKey = keys.Event.KeyNoPrefix(*startHeight)
 	}
-	if end != nil {
-		endKey = keys.Event.KeyNoPrefix(*end)
+	if endHeight != nil {
+		// Convert to inclusive end bounds since this generally makes more sense for block height
+		endKey = keys.Event.KeyNoPrefix(*endHeight + 1)
 	}
 	return tree.Iterate(startKey, endKey, true, func(_, value []byte) error {
 		buf := bytes.NewBuffer(value)
@@ -82,9 +84,7 @@ func (s *ReadState) IterateStreamEvents(start, end *uint64, consumer func(*exec.
 func (s *ReadState) TxsAtHeight(height uint64) ([]*exec.TxExecution, error) {
 	var stack exec.TxStack
 	var txExecutions []*exec.TxExecution
-	start := height
-	end := height + 1
-	err := s.IterateStreamEvents(&start, &end,
+	err := s.IterateStreamEvents(&height, &height,
 		func(ev *exec.StreamEvent) error {
 			// Keep trying to consume TxExecutions at from events at this height
 			txe := stack.Consume(ev)

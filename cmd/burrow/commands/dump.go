@@ -16,21 +16,21 @@ import (
 )
 
 type dumpOptions struct {
-	height   *int
-	filename *string
-	useJSON  *bool
+	height            *int
+	filename          *string
+	useBinaryEncoding *bool
 }
 
 func addDumpOptions(cmd *cli.Cmd, specOptions ...string) *dumpOptions {
-	cmd.Spec += "[--height=<state height to dump at>] [--json]"
+	cmd.Spec += "[--height=<state height to dump at>] [--binary]"
 	for _, spec := range specOptions {
 		cmd.Spec += " " + spec
 	}
 	cmd.Spec += " FILE"
 	return &dumpOptions{
-		height:   cmd.IntOpt("h height", 0, "Block height to dump to, defaults to latest block height"),
-		useJSON:  cmd.BoolOpt("j json", false, "Output in json"),
-		filename: cmd.StringArg("FILE", "", "Save dump here"),
+		height:            cmd.IntOpt("h height", 0, "Block height to dump to, defaults to latest block height"),
+		useBinaryEncoding: cmd.BoolOpt("b binary", false, "Output in binary encoding (default is JSON)"),
+		filename:          cmd.StringArg("FILE", "", "Save dump here"),
 	}
 }
 
@@ -66,10 +66,10 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("could not make logger: %v", err)
 				}
 
-				receiver := dump.NewDumper(kern.State, kern.Blockchain, logger).
-					Pipe(0, uint64(*dumpOpts.height), dump.All)
+				source := dump.NewDumper(kern.State, kern.Blockchain).WithLogger(logger).
+					Source(0, uint64(*dumpOpts.height), dump.All)
 
-				err = dumpToFile(receiver, *dumpOpts.filename, *dumpOpts.useJSON)
+				err = dumpToFile(*dumpOpts.filename, source, *dumpOpts.useBinaryEncoding)
 				if err != nil {
 					output.Fatalf("could not dump to file %s': %v", *dumpOpts.filename, err)
 				}
@@ -117,7 +117,7 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("failed to retrieve dump: %v", err)
 				}
 
-				err = dumpToFile(receiver, *dumpOpts.filename, *dumpOpts.useJSON)
+				err = dumpToFile(*dumpOpts.filename, receiver, *dumpOpts.useBinaryEncoding)
 				if err != nil {
 					output.Fatalf("could not dump to file %s': %v", *dumpOpts.filename, err)
 				}
@@ -128,14 +128,14 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 	}
 }
 
-func dumpToFile(receiver dump.Receiver, filename string, useJSON bool) error {
+func dumpToFile(filename string, source dump.Source, useBinaryEncoding bool) error {
 	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
 
 	// Receive
-	err = dump.Write(receiver, f, useJSON, dump.All)
+	err = dump.Write(f, source, useBinaryEncoding, dump.All)
 	if err != nil {
 		return err
 	}

@@ -11,6 +11,6 @@ func TestBlockRange_Bounds(t *testing.T) {
 	br := &BlockRange{}
 	start, end, streaming := br.Bounds(latestHeight)
 	assert.Equal(t, latestHeight, start)
-	assert.Equal(t, latestHeight+1, end)
+	assert.Equal(t, latestHeight, end)
 	assert.False(t, streaming)
 }

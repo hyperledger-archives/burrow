@@ -131,8 +131,7 @@ func TestExecutionEventsTest(t *testing.T) {
 				assert.Contains(t, strconv.FormatUint(be.Height, 10), "2")
 				return nil
 			})
-			// should record blocks 2 and 12
-			require.Len(t, blocks, 2)
+			require.Len(t, blocks, 2, "should record blocks 2 and 12")
 			assert.Equal(t, uint64(2), blocks[0].Height)
 			assert.Equal(t, uint64(12), blocks[1].Height)
 
