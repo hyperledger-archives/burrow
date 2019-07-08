@@ -75,7 +75,7 @@ func TestBonding(t *testing.T) {
 		require.Equal(t, vsOut[valAccount.GetAddress()].GetPower(), power)
 
 		// wait for validator to propose a block
-		waitFor(7, valKernel.Blockchain)
+		waitFor(10, valKernel.Blockchain)
 		checkProposed(t, genesisKernels[0], valAccount.GetPublicKey().GetAddress().Bytes())
 
 		unbondTx := createUnbondTx(inputAccount, valAccount.GetPublicKey(), power)
