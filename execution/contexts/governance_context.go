@@ -18,7 +18,7 @@ import (
 
 type GovernanceContext struct {
 	StateWriter  acmstate.ReaderWriter
-	ValidatorSet validator.Alterer
+	ValidatorSet validator.ReaderWriter
 	Logger       *logging.Logger
 	tx           *payload.GovTx
 	txe          *exec.TxExecution
@@ -82,11 +82,7 @@ func (ctx *GovernanceContext) UpdateAccount(account *acm.Account, update *spec.T
 			return
 		}
 		power := new(big.Int).SetUint64(update.Balances().GetPower(0))
-		if !power.IsInt64() {
-			err = fmt.Errorf("power supplied in update to validator power for %v does not fit into int64 and "+
-				"so is not supported by Tendermint", update.Address)
-		}
-		_, err := ctx.ValidatorSet.AlterPower(*update.PublicKey, power)
+		_, err := ctx.ValidatorSet.SetPower(*update.PublicKey, power)
 		if err != nil {
 			return ev, err
 		}

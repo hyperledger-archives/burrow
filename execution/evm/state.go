@@ -29,7 +29,6 @@ type Reader interface {
 	GetPermissions(address crypto.Address) permission.AccountPermissions
 	GetEVMCode(address crypto.Address) acm.Bytecode
 	GetWASMCode(address crypto.Address) acm.Bytecode
-	GetSequence(address crypto.Address) uint64
 	Exists(address crypto.Address) bool
 	// GetBlockHash returns	hash of the specific block
 	GetBlockHash(blockNumber uint64) (binary.Word256, error)
@@ -161,14 +160,6 @@ func (st *State) Exists(address crypto.Address) bool {
 		return false
 	}
 	return true
-}
-
-func (st *State) GetSequence(address crypto.Address) uint64 {
-	acc := st.account(address)
-	if acc == nil {
-		return 0
-	}
-	return acc.Sequence
 }
 
 // Writer

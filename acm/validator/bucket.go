@@ -45,9 +45,9 @@ func (vc *Bucket) Power(id crypto.Address) (*big.Int, error) {
 	return vc.Previous.Power(id)
 }
 
-// Updates the current head bucket (accumulator) whilst
-func (vc *Bucket) AlterPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
-	const errHeader = "Bucket.AlterPower():"
+// SetPower ensures that validator power would not change too quickly in a single block
+func (vc *Bucket) SetPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
+	const errHeader = "Bucket.SetPower():"
 	err := checkPower(power)
 	if err != nil {
 		return nil, fmt.Errorf("%s %v", errHeader, err)
@@ -66,15 +66,17 @@ func (vc *Bucket) AlterPower(id crypto.PublicKey, power *big.Int) (*big.Int, err
 			"in a total power greater than that allowed by tendermint (%v): would make next total power: %v",
 			errHeader, id.GetAddress(), vc.Previous.GetPower(id.GetAddress()), power, maxTotalVotingPower, nextTotalPower)
 	}
+
 	// If we call vc.flow.ChangePower(id, absFlow) (below) will we induce a change in flow greater than the allowable
 	// flow we have left to spend?
-	if vc.Flow.Flow(id, absFlow).Cmp(allowableFlow) == 1 {
+	if vc.Flow.Flow(id, absFlow).Cmp(allowableFlow) == 1 && allowableFlow.Cmp(big.NewInt(0)) > 0 {
 		return nil, fmt.Errorf("%s cannot change validator power of %v from %v to %v because that would result "+
 			"in a flow greater than or equal to 1/3 of total power for the next commit: flow induced by change: %v, "+
 			"current total flow: %v/%v (cumulative/max), remaining allowable flow: %v",
 			errHeader, id.GetAddress(), vc.Previous.GetPower(id.GetAddress()), power, absFlow, vc.Flow.totalPower,
 			maxFlow, allowableFlow)
 	}
+
 	// Set flow for this id to update flow.totalPower (total flow) for comparison below, keep track of flow for each id
 	// so that we only count flow once for each id
 	vc.Flow.ChangePower(id, absFlow)
@@ -84,15 +86,20 @@ func (vc *Bucket) AlterPower(id crypto.PublicKey, power *big.Int) (*big.Int, err
 	return absFlow, nil
 }
 
-func (vc *Bucket) SetPower(id crypto.PublicKey, power *big.Int) error {
-	err := checkPower(power)
+func (vc *Bucket) Initialize(id crypto.PublicKey, power *big.Int) error {
+	exists, err := vc.Power(id.GetAddress())
 	if err != nil {
 		return err
 	}
-	// The new absolute flow caused by this AlterPower
+	if exists.Cmp(new(big.Int)) > 0 {
+		return fmt.Errorf("cannot initialize %v, validator already has power %v",
+			id.GetAddress(), exists)
+	}
+	err = checkPower(power)
+	if err != nil {
+		return err
+	}
 	absFlow := new(big.Int).Abs(vc.Previous.Flow(id, power))
-	// Set flow for this id to update flow.totalPower (total flow) for comparison below, keep track of flow for each id
-	// so that we only count flow once for each id
 	vc.Flow.ChangePower(id, absFlow)
 	// Add to total power
 	vc.Delta.ChangePower(id, power)
@@ -121,9 +128,9 @@ func (vc *Bucket) Equal(vwOther *Bucket) error {
 }
 
 func checkPower(power *big.Int) error {
-	// if power.Sign() == -1 {
-	// 	return fmt.Errorf("cannot set negative validator power: %v", power)
-	// }
+	if power.Sign() == -1 {
+		return fmt.Errorf("cannot set negative validator power: %v", power)
+	}
 	if !power.IsInt64() {
 		return fmt.Errorf("for tendermint compatibility validator power must fit within an int but %v "+
 			"does not", power)

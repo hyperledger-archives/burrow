@@ -31,9 +31,6 @@ type Ring struct {
 	populated int
 }
 
-var big1 = big.NewInt(1)
-var big3 = big.NewInt(3)
-
 var _ History = &Ring{}
 
 // Provides a sliding window over the last size buckets of validator power changes
@@ -66,21 +63,20 @@ func (vc *Ring) GetPower(id crypto.Address) *big.Int {
 	return vc.Head().Previous.GetPower(id)
 }
 
-// Updates the current head bucket (accumulator) whilst
-func (vc *Ring) AlterPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
-	return vc.Head().AlterPower(id, power)
-}
-
-func (vc *Ring) SetPower(id crypto.PublicKey, power *big.Int) error {
+func (vc *Ring) SetPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
 	return vc.Head().SetPower(id, power)
 }
 
-// Get the sum of all powers added in any bucket
+func (vc *Ring) Initialize(id crypto.PublicKey, power *big.Int) error {
+	return vc.Head().Initialize(id, power)
+}
+
+// CumulativePower gets the sum of all powers added in any bucket
 func (vc *Ring) CumulativePower() *Set {
 	return vc.power
 }
 
-// Advance the current head bucket to the next bucket and returns the change in total power between the previous bucket
+// Rotate the current head bucket to the next bucket and returns the change in total power between the previous bucket
 // and the current head, and the total flow which is the sum of absolute values of all changes each validator's power
 // after rotation the next head is a copy of the current head
 func (vc *Ring) Rotate() (totalPowerChange *big.Int, totalFlow *big.Int, err error) {

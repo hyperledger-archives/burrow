@@ -13,7 +13,7 @@ import (
 
 type UnbondContext struct {
 	StateWriter  acmstate.ReaderWriter
-	ValidatorSet validator.Alterer
+	ValidatorSet validator.ReaderWriter
 	Logger       *logging.Logger
 	tx           *payload.UnbondTx
 }
@@ -37,7 +37,7 @@ func (ctx *UnbondContext) Execute(txe *exec.TxExecution, p payload.Payload) erro
 		return err
 	}
 
-	_, err = ctx.ValidatorSet.AlterPower(account.PublicKey, power)
+	_, err = ctx.ValidatorSet.SetPower(account.PublicKey, power)
 	if err != nil {
 		return err
 	}

@@ -82,7 +82,7 @@ func LoadValidatorRing(version int64, ringSize int,
 
 func (ws *writeState) MakeGenesisValidators(genesisDoc *genesis.GenesisDoc) error {
 	for _, gv := range genesisDoc.Validators {
-		err := ws.SetPower(gv.PublicKey, new(big.Int).SetUint64(gv.Amount))
+		_, err := ws.SetPower(gv.PublicKey, new(big.Int).SetUint64(gv.Amount))
 		if err != nil {
 			return err
 		}
@@ -122,24 +122,14 @@ func (s *ReadState) IterateValidators(fn func(id crypto.Addressable, power *big.
 	})
 }
 
-func (ws *writeState) AlterPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
-	// AlterPower in ring
-	flow, err := ws.ring.AlterPower(id, power)
+func (ws *writeState) SetPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
+	// SetPower in ring
+	flow, err := ws.ring.SetPower(id, power)
 	if err != nil {
 		return nil, err
 	}
 	// Set power in versioned state
 	return flow, ws.setPower(id, power)
-}
-
-func (ws *writeState) SetPower(id crypto.PublicKey, power *big.Int) error {
-	// SetPower in ring
-	err := ws.ring.SetPower(id, power)
-	if err != nil {
-		return err
-	}
-	// Set power in versioned state
-	return ws.setPower(id, power)
 }
 
 func (ws *writeState) setPower(id crypto.PublicKey, power *big.Int) error {

@@ -13,7 +13,7 @@ import (
 
 type BondContext struct {
 	StateWriter  acmstate.ReaderWriter
-	ValidatorSet validator.Alterer
+	ValidatorSet validator.ReaderWriter
 	Logger       *logging.Logger
 	tx           *payload.BondTx
 }
@@ -48,7 +48,7 @@ func (ctx *BondContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 		return err
 	}
 
-	_, err = ctx.ValidatorSet.AlterPower(account.PublicKey, power)
+	_, err = ctx.ValidatorSet.SetPower(account.PublicKey, power)
 	if err != nil {
 		return err
 	}
