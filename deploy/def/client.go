@@ -506,11 +506,9 @@ func (c *Client) Send(arg *SendArg, logger *logging.Logger) (*payload.SendTx, er
 }
 
 type BondArg struct {
-	Input     string
-	Amount    string
-	Sequence  string
-	Address   string
-	PublicKey string
+	Input    string
+	Amount   string
+	Sequence string
 }
 
 func (c *Client) Bond(arg *BondArg, logger *logging.Logger) (*payload.BondTx, error) {
@@ -519,24 +517,18 @@ func (c *Client) Bond(arg *BondArg, logger *logging.Logger) (*payload.BondTx, er
 	if err != nil {
 		return nil, err
 	}
-	// TODO: disable mempool signing
 	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true, logger)
 	if err != nil {
 		return nil, err
 	}
-	pubKey, err := c.PublicKeyFromAddress(&input.Address)
-	if err != nil {
-		return nil, err
-	}
 	return &payload.BondTx{
-		Input:     input,
-		PublicKey: pubKey,
+		Input: input,
 	}, nil
 }
 
 type UnbondArg struct {
-	Input    string
 	Output   string
+	Amount   string
 	Sequence string
 }
 
@@ -545,18 +537,15 @@ func (c *Client) Unbond(arg *UnbondArg, logger *logging.Logger) (*payload.Unbond
 	if err := c.dial(logger); err != nil {
 		return nil, err
 	}
-	input, err := c.TxInput(arg.Input, "", arg.Sequence, true, logger)
+	input, err := c.TxInput(arg.Output, arg.Amount, arg.Sequence, true, logger)
 	if err != nil {
 		return nil, err
 	}
-	pubKey, err := c.PublicKeyFromAddress(&input.Address)
-	if err != nil {
-		return nil, err
-	}
-	return &payload.UnbondTx{
-		Input:     input,
-		PublicKey: pubKey,
-	}, nil
+
+	tx := payload.NewUnbondTx(input.Address, input.Amount)
+	tx.Input = input
+
+	return tx, nil
 }
 
 type NameArg struct {

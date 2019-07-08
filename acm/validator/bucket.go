@@ -86,27 +86,6 @@ func (vc *Bucket) SetPower(id crypto.PublicKey, power *big.Int) (*big.Int, error
 	return absFlow, nil
 }
 
-func (vc *Bucket) Initialize(id crypto.PublicKey, power *big.Int) error {
-	exists, err := vc.Power(id.GetAddress())
-	if err != nil {
-		return err
-	}
-	if exists.Cmp(new(big.Int)) > 0 {
-		return fmt.Errorf("cannot initialize %v, validator already has power %v",
-			id.GetAddress(), exists)
-	}
-	err = checkPower(power)
-	if err != nil {
-		return err
-	}
-	absFlow := new(big.Int).Abs(vc.Previous.Flow(id, power))
-	vc.Flow.ChangePower(id, absFlow)
-	// Add to total power
-	vc.Delta.ChangePower(id, power)
-	vc.Next.ChangePower(id, power)
-	return nil
-}
-
 func (vc *Bucket) CurrentSet() *Set {
 	return vc.Previous
 }

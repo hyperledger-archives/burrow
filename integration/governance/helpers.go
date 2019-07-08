@@ -65,26 +65,6 @@ func createKernel(genesisDoc *genesis.GenesisDoc, account *acm.PrivateAccount,
 	return kernel, kernel.Boot()
 }
 
-func createBondTx(address crypto.Address, pubKey crypto.PublicKey, amount uint64) *payload.BondTx {
-	return &payload.BondTx{
-		Input: &payload.TxInput{
-			Address: address,
-			Amount:  amount,
-		},
-		PublicKey: &pubKey,
-	}
-}
-
-func createUnbondTx(address crypto.Address, pubKey crypto.PublicKey, amount uint64) *payload.UnbondTx {
-	return &payload.UnbondTx{
-		Input: &payload.TxInput{
-			Address: address,
-			Amount:  amount,
-		},
-		PublicKey: &pubKey,
-	}
-}
-
 func signTx(t *testing.T, tx payload.Payload, chainID string, from acm.AddressableSigner) (txEnv *txs.Envelope) {
 	txEnv = txs.Enclose(chainID, tx)
 	require.NoError(t, txEnv.Sign(from))

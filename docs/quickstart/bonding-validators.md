@@ -29,14 +29,14 @@ This will return the pre-bonded validator, defined in our pool.
 To have the second node bond on and produce blocks:
 
 ```bash
-burrow tx --config burrow001.toml formulate bond --power 10000 | burrow tx commit
+burrow tx --config burrow001.toml formulate bond --amount 10000 | burrow tx commit
 ```
 
 Note that this will bond the current account, to bond an alternate account (which is created if it doesn't exist)
-simply specific the `--target=<address>` flag in formulation:
+simply specific the `--source=<address>` flag in formulation:
 
 ```bash
-burrow tx --config burrow001.toml formulate bond --target 8A468CC3A28A6E84ED52E433DA21D6E9ED7C1577 --power 10000
+burrow tx --config burrow001.toml formulate bond --source 8A468CC3A28A6E84ED52E433DA21D6E9ED7C1577 --amount 10000
 ```
 
 It should now be in the validator set:

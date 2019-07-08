@@ -6,10 +6,15 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 )
 
-func NewUnbondTx(address crypto.Address, height uint64) *UnbondTx {
+func NewUnbondTx(address crypto.Address, amount uint64) *UnbondTx {
 	return &UnbondTx{
-		Input:     &TxInput{},
-		PublicKey: &crypto.PublicKey{},
+		Input: &TxInput{
+			Address: address,
+		},
+		Output: &TxOutput{
+			Address: address,
+			Amount:  amount,
+		},
 	}
 }
 

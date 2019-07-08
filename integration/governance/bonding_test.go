@@ -6,13 +6,12 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/hyperledger/burrow/permission"
-
-	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/integration/rpctest"
+	"github.com/hyperledger/burrow/permission"
+	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,11 +33,10 @@ func TestBonding(t *testing.T) {
 	connectAllKernels(genesisKernels)
 
 	t.Run("NoPermission", func(t *testing.T) {
-		val := acm.GeneratePrivateAccountFromSecret("validator_1")
 		localAddress := genesisKernels[4].GRPCListenAddress().String()
 		inputAccount := genesisAccounts[4].GetAddress()
 		tcli := rpctest.NewTransactClient(t, localAddress)
-		bondTx := createBondTx(inputAccount, val.GetPublicKey(), uint64(1<<2))
+		bondTx := payload.NewBondTx(inputAccount, uint64(1<<2))
 		_, err = payloadSync(tcli, bondTx)
 		require.Error(t, err)
 	})
@@ -56,7 +54,7 @@ func TestBonding(t *testing.T) {
 		accBefore := getAccount(t, qcli, inputAccount)
 		var power uint64 = 1 << 16
 
-		bondTx := createBondTx(inputAccount, valAccount.GetPublicKey(), power)
+		bondTx := payload.NewBondTx(inputAccount, power)
 		_, err = payloadSync(tcli, bondTx)
 		require.NoError(t, err)
 		accAfter := getAccount(t, qcli, inputAccount)
@@ -78,7 +76,7 @@ func TestBonding(t *testing.T) {
 		waitFor(10, valKernel.Blockchain)
 		checkProposed(t, genesisKernels[0], valAccount.GetPublicKey().GetAddress().Bytes())
 
-		unbondTx := createUnbondTx(inputAccount, valAccount.GetPublicKey(), power)
+		unbondTx := payload.NewUnbondTx(inputAccount, power)
 		_, err = payloadSync(tcli, unbondTx)
 		require.NoError(t, err)
 

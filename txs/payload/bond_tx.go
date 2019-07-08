@@ -7,11 +7,13 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 )
 
-func NewBondTx(pubkey crypto.PublicKey) (*BondTx, error) {
+func NewBondTx(address crypto.Address, amount uint64) *BondTx {
 	return &BondTx{
-		Input:     &TxInput{},
-		PublicKey: &crypto.PublicKey{},
-	}, nil
+		Input: &TxInput{
+			Address: address,
+			Amount:  amount,
+		},
+	}
 }
 
 func (tx *BondTx) Type() Type {

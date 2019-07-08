@@ -230,26 +230,3 @@ func hasBondOrSendPermission(accountGetter acmstate.AccountGetter, accs map[cryp
 	}
 	return true
 }
-
-func validateBonding(accGet acmstate.AccountGetter, in *payload.TxInput,
-	pubKey *crypto.PublicKey, log *logging.Logger) (*acm.Account, error) {
-
-	account, err := accGet.GetAccount(in.Address)
-	if err != nil {
-		return nil, err
-	}
-
-	// ensure pubKey of validator is set correctly
-	if pubKey.GetAddress() != account.GetAddress() {
-		return nil, fmt.Errorf("input address and public key address do not much")
-	}
-
-	account.PublicKey = *pubKey
-
-	// can the account bond?
-	if !hasBondPermission(accGet, account, log) {
-		return nil, fmt.Errorf("account '%s' lacks bond permission", account.Address)
-	}
-
-	return account, nil
-}

@@ -112,28 +112,24 @@ func TestNameTxSignable(t *testing.T) {
 }
 
 func TestBondTxSignable(t *testing.T) {
-	val := makePrivateAccount("output1").GetPublicKey()
 	bondTx := &payload.BondTx{
 		Input: &payload.TxInput{
 			Address:  makePrivateAccount("input1").GetAddress(),
 			Amount:   12345,
 			Sequence: 67890,
 		},
-		PublicKey: &val,
 	}
 	testTxMarshalJSON(t, bondTx)
 	testTxSignVerify(t, bondTx)
 }
 
 func TestUnbondTxSignable(t *testing.T) {
-	val := makePrivateAccount("output1").GetPublicKey()
 	unbondTx := &payload.UnbondTx{
 		Input: &payload.TxInput{
 			Address:  makePrivateAccount("input1").GetAddress(),
 			Amount:   12345,
 			Sequence: 67890,
 		},
-		PublicKey: &val,
 	}
 	testTxMarshalJSON(t, unbondTx)
 	testTxSignVerify(t, unbondTx)

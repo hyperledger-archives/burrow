@@ -28,9 +28,14 @@ func (ctx *BondContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 
 	// the account initiating the bond
 	power := new(big.Int).SetUint64(ctx.tx.Input.GetAmount())
-	account, err := validateBonding(ctx.StateWriter, ctx.tx.Input, ctx.tx.PublicKey, ctx.Logger)
+	account, err := ctx.StateWriter.GetAccount(ctx.tx.Input.Address)
 	if err != nil {
 		return err
+	}
+
+	// can the account bond?
+	if !hasBondPermission(ctx.StateWriter, account, ctx.Logger) {
+		return fmt.Errorf("account '%s' lacks bond permission", account.Address)
 	}
 
 	// check account has enough to bond
@@ -48,7 +53,7 @@ func (ctx *BondContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 		return err
 	}
 
-	_, err = ctx.ValidatorSet.SetPower(account.PublicKey, power)
+	err = validator.AddPower(ctx.ValidatorSet, account.PublicKey, power)
 	if err != nil {
 		return err
 	}

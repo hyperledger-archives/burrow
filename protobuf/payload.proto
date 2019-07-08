@@ -5,7 +5,6 @@ option go_package = "github.com/hyperledger/burrow/txs/payload";
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 import "permission.proto";
-import "crypto.proto";
 import "spec.proto";
 
 package payload;
@@ -111,18 +110,16 @@ message BondTx {
 
     // Account with bonding permission
     TxInput Input = 1;
-    // The validator to bond, public key must be known
-    crypto.PublicKey PublicKey = 2;
+    // PublicKey is retrieved from signature
 }
 
 message UnbondTx {
     option (gogoproto.goproto_stringer) = false;
     option (gogoproto.goproto_getters) = false;
 
-    // Account with bonding permission
     TxInput Input = 1;
-    // The validator to unbond, public key must be known
-    crypto.PublicKey PublicKey = 2;
+    // Account to unbond
+    TxOutput Output = 2;
 }
 
 message GovTx {

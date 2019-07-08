@@ -11,11 +11,11 @@ Hyperledger Burrow is a permissioned Ethereum smart-contract blockchain node. It
    * [Send transactions](quickstart/send-transactions.md) - how to communicate with your Burrow chain
    * [Deploy contracts](quickstart/deploy-contracts.md) - interact with the Ethereum Virtual Machine
    * [Multiple validators](quickstart/multiple-validators.md) - advanced consensus setup
-   * [Adding validators](quickstart/add-validators.md) - bonding a new party
-   * [Seed nodes](quickstart/seed-nodes.md) - add new node dynamically
+   * [Bonding validators](quickstart/bonding-validators.md) - bonding yourself on
+   * [Seed nodes](quickstart/seed-nodes.md) - add new nodes dynamically
    * [Dump / restore](design/dump-restore.md) - create a new chain with previous state
 4. [Genesis](design/genesis.md)
 5. [Permissions](design/permissions.md)
-6. [Architecture](arch)
+6. [Architecture](architecture)
    * [State](arch/state.md)
 7. [Kubernetes](https://github.com/helm/charts/tree/master/stable/burrow) - bootstraps a burrow network on a Kubernetes cluster

@@ -18,7 +18,6 @@ import (
 //
 // delta [d5            | d6| d7   | d8  ]
 // cum   [v0+d1+d2+d3+d4|...|      |     ]
-
 type Ring struct {
 	buckets []*Bucket
 	// Power tracks the sliding sum of all powers for each validator added by each delta bucket - power is added for the newest delta and subtracted from the oldest delta each rotation
@@ -33,7 +32,7 @@ type Ring struct {
 
 var _ History = &Ring{}
 
-// Provides a sliding window over the last size buckets of validator power changes
+// NewRing provides a sliding window over the last size buckets of validator power changes
 func NewRing(initialSet Iterable, windowSize int) *Ring {
 	if windowSize < 1 {
 		windowSize = 1
@@ -54,7 +53,8 @@ func NewRing(initialSet Iterable, windowSize int) *Ring {
 }
 
 // Implement Reader
-// Get power at index from the delta bucket then falling through to the cumulative
+
+// Power gets the balance at index from the delta bucket then falling through to the cumulative
 func (vc *Ring) Power(id crypto.Address) (*big.Int, error) {
 	return vc.GetPower(id), nil
 }
@@ -65,10 +65,6 @@ func (vc *Ring) GetPower(id crypto.Address) *big.Int {
 
 func (vc *Ring) SetPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
 	return vc.Head().SetPower(id, power)
-}
-
-func (vc *Ring) Initialize(id crypto.PublicKey, power *big.Int) error {
-	return vc.Head().Initialize(id, power)
 }
 
 // CumulativePower gets the sum of all powers added in any bucket

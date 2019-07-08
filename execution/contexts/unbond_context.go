@@ -26,8 +26,12 @@ func (ctx *UnbondContext) Execute(txe *exec.TxExecution, p payload.Payload) erro
 		return fmt.Errorf("payload must be UnbondTx, but is: %v", txe.Envelope.Tx.Payload)
 	}
 
-	power := new(big.Int).Neg(new(big.Int).SetUint64(ctx.tx.Input.GetAmount()))
-	account, err := validateBonding(ctx.StateWriter, ctx.tx.Input, ctx.tx.PublicKey, ctx.Logger)
+	if ctx.tx.Input.Address != ctx.tx.Output.Address {
+		return fmt.Errorf("input and output address must match")
+	}
+
+	power := new(big.Int).SetUint64(ctx.tx.Output.GetAmount())
+	account, err := ctx.StateWriter.GetAccount(ctx.tx.Input.Address)
 	if err != nil {
 		return err
 	}
@@ -37,7 +41,7 @@ func (ctx *UnbondContext) Execute(txe *exec.TxExecution, p payload.Payload) erro
 		return err
 	}
 
-	_, err = ctx.ValidatorSet.SetPower(account.PublicKey, power)
+	err = validator.SubtractPower(ctx.ValidatorSet, account.PublicKey, power)
 	if err != nil {
 		return err
 	}

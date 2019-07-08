@@ -71,19 +71,12 @@ func FormulateBondJob(bond *def.Bond, account string, client *def.Client, logger
 	// Formulate tx
 	logger.InfoMsg("Bonding Transaction",
 		"source", bond.Source,
-		"target", bond.Target,
-		"power", bond.Power)
+		"amount", bond.Amount)
 
 	arg := &def.BondArg{
 		Input:    bond.Source,
-		Amount:   bond.Power,
+		Amount:   bond.Amount,
 		Sequence: bond.Sequence,
-	}
-
-	if len(bond.Source) == crypto.AddressHexLength {
-		arg.Address = bond.Target
-	} else {
-		arg.PublicKey = bond.Target
 	}
 
 	return client.Bond(arg, logger)
@@ -110,12 +103,10 @@ func FormulateUnbondJob(unbond *def.Unbond, account string, client *def.Client, 
 
 	// Formulate tx
 	logger.InfoMsg("Unbonding Transaction",
-		"source", unbond.Source,
-		"target", unbond.Target)
+		"source", unbond.Source)
 
 	arg := &def.UnbondArg{
-		Input:    unbond.Source,
-		Output:   unbond.Target,
+		Output:   unbond.Source,
 		Sequence: unbond.Sequence,
 	}
 
