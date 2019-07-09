@@ -74,6 +74,12 @@ $burrow_bin dump remote --height $height dump-after-restore.json
 
 kill $burrow_pid
 
+deadcafe=$(grep DEADCAFE dump.json | wc -l)
+if [[ $deadcafe -ne 2 ]]; then
+	echo "DUMP FAILURE -- missing DEADCAFE"
+	exit 1
+fi
+
 if cmp dump.json dump-after-restore.json
 then
 	title="Done."
