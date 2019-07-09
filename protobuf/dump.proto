@@ -40,7 +40,6 @@ message EVMEvent {
     google.protobuf.Timestamp Time = 2 [(gogoproto.nullable)=false, (gogoproto.stdtime)=true];
     // The event itself
     exec.LogEvent Event = 3;
-
 }
 
 message Dump {
