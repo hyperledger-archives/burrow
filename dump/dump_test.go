@@ -2,6 +2,8 @@ package dump
 
 import (
 	"bytes"
+	"encoding/json"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -34,19 +36,38 @@ func BenchmarkDump(b *testing.B) {
 	dumper := NewDumper(st, &bcm.Blockchain{})
 	b.StartTimer()
 	for n := 0; n < b.N; n++ {
-		testDump(b, dumper)
+		err := dumper.Transmit(NullSink{}, 0, 0, All)
+		require.NoError(b, err)
 	}
 }
 
 func TestDump(t *testing.T) {
-	st := testLoad(t, NewMockSource(1000, 1000, 100, 10000))
-	dumper := NewDumper(st, &bcm.Blockchain{})
-	testDump(t, dumper)
-}
-
-func testDump(t testing.TB, dumper *Dumper) {
-	err := dumper.Transmit(NullSink{}, 0, 0, All)
+	mockSource := NewMockSource(50, 50, 100, 100)
+	st := testLoad(t, mockSource)
+	dumper := NewDumper(st, mockSource)
+	sink := CollectSink{
+		Rows: make([]string, 0),
+	}
+	err := dumper.Transmit(&sink, 0, 0, All)
 	require.NoError(t, err)
+
+	sort.Strings(sink.Rows)
+
+	m := NewMockSource(50, 50, 100, 100)
+	data := make([]string, 0)
+
+	for {
+		row, err := m.Recv()
+		if err == io.EOF {
+			break
+		}
+		bs, _ := json.Marshal(row)
+		data = append(data, string(bs))
+	}
+
+	sort.Strings(data)
+
+	require.Equal(t, sink.Rows, data)
 }
 
 // Test util

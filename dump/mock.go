@@ -31,7 +31,7 @@ func NewMockSource(accounts, maxStorage, names, events int) *MockSource {
 		MaxStorage: maxStorage,
 		Names:      names,
 		Events:     events,
-		Mockchain:  NewMockchain("Mockchain", 999999),
+		Mockchain:  NewMockchain("Mockchain", 0),
 		rand:       rand.New(rand.NewSource(2323524)),
 	}
 }
@@ -47,7 +47,7 @@ func (m *MockSource) Recv() (*Dump, error) {
 
 		row.Account = &acm.Account{
 			Address: addr,
-			Balance: rand.Uint64(),
+			Balance: m.rand.Uint64(),
 		}
 
 		if m.Accounts%2 > 0 {
