@@ -74,6 +74,11 @@ $burrow_bin dump remote --height $height dump-after-restore.json
 
 kill $burrow_pid
 
+#
+# The contract emits an event which contains the hex string DEADCAFE. So,
+# this string should be present both in contract code and as an emitted
+# event. We should have two in our dump.
+#
 deadcafe=$(grep DEADCAFE dump.json | wc -l)
 if [[ $deadcafe -ne 2 ]]; then
 	echo "DUMP FAILURE -- missing DEADCAFE"
