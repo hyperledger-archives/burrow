@@ -6,6 +6,7 @@ import (
 
 	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/genesis"
+	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,7 +26,7 @@ func BenchmarkLoad(b *testing.B) {
 }
 
 func testLoad(t testing.TB, mock *MockSource) *state.State {
-	st, err := state.MakeGenesisState(testDB(t), &genesis.GenesisDoc{})
+	st, err := state.MakeGenesisState(testDB(t), &genesis.GenesisDoc{GlobalPermissions: permission.DefaultAccountPermissions})
 	require.NoError(t, err)
 	err = Load(mock, st)
 	require.NoError(t, err)

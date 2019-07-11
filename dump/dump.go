@@ -63,12 +63,13 @@ func (options Option) Enabled(option Option) bool {
 
 // Transmit Dump rows to the provided Sink over the inclusive range of heights provided, if endHeight is 0 the latest
 // height is used.
+
 func (ds *Dumper) Transmit(sink Sink, startHeight, endHeight uint64, options Option) error {
-	height := endHeight
-	if height == 0 {
-		height = ds.blockchain.LastBlockHeight()
+	lastHeight := ds.blockchain.LastBlockHeight()
+	if endHeight == 0 || endHeight > lastHeight {
+		endHeight = lastHeight
 	}
-	st, err := ds.state.LoadHeight(height)
+	st, err := ds.state.LoadHeight(endHeight)
 	if err != nil {
 		return err
 	}
@@ -80,7 +81,7 @@ func (ds *Dumper) Transmit(sink Sink, startHeight, endHeight uint64, options Opt
 			// and storage within the same row. If the storage gets too large we chunk it and send in separate rows
 			// (so that we stay well below the 4MiB GRPC message size limit and generally maintain stream-ability)
 			row := &Dump{
-				Height:  height,
+				Height:  endHeight,
 				Account: acc,
 				AccountStorage: &AccountStorage{
 					Address: acc.Address,
@@ -98,7 +99,7 @@ func (ds *Dumper) Transmit(sink Sink, startHeight, endHeight uint64, options Opt
 					}
 					// Start a new pure storage row
 					row = &Dump{
-						Height: height,
+						Height: endHeight,
 						AccountStorage: &AccountStorage{
 							Address: acc.Address,
 							Storage: make([]*Storage, 0),
@@ -139,7 +140,7 @@ func (ds *Dumper) Transmit(sink Sink, startHeight, endHeight uint64, options Opt
 	if options.Enabled(Names) {
 		ds.logger.InfoMsg("Dumping names")
 		err = st.IterateNames(func(entry *names.Entry) error {
-			return sink.Send(&Dump{Height: height, Name: entry})
+			return sink.Send(&Dump{Height: endHeight, Name: entry})
 		})
 		if err != nil {
 			return err
