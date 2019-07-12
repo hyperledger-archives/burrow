@@ -243,17 +243,9 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 			}
 		}()
 
-		// Validate inputs and check sequence numbers
-		err = exe.validateInputs(txEnv.Tx)
+		err = exe.validateInputsAndStorePublicKeys(txEnv)
 		if err != nil {
 			logger.InfoMsg("Transaction validate failed", structure.ErrorKey, err)
-			txe.PushError(err)
-			return nil, err
-		}
-
-		err = exe.updateSignatories(txEnv.Signatories)
-		if err != nil {
-			logger.InfoMsg("Updating signatories failed", structure.ErrorKey, err)
 			txe.PushError(err)
 			return nil, err
 		}
@@ -278,8 +270,13 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 	return nil, fmt.Errorf("unknown transaction type: %v", txEnv.Tx.Type())
 }
 
-func (exe *executor) validateInputs(tx *txs.Tx) error {
-	for _, in := range tx.GetInputs() {
+// Validate inputs, check sequence numbers and capture public keys
+func (exe *executor) validateInputsAndStorePublicKeys(txEnv *txs.Envelope) error {
+	for s, in := range txEnv.Tx.GetInputs() {
+		err := exe.updateSignatory(txEnv.Signatories[s])
+		if err != nil {
+			return fmt.Errorf("failed to update public key for input %X: %v", in.Address, err)
+		}
 		acc, err := exe.stateCache.GetAccount(in.Address)
 		if err != nil {
 			return err
@@ -313,27 +310,20 @@ func (exe *executor) validateInputs(tx *txs.Tx) error {
 	return nil
 }
 
-// Capture public keys
-func (exe *executor) updateSignatories(sigs []txs.Signatory) error {
-	for _, sig := range sigs {
-		// pointer dereferences are safe since txEnv.Validate() is run by
-		// txEnv.Verify() above which checks they are non-nil
-		acc, err := exe.stateCache.GetAccount(*sig.Address)
-		if err != nil {
-			return fmt.Errorf("error getting account on which to set public key: %v", *sig.Address)
-		}
-		// Important that verify has been run against signatories at this point
-		if sig.PublicKey.GetAddress() != acc.Address {
-			return fmt.Errorf("unexpected mismatch between address %v and supplied public key %v",
-				acc.Address, sig.PublicKey)
-		}
-		acc.PublicKey = *sig.PublicKey
-		err = exe.stateCache.UpdateAccount(acc)
-		if err != nil {
-			return fmt.Errorf("error updating account after setting public key: %v", err)
-		}
+func (exe *executor) updateSignatory(sig txs.Signatory) error {
+	// pointer dereferences are safe since txEnv.Validate() is run by
+	// txEnv.Verify() above which checks they are non-nil
+	acc, err := exe.stateCache.GetAccount(*sig.Address)
+	if err != nil {
+		return fmt.Errorf("error getting account on which to set public key: %v", *sig.Address)
 	}
-	return nil
+	// Important that verify has been run against signatories at this point
+	if sig.PublicKey.GetAddress() != acc.Address {
+		return fmt.Errorf("unexpected mismatch between address %v and supplied public key %v",
+			acc.Address, sig.PublicKey)
+	}
+	acc.PublicKey = *sig.PublicKey
+	return exe.stateCache.UpdateAccount(acc)
 }
 
 // Commit the current state - optionally pass in the tendermint ABCI header for that to be included with the BeginBlock

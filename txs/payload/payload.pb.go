@@ -554,7 +554,7 @@ func (*NameTx) XXX_MessageName() string {
 }
 
 type BondTx struct {
-	// Account with bonding permission
+	// Input must be the validator that desires to bond
 	Input                *TxInput `protobuf:"bytes,1,opt,name=Input,proto3" json:"Input,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`

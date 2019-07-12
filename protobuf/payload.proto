@@ -108,9 +108,8 @@ message BondTx {
     option (gogoproto.goproto_stringer) = false;
     option (gogoproto.goproto_getters) = false;
 
-    // Account with bonding permission
+    // Input must be the validator that desires to bond
     TxInput Input = 1;
-    // PublicKey is retrieved from signature
 }
 
 message UnbondTx {

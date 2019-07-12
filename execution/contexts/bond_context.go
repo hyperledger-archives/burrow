@@ -53,6 +53,7 @@ func (ctx *BondContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 		return err
 	}
 
+	// assume public key is know as we update account from signatures
 	err = validator.AddPower(ctx.ValidatorSet, account.PublicKey, power)
 	if err != nil {
 		return err
