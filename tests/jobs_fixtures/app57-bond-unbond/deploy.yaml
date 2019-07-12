@@ -1,0 +1,45 @@
+jobs:
+
+- name: power
+  set:
+    val: 12345
+
+- name: Validator
+  update-account:
+    target: new()
+    native: $power
+    permissions: ["all"]
+
+- name: InitialTotalPower
+  query-vals:
+    field: "Set.TotalPower"
+
+- name: BondValidator
+  bond:
+    source: $Validator.address
+    amount: $power
+
+- name: CheckAdded
+  query-vals:
+    field: "Set.${Validator.address}.Power"
+
+- name: PowerAssert
+  assert:
+    key: $CheckAdded
+    relation: eq
+    val: $power
+
+- name: UnbondValidator
+  unbond:
+    source: $Validator.address
+    amount: $power
+
+- name: PowerAfterRemoved
+  query-vals:
+    field: "Set.TotalPower"
+
+- name: AssertPowerNonZero
+  assert:
+    key: $PowerAfterRemoved
+    relation: eq
+    val: $InitialTotalPower
