@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"sync"
@@ -130,6 +131,29 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 			func(cmd *cli.Cmd) {
 				cmd.Action = func() {
 					output.Printf(source.JSONString(types.EventSpecSchema()))
+				}
+			})
+
+		cmd.Command("spec", "Generate SQLSOL specification from ABIs",
+			func(cmd *cli.Cmd) {
+				abiFileOpt := cmd.StringsOpt("abi", nil, "EVM Contract ABI file or folder")
+				dest := cmd.StringArg("SPEC", "", "Write resulting spec to this json file")
+
+				cmd.Action = func() {
+					abiSpec, err := abi.LoadPath(*abiFileOpt...)
+					if err != nil {
+						output.Fatalf("ABI loader error: %v", err)
+					}
+
+					spec, err := sqlsol.GenerateSpecFromAbis(abiSpec)
+					if err != nil {
+						output.Fatalf("error generating spec: %s\n", err)
+					}
+
+					err = ioutil.WriteFile(*dest, []byte(source.JSONString(spec)), 0644)
+					if err != nil {
+						output.Fatalf("error writing file: %v\n", err)
+					}
 				}
 			})
 

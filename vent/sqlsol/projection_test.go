@@ -148,6 +148,7 @@ func TestNewProjectionFromEventSpec(t *testing.T) {
 					Type:       types.EventFieldTypeString,
 					ColumnName: "name",
 					Notify:     []string{"burn"},
+					Primary:    true,
 				},
 				{
 					Field:      "burn",
@@ -178,6 +179,7 @@ func TestNewProjectionFromEventSpec(t *testing.T) {
 					Type:       types.EventFieldTypeString,
 					ColumnName: "name",
 					Notify:     []string{"burn"},
+					Primary:    true,
 				},
 				{
 					Field:      "unreliable",
@@ -224,4 +226,104 @@ func TestNewProjectionFromEventSpec(t *testing.T) {
 	field.Primary = !field.Primary
 	_, err = sqlsol.NewProjectionFromEventSpec(eventSpec)
 	require.Error(t, err)
+}
+
+func TestWithNoPrimaryKey(t *testing.T) {
+	tableName := "BurnNotices"
+	eventSpec := types.EventSpec{
+		{
+			TableName:         tableName,
+			Filter:            "LOG1Text = 'CIA/burn'",
+			DeleteMarkerField: "__DELETE__",
+			FieldMappings: []*types.EventFieldMapping{
+				{
+					Field:      "codename",
+					Type:       types.EventFieldTypeString,
+					ColumnName: "name",
+					Notify:     []string{"burn"},
+				},
+				{
+					Field:      "burn",
+					Type:       types.EventFieldTypeBool,
+					ColumnName: "burnt",
+					Notify:     []string{"burn"},
+				},
+				{
+					Field:      "dairy",
+					Type:       types.EventFieldTypeString,
+					ColumnName: "coffee_milk",
+					Notify:     []string{"mrs_doyle"},
+				},
+				{
+					Field:      "datetime",
+					Type:       types.EventFieldTypeInt,
+					ColumnName: "time_changed",
+					Notify:     []string{"last_heard", "mrs_doyle"},
+				},
+			},
+		},
+	}
+
+	_, err := sqlsol.NewProjectionFromEventSpec(eventSpec)
+	require.Error(t, err, "no DeleteMarkerField allowed if no primary key on")
+
+	// Try again and now check that the right fields are primary
+	eventSpec[0].DeleteMarkerField = ""
+
+	projection, err := sqlsol.NewProjectionFromEventSpec(eventSpec)
+	require.NoError(t, err, "projection with no primary key should be allowed")
+
+	for _, c := range projection.Tables[tableName].Columns {
+		switch c.Name {
+		case "_chainid":
+			require.Equal(t, true, c.Primary)
+		case "_height":
+			require.Equal(t, true, c.Primary)
+		case "_index":
+			require.Equal(t, true, c.Primary)
+		default:
+			require.Equal(t, false, c.Primary)
+		}
+	}
+
+	eventSpec = types.EventSpec{
+		{
+			TableName: tableName,
+			Filter:    "LOG1Text = 'CIA/burn'",
+			FieldMappings: []*types.EventFieldMapping{
+				{
+					Field:      "codename",
+					Type:       types.EventFieldTypeString,
+					ColumnName: "name",
+					Notify:     []string{"burn"},
+					Primary:    true,
+				},
+				{
+					Field:      "burn",
+					Type:       types.EventFieldTypeBool,
+					ColumnName: "burnt",
+					Notify:     []string{"burn"},
+				},
+				{
+					Field:      "dairy",
+					Type:       types.EventFieldTypeString,
+					ColumnName: "coffee_milk",
+					Notify:     []string{"mrs_doyle"},
+				},
+				{
+					Field:      "datetime",
+					Type:       types.EventFieldTypeInt,
+					ColumnName: "time_changed",
+					Notify:     []string{"last_heard", "mrs_doyle"},
+				},
+			},
+		},
+	}
+
+	projection, err = sqlsol.NewProjectionFromEventSpec(eventSpec)
+	require.NoError(t, err, "projection with primary key should be allowed")
+
+	for _, c := range projection.Tables[tableName].Columns {
+		require.Equal(t, c.Name == "name", c.Primary)
+	}
 }

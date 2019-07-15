@@ -35,7 +35,7 @@
       {
         "Field": "height",
         "ColumnName": "_height",
-        "Type": "string",
+        "Type": "uint",
         "Notify": ["meta", "keyed_meta"]
       },
       {

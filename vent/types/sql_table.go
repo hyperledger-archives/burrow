@@ -163,6 +163,7 @@ const (
 	// block related
 	ChainIDLabel     = "chainid"
 	BlockHeightLabel = "height"
+	BlockIndexLabel  = "index"
 
 	// transaction related
 	TxTxHashLabel = "txHash"

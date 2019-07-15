@@ -88,9 +88,6 @@ func NewProjectionFromEventSpec(eventSpec types.EventSpec) (*Projection, error) 
 	// builds abi information from specification
 	tables := make(types.EventTables)
 
-	// obtain global field mappings to add to table definitions
-	globalFieldMappings := getGlobalFieldMappings()
-
 	for _, eventClass := range eventSpec {
 		// validate json structure
 		if err := eventClass.Validate(); err != nil {
@@ -101,8 +98,25 @@ func NewProjectionFromEventSpec(eventSpec types.EventSpec) (*Projection, error) 
 		var columns []*types.SQLTableColumn
 		channels := make(map[string][]string)
 
+		// do we have a primary key
+		primary := false
+		for _, mapping := range eventClass.FieldMappings {
+			if mapping.Primary {
+				primary = true
+				break
+			}
+		}
+
+		if !primary && eventClass.DeleteMarkerField != "" {
+			return nil, fmt.Errorf("no DeleteMarkerField allowed if no primary key on %v", eventClass)
+		}
+
 		// Add the global mappings
-		eventClass.FieldMappings = append(globalFieldMappings, eventClass.FieldMappings...)
+		if primary {
+			eventClass.FieldMappings = append(getGlobalFieldMappings(), eventClass.FieldMappings...)
+		} else {
+			eventClass.FieldMappings = append(getGlobalFieldMappingsLogMode(), eventClass.FieldMappings...)
+		}
 
 		i := 0
 		for _, mapping := range eventClass.FieldMappings {
@@ -272,7 +286,52 @@ func getGlobalFieldMappings() []*types.EventFieldMapping {
 		{
 			ColumnName: columns.Height,
 			Field:      types.BlockHeightLabel,
+			Type:       types.EventFieldTypeUInt,
+		},
+		{
+			ColumnName: columns.Index,
+			Field:      types.BlockIndexLabel,
+			Type:       types.EventFieldTypeUInt,
+		},
+		{
+			ColumnName: columns.TxHash,
+			Field:      types.TxTxHashLabel,
 			Type:       types.EventFieldTypeString,
+		},
+		{
+			ColumnName: columns.EventType,
+			Field:      types.EventTypeLabel,
+			Type:       types.EventFieldTypeString,
+		},
+		{
+			ColumnName: columns.EventName,
+			Field:      types.EventNameLabel,
+			Type:       types.EventFieldTypeString,
+		},
+	}
+}
+
+// getGlobalColumns returns global columns for event table structures,
+// these columns will be part of every SQL event table to relate data with source events
+func getGlobalFieldMappingsLogMode() []*types.EventFieldMapping {
+	return []*types.EventFieldMapping{
+		{
+			ColumnName: columns.ChainID,
+			Field:      types.ChainIDLabel,
+			Type:       types.EventFieldTypeString,
+			Primary:    true,
+		},
+		{
+			ColumnName: columns.Height,
+			Field:      types.BlockHeightLabel,
+			Type:       types.EventFieldTypeUInt,
+			Primary:    true,
+		},
+		{
+			ColumnName: columns.Index,
+			Field:      types.BlockIndexLabel,
+			Type:       types.EventFieldTypeUInt,
+			Primary:    true,
 		},
 		{
 			ColumnName: columns.TxHash,
@@ -308,7 +367,7 @@ func mergeTables(tables ...*types.SQLTable) (*types.SQLTable, error) {
 				if columnA, ok := columns[columnB.Name]; ok {
 					if !columnA.Equals(columnB) {
 						return nil, fmt.Errorf("cannot merge event class tables for %s because of "+
-							"conflicting columns: %v and %v", t.Name, columnB, columnB)
+							"conflicting columns: %v and %v", t.Name, columnA, columnB)
 					}
 					// Just keep existing column from A - they match
 				} else {
