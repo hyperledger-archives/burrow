@@ -53,18 +53,22 @@ type SolidityOutput struct {
 	}
 }
 
+type ContractCode struct {
+	Object         string
+	LinkReferences json.RawMessage
+}
+
+type AbiMap struct {
+	DeployedBytecode ContractCode
+	Abi              string
+}
+
 // SolidityContract is defined for each contract defined in the solidity source code
 type SolidityContract struct {
 	Abi json.RawMessage
 	Evm struct {
-		Bytecode struct {
-			Object         string
-			LinkReferences json.RawMessage
-		}
-		DeployedBytecode struct {
-			Object         string
-			LinkReferences json.RawMessage
-		}
+		Bytecode         ContractCode
+		DeployedBytecode ContractCode
 	}
 	EWasm struct {
 		Wasm string
@@ -73,8 +77,13 @@ type SolidityContract struct {
 	Userdoc  json.RawMessage
 	Metadata string
 	// This is not present in the solidity output, but we add it ourselves
-	// This is map from CodeHash to ABI
-	AbiMap map[acmstate.CodeHash]string
+	// This is map from DeployedBytecode to ABI. A Solidity contract can create any number
+	// of contracts, which have distinct ABIs. This is a map for the deployed code to abi,
+	// including the first contract itself.
+
+	// Note that libraries do not have ABIs. Also, the deployedbytecode does not match
+	// what Solidity tells use it will be.
+	AbiMap []AbiMap `json:",omitempty"`
 }
 
 type Response struct {
@@ -128,40 +137,60 @@ func (contract *SolidityContract) Save(dir, file string) error {
 	return os.Rename(f.Name(), filepath.Join(dir, file))
 }
 
-func (contract *SolidityContract) Link(libraries map[string]string) error {
-	bin := contract.Evm.Bytecode.Object
-	if !strings.Contains(bin, "_") {
-		return nil
-	}
+func link(bytecode string, linkReferences json.RawMessage, libraries map[string]string) (string, error) {
 	var links map[string]map[string][]struct{ Start, Length int }
-	err := json.Unmarshal(contract.Evm.Bytecode.LinkReferences, &links)
+	err := json.Unmarshal(linkReferences, &links)
 	if err != nil {
-		return err
+		return "", err
 	}
 	for _, f := range links {
 		for name, relos := range f {
 			addr, ok := libraries[name]
 			if !ok {
-				return fmt.Errorf("library %s is not defined", name)
+				return "", fmt.Errorf("library %s is not defined", name)
 			}
 			for _, relo := range relos {
 				if relo.Length != crypto.AddressLength {
-					return fmt.Errorf("linkReference should be %d bytes long, not %d", crypto.AddressLength, relo.Length)
+					return "", fmt.Errorf("linkReference should be %d bytes long, not %d", crypto.AddressLength, relo.Length)
 				}
 				if len(addr) != crypto.AddressHexLength {
-					return fmt.Errorf("address %s should be %d character long, not %d", addr, crypto.AddressHexLength, len(addr))
+					return "", fmt.Errorf("address %s should be %d character long, not %d", addr, crypto.AddressHexLength, len(addr))
 				}
 				start := relo.Start * 2
 				end := relo.Start*2 + crypto.AddressHexLength
-				if bin[start+1] != '_' || bin[end-1] != '_' {
-					return fmt.Errorf("relocation dummy not found at %d in %s ", relo.Start, bin)
+				if bytecode[start+1] != '_' || bytecode[end-1] != '_' {
+					return "", fmt.Errorf("relocation dummy not found at %d in %s ", relo.Start, bytecode)
 				}
-				bin = bin[:start] + addr + bin[end:]
+				bytecode = bytecode[:start] + addr + bytecode[end:]
 			}
 		}
 	}
 
-	contract.Evm.Bytecode.Object = bin
+	return bytecode, nil
+}
+
+// Link will replace the unresolved references with the libraries provided
+func (contract *SolidityContract) Link(libraries map[string]string) error {
+	bin := contract.Evm.Bytecode.Object
+	if strings.Contains(bin, "_") {
+		bin, err := link(bin, contract.Evm.Bytecode.LinkReferences, libraries)
+		if err != nil {
+			return err
+		}
+		contract.Evm.Bytecode.Object = bin
+	}
+
+	if contract.AbiMap != nil {
+		for _, m := range contract.AbiMap {
+			if strings.Contains(bin, "_") {
+				bin, err := link(m.DeployedBytecode.Object, m.DeployedBytecode.LinkReferences, libraries)
+				if err != nil {
+					return err
+				}
+				m.DeployedBytecode.Object = bin
+			}
+		}
+	}
 
 	return nil
 }
@@ -172,6 +201,28 @@ func (contract *SolidityContract) Code() (code string) {
 		code = contract.EWasm.Wasm
 	}
 	return
+}
+
+func (contract *SolidityContract) IsLibrary() bool {
+	// If this contract is an Library, then:
+	//  a) it does not have an externally callable ABI
+	//  b) the deployedBytecode will not match the actually deployedBytecode (thanks Solidity!). It inserts its own address
+	//     into the bytecode before deploying.
+
+	//     https://github.com/ethereum/solidity/issues/7101
+
+	// However Solidity does not make it easy to detect whether a contract is a library or a regular contract. Any suggestions
+	// for improving this are *very* welcome.
+
+	// A library deploy code always starts with PUSH20 followed by 20 0 bytes. When the code is actually deployed, the address
+	// of the library itself is populated there. This is done so that there is some code which prevents a library being called
+	// directly via a transaction, rather than from a solidity contract as it was intended.
+
+	// https://github.com/ethereum/solidity/issues/7102
+
+	libraryPrefix := "73" + strings.Repeat("00", 20)
+
+	return strings.HasPrefix(contract.Evm.DeployedBytecode.Object, libraryPrefix)
 }
 
 func EVM(file string, optimize bool, workDir string, libraries map[string]string, logger *logging.Logger) (*Response, error) {
@@ -205,16 +256,26 @@ func EVM(file string, optimize bool, workDir string, libraries map[string]string
 		return nil, err
 	}
 
-	abis, err := output.getAbis(logger)
-	if err != nil {
-		return nil, err
+	// Collect our ABIs
+	abimap := make([]AbiMap, 0)
+	for _, src := range output.Contracts {
+		for _, item := range src {
+			if !item.IsLibrary() && item.Evm.DeployedBytecode.Object != "" {
+				abimap = append(abimap, AbiMap{
+					DeployedBytecode: item.Evm.DeployedBytecode,
+					Abi:              string(item.Abi),
+				})
+			}
+		}
 	}
 
 	respItemArray := make([]ResponseItem, 0)
 
 	for f, s := range output.Contracts {
 		for contract, item := range s {
-			item.AbiMap = abis
+			if !item.IsLibrary() {
+				item.AbiMap = abimap
+			}
 			respItem := ResponseItem{
 				Filename:   f,
 				Objectname: objectName(contract),
@@ -343,32 +404,30 @@ func PrintResponse(resp Response, cli bool, logger *logging.Logger) {
 }
 
 // GetAbis get the CodeHashes + Abis for the generated Code. So, we have a map for all the possible contracts codes hashes to abis
-func (sol *SolidityOutput) getAbis(logger *logging.Logger) (map[acmstate.CodeHash]string, error) {
+func (contract *SolidityContract) GetAbis(logger *logging.Logger) (map[acmstate.CodeHash]string, error) {
 	res := make(map[acmstate.CodeHash]string)
-	for filename, src := range sol.Contracts {
-		for name, contract := range src {
-			if contract.Evm.DeployedBytecode.Object == "" {
-				continue
-			}
-
-			runtime, err := hex.DecodeString(contract.Evm.DeployedBytecode.Object)
-			if err != nil {
-				return nil, err
-			}
-
-			hash := sha3.NewKeccak256()
-			hash.Write(runtime)
-			var codehash acmstate.CodeHash
-			copy(codehash[:], hash.Sum(nil))
-			logger.TraceMsg("Found ABI",
-				"contract", name,
-				"file", filename,
-				"code", fmt.Sprintf("%X", runtime),
-				"code hash", fmt.Sprintf("%X", codehash),
-				"abi", string(contract.Abi))
-			res[codehash] = string(contract.Abi)
-		}
+	if contract.Evm.DeployedBytecode.Object == "" {
+		return nil, nil
 	}
 
+	for _, m := range contract.AbiMap {
+		if strings.Contains(m.DeployedBytecode.Object, "_") {
+			continue
+		}
+		runtime, err := hex.DecodeString(m.DeployedBytecode.Object)
+		if err != nil {
+			return nil, err
+		}
+
+		hash := sha3.NewKeccak256()
+		hash.Write(runtime)
+		var codehash acmstate.CodeHash
+		copy(codehash[:], hash.Sum(nil))
+		logger.TraceMsg("Found ABI",
+			"code", fmt.Sprintf("%X", runtime),
+			"code hash", fmt.Sprintf("%X", codehash),
+			"abi", string(m.Abi))
+		res[codehash] = string(m.Abi)
+	}
 	return res, nil
 }

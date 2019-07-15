@@ -164,7 +164,12 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 			contractCode = contractCode + callData
 		}
 
-		tx, err := deployTx(client, deploy, contractName, string(contractCode), "", nil, logger)
+		abiMap, err := contract.GetAbis(logger)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		tx, err := deployTx(client, deploy, contractName, string(contractCode), "", abiMap, logger)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not deploy binary contract: %v", err)
 		}
@@ -352,6 +357,7 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 		}
 	}
 
+	var abiMap map[acmstate.CodeHash]string
 	wasm := ""
 	data := ""
 	if contract.EWasm.Wasm != "" {
@@ -362,6 +368,11 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 			return nil, err
 		}
 		data = contract.Evm.Bytecode.Object
+
+		abiMap, err = contract.GetAbis(logger)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if deploy.Data != nil {
@@ -388,7 +399,7 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 		}
 	}
 
-	return deployTx(client, deploy, compilersResponse.Objectname, data, wasm, contract.AbiMap, logger)
+	return deployTx(client, deploy, compilersResponse.Objectname, data, wasm, abiMap, logger)
 }
 
 func deployTx(client *def.Client, deploy *def.Deploy, contractName, data, wasm string, abis map[acmstate.CodeHash]string, logger *logging.Logger) (*payload.CallTx, error) {

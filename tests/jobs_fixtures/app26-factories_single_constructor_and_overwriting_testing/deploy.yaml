@@ -17,6 +17,7 @@ jobs:
   deploy:
       contract: GSContract.sol
       instance: GSContract
+      data: [ 0 ] 
 
 - name: createGSContract
   call:
