@@ -75,8 +75,9 @@ func (vc *Bucket) SetPower(id crypto.PublicKey, power *big.Int) (*big.Int, error
 	flow := vc.Previous.Flow(id, power)
 	absFlow := new(big.Int).Abs(flow)
 
-	// Check flow except in the special case when previous Set was empty
-	if vc.Previous.TotalPower().Sign() == 0 {
+	// Only check flow if power exists, this allows us to
+	// bootstrap the set from an empty state
+	if vc.Previous.TotalPower().Sign() > 0 {
 		// The max flow we are permitted to allow across all validators
 		maxFlow := vc.Previous.MaxFlow()
 		// The remaining flow we have to play with
