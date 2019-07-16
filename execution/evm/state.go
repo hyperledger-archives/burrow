@@ -9,6 +9,7 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/crypto/sha3"
+	"github.com/hyperledger/burrow/deploy/compile"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/permission"
 )
@@ -244,6 +245,18 @@ func (st *State) InitCode(address crypto.Address, parent *crypto.Address, code [
 			if bytes.Equal(codehash, m.CodeHash) {
 				found = true
 				break
+			}
+		}
+
+		// Libraries lie about their deployed bytecode
+		if !found {
+			deployCodehash := compile.GetDeployCodeHash(code, address)
+
+			for _, m := range metamap {
+				if bytes.Equal(deployCodehash, m.CodeHash) {
+					found = true
+					break
+				}
 			}
 		}
 

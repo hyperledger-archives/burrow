@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint"
+	"github.com/hyperledger/burrow/deploy/compile"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/execution/proposal"
@@ -77,7 +78,17 @@ func (qs *queryServer) GetAbi(ctx context.Context, param *GetAbiParam) (*AbiValu
 				var abihash acmstate.AbiHash
 				copy(abihash[:], m.AbiHash)
 				abi.Abi, err = qs.accounts.GetAbi(abihash)
-				break
+				return &abi, err
+			}
+		}
+
+		deployCodehash := compile.GetDeployCodeHash(acc.EVMCode, param.Address)
+		for _, m := range acc.MetaMap {
+			if bytes.Equal(m.CodeHash, deployCodehash) {
+				var abihash acmstate.AbiHash
+				copy(abihash[:], m.AbiHash)
+				abi.Abi, err = qs.accounts.GetAbi(abihash)
+				return &abi, err
 			}
 		}
 	}

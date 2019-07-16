@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/crypto/sha3"
+	"github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/logging"
 )
 
@@ -181,13 +182,19 @@ func (contract *SolidityContract) Link(libraries map[string]string) error {
 	}
 
 	if contract.AbiMap != nil {
-		for _, m := range contract.AbiMap {
+		for i, m := range contract.AbiMap {
+			bin := m.DeployedBytecode.Object
 			if strings.Contains(bin, "_") {
-				bin, err := link(m.DeployedBytecode.Object, m.DeployedBytecode.LinkReferences, libraries)
+				bin, err := link(bin, m.DeployedBytecode.LinkReferences, libraries)
+				// When compiling a solidity file with many contracts contained it, some of those contracts might
+				// never be created by the contract we're current linking. However, Solidity does not tell us
+				// which contracts can be created by a contract.
+				// See: https://github.com/ethereum/solidity/issues/7111
+				// Some of these contracts might have unresolved libraries. We can safely skip those contracts.
 				if err != nil {
-					return err
+					continue
 				}
-				m.DeployedBytecode.Object = bin
+				contract.AbiMap[i].DeployedBytecode.Object = bin
 			}
 		}
 	}
@@ -201,28 +208,6 @@ func (contract *SolidityContract) Code() (code string) {
 		code = contract.EWasm.Wasm
 	}
 	return
-}
-
-func (contract *SolidityContract) IsLibrary() bool {
-	// If this contract is an Library, then:
-	//  a) it does not have an externally callable ABI
-	//  b) the deployedBytecode will not match the actually deployedBytecode (thanks Solidity!). It inserts its own address
-	//     into the bytecode before deploying.
-
-	//     https://github.com/ethereum/solidity/issues/7101
-
-	// However Solidity does not make it easy to detect whether a contract is a library or a regular contract. Any suggestions
-	// for improving this are *very* welcome.
-
-	// A library deploy code always starts with PUSH20 followed by 20 0 bytes. When the code is actually deployed, the address
-	// of the library itself is populated there. This is done so that there is some code which prevents a library being called
-	// directly via a transaction, rather than from a solidity contract as it was intended.
-
-	// https://github.com/ethereum/solidity/issues/7102
-
-	libraryPrefix := "73" + strings.Repeat("00", 20)
-
-	return strings.HasPrefix(contract.Evm.DeployedBytecode.Object, libraryPrefix)
 }
 
 func EVM(file string, optimize bool, workDir string, libraries map[string]string, logger *logging.Logger) (*Response, error) {
@@ -260,7 +245,7 @@ func EVM(file string, optimize bool, workDir string, libraries map[string]string
 	abimap := make([]AbiMap, 0)
 	for _, src := range output.Contracts {
 		for _, item := range src {
-			if !item.IsLibrary() && item.Evm.DeployedBytecode.Object != "" {
+			if item.Evm.DeployedBytecode.Object != "" {
 				abimap = append(abimap, AbiMap{
 					DeployedBytecode: item.Evm.DeployedBytecode,
 					Abi:              string(item.Abi),
@@ -273,9 +258,7 @@ func EVM(file string, optimize bool, workDir string, libraries map[string]string
 
 	for f, s := range output.Contracts {
 		for contract, item := range s {
-			if !item.IsLibrary() {
-				item.AbiMap = abimap
-			}
+			item.AbiMap = abimap
 			respItem := ResponseItem{
 				Filename:   f,
 				Objectname: objectName(contract),
@@ -430,4 +413,15 @@ func (contract *SolidityContract) GetAbis(logger *logging.Logger) (map[acmstate.
 		res[codehash] = string(m.Abi)
 	}
 	return res, nil
+}
+
+// GetDeployCodeHash deals with the issue described in https://github.com/ethereum/solidity/issues/7101
+func GetDeployCodeHash(code []byte, address crypto.Address) []byte {
+	if bytes.HasPrefix(code, append([]byte{byte(asm.PUSH20)}, address.Bytes()...)) {
+		code = append([]byte{byte(asm.PUSH20)}, append(make([]byte, crypto.AddressLength), code[crypto.AddressLength+1:]...)...)
+	}
+
+	hash := sha3.NewKeccak256()
+	hash.Write(code)
+	return hash.Sum(nil)
 }
