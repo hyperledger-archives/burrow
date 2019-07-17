@@ -127,7 +127,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			t.Parallel()
 			numGoroutines := 40
 			numRuns := 5
-			spec, err := abi.ReadAbiSpec(solidity.Abi_StrangeLoop)
+			spec, err := abi.ReadSpec(solidity.Abi_StrangeLoop)
 			require.NoError(t, err)
 			data, _, err := spec.Pack("UpsieDownsie")
 			require.NoError(t, err)
@@ -282,7 +282,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			createTxe, err := rpctest.CreateContract(cli, inputAddress, solidity.Bytecode_StrangeLoop)
 			require.NoError(t, err)
 			address := lastCall(createTxe.Events).CallData.Callee
-			spec, err := abi.ReadAbiSpec(solidity.Abi_StrangeLoop)
+			spec, err := abi.ReadSpec(solidity.Abi_StrangeLoop)
 			require.NoError(t, err)
 			data, _, err := spec.Pack("UpsieDownsie")
 			require.NoError(t, err)
@@ -301,7 +301,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			createTxe, err := rpctest.CreateContract(cli, inputAddress, solidity.Bytecode_StrangeLoop)
 			require.NoError(t, err)
 			address := lastCall(createTxe.Events).CallData.Callee
-			spec, err := abi.ReadAbiSpec(solidity.Abi_StrangeLoop)
+			spec, err := abi.ReadSpec(solidity.Abi_StrangeLoop)
 			require.NoError(t, err)
 			data, _, err := spec.Pack("UpsieDownsie")
 			require.NoError(t, err)
@@ -312,7 +312,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			log := evs[0]
 			var direction string
 			var depth int64
-			evAbi := spec.Events["ChangeLevel"]
+			evAbi := spec.EventsByName["ChangeLevel"]
 			err = abi.UnpackEvent(&evAbi, log.Topics, log.Data, &direction, &depth)
 			require.NoError(t, err)
 			assert.Equal(t, evAbi.EventID.Bytes(), log.Topics[0].Bytes())
@@ -326,7 +326,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			createTxe, err := rpctest.CreateContract(cli, inputAddress, solidity.Bytecode_EventEmitter)
 			require.NoError(t, err)
 			address := lastCall(createTxe.Events).CallData.Callee
-			spec, err := abi.ReadAbiSpec(solidity.Abi_EventEmitter)
+			spec, err := abi.ReadSpec(solidity.Abi_EventEmitter)
 			require.NoError(t, err)
 			calldata, _, err := spec.Pack("EmitOne")
 			require.NoError(t, err)
@@ -334,7 +334,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			require.NoError(t, err)
 			evs := filterLogs(callTxe.Events)
 			log := evs[0]
-			evAbi := spec.Events["ManyTypes"]
+			evAbi := spec.EventsByName["ManyTypes"]
 			data := abi.GetPackingTypes(evAbi.Inputs)
 			// Check signature
 			assert.Equal(t, evAbi.EventID.Bytes(), log.Topics[0].Bytes())
@@ -365,7 +365,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			createTxe, err := rpctest.CreateContract(cli, inputAddress, solidity.Bytecode_EventEmitter)
 			require.NoError(t, err)
 			address := lastCall(createTxe.Events).CallData.Callee
-			spec, err := abi.ReadAbiSpec(solidity.Abi_EventEmitter)
+			spec, err := abi.ReadSpec(solidity.Abi_EventEmitter)
 			require.NoError(t, err)
 			calldata, _, err := spec.Pack("EmitOne")
 			require.NoError(t, err)
@@ -373,7 +373,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			require.NoError(t, err)
 			evs := filterLogs(callTxe.Events)
 			log := evs[0]
-			evAbi := spec.Events["ManyTypes"]
+			evAbi := spec.EventsByName["ManyTypes"]
 			data := abi.GetPackingTypes(evAbi.Inputs)
 			for i, a := range evAbi.Inputs {
 				if a.Indexed && !a.Hashed && a.EVM.GetSignature() == "bytes32" {
@@ -400,7 +400,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			t.Parallel()
 			txe, err := rpctest.CreateContract(cli, inputAddress, solidity.Bytecode_Revert)
 			require.NoError(t, err)
-			spec, err := abi.ReadAbiSpec(solidity.Abi_Revert)
+			spec, err := abi.ReadSpec(solidity.Abi_Revert)
 			require.NoError(t, err)
 			data, _, err := spec.Pack("RevertAt", 4)
 			require.NoError(t, err)
@@ -417,7 +417,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			t.Parallel()
 			txe, err := rpctest.CreateContract(cli, inputAddress, solidity.Bytecode_Revert)
 			require.NoError(t, err)
-			spec, err := abi.ReadAbiSpec(solidity.Abi_Revert)
+			spec, err := abi.ReadSpec(solidity.Abi_Revert)
 			require.NoError(t, err)
 			data, _, err := spec.Pack("RevertNoReason")
 			require.NoError(t, err)

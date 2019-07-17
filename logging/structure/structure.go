@@ -216,14 +216,27 @@ func Value(keyvals []interface{}, key interface{}) interface{} {
 }
 
 // Maps key values pairs with a function (key, value) -> (new key, new value)
-func MapKeyValues(keyvals []interface{}, fn func(interface{}, interface{}) (interface{}, interface{})) []interface{} {
-	mappedKeyvals := make([]interface{}, len(keyvals))
-	for i := 0; i < 2*(len(keyvals)/2); i += 2 {
-		key := keyvals[i]
-		val := keyvals[i+1]
-		mappedKeyvals[i], mappedKeyvals[i+1] = fn(key, val)
+func MapKeyValues(keyvals []interface{}, fn func(interface{}, interface{}) (interface{}, interface{})) ([]interface{}, error) {
+	mappedKeyvals := make([]interface{}, 0)
+	for i := 0; i < len(keyvals); {
+		keymap, ok := keyvals[i].(map[string]interface{})
+		if ok {
+			for key, val := range keymap {
+				k, v := fn(key, val)
+				mappedKeyvals = append(mappedKeyvals, k, v)
+			}
+			i++
+		} else {
+			if i+1 >= len(keyvals) {
+				return nil, fmt.Errorf("log line contains an odd number of elements so "+
+					"was dropped: %v", keyvals)
+			}
+			k, v := fn(keyvals[i], keyvals[i+1])
+			mappedKeyvals = append(mappedKeyvals, k, v)
+			i += 2
+		}
 	}
-	return mappedKeyvals
+	return mappedKeyvals, nil
 }
 
 // Deletes n elements starting with the ith from a slice by splicing.

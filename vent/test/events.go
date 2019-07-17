@@ -58,7 +58,7 @@ func Call(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAd
 	functionName string, args ...interface{}) *exec.TxExecution {
 	t.Helper()
 
-	spec, err := abi.ReadAbiSpec(Abi_EventsTest)
+	spec, err := abi.ReadSpec(Abi_EventsTest)
 	require.NoError(t, err)
 
 	data, _, err := spec.Pack(functionName, args...)

@@ -29,5 +29,5 @@ type EventDataRow struct {
 	Action  DBAction
 	RowData map[string]interface{}
 	// The EventClass that caused this row to be emitted (if it was caused by an specific event)
-	EventClass *EventClass
+	EventClass *EventClass `json:"-"`
 }

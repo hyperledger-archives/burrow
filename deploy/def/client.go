@@ -41,7 +41,7 @@ type Client struct {
 	queryClient           rpcquery.QueryClient
 	executionEventsClient rpcevents.ExecutionEventsClient
 	keyClient             keys.KeyClient
-	AllSpecs              *abi.AbiSpec
+	AllSpecs              *abi.Spec
 }
 
 func NewClient(chain, keysClientAddress string, mempoolSigning bool, timeout time.Duration) *Client {

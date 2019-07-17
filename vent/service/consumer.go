@@ -55,7 +55,7 @@ func NewConsumer(cfg *config.VentConfig, log *logging.Logger, eventChannel chan 
 // Run connects to a grpc service and subscribes to log events,
 // then gets tables structures, maps them & parse event data.
 // Store data in SQL event tables, it runs forever
-func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stream bool) error {
+func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.Spec, stream bool) error {
 	var err error
 
 	c.Log.InfoMsg("Connecting to Burrow gRPC server")
@@ -211,7 +211,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 	}
 }
 
-func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi.AbiSpec,
+func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi.Spec,
 	eventCh chan<- types.EventData) func(blockExecution *exec.BlockExecution) error {
 
 	return func(blockExecution *exec.BlockExecution) error {
@@ -281,7 +281,7 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 						// there's a matching filter, add data to the rows
 						if qry.Matches(taggedEvent) {
 
-							c.Log.InfoMsg(fmt.Sprintf("Matched event header: %v", event.Header),
+							c.Log.InfoMsg("Matched event", "header", event.Header,
 								"filter", eventClass.Filter)
 
 							// unpack, decode & build event data
@@ -304,7 +304,9 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 			// gets block data to upsert
 			blk := blockData.Data
 
-			c.Log.InfoMsg(fmt.Sprintf("Upserting rows in SQL tables %v", blk), "block", fromBlock)
+			for name, rows := range blk.Tables {
+				c.Log.InfoMsg("Upserting rows in SQL table", "height", fromBlock, "table", name, "action", "UPSERT", "rows", rows)
+			}
 
 			eventCh <- blk
 		}

@@ -16,7 +16,7 @@ import (
 )
 
 // buildEventData builds event data from transactions
-func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass, event *exec.Event, origin *exec.Origin, abiSpec *abi.AbiSpec,
+func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass, event *exec.Event, origin *exec.Origin, abiSpec *abi.Spec,
 	l *logging.Logger) (types.EventDataRow, error) {
 
 	// a fresh new row to store column/value data
@@ -32,7 +32,7 @@ func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass,
 		return types.EventDataRow{}, errors.Wrapf(err, "Error decoding event (filter: %s)", eventClass.Filter)
 	}
 
-	l.InfoMsg(fmt.Sprintf("Unpacked data: %v", decodedData), "eventName", decodedData[types.EventNameLabel])
+	l.InfoMsg("Decoded event", decodedData)
 
 	rowAction := types.ActionUpsert
 
@@ -75,7 +75,7 @@ func buildBlkData(tbls types.EventTables, block *exec.BlockExecution) (types.Eve
 	if _, ok := tbls[tables.Block]; ok {
 		blockHeader, err := json.Marshal(block.Header)
 		if err != nil {
-			return types.EventDataRow{}, fmt.Errorf("couldn not marshal BlockHeader in block %v", block)
+			return types.EventDataRow{}, fmt.Errorf("could not marshal BlockHeader in block %v", block)
 		}
 
 		row[columns.Height] = fmt.Sprintf("%v", block.Height)

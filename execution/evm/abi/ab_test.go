@@ -2,10 +2,11 @@ package abi
 
 import (
 	"bytes"
-	"encoding/hex"
 	"math/big"
 	"strings"
 	"testing"
+
+	hex "github.com/tmthrgd/go-hex"
 
 	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/assert"
