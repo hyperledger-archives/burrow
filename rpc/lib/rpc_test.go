@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/process"
 
-	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/hyperledger/burrow/rpc/lib/client"
 	"github.com/hyperledger/burrow/rpc/lib/server"
 	"github.com/hyperledger/burrow/rpc/lib/types"
@@ -88,10 +88,13 @@ func TestMain(m *testing.M) {
 
 // launch unix and tcp servers
 func setup() {
-	logger, _ := lifecycle.NewStdErrLogger()
+	logger, err := logconfig.New().NewLogger()
+	if err != nil {
+		panic(err)
+	}
 
 	cmd := exec.Command("rm", "-f", unixSocket)
-	err := cmd.Start()
+	err = cmd.Start()
 	if err != nil {
 		panic(err)
 	}

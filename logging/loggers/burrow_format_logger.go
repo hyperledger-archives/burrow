@@ -15,6 +15,8 @@
 package loggers
 
 import (
+	"encoding"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -47,7 +49,7 @@ func (bfl *burrowFormatLogger) Log(keyvals ...interface{}) error {
 	keyvals = structure.MapKeyValues(keyvals,
 		func(key interface{}, value interface{}) (interface{}, interface{}) {
 			switch v := value.(type) {
-			case string:
+			case string, json.Marshaler, encoding.TextMarshaler:
 			case time.Time:
 				value = v.Format(time.RFC3339Nano)
 			case fmt.Stringer:

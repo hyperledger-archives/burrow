@@ -8,7 +8,7 @@ import (
 
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/dump"
-	"github.com/hyperledger/burrow/logging/lifecycle"
+	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/rpc/rpcdump"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	cli "github.com/jawher/mow.cli"
@@ -61,7 +61,7 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 				}
 
 				// Include all logging by default
-				logger, err := lifecycle.NewStdErrLogger()
+				logger, err := logconfig.New().NewLogger()
 				if err != nil {
 					output.Fatalf("could not make logger: %v", err)
 				}
