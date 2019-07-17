@@ -27,6 +27,7 @@ type EVMType interface {
 	pack(v interface{}) ([]byte, error)
 	unpack(data []byte, offset int, v interface{}) (int, error)
 	Dynamic() bool
+	ImplicitCast(o EVMType) bool
 }
 
 var _ EVMType = (*EVMBool)(nil)
@@ -109,6 +110,10 @@ func (e EVMBool) unpack(data []byte, offset int, v interface{}) (int, error) {
 }
 
 func (e EVMBool) Dynamic() bool {
+	return false
+}
+
+func (e EVMBool) ImplicitCast(o EVMType) bool {
 	return false
 }
 
@@ -293,6 +298,11 @@ func (e EVMInt) getGoType() interface{} {
 	}
 }
 
+func (e EVMInt) ImplicitCast(o EVMType) bool {
+	i, ok := o.(EVMInt)
+	return ok && i.M >= e.M
+}
+
 func (e EVMInt) GetSignature() string {
 	return fmt.Sprintf("int%d", e.M)
 }
@@ -455,6 +465,11 @@ func (e EVMInt) Dynamic() bool {
 	return false
 }
 
+func (e EVMUint) ImplicitCast(o EVMType) bool {
+	u, ok := o.(EVMUint)
+	return ok && u.M >= e.M
+}
+
 var _ EVMType = (*EVMAddress)(nil)
 
 type EVMAddress struct {
@@ -514,6 +529,10 @@ func (e EVMAddress) unpack(data []byte, offset int, v interface{}) (int, error) 
 }
 
 func (e EVMAddress) Dynamic() bool {
+	return false
+}
+
+func (e EVMAddress) ImplicitCast(o EVMType) bool {
 	return false
 }
 
@@ -605,6 +624,10 @@ func (e EVMBytes) GetSignature() string {
 	}
 }
 
+func (e EVMBytes) ImplicitCast(o EVMType) bool {
+	return false
+}
+
 var _ EVMType = (*EVMString)(nil)
 
 type EVMString struct {
@@ -649,6 +672,10 @@ func (e EVMString) Dynamic() bool {
 	return true
 }
 
+func (e EVMString) ImplicitCast(o EVMType) bool {
+	return false
+}
+
 var _ EVMType = (*EVMFixed)(nil)
 
 type EVMFixed struct {
@@ -682,6 +709,10 @@ func (e EVMFixed) unpack(data []byte, offset int, v interface{}) (int, error) {
 }
 
 func (e EVMFixed) Dynamic() bool {
+	return false
+}
+
+func (e EVMFixed) ImplicitCast(o EVMType) bool {
 	return false
 }
 

@@ -21,7 +21,11 @@ func GenerateSpecFromAbis(spec *abi.AbiSpec) ([]*types.EventClass, error) {
 			field, ok := fields[in.Name]
 			if ok {
 				if field.Type != in.EVM {
-					fmt.Printf("WARNING: field %s in event %s has different definitions in events %v (%s rather than %s)\n", in.Name, ev.Name, field.Events, field.Type, ty)
+					if field.Type.ImplicitCast(in.EVM) {
+						field.Type = in.EVM
+					} else if !in.EVM.ImplicitCast(field.Type) {
+						fmt.Printf("WARNING: field %s in event %s has different definitions in events %v (%s rather than %s)\n", in.Name, ev.Name, field.Events, field.Type, in.EVM)
+					}
 				} else {
 					field.Events = append(field.Events, ev.Name)
 				}
