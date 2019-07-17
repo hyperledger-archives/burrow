@@ -567,7 +567,7 @@ func logEvents(txe *exec.TxExecution, client *def.Client, logger *logging.Logger
 		var eventID abi.EventID
 		copy(eventID[:], eventLog.GetTopic(0).Bytes())
 
-		evAbi, ok := client.AllSpecs.EventsById[eventID]
+		evAbi, ok := client.AllSpecs.EventsByID[eventID]
 		if !ok {
 			logger.InfoMsg("Could not find ABI for Event", "Event ID", hex.EncodeUpperToString(eventID[:]))
 			continue

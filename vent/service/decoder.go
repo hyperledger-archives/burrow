@@ -19,7 +19,7 @@ func decodeEvent(header *exec.Header, log *exec.LogEvent, origin *exec.Origin, a
 	var eventID abi.EventID
 	copy(eventID[:], log.Topics[0].Bytes())
 
-	evAbi, ok := abiSpec.EventsById[eventID]
+	evAbi, ok := abiSpec.EventsByID[eventID]
 	if !ok {
 		return nil, fmt.Errorf("abi spec not found for event %x", eventID)
 	}

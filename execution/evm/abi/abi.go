@@ -32,15 +32,15 @@ type Variable struct {
 
 func init() {
 	var err error
-	RevertAbi, err = ReadSpec([]byte(`[{"name":"Error","type":"function","outputs":[{"type":"string"}],"inputs":[{"type":"string"}]}]`))
+	revertAbi, err = ReadSpec([]byte(`[{"name":"Error","type":"function","outputs":[{"type":"string"}],"inputs":[{"type":"string"}]}]`))
 	if err != nil {
 		panic(fmt.Sprintf("internal error: failed to build revert abi: %v", err))
 	}
 }
 
-// RevertAbi exists to decode reverts. Any contract function call fail using revert(), assert() or require().
+// revertAbi exists to decode reverts. Any contract function call fail using revert(), assert() or require().
 // If a function exits this way, the this hardcoded ABI will be used.
-var RevertAbi *Spec
+var revertAbi *Spec
 
 // EncodeFunctionCallFromFile ABI encodes a function call based on ABI in file, and the
 // arguments specified as strings.
@@ -219,6 +219,7 @@ func stripHex(s string) string {
 	return s
 }
 
+// Argument is a decoded function parameter, return or event field
 type Argument struct {
 	Name        string
 	EVM         EVMType
@@ -228,10 +229,12 @@ type Argument struct {
 	ArrayLength uint64
 }
 
+// FunctionIDSize is the length of the function selector
 const FunctionIDSize = 4
 
 type FunctionID [FunctionIDSize]byte
 
+// EventIDSize is the length of the event selector
 const EventIDSize = 32
 
 type EventID [EventIDSize]byte
@@ -250,33 +253,34 @@ type EventSpec struct {
 	Anonymous bool
 }
 
+// Spec is the ABI for contract decoded.
 type Spec struct {
-	Constructor FunctionSpec
-	Fallback    FunctionSpec
-	Functions   map[string]FunctionSpec
-	Events      map[string]EventSpec
-	EventsById  map[EventID]EventSpec
+	Constructor  FunctionSpec
+	Fallback     FunctionSpec
+	Functions    map[string]FunctionSpec
+	EventsByName map[string]EventSpec
+	EventsByID   map[EventID]EventSpec
 }
 
-type ArgumentJSON struct {
+type argumentJSON struct {
 	Name       string
 	Type       string
-	Components []ArgumentJSON
+	Components []argumentJSON
 	Indexed    bool
 }
 
-type SpecJSON struct {
+type specJSON struct {
 	Name            string
 	Type            string
-	Inputs          []ArgumentJSON
-	Outputs         []ArgumentJSON
+	Inputs          []argumentJSON
+	Outputs         []argumentJSON
 	Constant        bool
 	Payable         bool
 	StateMutability string
 	Anonymous       bool
 }
 
-func readArgSpec(argsJ []ArgumentJSON) ([]Argument, error) {
+func readArgSpec(argsJ []argumentJSON) ([]Argument, error) {
 	args := make([]Argument, len(argsJ))
 	var err error
 
@@ -378,13 +382,14 @@ func readArgSpec(argsJ []ArgumentJSON) ([]Argument, error) {
 	return args, nil
 }
 
+// ReadSpec takes an ABI and decodes it for futher use
 func ReadSpec(specBytes []byte) (*Spec, error) {
-	var specJ []SpecJSON
+	var specJ []specJSON
 	err := json.Unmarshal(specBytes, &specJ)
 	if err != nil {
 		// The abi spec file might a bin file, with the Abi under the Abi field in json
 		var binFile struct {
-			Abi []SpecJSON
+			Abi []specJSON
 		}
 		err = json.Unmarshal(specBytes, &binFile)
 		if err != nil {
@@ -394,9 +399,9 @@ func ReadSpec(specBytes []byte) (*Spec, error) {
 	}
 
 	abiSpec := Spec{
-		Events:     make(map[string]EventSpec),
-		EventsById: make(map[EventID]EventSpec),
-		Functions:  make(map[string]FunctionSpec),
+		EventsByName: make(map[string]EventSpec),
+		EventsByID:   make(map[EventID]EventSpec),
+		Functions:    make(map[string]FunctionSpec),
 	}
 
 	for _, s := range specJ {
@@ -424,8 +429,8 @@ func ReadSpec(specBytes []byte) (*Spec, error) {
 				}
 			}
 			ev := EventSpec{Name: s.Name, EventID: GetEventID(sig), Inputs: inputs, Anonymous: s.Anonymous}
-			abiSpec.Events[ev.Name] = ev
-			abiSpec.EventsById[ev.EventID] = ev
+			abiSpec.EventsByName[ev.Name] = ev
+			abiSpec.EventsByID[ev.EventID] = ev
 		case "function":
 			inputs, err := readArgSpec(s.Inputs)
 			if err != nil {
@@ -444,6 +449,7 @@ func ReadSpec(specBytes []byte) (*Spec, error) {
 	return &abiSpec, nil
 }
 
+// ReadSpecFile reads an ABI file from a file
 func ReadSpecFile(filename string) (*Spec, error) {
 	specBytes, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -458,9 +464,9 @@ func ReadSpecFile(filename string) (*Spec, error) {
 // some information loss.
 func MergeSpec(abiSpec []*Spec) *Spec {
 	newSpec := Spec{
-		Events:     make(map[string]EventSpec),
-		EventsById: make(map[EventID]EventSpec),
-		Functions:  make(map[string]FunctionSpec),
+		EventsByName: make(map[string]EventSpec),
+		EventsByID:   make(map[EventID]EventSpec),
+		Functions:    make(map[string]FunctionSpec),
 	}
 
 	for _, s := range abiSpec {
@@ -470,16 +476,16 @@ func MergeSpec(abiSpec []*Spec) *Spec {
 
 		// Different Abis can have the Event name, but with a different signature
 		// Loop over the signatures, as these are less likely to have collisions
-		for _, e := range s.EventsById {
-			newSpec.Events[e.Name] = e
-			newSpec.EventsById[e.EventID] = e
+		for _, e := range s.EventsByID {
+			newSpec.EventsByName[e.Name] = e
+			newSpec.EventsByID[e.EventID] = e
 		}
 	}
 
 	return &newSpec
 }
 
-func EVMTypeFromReflect(v reflect.Type) Argument {
+func typeFromReflect(v reflect.Type) Argument {
 	arg := Argument{Name: v.Name()}
 
 	if v == reflect.TypeOf(crypto.Address{}) {
@@ -523,13 +529,13 @@ func SpecFromStructReflect(fname string, args reflect.Type, rets reflect.Type) *
 	}
 	for i := 0; i < args.NumField(); i++ {
 		f := args.Field(i)
-		a := EVMTypeFromReflect(f.Type)
+		a := typeFromReflect(f.Type)
 		a.Name = f.Name
 		s.Inputs[i] = a
 	}
 	for i := 0; i < rets.NumField(); i++ {
 		f := rets.Field(i)
-		a := EVMTypeFromReflect(f.Type)
+		a := typeFromReflect(f.Type)
 		a.Name = f.Name
 		s.Outputs[i] = a
 	}
@@ -550,11 +556,11 @@ func SpecFromFunctionReflect(fname string, v reflect.Value, skipIn, skipOut int)
 	s.Outputs = make([]Argument, t.NumOut()-skipOut)
 
 	for i := range s.Inputs {
-		s.Inputs[i] = EVMTypeFromReflect(t.In(i + skipIn))
+		s.Inputs[i] = typeFromReflect(t.In(i + skipIn))
 	}
 
 	for i := range s.Outputs {
-		s.Outputs[i] = EVMTypeFromReflect(t.Out(i))
+		s.Outputs[i] = typeFromReflect(t.Out(i))
 	}
 
 	s.SetFunctionID(fname)
@@ -612,15 +618,13 @@ func GetEventID(signature string) (id EventID) {
 func UnpackRevert(data []byte) (message *string, err error) {
 	if len(data) > 0 {
 		var msg string
-		err = RevertAbi.UnpackWithID(data, &msg)
+		err = revertAbi.UnpackWithID(data, &msg)
 		message = &msg
 	}
 	return
 }
 
-/*
- * Given a eventSpec, get all the fields (topic fields or not)
- */
+// UnpackEvent decodes all the fields in an event (indexed topic fields or not)
 func UnpackEvent(eventSpec *EventSpec, topics []burrow_binary.Word256, data []byte, args ...interface{}) error {
 	// First unpack the topic fields
 	topicIndex := 0
@@ -644,6 +648,7 @@ func UnpackEvent(eventSpec *EventSpec, topics []burrow_binary.Word256, data []by
 	})
 }
 
+// Unpack decodes the return values from a function call
 func (abiSpec *Spec) Unpack(data []byte, fname string, args ...interface{}) error {
 	var funcSpec FunctionSpec
 	var argSpec []Argument

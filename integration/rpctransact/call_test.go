@@ -312,7 +312,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			log := evs[0]
 			var direction string
 			var depth int64
-			evAbi := spec.Events["ChangeLevel"]
+			evAbi := spec.EventsByName["ChangeLevel"]
 			err = abi.UnpackEvent(&evAbi, log.Topics, log.Data, &direction, &depth)
 			require.NoError(t, err)
 			assert.Equal(t, evAbi.EventID.Bytes(), log.Topics[0].Bytes())
@@ -334,7 +334,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			require.NoError(t, err)
 			evs := filterLogs(callTxe.Events)
 			log := evs[0]
-			evAbi := spec.Events["ManyTypes"]
+			evAbi := spec.EventsByName["ManyTypes"]
 			data := abi.GetPackingTypes(evAbi.Inputs)
 			// Check signature
 			assert.Equal(t, evAbi.EventID.Bytes(), log.Topics[0].Bytes())
@@ -373,7 +373,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			require.NoError(t, err)
 			evs := filterLogs(callTxe.Events)
 			log := evs[0]
-			evAbi := spec.Events["ManyTypes"]
+			evAbi := spec.EventsByName["ManyTypes"]
 			data := abi.GetPackingTypes(evAbi.Inputs)
 			for i, a := range evAbi.Inputs {
 				if a.Indexed && !a.Hashed && a.EVM.GetSignature() == "bytes32" {

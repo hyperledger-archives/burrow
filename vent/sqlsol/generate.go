@@ -16,7 +16,7 @@ func GenerateSpecFromAbis(spec *abi.Spec) ([]*types.EventClass, error) {
 
 	fields := make(map[string]field)
 
-	for _, ev := range spec.EventsById {
+	for _, ev := range spec.EventsByID {
 		for _, in := range ev.Inputs {
 			field, ok := fields[in.Name]
 			if ok {
