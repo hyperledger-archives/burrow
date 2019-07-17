@@ -281,7 +281,7 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 						// there's a matching filter, add data to the rows
 						if qry.Matches(taggedEvent) {
 
-							c.Log.InfoMsg(fmt.Sprintf("Matched event header: %v", event.Header),
+							c.Log.InfoMsg("Matched event", "header", event.Header,
 								"filter", eventClass.Filter)
 
 							// unpack, decode & build event data
@@ -304,7 +304,9 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 			// gets block data to upsert
 			blk := blockData.Data
 
-			c.Log.InfoMsg(fmt.Sprintf("Upserting rows in SQL tables %v", blk), "block", fromBlock)
+			for name, rows := range blk.Tables {
+				c.Log.InfoMsg("Upserting rows in SQL table", "height", fromBlock, "table", name, "action", "UPSERT", "rows", rows)
+			}
 
 			eventCh <- blk
 		}

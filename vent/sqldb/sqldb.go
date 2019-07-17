@@ -289,7 +289,7 @@ func (db *SQLDB) SynchronizeDB(chainID string, eventTables types.EventTables) er
 
 // SetBlock inserts or updates multiple rows and stores log info in SQL tables
 func (db *SQLDB) SetBlock(chainID string, eventTables types.EventTables, eventData types.EventData) error {
-	db.Log.InfoMsg("Synchronize Block..........")
+	db.Log.InfoMsg("Synchronize Block", "action", "SYNC")
 
 	// Begin tx
 	tx, err := db.DB.Beginx()
@@ -366,7 +366,7 @@ loop:
 
 			eventName, _ := row.RowData[db.Columns.EventName].(string)
 			// Insert in log
-			db.Log.InfoMsg("INSERT LOG", "query", logQuery, "value",
+			db.Log.InfoMsg("INSERT LOG", "action", "INSERT", "query", logQuery, "value",
 				fmt.Sprintf("chainid = %s tableName = %s eventName = %s block = %d", chainID, safeTable, en, eventData.BlockHeight))
 
 			if _, err = logStmt.Exec(chainID, safeTable, eventName, row.EventClass.GetFilter(), eventData.BlockHeight, txHash,
@@ -421,7 +421,7 @@ loop:
 		return err
 	}
 
-	db.Log.InfoMsg("COMMIT")
+	db.Log.InfoMsg("COMMIT", "action", "COMMIT")
 
 	err = db.SetBlockHeight(tx, chainID, eventData.BlockHeight)
 	if err != nil {

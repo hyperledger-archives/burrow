@@ -42,11 +42,7 @@ func (bfl *burrowFormatLogger) Log(keyvals ...interface{}) error {
 	if bfl.logger == nil {
 		return nil
 	}
-	if len(keyvals)%2 != 0 {
-		return fmt.Errorf("log line contains an odd number of elements so "+
-			"was dropped: %v", keyvals)
-	}
-	keyvals = structure.MapKeyValues(keyvals,
+	keyvals, err := structure.MapKeyValues(keyvals,
 		func(key interface{}, value interface{}) (interface{}, interface{}) {
 			switch v := value.(type) {
 			case string, json.Marshaler, encoding.TextMarshaler:
@@ -59,6 +55,9 @@ func (bfl *burrowFormatLogger) Log(keyvals ...interface{}) error {
 			}
 			return structure.StringifyKey(key), value
 		})
+	if err != nil {
+		return err
+	}
 	bfl.Lock()
 	defer bfl.Unlock()
 	return bfl.logger.Log(keyvals...)
