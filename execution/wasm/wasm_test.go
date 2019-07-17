@@ -23,7 +23,7 @@ func TestStaticCallWithValue(t *testing.T) {
 	require.NoError(t, cerr)
 
 	// run getFooPlus2
-	spec, err := abi.ReadAbiSpec(Abi_storage_test)
+	spec, err := abi.ReadSpec(Abi_storage_test)
 	require.NoError(t, err)
 	calldata, _, err := spec.Pack("getFooPlus2")
 

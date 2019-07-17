@@ -174,7 +174,7 @@ func TestExecutionEventsTest(t *testing.T) {
 		t.Run("Revert", func(t *testing.T) {
 			txe, err := rpctest.CreateContract(tcli, inputAddress0, solidity.Bytecode_Revert)
 			require.NoError(t, err)
-			spec, err := abi.ReadAbiSpec(solidity.Abi_Revert)
+			spec, err := abi.ReadSpec(solidity.Abi_Revert)
 			require.NoError(t, err)
 			data, _, err := spec.Pack("RevertAt", 4)
 			require.NoError(t, err)

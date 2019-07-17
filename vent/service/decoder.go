@@ -12,7 +12,7 @@ import (
 )
 
 // decodeEvent unpacks & decodes event data
-func decodeEvent(header *exec.Header, log *exec.LogEvent, origin *exec.Origin, abiSpec *abi.AbiSpec) (map[string]interface{}, error) {
+func decodeEvent(header *exec.Header, log *exec.LogEvent, origin *exec.Origin, abiSpec *abi.Spec) (map[string]interface{}, error) {
 	// to prepare decoded data and map to event item name
 	data := make(map[string]interface{})
 

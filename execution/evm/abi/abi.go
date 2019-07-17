@@ -747,7 +747,7 @@ type EventSpec struct {
 	Anonymous bool
 }
 
-type AbiSpec struct {
+type Spec struct {
 	Constructor FunctionSpec
 	Fallback    FunctionSpec
 	Functions   map[string]FunctionSpec
@@ -762,7 +762,7 @@ type ArgumentJSON struct {
 	Indexed    bool
 }
 
-type AbiSpecJSON struct {
+type SpecJSON struct {
 	Name            string
 	Type            string
 	Inputs          []ArgumentJSON
@@ -875,13 +875,13 @@ func readArgSpec(argsJ []ArgumentJSON) ([]Argument, error) {
 	return args, nil
 }
 
-func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
-	var specJ []AbiSpecJSON
+func ReadSpec(specBytes []byte) (*Spec, error) {
+	var specJ []SpecJSON
 	err := json.Unmarshal(specBytes, &specJ)
 	if err != nil {
 		// The abi spec file might a bin file, with the Abi under the Abi field in json
 		var binFile struct {
-			Abi []AbiSpecJSON
+			Abi []SpecJSON
 		}
 		err = json.Unmarshal(specBytes, &binFile)
 		if err != nil {
@@ -890,7 +890,7 @@ func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
 		specJ = binFile.Abi
 	}
 
-	abiSpec := AbiSpec{
+	abiSpec := Spec{
 		Events:     make(map[string]EventSpec),
 		EventsById: make(map[EventID]EventSpec),
 		Functions:  make(map[string]FunctionSpec),
@@ -941,20 +941,20 @@ func ReadAbiSpec(specBytes []byte) (*AbiSpec, error) {
 	return &abiSpec, nil
 }
 
-func ReadAbiSpecFile(filename string) (*AbiSpec, error) {
+func ReadSpecFile(filename string) (*Spec, error) {
 	specBytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	return ReadAbiSpec(specBytes)
+	return ReadSpec(specBytes)
 }
 
-// MergeAbiSpec takes multiple AbiSpecs and merges them into once structure. Note that
+// MergeSpec takes multiple Specs and merges them into once structure. Note that
 // the same function name or event name can occur in different abis, so there might be
 // some information loss.
-func MergeAbiSpec(abiSpec []*AbiSpec) *AbiSpec {
-	newSpec := AbiSpec{
+func MergeSpec(abiSpec []*Spec) *Spec {
+	newSpec := Spec{
 		Events:     make(map[string]EventSpec),
 		EventsById: make(map[EventID]EventSpec),
 		Functions:  make(map[string]FunctionSpec),
@@ -1141,7 +1141,7 @@ func UnpackEvent(eventSpec *EventSpec, topics []burrow_binary.Word256, data []by
 	})
 }
 
-func (abiSpec *AbiSpec) Unpack(data []byte, fname string, args ...interface{}) error {
+func (abiSpec *Spec) Unpack(data []byte, fname string, args ...interface{}) error {
 	var funcSpec FunctionSpec
 	var argSpec []Argument
 	if fname != "" {
@@ -1165,7 +1165,7 @@ func (abiSpec *AbiSpec) Unpack(data []byte, fname string, args ...interface{}) e
 	})
 }
 
-func (abiSpec *AbiSpec) UnpackWithID(data []byte, args ...interface{}) error {
+func (abiSpec *Spec) UnpackWithID(data []byte, args ...interface{}) error {
 	var argSpec []Argument
 
 	var id FunctionID
@@ -1191,7 +1191,7 @@ func (abiSpec *AbiSpec) UnpackWithID(data []byte, args ...interface{}) error {
 // must match the function being called.
 // Returns the ABI encoded function call, whether the function is constant according
 // to the ABI (which means it does not modified contract state)
-func (abiSpec *AbiSpec) Pack(fname string, args ...interface{}) ([]byte, *FunctionSpec, error) {
+func (abiSpec *Spec) Pack(fname string, args ...interface{}) ([]byte, *FunctionSpec, error) {
 	var funcSpec FunctionSpec
 	var argSpec []Argument
 	if fname != "" {

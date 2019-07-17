@@ -55,7 +55,7 @@ func NewConsumer(cfg *config.VentConfig, log *logging.Logger, eventChannel chan 
 // Run connects to a grpc service and subscribes to log events,
 // then gets tables structures, maps them & parse event data.
 // Store data in SQL event tables, it runs forever
-func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stream bool) error {
+func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.Spec, stream bool) error {
 	var err error
 
 	c.Log.InfoMsg("Connecting to Burrow gRPC server")
@@ -211,7 +211,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 	}
 }
 
-func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi.AbiSpec,
+func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi.Spec,
 	eventCh chan<- types.EventData) func(blockExecution *exec.BlockExecution) error {
 
 	return func(blockExecution *exec.BlockExecution) error {

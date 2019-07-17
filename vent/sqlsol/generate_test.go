@@ -11,7 +11,7 @@ import (
 )
 
 func TestGenerateSpecFromAbis(t *testing.T) {
-	spec, err := abi.ReadAbiSpec(solidity.Abi_EventEmitter)
+	spec, err := abi.ReadSpec(solidity.Abi_EventEmitter)
 	require.NoError(t, err)
 
 	project, err := sqlsol.GenerateSpecFromAbis(spec)

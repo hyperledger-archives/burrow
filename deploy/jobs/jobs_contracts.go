@@ -376,7 +376,7 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 		data = data + callData
 	} else {
 		// No constructor arguments were provided. Did the constructor want any?
-		spec, err := abi.ReadAbiSpec(compilersResponse.Contract.Abi)
+		spec, err := abi.ReadSpec(compilersResponse.Contract.Abi)
 		if err != nil {
 			return nil, err
 		}
@@ -593,8 +593,8 @@ func logEvents(txe *exec.TxExecution, client *def.Client, logger *logging.Logger
 }
 
 func mergeAbiSpecBytes(client *def.Client, bs []byte) {
-	spec, err := abi.ReadAbiSpec(bs)
+	spec, err := abi.ReadSpec(bs)
 	if err == nil {
-		client.AllSpecs = abi.MergeAbiSpec([]*abi.AbiSpec{client.AllSpecs, spec})
+		client.AllSpecs = abi.MergeSpec([]*abi.Spec{client.AllSpecs, spec})
 	}
 }

@@ -20,7 +20,7 @@ type Variable struct {
 
 func init() {
 	var err error
-	RevertAbi, err = ReadAbiSpec([]byte(`[{"name":"Error","type":"function","outputs":[{"type":"string"}],"inputs":[{"type":"string"}]}]`))
+	RevertAbi, err = ReadSpec([]byte(`[{"name":"Error","type":"function","outputs":[{"type":"string"}],"inputs":[{"type":"string"}]}]`))
 	if err != nil {
 		panic(fmt.Sprintf("internal error: failed to build revert abi: %v", err))
 	}
@@ -28,7 +28,7 @@ func init() {
 
 // RevertAbi exists to decode reverts. Any contract function call fail using revert(), assert() or require().
 // If a function exits this way, the this hardcoded ABI will be used.
-var RevertAbi *AbiSpec
+var RevertAbi *Spec
 
 // EncodeFunctionCallFromFile ABI encodes a function call based on ABI in file, and the
 // arguments specified as strings.
@@ -63,7 +63,7 @@ func EncodeFunctionCall(abiData, funcName string, logger *logging.Logger, args .
 		"arguments", fmt.Sprintf("%v", args),
 	)
 
-	abiSpec, err := ReadAbiSpec([]byte(abiData))
+	abiSpec, err := ReadSpec([]byte(abiData))
 	if err != nil {
 		logger.InfoMsg("Failed to decode abi spec",
 			"abi", abiData,
@@ -97,7 +97,7 @@ func DecodeFunctionReturnFromFile(abiLocation, binPath, funcName string, resultR
 }
 
 func DecodeFunctionReturn(abiData, name string, data []byte) ([]*Variable, error) {
-	abiSpec, err := ReadAbiSpec([]byte(abiData))
+	abiSpec, err := ReadSpec([]byte(abiData))
 	if err != nil {
 		return nil, err
 	}
@@ -162,12 +162,12 @@ func readAbi(root, contract string, logger *logging.Logger) (string, error) {
 }
 
 // LoadPath loads one abi file or finds all files in a directory
-func LoadPath(abiFileOrDirs ...string) (*AbiSpec, error) {
+func LoadPath(abiFileOrDirs ...string) (*Spec, error) {
 	if len(abiFileOrDirs) == 0 {
-		return &AbiSpec{}, fmt.Errorf("no ABI file or directory provided")
+		return &Spec{}, fmt.Errorf("no ABI file or directory provided")
 	}
 
-	specs := make([]*AbiSpec, 0)
+	specs := make([]*Spec, 0)
 
 	for _, dir := range abiFileOrDirs {
 		err := filepath.Walk(dir, func(path string, fi os.FileInfo, err error) error {
@@ -179,7 +179,7 @@ func LoadPath(abiFileOrDirs ...string) (*AbiSpec, error) {
 				return nil
 			}
 			if err == nil {
-				abiSpc, err := ReadAbiSpecFile(path)
+				abiSpc, err := ReadSpecFile(path)
 				if err != nil {
 					return errors.Wrap(err, "Error parsing abi file "+path)
 				}
@@ -188,10 +188,10 @@ func LoadPath(abiFileOrDirs ...string) (*AbiSpec, error) {
 			return nil
 		})
 		if err != nil {
-			return &AbiSpec{}, err
+			return &Spec{}, err
 		}
 	}
-	return MergeAbiSpec(specs), nil
+	return MergeSpec(specs), nil
 }
 
 func stripHex(s string) string {

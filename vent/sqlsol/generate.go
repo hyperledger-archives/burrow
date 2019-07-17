@@ -8,7 +8,7 @@ import (
 )
 
 // GenerateSpecFromAbis creates a simple spec which just logs all events
-func GenerateSpecFromAbis(spec *abi.AbiSpec) ([]*types.EventClass, error) {
+func GenerateSpecFromAbis(spec *abi.Spec) ([]*types.EventClass, error) {
 	type field struct {
 		Type   abi.EVMType
 		Events []string
