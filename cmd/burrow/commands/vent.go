@@ -8,10 +8,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hyperledger/burrow/logging/lifecycle"
-
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/execution/evm/abi"
+	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/vent/config"
 	"github.com/hyperledger/burrow/vent/service"
 	"github.com/hyperledger/burrow/vent/sqldb"
@@ -69,7 +68,7 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					"[--blocks] [--txs] [--grpc-addr] [--http-addr] [--log-level] [--announce-every=<duration>]"
 
 				cmd.Action = func() {
-					log, err := lifecycle.NewStdErrLogger()
+					log, err := logconfig.New().NewLogger()
 					if err != nil {
 						output.Fatalf("failed to load logger: %v", err)
 					}
@@ -161,7 +160,7 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				}
 
 				cmd.Action = func() {
-					log, err := lifecycle.NewStdErrLogger()
+					log, err := logconfig.New().NewLogger()
 					if err != nil {
 						output.Fatalf("failed to load logger: %v", err)
 					}

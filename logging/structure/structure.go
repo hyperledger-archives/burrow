@@ -250,7 +250,7 @@ func StringifyKey(key interface{}) string {
 		case fmt.Stringer:
 			return k.String()
 		default:
-			return fmt.Sprintf("%v", key)
+			return fmt.Sprint(key)
 		}
 	}
 }
