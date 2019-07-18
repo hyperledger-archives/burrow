@@ -7,11 +7,13 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 )
 
-func NewBondTx(pubkey crypto.PublicKey) (*BondTx, error) {
+func NewBondTx(address crypto.Address, amount uint64) *BondTx {
 	return &BondTx{
-		Inputs:   []*TxInput{},
-		UnbondTo: []*TxOutput{},
-	}, nil
+		Input: &TxInput{
+			Address: address,
+			Amount:  amount,
+		},
+	}
 }
 
 func (tx *BondTx) Type() Type {
@@ -19,11 +21,11 @@ func (tx *BondTx) Type() Type {
 }
 
 func (tx *BondTx) GetInputs() []*TxInput {
-	return tx.Inputs
+	return []*TxInput{tx.Input}
 }
 
 func (tx *BondTx) String() string {
-	return fmt.Sprintf("BondTx{%v -> %v}", tx.Inputs, tx.UnbondTo)
+	return fmt.Sprintf("BondTx{%v}", tx.Input)
 }
 
 func (tx *BondTx) AddInput(st acmstate.AccountGetter, pubkey crypto.PublicKey, amt uint64) error {
@@ -39,19 +41,11 @@ func (tx *BondTx) AddInput(st acmstate.AccountGetter, pubkey crypto.PublicKey, a
 }
 
 func (tx *BondTx) AddInputWithSequence(pubkey crypto.PublicKey, amt uint64, sequence uint64) error {
-	tx.Inputs = append(tx.Inputs, &TxInput{
+	tx.Input = &TxInput{
 		Address:  pubkey.GetAddress(),
 		Amount:   amt,
 		Sequence: sequence,
-	})
-	return nil
-}
-
-func (tx *BondTx) AddOutput(addr crypto.Address, amt uint64) error {
-	tx.UnbondTo = append(tx.UnbondTo, &TxOutput{
-		Address: addr,
-		Amount:  amt,
-	})
+	}
 	return nil
 }
 

@@ -108,8 +108,8 @@ message BondTx {
     option (gogoproto.goproto_stringer) = false;
     option (gogoproto.goproto_getters) = false;
 
-    repeated TxInput Inputs = 1;
-    repeated TxOutput UnbondTo = 2;
+    // Input must be the validator that desires to bond
+    TxInput Input = 1;
 }
 
 message UnbondTx {
@@ -117,8 +117,8 @@ message UnbondTx {
     option (gogoproto.goproto_getters) = false;
 
     TxInput Input = 1;
-    bytes Address = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
-    uint64 Height = 3;
+    // Account to unbond
+    TxOutput Output = 2;
 }
 
 message GovTx {

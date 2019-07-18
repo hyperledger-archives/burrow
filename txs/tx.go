@@ -237,5 +237,11 @@ func EnvelopeFromAny(chainID string, p *payload.Any) *Envelope {
 	if p.BatchTx != nil {
 		return Enclose(chainID, p.BatchTx)
 	}
+	if p.BondTx != nil {
+		return Enclose(chainID, p.BondTx)
+	}
+	if p.UnbondTx != nil {
+		return Enclose(chainID, p.UnbondTx)
+	}
 	return nil
 }

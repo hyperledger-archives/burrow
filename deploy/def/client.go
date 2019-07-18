@@ -338,9 +338,33 @@ func (c *Client) UpdateAccount(arg *GovArg, logger *logging.Logger) (*payload.Go
 		Permissions: arg.Permissions,
 		Roles:       arg.Permissions,
 	}
-	err = c.getIdentity(update, arg.Address, arg.PublicKey, logger)
-	if err != nil {
-		return nil, err
+	if arg.Address != "" {
+		addr, err := c.GetKeyAddress(arg.Address, logger)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse address: %v", err)
+		}
+		update.Address = &addr
+	}
+	if arg.PublicKey != "" {
+		pubKey, err := publicKeyFromString(arg.PublicKey)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse publicKey: %v", err)
+		}
+		update.PublicKey = &pubKey
+	} else {
+		// Attempt to get public key from connected key client
+		if arg.Address != "" {
+			// Try key client
+			pubKey, err := c.PublicKeyFromAddress(update.Address)
+			if err != nil {
+				logger.InfoMsg("did not get public key", "address", *update.Address)
+			} else {
+				update.PublicKey = pubKey
+			}
+			// We can still proceed with just address set
+		} else {
+			return nil, fmt.Errorf("neither target address or public key were provided")
+		}
 	}
 
 	_, err = permission.PermFlagFromStringList(arg.Permissions)
@@ -369,38 +393,15 @@ func (c *Client) UpdateAccount(arg *GovArg, logger *logging.Logger) (*payload.Go
 	return tx, nil
 }
 
-func (c *Client) getIdentity(account *spec.TemplateAccount, address, publicKey string, logger *logging.Logger) error {
-	if address != "" {
-		addr, err := c.GetKeyAddress(address, logger)
-		if err != nil {
-			return fmt.Errorf("could not parse address: %v", err)
-		}
-		account.Address = &addr
+func (c *Client) PublicKeyFromAddress(address *crypto.Address) (*crypto.PublicKey, error) {
+	if c.keyClient != nil {
+		return nil, fmt.Errorf("key client is not set")
 	}
-	if publicKey != "" {
-		pubKey, err := publicKeyFromString(publicKey)
-		if err != nil {
-			return fmt.Errorf("could not parse publicKey: %v", err)
-		}
-		account.PublicKey = &pubKey
-	} else {
-		// Attempt to get public key from connected key client
-		if address != "" {
-			// Try key client
-			if c.keyClient != nil {
-				pubKey, err := c.keyClient.PublicKey(*account.Address)
-				if err != nil {
-					logger.InfoMsg("Could not retrieve public key from keys server", "address", *account.Address)
-				} else {
-					account.PublicKey = &pubKey
-				}
-			}
-			// We can still proceed with just address set
-		} else {
-			return fmt.Errorf("neither target address or public key were provided")
-		}
+	pubKey, err := c.keyClient.PublicKey(*address)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve public key from keys server: %v", err)
 	}
-	return nil
+	return &pubKey, nil
 }
 
 func publicKeyFromString(publicKey string) (crypto.PublicKey, error) {
@@ -501,6 +502,49 @@ func (c *Client) Send(arg *SendArg, logger *logging.Logger) (*payload.SendTx, er
 			Amount:  input.Amount,
 		}},
 	}
+	return tx, nil
+}
+
+type BondArg struct {
+	Input    string
+	Amount   string
+	Sequence string
+}
+
+func (c *Client) Bond(arg *BondArg, logger *logging.Logger) (*payload.BondTx, error) {
+	logger.InfoMsg("BondTx", "account", arg)
+	err := c.dial(logger)
+	if err != nil {
+		return nil, err
+	}
+	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true, logger)
+	if err != nil {
+		return nil, err
+	}
+	return &payload.BondTx{
+		Input: input,
+	}, nil
+}
+
+type UnbondArg struct {
+	Output   string
+	Amount   string
+	Sequence string
+}
+
+func (c *Client) Unbond(arg *UnbondArg, logger *logging.Logger) (*payload.UnbondTx, error) {
+	logger.InfoMsg("UnbondTx", "account", arg)
+	if err := c.dial(logger); err != nil {
+		return nil, err
+	}
+	input, err := c.TxInput(arg.Output, arg.Amount, arg.Sequence, true, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	tx := payload.NewUnbondTx(input.Address, input.Amount)
+	tx.Input = input
+
 	return tx, nil
 }
 

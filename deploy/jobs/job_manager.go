@@ -176,6 +176,26 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if err != nil {
 				return err
 			}
+		case *def.Bond:
+			announce(job.Name, "Bond", logger)
+			tx, err := FormulateBondJob(job.Bond, playbook.Account, client, logger)
+			if err != nil {
+				return err
+			}
+			job.Result, err = BondJob(job.Bond, tx, playbook.Account, client, logger)
+			if err != nil {
+				return err
+			}
+		case *def.Unbond:
+			announce(job.Name, "Unbond", logger)
+			tx, err := FormulateUnbondJob(job.Unbond, playbook.Account, client, logger)
+			if err != nil {
+				return err
+			}
+			job.Result, err = UnbondJob(job.Unbond, tx, playbook.Account, client, logger)
+			if err != nil {
+				return err
+			}
 		case *def.RegisterName:
 			announce(job.Name, "RegisterName", logger)
 			txs, err := FormulateRegisterNameJob(job.RegisterName, args, playbook, client, logger)

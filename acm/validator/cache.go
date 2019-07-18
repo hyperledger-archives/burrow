@@ -23,7 +23,8 @@ func (vc *Cache) Reset(backend Iterable) {
 
 func (vc *Cache) Flush(output Writer, backend Iterable) error {
 	err := vc.Delta.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
-		return output.SetPower(id.GetPublicKey(), power)
+		_, err := output.SetPower(id.GetPublicKey(), power)
+		return err
 	})
 	if err != nil {
 		return err

@@ -18,7 +18,7 @@ import (
 
 type GovernanceContext struct {
 	StateWriter  acmstate.ReaderWriter
-	ValidatorSet validator.Alterer
+	ValidatorSet validator.ReaderWriter
 	Logger       *logging.Logger
 	tx           *payload.GovTx
 	txe          *exec.TxExecution
@@ -50,28 +50,9 @@ func (ctx *GovernanceContext) Execute(txe *exec.TxExecution, p payload.Payload) 
 	}
 
 	for _, update := range ctx.tx.AccountUpdates {
-		if update.Address == nil && update.PublicKey == nil {
-			// We do not want to generate a key
-			return fmt.Errorf("could not execution GovTx since account template %v contains neither "+
-				"address or public key", update)
-		}
-		if update.PublicKey == nil {
-			update.PublicKey, err = ctx.MaybeGetPublicKey(*update.Address)
-			if err != nil {
-				return err
-			}
-		}
-		// Check address
-		if update.PublicKey != nil {
-			address := update.PublicKey.GetAddress()
-			if update.Address != nil && address != *update.Address {
-				return fmt.Errorf("supplied public key %v whose address %v does not match %v provided by"+
-					"GovTx", update.PublicKey, address, update.Address)
-			}
-			update.Address = &address
-		} else if update.Balances().HasPower() {
-			// If we are updating power we will need the key
-			return fmt.Errorf("GovTx must be provided with public key when updating validator power")
+		err := VerifyIdentity(ctx.StateWriter, update)
+		if err != nil {
+			return fmt.Errorf("GovTx: %v", err)
 		}
 		account, err := getOrMakeOutput(ctx.StateWriter, accounts, *update.Address, ctx.Logger)
 		if err != nil {
@@ -101,11 +82,7 @@ func (ctx *GovernanceContext) UpdateAccount(account *acm.Account, update *spec.T
 			return
 		}
 		power := new(big.Int).SetUint64(update.Balances().GetPower(0))
-		if !power.IsInt64() {
-			err = fmt.Errorf("power supplied in update to validator power for %v does not fit into int64 and "+
-				"so is not supported by Tendermint", update.Address)
-		}
-		_, err := ctx.ValidatorSet.AlterPower(*update.PublicKey, power)
+		_, err := ctx.ValidatorSet.SetPower(*update.PublicKey, power)
 		if err != nil {
 			return ev, err
 		}
@@ -134,9 +111,36 @@ func (ctx *GovernanceContext) UpdateAccount(account *acm.Account, update *spec.T
 	return
 }
 
-func (ctx *GovernanceContext) MaybeGetPublicKey(address crypto.Address) (*crypto.PublicKey, error) {
+func VerifyIdentity(sw acmstate.ReaderWriter, account *spec.TemplateAccount) (err error) {
+	if account.Address == nil && account.PublicKey == nil {
+		// We do not want to generate a key
+		return fmt.Errorf("could not execute Tx since account template %v contains neither "+
+			"address or public key", account)
+	}
+	if account.PublicKey == nil {
+		account.PublicKey, err = MaybeGetPublicKey(sw, *account.Address)
+		if err != nil {
+			return err
+		}
+	}
+	// Check address
+	if account.PublicKey != nil {
+		address := account.PublicKey.GetAddress()
+		if account.Address != nil && address != *account.Address {
+			return fmt.Errorf("supplied public key %v whose address %v does not match %v provided by"+
+				"GovTx", account.PublicKey, address, account.Address)
+		}
+		account.Address = &address
+	} else if account.Balances().HasPower() {
+		// If we are updating power we will need the key
+		return fmt.Errorf("must be provided with public key when updating validator power")
+	}
+	return nil
+}
+
+func MaybeGetPublicKey(sw acmstate.ReaderWriter, address crypto.Address) (*crypto.PublicKey, error) {
 	// First try state in case chain has received input previously
-	acc, err := ctx.StateWriter.GetAccount(address)
+	acc, err := sw.GetAccount(address)
 	if err != nil {
 		return nil, err
 	}

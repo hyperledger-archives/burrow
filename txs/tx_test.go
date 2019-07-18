@@ -113,27 +113,10 @@ func TestNameTxSignable(t *testing.T) {
 
 func TestBondTxSignable(t *testing.T) {
 	bondTx := &payload.BondTx{
-		Inputs: []*payload.TxInput{
-			{
-				Address:  makePrivateAccount("input1").GetAddress(),
-				Amount:   12345,
-				Sequence: 67890,
-			},
-			{
-				Address:  makePrivateAccount("input2").GetAddress(),
-				Amount:   111,
-				Sequence: 222,
-			},
-		},
-		UnbondTo: []*payload.TxOutput{
-			{
-				Address: makePrivateAccount("output1").GetAddress(),
-				Amount:  333,
-			},
-			{
-				Address: makePrivateAccount("output2").GetAddress(),
-				Amount:  444,
-			},
+		Input: &payload.TxInput{
+			Address:  makePrivateAccount("input1").GetAddress(),
+			Amount:   12345,
+			Sequence: 67890,
 		},
 	}
 	testTxMarshalJSON(t, bondTx)
@@ -143,10 +126,10 @@ func TestBondTxSignable(t *testing.T) {
 func TestUnbondTxSignable(t *testing.T) {
 	unbondTx := &payload.UnbondTx{
 		Input: &payload.TxInput{
-			Address: makePrivateAccount("fooo1").GetAddress(),
+			Address:  makePrivateAccount("input1").GetAddress(),
+			Amount:   12345,
+			Sequence: 67890,
 		},
-		Address: makePrivateAccount("address1").GetAddress(),
-		Height:  111,
 	}
 	testTxMarshalJSON(t, unbondTx)
 	testTxSignVerify(t, unbondTx)

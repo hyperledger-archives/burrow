@@ -57,11 +57,11 @@ var nameFromType = map[Type]string{
 	TypeCall:        "CallTx",
 	TypeName:        "NameTx",
 	TypeBatch:       "BatchTx",
-	TypeBond:        "BondTx",
-	TypeUnbond:      "UnbondTx",
 	TypePermissions: "PermsTx",
 	TypeGovernance:  "GovTx",
 	TypeProposal:    "ProposalTx",
+	TypeBond:        "BondTx",
+	TypeUnbond:      "UnbondTx",
 }
 
 var typeFromName = make(map[string]Type)
@@ -120,14 +120,14 @@ func New(txType Type) (Payload, error) {
 		return &NameTx{}, nil
 	case TypeBatch:
 		return &BatchTx{}, nil
-	case TypeBond:
-		return &BondTx{}, nil
-	case TypeUnbond:
-		return &UnbondTx{}, nil
 	case TypePermissions:
 		return &PermsTx{}, nil
 	case TypeGovernance:
 		return &GovTx{}, nil
+	case TypeBond:
+		return &BondTx{}, nil
+	case TypeUnbond:
+		return &UnbondTx{}, nil
 	case TypeProposal:
 		return &ProposalTx{}, nil
 	}

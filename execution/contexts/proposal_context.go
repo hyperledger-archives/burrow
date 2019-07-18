@@ -178,7 +178,10 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 				return fmt.Errorf("proposal expired, sequence number %d for account %s wrong at step %d", input.Sequence, input.Address, i+1)
 			}
 
-			stateCache.UpdateAccount(acc)
+			err = stateCache.UpdateAccount(acc)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

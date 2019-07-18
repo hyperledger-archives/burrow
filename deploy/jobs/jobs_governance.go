@@ -63,3 +63,67 @@ func UpdateAccountJob(gov *def.UpdateAccount, account string, tx *payload.GovTx,
 
 	return nil
 }
+
+func FormulateBondJob(bond *def.Bond, account string, client *def.Client, logger *logging.Logger) (*payload.BondTx, error) {
+	// Use Default
+	bond.Source = FirstOf(bond.Source, account)
+
+	// Formulate tx
+	logger.InfoMsg("Bonding Transaction",
+		"source", bond.Source,
+		"amount", bond.Amount)
+
+	arg := &def.BondArg{
+		Input:    bond.Source,
+		Amount:   bond.Amount,
+		Sequence: bond.Sequence,
+	}
+
+	return client.Bond(arg, logger)
+}
+
+func BondJob(bond *def.Bond, tx *payload.BondTx, account string, client *def.Client, logger *logging.Logger) (string, error) {
+	// Sign, broadcast, display
+	txe, err := client.SignAndBroadcast(tx, logger)
+	if err != nil {
+		return "", util.ChainErrorHandler(account, err, logger)
+	}
+
+	util.ReadTxSignAndBroadcast(txe, err, logger)
+	if err != nil {
+		return "", err
+	}
+
+	return txe.Receipt.TxHash.String(), nil
+}
+
+func FormulateUnbondJob(unbond *def.Unbond, account string, client *def.Client, logger *logging.Logger) (*payload.UnbondTx, error) {
+	// Use Default
+	unbond.Source = FirstOf(unbond.Source, account)
+
+	// Formulate tx
+	logger.InfoMsg("Unbonding Transaction",
+		"source", unbond.Source)
+
+	arg := &def.UnbondArg{
+		Output:   unbond.Source,
+		Sequence: unbond.Sequence,
+	}
+
+	return client.Unbond(arg, logger)
+}
+
+func UnbondJob(bond *def.Unbond, tx *payload.UnbondTx, account string, client *def.Client, logger *logging.Logger) (string, error) {
+	// Sign, broadcast, display
+	txe, err := client.SignAndBroadcast(tx, logger)
+	if err != nil {
+		return "", util.ChainErrorHandler(account, err, logger)
+	}
+
+	util.ReadTxSignAndBroadcast(txe, err, logger)
+	if err != nil {
+		return "", err
+	}
+
+	return txe.Receipt.TxHash.String(), nil
+}

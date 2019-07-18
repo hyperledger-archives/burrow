@@ -5,14 +5,12 @@ package names
 
 import (
 	fmt "fmt"
-	io "io"
-	math "math"
-	math_bits "math/bits"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
 	github_com_hyperledger_burrow_crypto "github.com/hyperledger/burrow/crypto"
+	io "io"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -147,9 +145,9 @@ func (m *Entry) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x12
 	i++
 	i = encodeVarintNames(dAtA, i, uint64(m.Owner.Size()))
-	n1, err1 := m.Owner.MarshalTo(dAtA[i:])
-	if err1 != nil {
-		return 0, err1
+	n1, err := m.Owner.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n1
 	if len(m.Data) > 0 {
@@ -204,7 +202,14 @@ func (m *Entry) Size() (n int) {
 }
 
 func sovNames(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozNames(x uint64) (n int) {
 	return sovNames(uint64((x << 1) ^ uint64((int64(x) >> 63))))

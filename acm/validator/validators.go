@@ -7,13 +7,7 @@ import (
 )
 
 type Writer interface {
-	SetPower(id crypto.PublicKey, power *big.Int) error
-}
-
-type Alterer interface {
-	// AlterPower ensures that validator power would not change too quickly in a single block (unlike SetPower) which
-	// merely checks values are sane. It returns the flow induced by the change in power.
-	AlterPower(id crypto.PublicKey, power *big.Int) (flow *big.Int, err error)
+	SetPower(id crypto.PublicKey, power *big.Int) (flow *big.Int, err error)
 }
 
 type Reader interface {
@@ -50,7 +44,8 @@ func AddPower(vs ReaderWriter, id crypto.PublicKey, power *big.Int) error {
 	if err != nil {
 		return err
 	}
-	return vs.SetPower(id, new(big.Int).Add(currentPower, power))
+	_, err = vs.SetPower(id, new(big.Int).Add(currentPower, power))
+	return err
 }
 
 func SubtractPower(vs ReaderWriter, id crypto.PublicKey, power *big.Int) error {
@@ -58,7 +53,8 @@ func SubtractPower(vs ReaderWriter, id crypto.PublicKey, power *big.Int) error {
 	if err != nil {
 		return err
 	}
-	return vs.SetPower(id, new(big.Int).Sub(currentPower, power))
+	_, err = vs.SetPower(id, new(big.Int).Sub(currentPower, power))
+	return err
 }
 
 // Returns the asymmetric difference, diff, between two Sets such that applying diff to before results in after
@@ -98,13 +94,7 @@ func Diff(before, after IterableReader) (*Set, error) {
 
 func Write(vs Writer, vsOther Iterable) error {
 	return vsOther.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
-		return vs.SetPower(id.GetPublicKey(), power)
-	})
-}
-
-func Alter(vs Alterer, vsOther Iterable) error {
-	return vsOther.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
-		_, err := vs.AlterPower(id.GetPublicKey(), power)
+		_, err := vs.SetPower(id.GetPublicKey(), power)
 		return err
 	})
 }

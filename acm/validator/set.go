@@ -10,6 +10,9 @@ import (
 )
 
 var big0 = big.NewInt(0)
+var big1 = big.NewInt(1)
+var big2 = big.NewInt(2)
+var big3 = big.NewInt(3)
 
 // A Validator multiset - can be used to capture the global state of validators or as an accumulator each block
 type Set struct {
@@ -41,9 +44,8 @@ func NewTrimSet() *Set {
 }
 
 // Implements Writer, but will never error
-func (vs *Set) SetPower(id crypto.PublicKey, power *big.Int) error {
-	vs.ChangePower(id, power)
-	return nil
+func (vs *Set) SetPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
+	return vs.ChangePower(id, power), nil
 }
 
 // Add the power of a validator and returns the flow into that validator
@@ -137,7 +139,8 @@ func (vs *Set) IterateValidators(iter func(id crypto.Addressable, power *big.Int
 
 func (vs *Set) Flush(output Writer, backend Reader) error {
 	return vs.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
-		return output.SetPower(id.GetPublicKey(), power)
+		_, err := output.SetPower(id.GetPublicKey(), power)
+		return err
 	})
 }
 

@@ -175,6 +175,42 @@ func (job *Send) Validate() error {
 	)
 }
 
+type Bond struct {
+	// (Optional, if account job or global account set) address of the account from which to bond (the
+	// public key for the account must be available to burrow keys)
+	Source string `mapstructure:"source" json:"source" yaml:"source" toml:"source"`
+	// (Required) the Tendermint validator power to claim
+	Amount string `mapstructure:"amount" json:"amount" yaml:"amount" toml:"amount"`
+	// (Optional, advanced only) sequence to use when burrow keys signs the transaction
+	// (do not use unless you know what you're doing)
+	Sequence string `mapstructure:"sequence" json:"sequence" yaml:"sequence" toml:"sequence"`
+}
+
+func (job *Bond) Validate() error {
+	return validation.ValidateStruct(job,
+		validation.Field(&job.Amount, validation.Required),
+		validation.Field(&job.Sequence, rule.Uint64OrPlaceholder),
+	)
+}
+
+type Unbond struct {
+	// (Optional, if account job or global account set) address of the validator to unbond (the
+	// public key for the validator must be available to burrow keys)
+	Source string `mapstructure:"source" json:"source" yaml:"source" toml:"source"`
+	// (Required) the Tendermint validator power to unclaim
+	Amount string `mapstructure:"amount" json:"amount" yaml:"amount" toml:"amount"`
+	// (Optional, advanced only) sequence to use when burrow keys signs the transaction (do not use unless you
+	// know what you're doing)
+	Sequence string `mapstructure:"sequence" json:"sequence" yaml:"sequence" toml:"sequence"`
+}
+
+func (job *Unbond) Validate() error {
+	return validation.ValidateStruct(job,
+		validation.Field(&job.Amount, validation.Required),
+		validation.Field(&job.Sequence, rule.Uint64OrPlaceholder),
+	)
+}
+
 type RegisterName struct {
 	// (Optional, if account job or global account set) address of the account from which to send (the
 	// public key for the account must be available to burrow keys)

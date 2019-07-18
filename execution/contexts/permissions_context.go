@@ -97,7 +97,7 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution, p payload.Payload)
 		return fmt.Errorf("invalid permission function: %v", permFlag)
 	}
 
-	// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
+	// TODO: maybe we want to take funds on error and allow txs in that don't do anything?
 	if err != nil {
 		return err
 	}

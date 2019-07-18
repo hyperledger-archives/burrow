@@ -18,7 +18,6 @@ import (
 //
 // delta [d5            | d6| d7   | d8  ]
 // cum   [v0+d1+d2+d3+d4|...|      |     ]
-
 type Ring struct {
 	buckets []*Bucket
 	// Power tracks the sliding sum of all powers for each validator added by each delta bucket - power is added for the newest delta and subtracted from the oldest delta each rotation
@@ -31,12 +30,9 @@ type Ring struct {
 	populated int
 }
 
-var big1 = big.NewInt(1)
-var big3 = big.NewInt(3)
-
 var _ History = &Ring{}
 
-// Provides a sliding window over the last size buckets of validator power changes
+// NewRing provides a sliding window over the last size buckets of validator power changes
 func NewRing(initialSet Iterable, windowSize int) *Ring {
 	if windowSize < 1 {
 		windowSize = 1
@@ -57,7 +53,8 @@ func NewRing(initialSet Iterable, windowSize int) *Ring {
 }
 
 // Implement Reader
-// Get power at index from the delta bucket then falling through to the cumulative
+
+// Power gets the balance at index from the delta bucket then falling through to the cumulative
 func (vc *Ring) Power(id crypto.Address) (*big.Int, error) {
 	return vc.GetPower(id), nil
 }
@@ -66,21 +63,16 @@ func (vc *Ring) GetPower(id crypto.Address) *big.Int {
 	return vc.Head().Previous.GetPower(id)
 }
 
-// Updates the current head bucket (accumulator) whilst
-func (vc *Ring) AlterPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
-	return vc.Head().AlterPower(id, power)
-}
-
-func (vc *Ring) SetPower(id crypto.PublicKey, power *big.Int) error {
+func (vc *Ring) SetPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
 	return vc.Head().SetPower(id, power)
 }
 
-// Get the sum of all powers added in any bucket
+// CumulativePower gets the sum of all powers added in any bucket
 func (vc *Ring) CumulativePower() *Set {
 	return vc.power
 }
 
-// Advance the current head bucket to the next bucket and returns the change in total power between the previous bucket
+// Rotate the current head bucket to the next bucket and returns the change in total power between the previous bucket
 // and the current head, and the total flow which is the sum of absolute values of all changes each validator's power
 // after rotation the next head is a copy of the current head
 func (vc *Ring) Rotate() (totalPowerChange *big.Int, totalFlow *big.Int, err error) {
