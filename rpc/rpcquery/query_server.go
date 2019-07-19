@@ -61,6 +61,7 @@ func (qs *queryServer) GetAccount(ctx context.Context, param *GetAccountParam) (
 	return acc, err
 }
 
+// GetMetadata returns empty metadata string if not found
 func (qs *queryServer) GetMetadata(ctx context.Context, param *GetMetadataParam) (*MetadataResult, error) {
 	metadata := MetadataResult{}
 	acc, err := qs.accounts.GetAccount(param.Address)

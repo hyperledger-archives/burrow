@@ -152,6 +152,7 @@ func (c *Client) GetMetadataForAccount(address crypto.Address) (string, error) {
 	return metadata.Metadata, nil
 }
 
+// GetMetadata is required for us to implement acmstate.Reader, but it is not used
 func (c *Client) GetMetadata(metahash acmstate.MetadataHash) (string, error) {
 	panic("not implemented")
 	return "", nil

@@ -43,7 +43,8 @@ type Reader interface {
 type Writer interface {
 	CreateAccount(address crypto.Address)
 	InitWASMCode(address crypto.Address, code []byte)
-	InitCode(address crypto.Address, forebear *crypto.Address, code []byte)
+	InitCode(address crypto.Address, code []byte)
+	InitChildCode(address crypto.Address, forebear crypto.Address, code []byte)
 	RemoveAccount(address crypto.Address)
 	SetStorage(address crypto.Address, key binary.Word256, value []byte)
 	AddToBalance(address crypto.Address, amount uint64)
@@ -203,7 +204,16 @@ func (st *State) CreateAccount(address crypto.Address) {
 	st.updateAccount(&acm.Account{Address: address})
 }
 
-func (st *State) InitCode(address crypto.Address, parent *crypto.Address, code []byte) {
+func (st *State) InitCode(address crypto.Address, code []byte) {
+	st.initCode(address, nil, code)
+}
+
+func (st *State) InitChildCode(address crypto.Address, parent crypto.Address, code []byte) {
+	st.initCode(address, &parent, code)
+
+}
+
+func (st *State) initCode(address crypto.Address, parent *crypto.Address, code []byte) {
 	acc := st.mustAccount(address)
 	if acc == nil {
 		st.PushError(errors.ErrorCodef(errors.ErrorCodeInvalidAddress,
@@ -240,24 +250,12 @@ func (st *State) InitCode(address crypto.Address, parent *crypto.Address, code [
 	// If we have a list of ABIs for this contract, we also know what contract code it is allowed to create
 	// For compatibility with older contracts, allow any contract to be created if we have no mappings
 	if metamap != nil && len(metamap) > 0 {
-		found := false
-		for _, m := range metamap {
-			if bytes.Equal(codehash, m.CodeHash) {
-				found = true
-				break
-			}
-		}
+		found := codehashPermitted(codehash, metamap)
 
 		// Libraries lie about their deployed bytecode
 		if !found {
 			deployCodehash := compile.GetDeployCodeHash(code, address)
-
-			for _, m := range metamap {
-				if bytes.Equal(deployCodehash, m.CodeHash) {
-					found = true
-					break
-				}
-			}
+			found = codehashPermitted(deployCodehash, metamap)
 		}
 
 		if !found {
@@ -270,6 +268,16 @@ func (st *State) InitCode(address crypto.Address, parent *crypto.Address, code [
 	acc.Forebear = forebear
 
 	st.updateAccount(acc)
+}
+
+func codehashPermitted(codehash []byte, metamap []*acm.ContractMeta) bool {
+	for _, m := range metamap {
+		if bytes.Equal(codehash, m.CodeHash) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (st *State) InitWASMCode(address crypto.Address, code []byte) {

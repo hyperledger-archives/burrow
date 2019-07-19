@@ -814,7 +814,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			} else {
 				// Update the account with its initialised contract code
 				forebear := callState.GetForebear(callee)
-				childCallState.InitCode(newAccount, &forebear, ret)
+				childCallState.InitChildCode(newAccount, forebear, ret)
 				callState.PushError(childCallState.Sync())
 				stack.PushAddress(newAccount)
 			}

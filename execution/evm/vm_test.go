@@ -94,7 +94,7 @@ func newAccount(st Interface, name string) crypto.Address {
 func makeAccountWithCode(st Interface, name string, code []byte) crypto.Address {
 	address := newAddress(name)
 	st.CreateAccount(address)
-	st.InitCode(address, nil, code)
+	st.InitCode(address, code)
 	st.AddToBalance(address, 9999999)
 	return address
 }
@@ -999,7 +999,7 @@ func TestMsgSender(t *testing.T) {
 
 	// Not needed for this test (since contract code is passed as argument to vm), but this is what an execution
 	// framework must do
-	cache.InitCode(account2, nil, contractCode)
+	cache.InitCode(account2, contractCode)
 
 	// Input is the function hash of `get()`
 	input := hex.MustDecodeString("6d4ce63c")
@@ -1429,8 +1429,8 @@ func TestCallStackOverflow(t *testing.T) {
 	contractCode, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, code, code, 0, &gas)
 	require.NoError(t, err)
 
-	cache.InitCode(account1, nil, contractCode)
-	cache.InitCode(account2, nil, contractCode)
+	cache.InitCode(account1, contractCode)
+	cache.InitCode(account2, contractCode)
 
 	// keccak256 hash of 'callMeBack()'
 	input, err := hex.DecodeString("692c3b7c")

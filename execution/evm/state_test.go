@@ -35,7 +35,7 @@ func TestState_CreateAccount(t *testing.T) {
 	st = NewState(newAppState(), blockHashGetter)
 	st.CreateAccount(address)
 	require.Nil(t, st.Error())
-	st.InitCode(address, nil, []byte{1, 2, 3})
+	st.InitCode(address, []byte{1, 2, 3})
 	require.Nil(t, st.Error())
 }
 

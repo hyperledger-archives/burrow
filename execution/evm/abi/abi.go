@@ -573,14 +573,14 @@ func SpecFromFunctionReflect(fname string, v reflect.Value, skipIn, skipOut int)
 	return &s
 }
 
-func argsToSignature(args []Argument) (str string) {
+func argsToSignature(args []Argument, addIndexed bool) (str string) {
 	str = "("
 	for i, a := range args {
 		if i > 0 {
 			str += ","
 		}
 		str += a.EVM.GetSignature()
-		if a.Indexed {
+		if addIndexed && a.Indexed {
 			str += " indexed"
 		}
 		if a.IsArray {
@@ -596,7 +596,7 @@ func argsToSignature(args []Argument) (str string) {
 }
 
 func Signature(name string, args []Argument) string {
-	return name + argsToSignature(args)
+	return name + argsToSignature(args, false)
 }
 
 func (functionSpec *FunctionSpec) SetFunctionID(functionName string) {
@@ -605,12 +605,12 @@ func (functionSpec *FunctionSpec) SetFunctionID(functionName string) {
 }
 
 func (f *FunctionSpec) String(name string) string {
-	return name + argsToSignature(f.Inputs) +
-		" returns " + argsToSignature(f.Outputs)
+	return name + argsToSignature(f.Inputs, false) +
+		" returns " + argsToSignature(f.Outputs, false)
 }
 
 func (e *EventSpec) String() string {
-	str := e.Name + argsToSignature(e.Inputs)
+	str := e.Name + argsToSignature(e.Inputs, true)
 	if e.Anonymous {
 		str += " anonymous"
 	}

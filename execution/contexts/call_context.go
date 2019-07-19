@@ -240,7 +240,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		} else {
 			ctx.Logger.TraceMsg("Successful execution")
 			if createContract {
-				txCache.InitCode(callee, nil, ret)
+				txCache.InitCode(callee, ret)
 			}
 			err := txCache.Sync()
 			if err != nil {
