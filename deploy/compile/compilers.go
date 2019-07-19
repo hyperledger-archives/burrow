@@ -79,10 +79,28 @@ type ContractCode struct {
 	LinkReferences json.RawMessage
 }
 
+// SolidityMetadata is the json field metadata
+type SolidityMetadata struct {
+	Version string
+	// The solidity compiler needs to tell us it compiles solidity
+	Language string
+	Compiler struct {
+		Version   string
+		Keccak256 string
+	}
+	Sources map[string]struct {
+		Keccak256 string
+		Content   string
+		Urls      []string
+	}
+	// Other fields elided, see https://solidity.readthedocs.io/en/v0.5.10/metadata.html
+}
+
 type Metadata struct {
-	ContractName string
-	SourceFile   string
-	Abi          json.RawMessage
+	ContractName    string
+	SourceFile      string
+	CompilerVersion string
+	Abi             json.RawMessage
 }
 
 type MetadataMap struct {
@@ -248,13 +266,16 @@ func EVM(file string, optimize bool, workDir string, libraries map[string]string
 	metamap := make([]MetadataMap, 0)
 	for filename, src := range output.Contracts {
 		for contractname, item := range src {
+			var meta SolidityMetadata
+			_ = json.Unmarshal([]byte(item.Metadata), &meta)
 			if item.Evm.DeployedBytecode.Object != "" {
 				metamap = append(metamap, MetadataMap{
 					DeployedBytecode: item.Evm.DeployedBytecode,
 					Metadata: Metadata{
-						ContractName: contractname,
-						SourceFile:   filename,
-						Abi:          item.Abi,
+						ContractName:    contractname,
+						SourceFile:      filename,
+						CompilerVersion: meta.Compiler.Version,
+						Abi:             item.Abi,
 					},
 				})
 			}

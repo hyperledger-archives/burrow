@@ -67,6 +67,7 @@ func Accounts(output Output) func(cmd *cli.Cmd) {
 
 					output.Printf(" Contract Name: %s", metadata.ContractName)
 					output.Printf(" Source File: %s", metadata.SourceFile)
+					output.Printf(" Compiler version: %s", metadata.CompilerVersion)
 
 					spec, err := abi.ReadSpec(metadata.Abi)
 					if err != nil {
