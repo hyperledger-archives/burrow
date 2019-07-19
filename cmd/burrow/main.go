@@ -78,6 +78,9 @@ func burrow(output commands.Output) *cli.Cli {
 	app.Command("restore", "Restore new chain from backup",
 		commands.Restore(output))
 
+	app.Command("accounts", "List accounts and metadata",
+		commands.Accounts(output))
+
 	return app
 }
 

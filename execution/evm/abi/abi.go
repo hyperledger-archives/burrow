@@ -573,28 +573,49 @@ func SpecFromFunctionReflect(fname string, v reflect.Value, skipIn, skipOut int)
 	return &s
 }
 
-func Signature(name string, args []Argument) (sig string) {
-	sig = name + "("
+func argsToSignature(args []Argument) (str string) {
+	str = "("
 	for i, a := range args {
 		if i > 0 {
-			sig += ","
+			str += ","
 		}
-		sig += a.EVM.GetSignature()
+		str += a.EVM.GetSignature()
+		if a.Indexed {
+			str += " indexed"
+		}
 		if a.IsArray {
 			if a.ArrayLength > 0 {
-				sig += fmt.Sprintf("[%d]", a.ArrayLength)
+				str += fmt.Sprintf("[%d]", a.ArrayLength)
 			} else {
-				sig += "[]"
+				str += "[]"
 			}
 		}
 	}
-	sig += ")"
+	str += ")"
 	return
+}
+
+func Signature(name string, args []Argument) string {
+	return name + argsToSignature(args)
 }
 
 func (functionSpec *FunctionSpec) SetFunctionID(functionName string) {
 	sig := Signature(functionName, functionSpec.Inputs)
 	functionSpec.FunctionID = GetFunctionID(sig)
+}
+
+func (f *FunctionSpec) String(name string) string {
+	return name + argsToSignature(f.Inputs) +
+		" returns " + argsToSignature(f.Outputs)
+}
+
+func (e *EventSpec) String() string {
+	str := e.Name + argsToSignature(e.Inputs)
+	if e.Anonymous {
+		str += " anonymous"
+	}
+
+	return str
 }
 
 func (fs FunctionID) Bytes() []byte {
