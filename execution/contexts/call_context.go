@@ -153,15 +153,15 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 			"init_code", code)
 
 		// store abis
-		if len(ctx.tx.Abis) > 0 {
-			metamap := make([]*acm.MetaMap, len(ctx.tx.Abis))
-			for i, abi := range ctx.tx.Abis {
-				abihash := acmstate.GetAbiHash(abi.Abi)
-				metamap[i] = &acm.MetaMap{
-					AbiHash:  abihash[:],
-					CodeHash: abi.CodeHash,
+		if len(ctx.tx.ContractMeta) > 0 {
+			metamap := make([]*acm.ContractMeta, len(ctx.tx.ContractMeta))
+			for i, abi := range ctx.tx.ContractMeta {
+				metahash := acmstate.GetMetadataHash(abi.Meta)
+				metamap[i] = &acm.ContractMeta{
+					MetadataHash: metahash[:],
+					CodeHash:     abi.CodeHash,
 				}
-				txCache.SetAbi(abihash, abi.Abi)
+				txCache.SetMetadata(metahash, abi.Meta)
 			}
 
 			txCache.UpdateMetaMap(callee, metamap)

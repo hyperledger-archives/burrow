@@ -71,12 +71,12 @@ message CallTx {
     // WASM bytecode
     bytes WASM = 6 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false, (gogoproto.jsontag)="tags,omitempty"];
     // Set of contracts this code will deploy
-    repeated Abis Abis = 7;
+    repeated ContractMeta ContractMeta = 7;
 }
 
-message Abis {
+message ContractMeta {
     bytes CodeHash = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
-    string Abi = 2;
+    string Meta = 2;
 }
 
 // A payment between two sets of parties

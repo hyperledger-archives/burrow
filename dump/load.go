@@ -31,14 +31,14 @@ func Load(source Source, st *state.State) error {
 
 			if row.Account != nil {
 				if row.Account.Address != acm.GlobalPermissionsAddress {
-					for _, m := range row.Account.MetaMap {
-						abihash := acmstate.GetAbiHash(m.Abi)
-						err = s.SetAbi(abihash, m.Abi)
+					for _, m := range row.Account.ContractMeta {
+						metahash := acmstate.GetMetadataHash(m.Metadata)
+						err = s.SetMetadata(metahash, m.Metadata)
 						if err != nil {
 							return err
 						}
-						m.AbiHash = abihash.Bytes()
-						m.Abi = ""
+						m.MetadataHash = metahash.Bytes()
+						m.Metadata = ""
 					}
 					err := s.UpdateAccount(row.Account)
 					if err != nil {

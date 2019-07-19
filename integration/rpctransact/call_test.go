@@ -299,7 +299,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 
 		t.Run("DeployAbis", func(t *testing.T) {
 			t.Parallel()
-			createTxe, err := rpctest.CreateContract(cli, inputAddress, solidity.Bytecode_A, []rpctest.AbiMap{
+			createTxe, err := rpctest.CreateContract(cli, inputAddress, solidity.Bytecode_A, []rpctest.MetadataMap{
 				{DeployedCode: solidity.DeployedBytecode_A, Abi: solidity.Abi_A},
 				{DeployedCode: solidity.DeployedBytecode_B, Abi: solidity.Abi_B},
 				{DeployedCode: solidity.DeployedBytecode_C, Abi: solidity.Abi_C},
@@ -308,9 +308,9 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			addressA := lastCall(createTxe.Events).CallData.Callee
 			// Check ABI for new contract A
 			qcli := rpctest.NewQueryClient(t, kern.GRPCListenAddress().String())
-			res, err := qcli.GetAbi(context.Background(), &rpcquery.GetAbiParam{Address: addressA})
+			res, err := qcli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: addressA})
 			require.NoError(t, err)
-			assert.Equal(t, res.Abi, string(solidity.Abi_A))
+			assert.Equal(t, res.Metadata, string(solidity.Abi_A))
 			// CreateB
 			spec, err := abi.ReadSpec(solidity.Abi_A)
 			require.NoError(t, err)
@@ -321,9 +321,9 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			var addressB crypto.Address
 			err = spec.Unpack(callTxe.Result.Return, "createB", &addressB)
 			// check ABI for contract B
-			res, err = qcli.GetAbi(context.Background(), &rpcquery.GetAbiParam{Address: addressB})
+			res, err = qcli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: addressB})
 			require.NoError(t, err)
-			assert.Equal(t, res.Abi, string(solidity.Abi_B))
+			assert.Equal(t, res.Metadata, string(solidity.Abi_B))
 			// CreateC
 			spec, err = abi.ReadSpec(solidity.Abi_B)
 			require.NoError(t, err)
@@ -334,9 +334,9 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			var addressC crypto.Address
 			err = spec.Unpack(callTxe.Result.Return, "createC", &addressC)
 			// check abi for contract C
-			res, err = qcli.GetAbi(context.Background(), &rpcquery.GetAbiParam{Address: addressC})
+			res, err = qcli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: addressC})
 			require.NoError(t, err)
-			assert.Equal(t, res.Abi, string(solidity.Abi_C))
+			assert.Equal(t, res.Metadata, string(solidity.Abi_C))
 			return
 		})
 

@@ -90,15 +90,15 @@ func (ds *Dumper) Transmit(sink Sink, startHeight, endHeight uint64, options Opt
 				},
 			}
 
-			for _, m := range acc.MetaMap {
-				var abihash acmstate.AbiHash
-				copy(abihash[:], m.AbiHash.Bytes())
-				abi, err := ds.state.GetAbi(abihash)
+			for _, m := range acc.ContractMeta {
+				var metahash acmstate.MetadataHash
+				copy(metahash[:], m.MetadataHash.Bytes())
+				meta, err := ds.state.GetMetadata(metahash)
 				if err != nil {
 					return err
 				}
-				m.Abi = abi
-				m.AbiHash = []byte{}
+				m.Metadata = meta
+				m.MetadataHash = []byte{}
 			}
 
 			var storageBytes int

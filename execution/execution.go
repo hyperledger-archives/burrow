@@ -404,10 +404,10 @@ func (exe *executor) GetAccount(address crypto.Address) (*acm.Account, error) {
 	return exe.stateCache.GetAccount(address)
 }
 
-func (exe *executor) GetAbi(abihash acmstate.AbiHash) (string, error) {
+func (exe *executor) GetMetadata(metahash acmstate.MetadataHash) (string, error) {
 	exe.RLock()
 	defer exe.RUnlock()
-	return exe.stateCache.GetAbi(abihash)
+	return exe.stateCache.GetMetadata(metahash)
 }
 
 // Storage

@@ -164,12 +164,12 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 			contractCode = contractCode + callData
 		}
 
-		abiMap, err := contract.GetAbis(logger)
+		metaMap, err := contract.GetMetadatas(logger)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		tx, err := deployTx(client, deploy, contractName, string(contractCode), "", abiMap, logger)
+		tx, err := deployTx(client, deploy, contractName, string(contractCode), "", metaMap, logger)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not deploy binary contract: %v", err)
 		}
@@ -357,7 +357,7 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 		}
 	}
 
-	var abiMap map[acmstate.CodeHash]string
+	var metaMap map[acmstate.CodeHash]string
 	wasm := ""
 	data := ""
 	if contract.EWasm.Wasm != "" {
@@ -369,7 +369,7 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 		}
 		data = contract.Evm.Bytecode.Object
 
-		abiMap, err = contract.GetAbis(logger)
+		metaMap, err = contract.GetMetadatas(logger)
 		if err != nil {
 			return nil, err
 		}
@@ -399,10 +399,10 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 		}
 	}
 
-	return deployTx(client, deploy, compilersResponse.Objectname, data, wasm, abiMap, logger)
+	return deployTx(client, deploy, compilersResponse.Objectname, data, wasm, metaMap, logger)
 }
 
-func deployTx(client *def.Client, deploy *def.Deploy, contractName, data, wasm string, abis map[acmstate.CodeHash]string, logger *logging.Logger) (*payload.CallTx, error) {
+func deployTx(client *def.Client, deploy *def.Deploy, contractName, data, wasm string, metamap map[acmstate.CodeHash]string, logger *logging.Logger) (*payload.CallTx, error) {
 	// Deploy contract
 	logger.TraceMsg("Deploying Contract",
 		"contract", contractName,
@@ -419,7 +419,7 @@ func deployTx(client *def.Client, deploy *def.Deploy, contractName, data, wasm s
 		Data:     data,
 		WASM:     wasm,
 		Sequence: deploy.Sequence,
-		Abis:     abis,
+		Metadata: metamap,
 	}, logger)
 }
 
@@ -447,7 +447,7 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 	var packedBytes []byte
 	var funcSpec *abi.FunctionSpec
 
-	abiJSON, err := client.GetAbiForAccount(address)
+	abiJSON, err := client.GetMetadataForAccount(address)
 	if abiJSON != "" && err == nil {
 		packedBytes, funcSpec, err = abi.EncodeFunctionCall(abiJSON, call.Function, logger, callDataArray...)
 		if err != nil {

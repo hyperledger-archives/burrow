@@ -61,38 +61,41 @@ func (qs *queryServer) GetAccount(ctx context.Context, param *GetAccountParam) (
 	return acc, err
 }
 
-func (qs *queryServer) GetAbi(ctx context.Context, param *GetAbiParam) (*AbiValue, error) {
-	abi := AbiValue{}
+func (qs *queryServer) GetMetadata(ctx context.Context, param *GetMetadataParam) (*MetadataResult, error) {
+	metadata := MetadataResult{}
 	acc, err := qs.accounts.GetAccount(param.Address)
+	if err != nil {
+		return &metadata, err
+	}
 	if acc != nil && acc.CodeHash != nil {
 		codehash := acc.CodeHash
 		if acc.Forebear != nil {
 			acc, err = qs.accounts.GetAccount(*acc.Forebear)
 			if err != nil {
-				return &abi, err
+				return &metadata, err
 			}
 		}
 
-		for _, m := range acc.MetaMap {
+		for _, m := range acc.ContractMeta {
 			if bytes.Equal(m.CodeHash, codehash) {
-				var abihash acmstate.AbiHash
-				copy(abihash[:], m.AbiHash)
-				abi.Abi, err = qs.accounts.GetAbi(abihash)
-				return &abi, err
+				var metahash acmstate.MetadataHash
+				copy(metahash[:], m.MetadataHash)
+				metadata.Metadata, err = qs.accounts.GetMetadata(metahash)
+				return &metadata, err
 			}
 		}
 
 		deployCodehash := compile.GetDeployCodeHash(acc.EVMCode, param.Address)
-		for _, m := range acc.MetaMap {
+		for _, m := range acc.ContractMeta {
 			if bytes.Equal(m.CodeHash, deployCodehash) {
-				var abihash acmstate.AbiHash
-				copy(abihash[:], m.AbiHash)
-				abi.Abi, err = qs.accounts.GetAbi(abihash)
-				return &abi, err
+				var metahash acmstate.MetadataHash
+				copy(metahash[:], m.MetadataHash)
+				metadata.Metadata, err = qs.accounts.GetMetadata(metahash)
+				return &metadata, err
 			}
 		}
 	}
-	return &abi, err
+	return &metadata, err
 }
 
 func (qs *queryServer) GetStorage(ctx context.Context, param *GetStorageParam) (*StorageValue, error) {

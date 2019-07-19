@@ -28,7 +28,7 @@ import (
 type FakeAppState struct {
 	accounts map[crypto.Address]*acm.Account
 	storage  map[string][]byte
-	abis     map[acmstate.AbiHash]string
+	metadata map[acmstate.MetadataHash]string
 }
 
 var _ acmstate.ReaderWriter = &FakeAppState{}
@@ -38,12 +38,12 @@ func (fas *FakeAppState) GetAccount(addr crypto.Address) (*acm.Account, error) {
 	return account, nil
 }
 
-func (fas *FakeAppState) GetAbi(abihash acmstate.AbiHash) (string, error) {
-	return fas.abis[abihash], nil
+func (fas *FakeAppState) GetMetadata(metahash acmstate.MetadataHash) (string, error) {
+	return fas.metadata[metahash], nil
 }
 
-func (fas *FakeAppState) SetAbi(abihash acmstate.AbiHash, abi string) error {
-	fas.abis[abihash] = abi
+func (fas *FakeAppState) SetMetadata(metahash acmstate.MetadataHash, metadata string) error {
+	fas.metadata[metahash] = metadata
 	return nil
 }
 

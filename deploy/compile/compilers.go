@@ -2,7 +2,6 @@ package compile
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -16,6 +15,7 @@ import (
 	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/logging"
+	hex "github.com/tmthrgd/go-hex"
 )
 
 // SolidityInput is a structure for the solidity compiler input json form, see:
@@ -54,16 +54,6 @@ type SolidityOutput struct {
 	}
 }
 
-type ContractCode struct {
-	Object         string
-	LinkReferences json.RawMessage
-}
-
-type AbiMap struct {
-	DeployedBytecode ContractCode
-	Abi              string
-}
-
 // SolidityContract is defined for each contract defined in the solidity source code
 type SolidityContract struct {
 	Abi json.RawMessage
@@ -78,13 +68,26 @@ type SolidityContract struct {
 	Userdoc  json.RawMessage
 	Metadata string
 	// This is not present in the solidity output, but we add it ourselves
-	// This is map from DeployedBytecode to ABI. A Solidity contract can create any number
-	// of contracts, which have distinct ABIs. This is a map for the deployed code to abi,
+	// This is map from DeployedBytecode to Metadata. A Solidity contract can create any number
+	// of contracts, which have distinct metadata. This is a map for the deployed code to metdata,
 	// including the first contract itself.
+	MetadataMap []MetadataMap `json:",omitempty"`
+}
 
-	// Note that libraries do not have ABIs. Also, the deployedbytecode does not match
-	// what Solidity tells use it will be.
-	AbiMap []AbiMap `json:",omitempty"`
+type ContractCode struct {
+	Object         string
+	LinkReferences json.RawMessage
+}
+
+type Metadata struct {
+	ContractName string
+	SourceFile   string
+	Abi          json.RawMessage
+}
+
+type MetadataMap struct {
+	DeployedBytecode ContractCode
+	Metadata         Metadata
 }
 
 type Response struct {
@@ -181,20 +184,20 @@ func (contract *SolidityContract) Link(libraries map[string]string) error {
 		contract.Evm.Bytecode.Object = bin
 	}
 
-	if contract.AbiMap != nil {
-		for i, m := range contract.AbiMap {
+	// When compiling a solidity file with many contracts contained it, some of those contracts might
+	// never be created by the contract we're current linking. However, Solidity does not tell us
+	// which contracts can be created by a contract.
+	// See: https://github.com/ethereum/solidity/issues/7111
+	// Some of these contracts might have unresolved libraries. We can safely skip those contracts.
+	if contract.MetadataMap != nil {
+		for i, m := range contract.MetadataMap {
 			bin := m.DeployedBytecode.Object
 			if strings.Contains(bin, "_") {
 				bin, err := link(bin, m.DeployedBytecode.LinkReferences, libraries)
-				// When compiling a solidity file with many contracts contained it, some of those contracts might
-				// never be created by the contract we're current linking. However, Solidity does not tell us
-				// which contracts can be created by a contract.
-				// See: https://github.com/ethereum/solidity/issues/7111
-				// Some of these contracts might have unresolved libraries. We can safely skip those contracts.
 				if err != nil {
 					continue
 				}
-				contract.AbiMap[i].DeployedBytecode.Object = bin
+				contract.MetadataMap[i].DeployedBytecode.Object = bin
 			}
 		}
 	}
@@ -242,13 +245,17 @@ func EVM(file string, optimize bool, workDir string, libraries map[string]string
 	}
 
 	// Collect our ABIs
-	abimap := make([]AbiMap, 0)
-	for _, src := range output.Contracts {
-		for _, item := range src {
+	metamap := make([]MetadataMap, 0)
+	for filename, src := range output.Contracts {
+		for contractname, item := range src {
 			if item.Evm.DeployedBytecode.Object != "" {
-				abimap = append(abimap, AbiMap{
+				metamap = append(metamap, MetadataMap{
 					DeployedBytecode: item.Evm.DeployedBytecode,
-					Abi:              string(item.Abi),
+					Metadata: Metadata{
+						ContractName: contractname,
+						SourceFile:   filename,
+						Abi:          item.Abi,
+					},
 				})
 			}
 		}
@@ -258,7 +265,7 @@ func EVM(file string, optimize bool, workDir string, libraries map[string]string
 
 	for f, s := range output.Contracts {
 		for contract, item := range s {
-			item.AbiMap = abimap
+			item.MetadataMap = metamap
 			respItem := ResponseItem{
 				Filename:   f,
 				Objectname: objectName(contract),
@@ -386,14 +393,14 @@ func PrintResponse(resp Response, cli bool, logger *logging.Logger) {
 	}
 }
 
-// GetAbis get the CodeHashes + Abis for the generated Code. So, we have a map for all the possible contracts codes hashes to abis
-func (contract *SolidityContract) GetAbis(logger *logging.Logger) (map[acmstate.CodeHash]string, error) {
+// GetMetadatas get the CodeHashes + Abis for the generated Code. So, we have a map for all the possible contracts codes hashes to abis
+func (contract *SolidityContract) GetMetadatas(logger *logging.Logger) (map[acmstate.CodeHash]string, error) {
 	res := make(map[acmstate.CodeHash]string)
 	if contract.Evm.DeployedBytecode.Object == "" {
 		return nil, nil
 	}
 
-	for _, m := range contract.AbiMap {
+	for _, m := range contract.MetadataMap {
 		if strings.Contains(m.DeployedBytecode.Object, "_") {
 			continue
 		}
@@ -402,20 +409,32 @@ func (contract *SolidityContract) GetAbis(logger *logging.Logger) (map[acmstate.
 			return nil, err
 		}
 
+		bs, err := json.Marshal(m.Metadata)
+		if err != nil {
+			return nil, err
+		}
+
 		hash := sha3.NewKeccak256()
 		hash.Write(runtime)
 		var codehash acmstate.CodeHash
 		copy(codehash[:], hash.Sum(nil))
-		logger.TraceMsg("Found ABI",
+		logger.TraceMsg("Found metadata",
 			"code", fmt.Sprintf("%X", runtime),
 			"code hash", fmt.Sprintf("%X", codehash),
-			"abi", string(m.Abi))
-		res[codehash] = string(m.Abi)
+			"meta", string(bs))
+		res[codehash] = string(bs)
 	}
 	return res, nil
 }
 
 // GetDeployCodeHash deals with the issue described in https://github.com/ethereum/solidity/issues/7101
+// When a library contract (one declared with "libary { }" rather than "contract { }"), the deployed code
+// will not match what the solidity compiler said it would be. This is done to implement "call protection";
+// library contracts are only supposed to be called from our solidity contracts, not directly. To prevent
+// this, the library deployed code compares the callee address with the contract address itself. If it equal,
+// it calls revert.
+// The library contract address is only known post-deploy so this issue can only be handled post-deploy. This
+// is why this is not dealt with during deploy time.
 func GetDeployCodeHash(code []byte, address crypto.Address) []byte {
 	if bytes.HasPrefix(code, append([]byte{byte(asm.PUSH20)}, address.Bytes()...)) {
 		code = append([]byte{byte(asm.PUSH20)}, append(make([]byte, crypto.AddressLength), code[crypto.AddressLength+1:]...)...)

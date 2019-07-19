@@ -141,18 +141,18 @@ func (c *Client) GetAccount(address crypto.Address) (*acm.Account, error) {
 	return c.queryClient.GetAccount(ctx, &rpcquery.GetAccountParam{Address: address})
 }
 
-func (c *Client) GetAbiForAccount(address crypto.Address) (string, error) {
+func (c *Client) GetMetadataForAccount(address crypto.Address) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
-	abi, err := c.queryClient.GetAbi(ctx, &rpcquery.GetAbiParam{Address: address})
+	metadata, err := c.queryClient.GetMetadata(ctx, &rpcquery.GetMetadataParam{Address: address})
 	if err != nil {
 		return "", err
 	}
 
-	return abi.Abi, nil
+	return metadata.Metadata, nil
 }
 
-func (c *Client) GetAbi(abihash acmstate.AbiHash) (string, error) {
+func (c *Client) GetMetadata(metahash acmstate.MetadataHash) (string, error) {
 	panic("not implemented")
 	return "", nil
 }
@@ -446,7 +446,7 @@ type CallArg struct {
 	Gas      string
 	Data     string
 	WASM     string
-	Abis     map[acmstate.CodeHash]string
+	Metadata map[acmstate.CodeHash]string
 }
 
 func (c *Client) Call(arg *CallArg, logger *logging.Logger) (*payload.CallTx, error) {
@@ -488,22 +488,22 @@ func (c *Client) Call(arg *CallArg, logger *logging.Logger) (*payload.CallTx, er
 		return nil, err
 	}
 
-	abis := make([]*payload.Abis, 0)
-	for codehash, abi := range arg.Abis {
-		abis = append(abis, &payload.Abis{
+	metas := make([]*payload.ContractMeta, 0)
+	for codehash, metadata := range arg.Metadata {
+		metas = append(metas, &payload.ContractMeta{
 			CodeHash: codehash.Bytes(),
-			Abi:      abi,
+			Meta:     metadata,
 		})
 	}
 
 	tx := &payload.CallTx{
-		Input:    input,
-		Address:  contractAddress,
-		Data:     code,
-		WASM:     wasm,
-		Fee:      fee,
-		GasLimit: gas,
-		Abis:     abis,
+		Input:        input,
+		Address:      contractAddress,
+		Data:         code,
+		WASM:         wasm,
+		Fee:          fee,
+		GasLimit:     gas,
+		ContractMeta: metas,
 	}
 
 	return tx, nil

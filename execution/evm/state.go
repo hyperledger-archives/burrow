@@ -224,7 +224,7 @@ func (st *State) InitCode(address crypto.Address, parent *crypto.Address, code [
 	codehash := hash.Sum(nil)
 
 	forebear := &address
-	metamap := acc.MetaMap
+	metamap := acc.ContractMeta
 	if parent != nil {
 		// find our ancestor, i.e. the initial contract that was deployed, from which this contract descends
 		ancestor := st.mustAccount(*parent)
@@ -234,7 +234,7 @@ func (st *State) InitCode(address crypto.Address, parent *crypto.Address, code [
 		} else {
 			forebear = parent
 		}
-		metamap = ancestor.MetaMap
+		metamap = ancestor.ContractMeta
 	}
 
 	// If we have a list of ABIs for this contract, we also know what contract code it is allowed to create
@@ -293,19 +293,19 @@ func (st *State) InitWASMCode(address crypto.Address, code []byte) {
 	st.updateAccount(acc)
 }
 
-func (st *State) UpdateMetaMap(address crypto.Address, mapping []*acm.MetaMap) {
+func (st *State) UpdateMetaMap(address crypto.Address, mapping []*acm.ContractMeta) {
 	acc := st.mustAccount(address)
 	if acc == nil {
 		st.PushError(errors.ErrorCodef(errors.ErrorCodeInvalidAddress,
 			"tried to initialise code for an account that does not exist: %v", address))
 		return
 	}
-	acc.MetaMap = mapping
+	acc.ContractMeta = mapping
 	st.updateAccount(acc)
 }
 
-func (st *State) SetAbi(abihash acmstate.AbiHash, abi string) error {
-	return st.cache.SetAbi(abihash, abi)
+func (st *State) SetMetadata(metahash acmstate.MetadataHash, abi string) error {
+	return st.cache.SetMetadata(metahash, abi)
 }
 
 func (st *State) RemoveAccount(address crypto.Address) {

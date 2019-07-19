@@ -9,9 +9,9 @@ import (
 )
 
 type MemoryState struct {
-	Accounts map[crypto.Address]*acm.Account
-	Storage  map[crypto.Address]map[binary.Word256][]byte
-	Abis     map[AbiHash]string
+	Accounts  map[crypto.Address]*acm.Account
+	Storage   map[crypto.Address]map[binary.Word256][]byte
+	Metadatas map[MetadataHash]string
 }
 
 var _ IterableReaderWriter = &MemoryState{}
@@ -19,9 +19,9 @@ var _ IterableReaderWriter = &MemoryState{}
 // Get an in-memory state IterableReader
 func NewMemoryState() *MemoryState {
 	return &MemoryState{
-		Accounts: make(map[crypto.Address]*acm.Account),
-		Storage:  make(map[crypto.Address]map[binary.Word256][]byte),
-		Abis:     make(map[AbiHash]string),
+		Accounts:  make(map[crypto.Address]*acm.Account),
+		Storage:   make(map[crypto.Address]map[binary.Word256][]byte),
+		Metadatas: make(map[MetadataHash]string),
 	}
 }
 
@@ -37,12 +37,12 @@ func (ms *MemoryState) UpdateAccount(updatedAccount *acm.Account) error {
 	return nil
 }
 
-func (ms *MemoryState) GetAbi(abihash AbiHash) (string, error) {
-	return ms.Abis[abihash], nil
+func (ms *MemoryState) GetMetadata(metahash MetadataHash) (string, error) {
+	return ms.Metadatas[metahash], nil
 }
 
-func (ms *MemoryState) SetAbi(abihash AbiHash, abi string) error {
-	ms.Abis[abihash] = abi
+func (ms *MemoryState) SetMetadata(metahash MetadataHash, metadata string) error {
+	ms.Metadatas[metahash] = metadata
 	return nil
 }
 

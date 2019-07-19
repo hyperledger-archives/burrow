@@ -117,7 +117,7 @@ func TestLocalSingle(t *testing.T) {
 	for i := range resp.Objects {
 		resp.Objects[i].Contract.Metadata = ""
 		resp.Objects[i].Contract.Devdoc = nil
-		resp.Objects[i].Contract.AbiMap = nil
+		resp.Objects[i].Contract.MetadataMap = nil
 		resp.Objects[i].Contract.Evm.DeployedBytecode.Object = ""
 		resp.Objects[i].Contract.Evm.DeployedBytecode.LinkReferences = nil
 	}

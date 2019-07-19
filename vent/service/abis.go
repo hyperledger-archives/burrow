@@ -39,23 +39,23 @@ func NewAbiProvider(paths []string, cli rpcquery.QueryClient) (provider *AbiProv
 func (p *AbiProvider) GetEventAbi(eventID abi.EventID, address crypto.Address, l *logging.Logger) (*abi.EventSpec, error) {
 	evAbi, ok := p.abiSpec.EventsByID[eventID]
 	if !ok {
-		resp, err := p.cli.GetAbi(context.Background(), &rpcquery.GetAbiParam{Address: address})
+		resp, err := p.cli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: address})
 		if err != nil {
 			l.InfoMsg("Error retrieving abi for event", "address", address.String(), "eventid", eventID.String(), "error", err)
 			return nil, err
 		}
-		if resp == nil || resp.Abi == "" {
+		if resp == nil || resp.Metadata == "" {
 			l.InfoMsg("ABI not found for contract", "address", address.String(), "eventid", eventID.String())
 			return nil, fmt.Errorf("No ABI present for contract at address %v", address)
 		}
-		a, err := abi.ReadSpec([]byte(resp.Abi))
+		a, err := abi.ReadSpec([]byte(resp.Metadata))
 		if err != nil {
-			l.InfoMsg("Failed to parse abi", "address", address.String(), "eventid", eventID.String(), "abi", resp.Abi)
+			l.InfoMsg("Failed to parse abi", "address", address.String(), "eventid", eventID.String(), "abi", resp.Metadata)
 			return nil, err
 		}
 		evAbi, ok = a.EventsByID[eventID]
 		if !ok {
-			l.InfoMsg("Event missing from ABI spec for contract", "address", address.String(), "eventid", eventID.String(), "abi", resp.Abi)
+			l.InfoMsg("Event missing from ABI spec for contract", "address", address.String(), "eventid", eventID.String(), "abi", resp.Metadata)
 			return nil, fmt.Errorf("Event missing from ABI spec for contract")
 		}
 

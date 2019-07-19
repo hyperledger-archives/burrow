@@ -26,13 +26,13 @@ message Account {
     permission.AccountPermissions Permissions = 6 [(gogoproto.nullable) = false];
     bytes WASMCode = 7 [(gogoproto.customtype) = "Bytecode", (gogoproto.jsontag) = ",omitempty", (gogoproto.nullable) = false];
     bytes CodeHash = 8 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false, (gogoproto.jsontag) = "-"];
-    repeated MetaMap MetaMap = 9;
+    repeated ContractMeta ContractMeta = 9;
     bytes Forebear = 10 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address"];
 }
 
-message MetaMap {
+message ContractMeta {
     bytes CodeHash = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
-    bytes AbiHash = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
+    bytes MetadataHash = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
     // In the dump format we would like the ABI rather than its hash
-    string Abi = 3;
+    string Metadata = 3;
 }

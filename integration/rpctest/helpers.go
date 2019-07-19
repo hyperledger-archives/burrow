@@ -1,5 +1,3 @@
-// +build integration
-
 package rpctest
 
 import (
@@ -50,21 +48,21 @@ func NewQueryClient(t testing.TB, listenAddress string) rpcquery.QueryClient {
 	return rpcquery.NewQueryClient(conn)
 }
 
-type AbiMap struct {
+type MetadataMap struct {
 	DeployedCode []byte
 	Abi          []byte
 }
 
-func CreateContract(cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte, abimap []AbiMap) (*exec.TxExecution, error) {
-	var abis []*payload.Abis
-	if abimap != nil {
-		abis = make([]*payload.Abis, len(abimap))
-		for i, m := range abimap {
+func CreateContract(cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte, metamap []MetadataMap) (*exec.TxExecution, error) {
+	var meta []*payload.ContractMeta
+	if metamap != nil {
+		meta = make([]*payload.ContractMeta, len(metamap))
+		for i, m := range metamap {
 			hash := sha3.NewKeccak256()
 			hash.Write([]byte(m.DeployedCode))
-			abis[i] = &payload.Abis{
+			meta[i] = &payload.ContractMeta{
 				CodeHash: hash.Sum(nil),
-				Abi:      string(m.Abi),
+				Meta:     string(m.Abi),
 			}
 		}
 	}
@@ -74,11 +72,11 @@ func CreateContract(cli rpctransact.TransactClient, inputAddress crypto.Address,
 			Address: inputAddress,
 			Amount:  2,
 		},
-		Address:  nil,
-		Data:     bytecode,
-		Fee:      2,
-		GasLimit: 10000,
-		Abis:     abis,
+		Address:      nil,
+		Data:         bytecode,
+		Fee:          2,
+		GasLimit:     10000,
+		ContractMeta: meta,
 	})
 	if err != nil {
 		return nil, err
