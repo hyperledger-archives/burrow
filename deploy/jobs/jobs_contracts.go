@@ -446,8 +446,12 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 	// formulate call
 	var packedBytes []byte
 	var funcSpec *abi.FunctionSpec
+	var abiJSON string
 
-	abiJSON, err := client.GetMetadataForAccount(address)
+	if !do.LocalABI {
+		abiJSON, err = client.GetMetadataForAccount(address)
+	}
+
 	if abiJSON != "" && err == nil {
 		packedBytes, funcSpec, err = abi.EncodeFunctionCall(abiJSON, call.Function, logger, callDataArray...)
 		if err != nil {

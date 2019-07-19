@@ -59,6 +59,8 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 
 		verboseOpt := cmd.BoolOpt("v verbose", false, "verbose output")
 
+		localAbiOpt := cmd.BoolOpt("local-abi", false, "use local ABIs rather than fetching them from burrow")
+
 		wasmOpt := cmd.BoolOpt("wasm", false, "Compile to WASM using solang (experimental)")
 
 		debugOpt := cmd.BoolOpt("d debug", false, "debug level output")
@@ -97,6 +99,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			args.MempoolSign = *mempoolSigningOpt
 			args.Timeout = *timeoutSecondsOpt
 			args.Path = *pathOpt
+			args.LocalABI = *localAbiOpt
 			args.Wasm = *wasmOpt
 			args.DefaultOutput = *defaultOutputOpt
 			args.DefaultSets = *defaultSetsOpt
