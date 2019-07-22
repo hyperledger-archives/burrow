@@ -48,10 +48,10 @@ func Accounts(output Output) func(cmd *cli.Cmd) {
 					output.Printf("  Public Key: %s\n", acc.PublicKey.String())
 				}
 				if acc.WASMCode != nil && len(acc.WASMCode) > 0 {
-					output.Printf("  WASM Code: %s", acc.WASMCode.String())
+					output.Printf("  WASM Code Hash: %s", acc.CodeHash.String())
 				}
 				if acc.EVMCode != nil && len(acc.EVMCode) > 0 {
-					output.Printf("  EVM Code: %s", acc.EVMCode.String())
+					output.Printf("  EVM Code Hash: %s", acc.CodeHash.String())
 				}
 
 				meta, err := qCli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: &acc.Address})
@@ -65,9 +65,9 @@ func Accounts(output Output) func(cmd *cli.Cmd) {
 						output.Fatalf("failed to unmarshal metadata %s: %v", meta.Metadata, err)
 					}
 
-					output.Printf(" Contract Name: %s", metadata.ContractName)
-					output.Printf(" Source File: %s", metadata.SourceFile)
-					output.Printf(" Compiler version: %s", metadata.CompilerVersion)
+					output.Printf("  Contract Name: %s", metadata.ContractName)
+					output.Printf("  Source File: %s", metadata.SourceFile)
+					output.Printf("  Compiler version: %s", metadata.CompilerVersion)
 
 					spec, err := abi.ReadSpec(metadata.Abi)
 					if err != nil {
@@ -75,16 +75,16 @@ func Accounts(output Output) func(cmd *cli.Cmd) {
 					}
 
 					if len(spec.Functions) > 0 {
-						output.Printf(" Functions:")
+						output.Printf("  Functions:")
 						for name, f := range spec.Functions {
-							output.Printf("   %s", f.String(name))
+							output.Printf("    %s", f.String(name))
 						}
 					}
 
 					if len(spec.EventsByID) > 0 {
-						output.Printf(" Events:")
+						output.Printf("  Events:")
 						for _, e := range spec.EventsByID {
-							output.Printf("   %s", e.String())
+							output.Printf("    %s", e.String())
 						}
 					}
 				}
