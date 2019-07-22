@@ -438,7 +438,7 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 	call.Gas = FirstOf(call.Gas, do.DefaultGas)
 
 	// Get address (possibly via key)
-	address, err := client.GetKeyAddress(call.Destination, logger)
+	address, err := client.ParseAddress(call.Destination, logger)
 	if err != nil {
 		return nil, err
 	}

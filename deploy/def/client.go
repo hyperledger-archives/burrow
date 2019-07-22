@@ -123,7 +123,7 @@ func (c *Client) Status(logger *logging.Logger) (*rpc.ResultStatus, error) {
 	return c.queryClient.Status(ctx, &rpcquery.StatusParam{})
 }
 
-func (c *Client) GetKeyAddress(key string, logger *logging.Logger) (crypto.Address, error) {
+func (c *Client) ParseAddress(key string, logger *logging.Logger) (crypto.Address, error) {
 	address, err := crypto.AddressFromHexString(key)
 	if err == nil {
 		return address, nil
@@ -363,7 +363,7 @@ func (c *Client) UpdateAccount(arg *GovArg, logger *logging.Logger) (*payload.Go
 		Roles:       arg.Permissions,
 	}
 	if arg.Address != "" {
-		addr, err := c.GetKeyAddress(arg.Address, logger)
+		addr, err := c.ParseAddress(arg.Address, logger)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse address: %v", err)
 		}
@@ -529,7 +529,7 @@ func (c *Client) Send(arg *SendArg, logger *logging.Logger) (*payload.SendTx, er
 	if err != nil {
 		return nil, err
 	}
-	outputAddress, err := c.GetKeyAddress(arg.Output, logger)
+	outputAddress, err := c.ParseAddress(arg.Output, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -638,7 +638,7 @@ func (c *Client) Permissions(arg *PermArg, logger *logging.Logger) (*payload.Per
 		Action: action,
 	}
 	if arg.Target != "" {
-		target, err := c.GetKeyAddress(arg.Target, logger)
+		target, err := c.ParseAddress(arg.Target, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -679,7 +679,7 @@ func (c *Client) TxInput(inputString, amountString, sequenceString string, allow
 	var err error
 	var inputAddress crypto.Address
 	if inputString != "" {
-		inputAddress, err = c.GetKeyAddress(inputString, logger)
+		inputAddress, err = c.ParseAddress(inputString, logger)
 		if err != nil {
 			return nil, fmt.Errorf("TxInput(): could not obtain input address from '%s': %v", inputString, err)
 		}
