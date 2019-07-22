@@ -308,7 +308,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			addressA := lastCall(createTxe.Events).CallData.Callee
 			// Check ABI for new contract A
 			qcli := rpctest.NewQueryClient(t, kern.GRPCListenAddress().String())
-			res, err := qcli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: addressA})
+			res, err := qcli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: &addressA})
 			require.NoError(t, err)
 			assert.Equal(t, res.Metadata, string(solidity.Abi_A))
 			// CreateB
@@ -321,7 +321,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			var addressB crypto.Address
 			err = spec.Unpack(callTxe.Result.Return, "createB", &addressB)
 			// check ABI for contract B
-			res, err = qcli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: addressB})
+			res, err = qcli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: &addressB})
 			require.NoError(t, err)
 			assert.Equal(t, res.Metadata, string(solidity.Abi_B))
 			// CreateC
@@ -334,7 +334,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			var addressC crypto.Address
 			err = spec.Unpack(callTxe.Result.Return, "createC", &addressC)
 			// check abi for contract C
-			res, err = qcli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: addressC})
+			res, err = qcli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: &addressC})
 			require.NoError(t, err)
 			assert.Equal(t, res.Metadata, string(solidity.Abi_C))
 			return

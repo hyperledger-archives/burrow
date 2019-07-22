@@ -61,41 +61,49 @@ func (qs *queryServer) GetAccount(ctx context.Context, param *GetAccountParam) (
 	return acc, err
 }
 
-// GetMetadata returns empty metadata string if not found
+// GetMetadata returns empty metadata string if not found. Metadata can be retrieved by account, or
+// by metadata hash
 func (qs *queryServer) GetMetadata(ctx context.Context, param *GetMetadataParam) (*MetadataResult, error) {
 	metadata := MetadataResult{}
-	acc, err := qs.accounts.GetAccount(param.Address)
-	if err != nil {
-		return &metadata, err
-	}
-	if acc != nil && acc.CodeHash != nil {
-		codehash := acc.CodeHash
-		if acc.Forebear != nil {
-			acc, err = qs.accounts.GetAccount(*acc.Forebear)
-			if err != nil {
-				return &metadata, err
-			}
+	var metahash acmstate.MetadataHash
+	var err error
+	if param.Address != nil {
+		acc, err := qs.accounts.GetAccount(*param.Address)
+		if err != nil {
+			return &metadata, err
 		}
+		if acc != nil && acc.CodeHash != nil {
+			codehash := acc.CodeHash
+			if acc.Forebear != nil {
+				acc, err = qs.accounts.GetAccount(*acc.Forebear)
+				if err != nil {
+					return &metadata, err
+				}
+			}
 
-		for _, m := range acc.ContractMeta {
-			if bytes.Equal(m.CodeHash, codehash) {
-				var metahash acmstate.MetadataHash
-				copy(metahash[:], m.MetadataHash)
-				metadata.Metadata, err = qs.accounts.GetMetadata(metahash)
-				return &metadata, err
+			found := false
+			for _, m := range acc.ContractMeta {
+				if bytes.Equal(m.CodeHash, codehash) {
+					copy(metahash[:], m.MetadataHash)
+					found = true
+					break
+				}
 			}
-		}
 
-		deployCodehash := compile.GetDeployCodeHash(acc.EVMCode, param.Address)
-		for _, m := range acc.ContractMeta {
-			if bytes.Equal(m.CodeHash, deployCodehash) {
-				var metahash acmstate.MetadataHash
-				copy(metahash[:], m.MetadataHash)
-				metadata.Metadata, err = qs.accounts.GetMetadata(metahash)
-				return &metadata, err
+			if !found {
+				deployCodehash := compile.GetDeployCodeHash(acc.EVMCode, *param.Address)
+				for _, m := range acc.ContractMeta {
+					if bytes.Equal(m.CodeHash, deployCodehash) {
+						copy(metahash[:], m.MetadataHash)
+						break
+					}
+				}
 			}
 		}
+	} else if param.MetadataHash != nil {
+		copy(metahash[:], *param.MetadataHash)
 	}
+	metadata.Metadata, err = qs.accounts.GetMetadata(metahash)
 	return &metadata, err
 }
 

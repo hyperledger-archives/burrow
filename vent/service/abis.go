@@ -39,7 +39,7 @@ func NewAbiProvider(paths []string, cli rpcquery.QueryClient) (provider *AbiProv
 func (p *AbiProvider) GetEventAbi(eventID abi.EventID, address crypto.Address, l *logging.Logger) (*abi.EventSpec, error) {
 	evAbi, ok := p.abiSpec.EventsByID[eventID]
 	if !ok {
-		resp, err := p.cli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: address})
+		resp, err := p.cli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: &address})
 		if err != nil {
 			l.InfoMsg("Error retrieving abi for event", "address", address.String(), "eventid", eventID.String(), "error", err)
 			return nil, err

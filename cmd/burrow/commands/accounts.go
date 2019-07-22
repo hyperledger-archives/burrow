@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Keys runs as either client or server
+// Accounts lists all the accounts in a chain, alongside with any metadata like contract name and ABI
 func Accounts(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 		chainURLOpt := cmd.StringOpt("c chain", "127.0.0.1:10997", "chain to be used in IP:PORT format")
@@ -54,7 +54,7 @@ func Accounts(output Output) func(cmd *cli.Cmd) {
 					output.Printf("  EVM Code: %s", acc.EVMCode.String())
 				}
 
-				meta, err := qCli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: acc.Address})
+				meta, err := qCli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: &acc.Address})
 				if err != nil {
 					output.Fatalf("failed to get metadata for %s: %v", acc.Address, err)
 				}

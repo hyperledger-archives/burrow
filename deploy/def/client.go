@@ -144,7 +144,7 @@ func (c *Client) GetAccount(address crypto.Address) (*acm.Account, error) {
 func (c *Client) GetMetadataForAccount(address crypto.Address) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
-	metadata, err := c.queryClient.GetMetadata(ctx, &rpcquery.GetMetadataParam{Address: address})
+	metadata, err := c.queryClient.GetMetadata(ctx, &rpcquery.GetMetadataParam{Address: &address})
 	if err != nil {
 		return "", err
 	}
@@ -152,10 +152,16 @@ func (c *Client) GetMetadataForAccount(address crypto.Address) (string, error) {
 	return metadata.Metadata, nil
 }
 
-// GetMetadata is required for us to implement acmstate.Reader, but it is not used
 func (c *Client) GetMetadata(metahash acmstate.MetadataHash) (string, error) {
-	panic("not implemented")
-	return "", nil
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	var bs binary.HexBytes = metahash.Bytes()
+	metadata, err := c.queryClient.GetMetadata(ctx, &rpcquery.GetMetadataParam{MetadataHash: &bs})
+	if err != nil {
+		return "", err
+	}
+
+	return metadata.Metadata, nil
 }
 
 func (c *Client) GetStorage(address crypto.Address, key binary.Word256) ([]byte, error) {

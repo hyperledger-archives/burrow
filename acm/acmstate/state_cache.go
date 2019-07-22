@@ -111,15 +111,12 @@ func (cache *Cache) UpdateAccount(account *acm.Account) error {
 }
 
 func (cache *Cache) GetMetadata(metahash MetadataHash) (string, error) {
-	cache.RLock()
-	defer cache.RUnlock()
-
-	metadataInfo, ok := cache.metadata[metahash]
-	if ok {
-		return metadataInfo.metadata, nil
+	metaInfo, err := cache.getMetadata(metahash)
+	if err != nil {
+		return "", err
 	}
 
-	return "", nil
+	return metaInfo.metadata, nil
 }
 
 func (cache *Cache) SetMetadata(metahash MetadataHash, metadata string) error {
@@ -340,4 +337,27 @@ func (cache *Cache) get(address crypto.Address) (*accountInfo, error) {
 		}
 	}
 	return accInfo, nil
+}
+
+// Get the cache accountInfo item creating it if necessary
+func (cache *Cache) getMetadata(metahash MetadataHash) (*metadataInfo, error) {
+	cache.RLock()
+	metaInfo := cache.metadata[metahash]
+	cache.RUnlock()
+	if metaInfo == nil {
+		cache.Lock()
+		defer cache.Unlock()
+		metaInfo = cache.metadata[metahash]
+		if metaInfo == nil {
+			metadata, err := cache.backend.GetMetadata(metahash)
+			if err != nil {
+				return nil, err
+			}
+			metaInfo = &metadataInfo{
+				metadata: metadata,
+			}
+			cache.metadata[metahash] = metaInfo
+		}
+	}
+	return metaInfo, nil
 }

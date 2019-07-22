@@ -414,8 +414,8 @@ func PrintResponse(resp Response, cli bool, logger *logging.Logger) {
 	}
 }
 
-// GetMetadatas get the CodeHashes + Abis for the generated Code. So, we have a map for all the possible contracts codes hashes to abis
-func (contract *SolidityContract) GetMetadatas(logger *logging.Logger) (map[acmstate.CodeHash]string, error) {
+// GetMetadata get the CodeHashes + Abis for the generated Code. So, we have a map for all the possible contracts codes hashes to abis
+func (contract *SolidityContract) GetMetadata(logger *logging.Logger) (map[acmstate.CodeHash]string, error) {
 	res := make(map[acmstate.CodeHash]string)
 	if contract.Evm.DeployedBytecode.Object == "" {
 		return nil, nil

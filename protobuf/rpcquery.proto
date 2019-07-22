@@ -50,7 +50,8 @@ message GetAccountParam {
 }
 
 message GetMetadataParam {
-    bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+    bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address"];
+    bytes MetadataHash = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes"];
 }
 
 message MetadataResult {

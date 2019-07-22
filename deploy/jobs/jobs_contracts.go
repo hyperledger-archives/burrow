@@ -164,7 +164,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 			contractCode = contractCode + callData
 		}
 
-		metaMap, err := contract.GetMetadatas(logger)
+		metaMap, err := contract.GetMetadata(logger)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -369,7 +369,7 @@ func deployContract(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook
 		}
 		data = contract.Evm.Bytecode.Object
 
-		metaMap, err = contract.GetMetadatas(logger)
+		metaMap, err = contract.GetMetadata(logger)
 		if err != nil {
 			return nil, err
 		}
