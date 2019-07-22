@@ -8,6 +8,7 @@ jobs:
   deploy:
       contract: contracts/storage.sol
       instance: all
+      data: [ 0 ]
 
 - name: setStorage
   call:

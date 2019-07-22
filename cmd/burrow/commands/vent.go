@@ -65,7 +65,7 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					}
 				}
 
-				cmd.Spec = "--spec=<spec file or dir> --abi=<abi file or dir> [--db-adapter] [--db-url] [--db-schema] " +
+				cmd.Spec = "--spec=<spec file or dir> [--abi=<abi file or dir>] [--db-adapter] [--db-url] [--db-schema] " +
 					"[--blocks] [--txs] [--grpc-addr] [--http-addr] [--log-level] [--announce-every=<duration>]"
 
 				cmd.Action = func() {
@@ -82,10 +82,6 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					if err != nil {
 						output.Fatalf("Spec loader error: %v", err)
 					}
-					abiSpec, err := abi.LoadPath(cfg.AbiFileOrDirs...)
-					if err != nil {
-						output.Fatalf("ABI loader error: %v", err)
-					}
 
 					var wg sync.WaitGroup
 
@@ -99,7 +95,7 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					wg.Add(1)
 
 					go func() {
-						if err := consumer.Run(projection, abiSpec, true); err != nil {
+						if err := consumer.Run(projection, true); err != nil {
 							output.Fatalf("Consumer execution error: %v", err)
 						}
 

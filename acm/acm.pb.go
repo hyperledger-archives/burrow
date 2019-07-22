@@ -8,6 +8,7 @@ import (
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
+	github_com_hyperledger_burrow_binary "github.com/hyperledger/burrow/binary"
 	crypto "github.com/hyperledger/burrow/crypto"
 	github_com_hyperledger_burrow_crypto "github.com/hyperledger/burrow/crypto"
 	permission "github.com/hyperledger/burrow/permission"
@@ -28,16 +29,19 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type Account struct {
-	Address              github_com_hyperledger_burrow_crypto.Address `protobuf:"bytes,1,opt,name=Address,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Address"`
-	PublicKey            crypto.PublicKey                             `protobuf:"bytes,2,opt,name=PublicKey,proto3" json:"PublicKey"`
-	Sequence             uint64                                       `protobuf:"varint,3,opt,name=Sequence,proto3" json:"Sequence,omitempty"`
-	Balance              uint64                                       `protobuf:"varint,4,opt,name=Balance,proto3" json:"Balance,omitempty"`
-	EVMCode              Bytecode                                     `protobuf:"bytes,5,opt,name=EVMCode,proto3,customtype=Bytecode" json:"EVMCode"`
-	Permissions          permission.AccountPermissions                `protobuf:"bytes,6,opt,name=Permissions,proto3" json:"Permissions"`
-	WASMCode             Bytecode                                     `protobuf:"bytes,7,opt,name=WASMCode,proto3,customtype=Bytecode" json:",omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                                     `json:"-"`
-	XXX_unrecognized     []byte                                       `json:"-"`
-	XXX_sizecache        int32                                        `json:"-"`
+	Address              github_com_hyperledger_burrow_crypto.Address  `protobuf:"bytes,1,opt,name=Address,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Address"`
+	PublicKey            crypto.PublicKey                              `protobuf:"bytes,2,opt,name=PublicKey,proto3" json:"PublicKey"`
+	Sequence             uint64                                        `protobuf:"varint,3,opt,name=Sequence,proto3" json:"Sequence,omitempty"`
+	Balance              uint64                                        `protobuf:"varint,4,opt,name=Balance,proto3" json:"Balance,omitempty"`
+	EVMCode              Bytecode                                      `protobuf:"bytes,5,opt,name=EVMCode,proto3,customtype=Bytecode" json:"EVMCode"`
+	Permissions          permission.AccountPermissions                 `protobuf:"bytes,6,opt,name=Permissions,proto3" json:"Permissions"`
+	WASMCode             Bytecode                                      `protobuf:"bytes,7,opt,name=WASMCode,proto3,customtype=Bytecode" json:",omitempty"`
+	CodeHash             github_com_hyperledger_burrow_binary.HexBytes `protobuf:"bytes,8,opt,name=CodeHash,proto3,customtype=github.com/hyperledger/burrow/binary.HexBytes" json:"-"`
+	ContractMeta         []*ContractMeta                               `protobuf:"bytes,9,rep,name=ContractMeta,proto3" json:"ContractMeta,omitempty"`
+	Forebear             *github_com_hyperledger_burrow_crypto.Address `protobuf:"bytes,10,opt,name=Forebear,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Forebear,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                                      `json:"-"`
+	XXX_unrecognized     []byte                                        `json:"-"`
+	XXX_sizecache        int32                                         `json:"-"`
 }
 
 func (m *Account) Reset()      { *m = Account{} }
@@ -96,42 +100,109 @@ func (m *Account) GetPermissions() permission.AccountPermissions {
 	return permission.AccountPermissions{}
 }
 
+func (m *Account) GetContractMeta() []*ContractMeta {
+	if m != nil {
+		return m.ContractMeta
+	}
+	return nil
+}
+
 func (*Account) XXX_MessageName() string {
 	return "acm.Account"
+}
+
+type ContractMeta struct {
+	CodeHash     github_com_hyperledger_burrow_binary.HexBytes `protobuf:"bytes,1,opt,name=CodeHash,proto3,customtype=github.com/hyperledger/burrow/binary.HexBytes" json:"CodeHash"`
+	MetadataHash github_com_hyperledger_burrow_binary.HexBytes `protobuf:"bytes,2,opt,name=MetadataHash,proto3,customtype=github.com/hyperledger/burrow/binary.HexBytes" json:"MetadataHash"`
+	// In the dump format we would like the ABI rather than its hash
+	Metadata             string   `protobuf:"bytes,3,opt,name=Metadata,proto3" json:"Metadata,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ContractMeta) Reset()         { *m = ContractMeta{} }
+func (m *ContractMeta) String() string { return proto.CompactTextString(m) }
+func (*ContractMeta) ProtoMessage()    {}
+func (*ContractMeta) Descriptor() ([]byte, []int) {
+	return fileDescriptor_49ed775bc0a6adf6, []int{1}
+}
+func (m *ContractMeta) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ContractMeta) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalTo(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *ContractMeta) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ContractMeta.Merge(m, src)
+}
+func (m *ContractMeta) XXX_Size() int {
+	return m.Size()
+}
+func (m *ContractMeta) XXX_DiscardUnknown() {
+	xxx_messageInfo_ContractMeta.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ContractMeta proto.InternalMessageInfo
+
+func (m *ContractMeta) GetMetadata() string {
+	if m != nil {
+		return m.Metadata
+	}
+	return ""
+}
+
+func (*ContractMeta) XXX_MessageName() string {
+	return "acm.ContractMeta"
 }
 func init() {
 	proto.RegisterType((*Account)(nil), "acm.Account")
 	golang_proto.RegisterType((*Account)(nil), "acm.Account")
+	proto.RegisterType((*ContractMeta)(nil), "acm.ContractMeta")
+	golang_proto.RegisterType((*ContractMeta)(nil), "acm.ContractMeta")
 }
 
 func init() { proto.RegisterFile("acm.proto", fileDescriptor_49ed775bc0a6adf6) }
 func init() { golang_proto.RegisterFile("acm.proto", fileDescriptor_49ed775bc0a6adf6) }
 
 var fileDescriptor_49ed775bc0a6adf6 = []byte{
-	// 357 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x51, 0x3f, 0x4f, 0xc2, 0x40,
-	0x1c, 0xe5, 0xa0, 0x52, 0x38, 0x18, 0xf0, 0xa6, 0x86, 0xe1, 0x8a, 0x4e, 0xc4, 0x60, 0x9b, 0xf8,
-	0x67, 0xc1, 0x89, 0x1a, 0x5d, 0x8c, 0x86, 0x94, 0x44, 0x13, 0xb7, 0xf6, 0x7a, 0x96, 0x26, 0x94,
-	0xab, 0xd7, 0x36, 0xa6, 0xdf, 0xc4, 0xd1, 0x8f, 0xe2, 0xc8, 0xe8, 0x68, 0x1c, 0x88, 0x29, 0x9b,
-	0x9f, 0xc1, 0xc1, 0x70, 0x1c, 0xb5, 0x71, 0x70, 0xeb, 0xeb, 0x7b, 0xef, 0xf7, 0x5e, 0xde, 0xc1,
-	0xa6, 0x43, 0x42, 0x23, 0xe2, 0x2c, 0x61, 0xa8, 0xe6, 0x90, 0xb0, 0x7b, 0xe8, 0x07, 0xc9, 0x34,
-	0x75, 0x0d, 0xc2, 0x42, 0xd3, 0x67, 0x3e, 0x33, 0x05, 0xe7, 0xa6, 0x0f, 0x02, 0x09, 0x20, 0xbe,
-	0x36, 0x9e, 0x6e, 0x27, 0xa2, 0x3c, 0x0c, 0xe2, 0x38, 0x60, 0x73, 0xf9, 0xa7, 0x4d, 0x78, 0x16,
-	0x25, 0x92, 0xdf, 0xff, 0xae, 0x42, 0x75, 0x44, 0x08, 0x4b, 0xe7, 0x09, 0xba, 0x81, 0xea, 0xc8,
-	0xf3, 0x38, 0x8d, 0x63, 0x0d, 0xf4, 0x40, 0xbf, 0x6d, 0x9d, 0x2c, 0x96, 0x7a, 0xe5, 0x63, 0xa9,
-	0x0f, 0x4a, 0x99, 0xd3, 0x2c, 0xa2, 0x7c, 0x46, 0x3d, 0x9f, 0x72, 0xd3, 0x4d, 0x39, 0x67, 0x4f,
-	0xa6, 0x3c, 0x28, 0xbd, 0xf6, 0xf6, 0x08, 0x3a, 0x85, 0xcd, 0x71, 0xea, 0xce, 0x02, 0x72, 0x45,
-	0x33, 0xad, 0xda, 0x03, 0xfd, 0xd6, 0xd1, 0xae, 0x21, 0xc5, 0x05, 0x61, 0x29, 0xeb, 0x10, 0xfb,
-	0x57, 0x89, 0xba, 0xb0, 0x31, 0xa1, 0x8f, 0x29, 0x9d, 0x13, 0xaa, 0xd5, 0x7a, 0xa0, 0xaf, 0xd8,
-	0x05, 0x46, 0x1a, 0x54, 0x2d, 0x67, 0xe6, 0xac, 0x29, 0x45, 0x50, 0x5b, 0x88, 0x0e, 0xa0, 0x7a,
-	0x71, 0x7b, 0x7d, 0xce, 0x3c, 0xaa, 0xed, 0x88, 0xf2, 0x1d, 0x59, 0xbe, 0x61, 0x65, 0x09, 0x25,
-	0xcc, 0xa3, 0xf6, 0x56, 0x80, 0x2e, 0x61, 0x6b, 0x5c, 0xcc, 0x12, 0x6b, 0x75, 0x51, 0x0d, 0x1b,
-	0xa5, 0xa9, 0xe4, 0x24, 0x25, 0x95, 0xec, 0x59, 0x36, 0xa2, 0x21, 0x6c, 0xdc, 0x8d, 0x26, 0x9b,
-	0x50, 0x55, 0x84, 0xe2, 0xbf, 0xa1, 0x5f, 0x4b, 0x1d, 0x0e, 0x58, 0x18, 0x24, 0x34, 0x8c, 0x92,
-	0xcc, 0x2e, 0xf4, 0x43, 0xe5, 0xf9, 0x45, 0xaf, 0x58, 0x67, 0x8b, 0x1c, 0x83, 0xb7, 0x1c, 0x83,
-	0xf7, 0x1c, 0x83, 0xcf, 0x1c, 0x83, 0xd7, 0x15, 0x06, 0x8b, 0x15, 0x06, 0xf7, 0x7b, 0xff, 0x6f,
-	0xee, 0x90, 0xd0, 0xad, 0x8b, 0x27, 0x3c, 0xfe, 0x09, 0x00, 0x00, 0xff, 0xff, 0xba, 0x95, 0x25,
-	0xdd, 0x23, 0x02, 0x00, 0x00,
+	// 483 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x53, 0x31, 0x6f, 0xd3, 0x40,
+	0x14, 0xee, 0x35, 0xa6, 0x76, 0xae, 0x19, 0xca, 0x4d, 0x56, 0x06, 0x3b, 0x74, 0x8a, 0x50, 0xe3,
+	0x20, 0x20, 0x4b, 0x98, 0xe2, 0x8a, 0xaa, 0x12, 0x14, 0x15, 0x57, 0x2a, 0x82, 0xed, 0x7c, 0x7e,
+	0x24, 0x96, 0x62, 0x9f, 0x39, 0x9f, 0x05, 0xfe, 0x27, 0x8c, 0xfc, 0x14, 0xc6, 0x8c, 0x8c, 0x85,
+	0x21, 0x42, 0xe9, 0xd6, 0x5f, 0x81, 0x7c, 0xb9, 0x18, 0x87, 0x21, 0x12, 0x30, 0x25, 0xcf, 0xdf,
+	0xf7, 0xbe, 0xef, 0x7b, 0xcf, 0xcf, 0xb8, 0x4d, 0x59, 0xe2, 0x65, 0x82, 0x4b, 0x4e, 0x5a, 0x94,
+	0x25, 0xdd, 0xc1, 0x34, 0x96, 0xb3, 0x22, 0xf4, 0x18, 0x4f, 0x86, 0x53, 0x3e, 0xe5, 0x43, 0x85,
+	0x85, 0xc5, 0x7b, 0x55, 0xa9, 0x42, 0xfd, 0x5b, 0xf7, 0x74, 0x8f, 0x32, 0x10, 0x49, 0x9c, 0xe7,
+	0x31, 0x4f, 0xf5, 0x93, 0x0e, 0x13, 0x65, 0x26, 0x35, 0x7e, 0xfc, 0xdd, 0xc0, 0xe6, 0x84, 0x31,
+	0x5e, 0xa4, 0x92, 0xbc, 0xc2, 0xe6, 0x24, 0x8a, 0x04, 0xe4, 0xb9, 0x8d, 0x7a, 0xa8, 0xdf, 0xf1,
+	0x9f, 0x2e, 0x96, 0xee, 0xde, 0x8f, 0xa5, 0x7b, 0xd2, 0xf0, 0x9c, 0x95, 0x19, 0x88, 0x39, 0x44,
+	0x53, 0x10, 0xc3, 0xb0, 0x10, 0x82, 0x7f, 0x1c, 0x6a, 0x41, 0xdd, 0x1b, 0x6c, 0x44, 0xc8, 0x08,
+	0xb7, 0x2f, 0x8b, 0x70, 0x1e, 0xb3, 0x17, 0x50, 0xda, 0xfb, 0x3d, 0xd4, 0x3f, 0x7c, 0x7c, 0xdf,
+	0xd3, 0xe4, 0x1a, 0xf0, 0x8d, 0xca, 0x24, 0xf8, 0xcd, 0x24, 0x5d, 0x6c, 0x5d, 0xc1, 0x87, 0x02,
+	0x52, 0x06, 0x76, 0xab, 0x87, 0xfa, 0x46, 0x50, 0xd7, 0xc4, 0xc6, 0xa6, 0x4f, 0xe7, 0xb4, 0x82,
+	0x0c, 0x05, 0x6d, 0x4a, 0xf2, 0x10, 0x9b, 0xcf, 0xaf, 0x2f, 0x4e, 0x79, 0x04, 0xf6, 0x3d, 0x15,
+	0xfe, 0x48, 0x87, 0xb7, 0xfc, 0x52, 0x02, 0xe3, 0x11, 0x04, 0x1b, 0x02, 0x39, 0xc3, 0x87, 0x97,
+	0xf5, 0x5a, 0x72, 0xfb, 0x40, 0x45, 0x73, 0xbc, 0xc6, 0xaa, 0xf4, 0x4a, 0x1a, 0x2c, 0x9d, 0xb3,
+	0xd9, 0x48, 0xc6, 0xd8, 0x7a, 0x33, 0xb9, 0x5a, 0x9b, 0x9a, 0xca, 0xd4, 0xf9, 0xd3, 0xf4, 0x6e,
+	0xe9, 0xe2, 0x13, 0x9e, 0xc4, 0x12, 0x92, 0x4c, 0x96, 0x41, 0xcd, 0x27, 0xd7, 0xd8, 0xaa, 0x7e,
+	0xcf, 0x69, 0x3e, 0xb3, 0x2d, 0xd5, 0x3b, 0xd6, 0xbd, 0x83, 0xdd, 0xdb, 0x0e, 0xe3, 0x94, 0x8a,
+	0xd2, 0x3b, 0x87, 0x4f, 0x95, 0x47, 0x7e, 0xb7, 0x74, 0xd1, 0x20, 0xa8, 0xb5, 0xc8, 0x08, 0x77,
+	0x4e, 0x79, 0x2a, 0x05, 0x65, 0xf2, 0x02, 0x24, 0xb5, 0xdb, 0xbd, 0x96, 0xda, 0x7b, 0x75, 0x46,
+	0x4d, 0x20, 0xd8, 0xa2, 0x91, 0x97, 0xd8, 0x3a, 0xe3, 0x02, 0x42, 0xa0, 0xc2, 0xc6, 0x2a, 0xce,
+	0xa3, 0xbf, 0x7e, 0xf1, 0xb5, 0xc2, 0xd8, 0xf8, 0xfc, 0xc5, 0xdd, 0x3b, 0xbe, 0x41, 0xdb, 0x59,
+	0xc8, 0xeb, 0xc6, 0xcc, 0xeb, 0x0b, 0x1b, 0xfd, 0xd3, 0xcc, 0x8d, 0x71, 0xdf, 0xe2, 0x4e, 0x25,
+	0x1d, 0x51, 0x49, 0x95, 0xec, 0xfe, 0xff, 0xc8, 0x6e, 0x49, 0x55, 0x77, 0xb8, 0xa9, 0xd5, 0x1d,
+	0xb6, 0x83, 0xba, 0xf6, 0x9f, 0x2d, 0x56, 0x0e, 0xfa, 0xb6, 0x72, 0xd0, 0xcd, 0xca, 0x41, 0x3f,
+	0x57, 0x0e, 0xfa, 0x7a, 0xeb, 0xa0, 0xc5, 0xad, 0x83, 0xde, 0x3d, 0xd8, 0x6d, 0x49, 0x59, 0x12,
+	0x1e, 0xa8, 0x4f, 0xef, 0xc9, 0xaf, 0x00, 0x00, 0x00, 0xff, 0xff, 0x8b, 0x68, 0x6a, 0xd3, 0xdb,
+	0x03, 0x00, 0x00,
 }
 
 func (m *Account) Marshal() (dAtA []byte, err error) {
@@ -199,6 +270,79 @@ func (m *Account) MarshalTo(dAtA []byte) (int, error) {
 		return 0, err
 	}
 	i += n5
+	dAtA[i] = 0x42
+	i++
+	i = encodeVarintAcm(dAtA, i, uint64(m.CodeHash.Size()))
+	n6, err := m.CodeHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n6
+	if len(m.ContractMeta) > 0 {
+		for _, msg := range m.ContractMeta {
+			dAtA[i] = 0x4a
+			i++
+			i = encodeVarintAcm(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
+	}
+	if m.Forebear != nil {
+		dAtA[i] = 0x52
+		i++
+		i = encodeVarintAcm(dAtA, i, uint64(m.Forebear.Size()))
+		n7, err := m.Forebear.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n7
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *ContractMeta) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ContractMeta) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	dAtA[i] = 0xa
+	i++
+	i = encodeVarintAcm(dAtA, i, uint64(m.CodeHash.Size()))
+	n8, err := m.CodeHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n8
+	dAtA[i] = 0x12
+	i++
+	i = encodeVarintAcm(dAtA, i, uint64(m.MetadataHash.Size()))
+	n9, err := m.MetadataHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n9
+	if len(m.Metadata) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintAcm(dAtA, i, uint64(len(m.Metadata)))
+		i += copy(dAtA[i:], m.Metadata)
+	}
 	if m.XXX_unrecognized != nil {
 		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
@@ -236,6 +380,38 @@ func (m *Account) Size() (n int) {
 	n += 1 + l + sovAcm(uint64(l))
 	l = m.WASMCode.Size()
 	n += 1 + l + sovAcm(uint64(l))
+	l = m.CodeHash.Size()
+	n += 1 + l + sovAcm(uint64(l))
+	if len(m.ContractMeta) > 0 {
+		for _, e := range m.ContractMeta {
+			l = e.Size()
+			n += 1 + l + sovAcm(uint64(l))
+		}
+	}
+	if m.Forebear != nil {
+		l = m.Forebear.Size()
+		n += 1 + l + sovAcm(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *ContractMeta) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.CodeHash.Size()
+	n += 1 + l + sovAcm(uint64(l))
+	l = m.MetadataHash.Size()
+	n += 1 + l + sovAcm(uint64(l))
+	l = len(m.Metadata)
+	if l > 0 {
+		n += 1 + l + sovAcm(uint64(l))
+	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -486,6 +662,260 @@ func (m *Account) Unmarshal(dAtA []byte) error {
 			if err := m.WASMCode.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CodeHash", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAcm
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAcm
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAcm
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.CodeHash.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ContractMeta", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAcm
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthAcm
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthAcm
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ContractMeta = append(m.ContractMeta, &ContractMeta{})
+			if err := m.ContractMeta[len(m.ContractMeta)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 10:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Forebear", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAcm
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAcm
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAcm
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			var v github_com_hyperledger_burrow_crypto.Address
+			m.Forebear = &v
+			if err := m.Forebear.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAcm(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthAcm
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthAcm
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ContractMeta) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAcm
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ContractMeta: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ContractMeta: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CodeHash", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAcm
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAcm
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAcm
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.CodeHash.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MetadataHash", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAcm
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthAcm
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAcm
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.MetadataHash.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Metadata", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAcm
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAcm
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAcm
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Metadata = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

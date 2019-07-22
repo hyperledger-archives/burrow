@@ -8,7 +8,6 @@ import (
 
 	"github.com/hyperledger/burrow/rpc"
 
-	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
@@ -55,7 +54,7 @@ func NewConsumer(cfg *config.VentConfig, log *logging.Logger, eventChannel chan 
 // Run connects to a grpc service and subscribes to log events,
 // then gets tables structures, maps them & parse event data.
 // Store data in SQL event tables, it runs forever
-func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.Spec, stream bool) error {
+func (c *Consumer) Run(projection *sqlsol.Projection, stream bool) error {
 	var err error
 
 	c.Log.InfoMsg("Connecting to Burrow gRPC server")
@@ -72,6 +71,11 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.Spec, stream 
 	c.Status.Burrow, err = qCli.Status(context.Background(), &rpcquery.StatusParam{})
 	if err != nil {
 		return errors.Wrapf(err, "Error getting chain status")
+	}
+
+	abiProvider, err := NewAbiProvider(c.Config.AbiFileOrDirs, rpcquery.NewQueryClient(c.GRPCConnection))
+	if err != nil {
+		return errors.Wrapf(err, "Error loading ABIs")
 	}
 
 	if len(projection.EventSpec) == 0 {
@@ -167,7 +171,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.Spec, stream 
 
 		c.Log.TraceMsg("Waiting for blocks...")
 
-		err = rpcevents.ConsumeBlockExecutions(stream, c.makeBlockConsumer(projection, abiSpec, eventCh))
+		err = rpcevents.ConsumeBlockExecutions(stream, c.makeBlockConsumer(projection, abiProvider, eventCh))
 
 		if err != nil {
 			if err == io.EOF {
@@ -211,7 +215,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.Spec, stream 
 	}
 }
 
-func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi.Spec,
+func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiProvider *AbiProvider,
 	eventCh chan<- types.EventData) func(blockExecution *exec.BlockExecution) error {
 
 	return func(blockExecution *exec.BlockExecution) error {
@@ -285,7 +289,7 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi
 								"filter", eventClass.Filter)
 
 							// unpack, decode & build event data
-							eventData, err := buildEventData(projection, eventClass, event, origin, abiSpec, c.Log)
+							eventData, err := buildEventData(projection, eventClass, event, origin, abiProvider, c.Log)
 							if err != nil {
 								return errors.Wrapf(err, "Error building event data")
 							}

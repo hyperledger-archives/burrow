@@ -28,6 +28,7 @@ import (
 type FakeAppState struct {
 	accounts map[crypto.Address]*acm.Account
 	storage  map[string][]byte
+	metadata map[acmstate.MetadataHash]string
 }
 
 var _ acmstate.ReaderWriter = &FakeAppState{}
@@ -35,6 +36,15 @@ var _ acmstate.ReaderWriter = &FakeAppState{}
 func (fas *FakeAppState) GetAccount(addr crypto.Address) (*acm.Account, error) {
 	account := fas.accounts[addr]
 	return account, nil
+}
+
+func (fas *FakeAppState) GetMetadata(metahash acmstate.MetadataHash) (string, error) {
+	return fas.metadata[metahash], nil
+}
+
+func (fas *FakeAppState) SetMetadata(metahash acmstate.MetadataHash, metadata string) error {
+	fas.metadata[metahash] = metadata
+	return nil
 }
 
 func (fas *FakeAppState) UpdateAccount(account *acm.Account) error {

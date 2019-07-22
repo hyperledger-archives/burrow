@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	hex "github.com/tmthrgd/go-hex"
+
 	burrow_binary "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/crypto/sha3"
@@ -238,6 +240,10 @@ type FunctionID [FunctionIDSize]byte
 const EventIDSize = 32
 
 type EventID [EventIDSize]byte
+
+func (e EventID) String() string {
+	return hex.EncodeUpperToString(e[:])
+}
 
 type FunctionSpec struct {
 	FunctionID FunctionID
@@ -567,28 +573,52 @@ func SpecFromFunctionReflect(fname string, v reflect.Value, skipIn, skipOut int)
 	return &s
 }
 
-func Signature(name string, args []Argument) (sig string) {
-	sig = name + "("
+func argsToSignature(args []Argument, addIndexedName bool) (str string) {
+	str = "("
 	for i, a := range args {
 		if i > 0 {
-			sig += ","
+			str += ","
 		}
-		sig += a.EVM.GetSignature()
+		str += a.EVM.GetSignature()
+		if addIndexedName && a.Indexed {
+			str += " indexed"
+		}
 		if a.IsArray {
 			if a.ArrayLength > 0 {
-				sig += fmt.Sprintf("[%d]", a.ArrayLength)
+				str += fmt.Sprintf("[%d]", a.ArrayLength)
 			} else {
-				sig += "[]"
+				str += "[]"
 			}
 		}
+		if addIndexedName && a.Name != "" {
+			str += " " + a.Name
+		}
 	}
-	sig += ")"
+	str += ")"
 	return
+}
+
+func Signature(name string, args []Argument) string {
+	return name + argsToSignature(args, false)
 }
 
 func (functionSpec *FunctionSpec) SetFunctionID(functionName string) {
 	sig := Signature(functionName, functionSpec.Inputs)
 	functionSpec.FunctionID = GetFunctionID(sig)
+}
+
+func (f *FunctionSpec) String(name string) string {
+	return name + argsToSignature(f.Inputs, true) +
+		" returns " + argsToSignature(f.Outputs, true)
+}
+
+func (e *EventSpec) String() string {
+	str := e.Name + argsToSignature(e.Inputs, true)
+	if e.Anonymous {
+		str += " anonymous"
+	}
+
+	return str
 }
 
 func (fs FunctionID) Bytes() []byte {
@@ -706,21 +736,17 @@ func (abiSpec *Spec) Pack(fname string, args ...interface{}) ([]byte, *FunctionS
 		if _, ok := abiSpec.Functions[fname]; ok {
 			funcSpec = abiSpec.Functions[fname]
 		} else {
-			funcSpec = abiSpec.Fallback
+			return nil, nil, fmt.Errorf("Unknown function %s", fname)
 		}
 	} else {
-		funcSpec = abiSpec.Constructor
+		if abiSpec.Constructor.Inputs != nil {
+			funcSpec = abiSpec.Constructor
+		} else {
+			return nil, nil, fmt.Errorf("Contract does not have a constructor")
+		}
 	}
 
 	argSpec = funcSpec.Inputs
-
-	if argSpec == nil {
-		if fname == "" {
-			return nil, nil, fmt.Errorf("Contract does not have a constructor")
-		}
-
-		return nil, nil, fmt.Errorf("Unknown function %s", fname)
-	}
 
 	packed := make([]byte, 0)
 

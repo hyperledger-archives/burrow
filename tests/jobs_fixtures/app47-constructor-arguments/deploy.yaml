@@ -1,3 +1,6 @@
+# This uses a bin file without any metadata to test deployment.
+# This means uses local ABIs rather than burrow-side ABIs.
+
 jobs:
 
 - name: setStorageBaseString1

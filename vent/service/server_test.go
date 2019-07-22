@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/integration/rpctest"
 	"github.com/hyperledger/burrow/logging"
@@ -44,13 +43,12 @@ func TestServer(t *testing.T) {
 			log := logging.NewNoopLogger()
 			consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
 			projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, sqlsol.None)
-			abiSpec, err := abi.LoadPath(cfg.AbiFileOrDirs...)
 
 			var wg sync.WaitGroup
 
 			wg.Add(1)
 			go func() {
-				err := consumer.Run(projection, abiSpec, true)
+				err := consumer.Run(projection, true)
 				require.NoError(t, err)
 
 				wg.Done()

@@ -12,17 +12,9 @@ import (
 )
 
 // decodeEvent unpacks & decodes event data
-func decodeEvent(header *exec.Header, log *exec.LogEvent, origin *exec.Origin, abiSpec *abi.Spec) (map[string]interface{}, error) {
+func decodeEvent(header *exec.Header, log *exec.LogEvent, origin *exec.Origin, evAbi *abi.EventSpec) (map[string]interface{}, error) {
 	// to prepare decoded data and map to event item name
 	data := make(map[string]interface{})
-
-	var eventID abi.EventID
-	copy(eventID[:], log.Topics[0].Bytes())
-
-	evAbi, ok := abiSpec.EventsByID[eventID]
-	if !ok {
-		return nil, fmt.Errorf("abi spec not found for event %x", eventID)
-	}
 
 	// decode header to get context data for each event
 	data[types.EventNameLabel] = evAbi.Name
@@ -36,8 +28,8 @@ func decodeEvent(header *exec.Header, log *exec.LogEvent, origin *exec.Origin, a
 	unpackedData := abi.GetPackingTypes(evAbi.Inputs)
 
 	// unpack event data (topics & data part)
-	if err := abi.UnpackEvent(&evAbi, log.Topics, log.Data, unpackedData...); err != nil {
-		return nil, errors.Wrap(err, "could not unpack event data")
+	if err := abi.UnpackEvent(evAbi, log.Topics, log.Data, unpackedData...); err != nil {
+		return nil, errors.Wrap(err, "Could not unpack event data")
 	}
 
 	// for each decoded item value, stores it in given item name

@@ -18,6 +18,7 @@ jobs:
   deploy:
       contract: contracts/GSSingle.sol
       instance: GSSingle
+      data: [ 0 ]
 
 - name: createGSContractSingle
   call:
@@ -79,6 +80,7 @@ jobs:
   deploy:
       contract: contracts/GSMulti.sol
       instance: GSMulti
+      data: [ 0, 0 ]
 
 - name: createGSContractMulti
   call:

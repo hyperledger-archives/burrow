@@ -58,6 +58,10 @@ func main() {
 			}
 			f.WriteString(fmt.Sprintf("var Bytecode_%s = hex.MustDecodeString(\"%s\")\n",
 				c.Objectname, code))
+			if c.Contract.Evm.DeployedBytecode.Object != "" {
+				f.WriteString(fmt.Sprintf("var DeployedBytecode_%s = hex.MustDecodeString(\"%s\")\n",
+					c.Objectname, c.Contract.Evm.DeployedBytecode.Object))
+			}
 			f.WriteString(fmt.Sprintf("var Abi_%s = []byte(`%s`)\n",
 				c.Objectname, c.Contract.Abi))
 		}

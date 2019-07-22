@@ -21,6 +21,7 @@ option (gogoproto.messagename_all) = true;
 service Query {
     rpc Status (StatusParam) returns (rpc.ResultStatus);
     rpc GetAccount (GetAccountParam) returns (acm.Account);
+    rpc GetMetadata (GetMetadataParam) returns (MetadataResult);
     rpc GetStorage (GetStorageParam) returns (StorageValue);
 
     rpc ListAccounts (ListAccountsParam) returns (stream acm.Account);
@@ -46,6 +47,15 @@ message StatusParam {
 
 message GetAccountParam {
     bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+}
+
+message GetMetadataParam {
+    bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address"];
+    bytes MetadataHash = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes"];
+}
+
+message MetadataResult {
+    string Metadata = 1;
 }
 
 message GetStorageParam {

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -87,6 +88,17 @@ func (ds *Dumper) Transmit(sink Sink, startHeight, endHeight uint64, options Opt
 					Address: acc.Address,
 					Storage: make([]*Storage, 0),
 				},
+			}
+
+			for _, m := range acc.ContractMeta {
+				var metahash acmstate.MetadataHash
+				copy(metahash[:], m.MetadataHash.Bytes())
+				meta, err := ds.state.GetMetadata(metahash)
+				if err != nil {
+					return err
+				}
+				m.Metadata = meta
+				m.MetadataHash = []byte{}
 			}
 
 			var storageBytes int

@@ -130,7 +130,7 @@ build_burrow_sqlite: commit_hash
 .PHONY: install
 install: build_burrow
 	mkdir -p ${BIN_PATH}
-	cp ${REPO}/bin/burrow ${BIN_PATH}/burrow
+	install -T ${REPO}/bin/burrow ${BIN_PATH}/burrow
 
 # build burrow with checks for race conditions
 .PHONY: build_race_db

@@ -58,9 +58,11 @@ type KeyFormatStore struct {
 	Validator *storage.MustKeyFormat
 	Event     *storage.MustKeyFormat
 	TxHash    *storage.MustKeyFormat
+	Abi       *storage.MustKeyFormat
 }
 
 var keys = KeyFormatStore{
+	// Stored in the forest
 	// AccountAddress -> Account
 	Account: storage.NewMustKeyFormat("a", crypto.AddressLength),
 	// AccountAddress, Key -> Value
@@ -73,8 +75,12 @@ var keys = KeyFormatStore{
 	Validator: storage.NewMustKeyFormat("v", crypto.AddressLength),
 	// Height -> StreamEvent
 	Event: storage.NewMustKeyFormat("e", uint64Length),
+
+	// Stored on the plain
 	// TxHash -> TxHeight, TxIndex
 	TxHash: storage.NewMustKeyFormat("th", txs.HashLength),
+	// CodeHash -> Abi
+	Abi: storage.NewMustKeyFormat("abi", sha256.Size),
 }
 
 var Prefixes [][]byte

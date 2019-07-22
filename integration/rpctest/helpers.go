@@ -6,6 +6,7 @@ import (
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/integration"
@@ -47,16 +48,35 @@ func NewQueryClient(t testing.TB, listenAddress string) rpcquery.QueryClient {
 	return rpcquery.NewQueryClient(conn)
 }
 
-func CreateContract(cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte) (*exec.TxExecution, error) {
+type MetadataMap struct {
+	DeployedCode []byte
+	Abi          []byte
+}
+
+func CreateContract(cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte, metamap []MetadataMap) (*exec.TxExecution, error) {
+	var meta []*payload.ContractMeta
+	if metamap != nil {
+		meta = make([]*payload.ContractMeta, len(metamap))
+		for i, m := range metamap {
+			hash := sha3.NewKeccak256()
+			hash.Write([]byte(m.DeployedCode))
+			meta[i] = &payload.ContractMeta{
+				CodeHash: hash.Sum(nil),
+				Meta:     string(m.Abi),
+			}
+		}
+	}
+
 	txe, err := cli.CallTxSync(context.Background(), &payload.CallTx{
 		Input: &payload.TxInput{
 			Address: inputAddress,
 			Amount:  2,
 		},
-		Address:  nil,
-		Data:     bytecode,
-		Fee:      2,
-		GasLimit: 10000,
+		Address:      nil,
+		Data:         bytecode,
+		Fee:          2,
+		GasLimit:     10000,
+		ContractMeta: meta,
 	})
 	if err != nil {
 		return nil, err

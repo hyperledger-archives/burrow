@@ -70,6 +70,13 @@ message CallTx {
     bytes Data = 5 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
     // WASM bytecode
     bytes WASM = 6 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false, (gogoproto.jsontag)="tags,omitempty"];
+    // Set of contracts this code will deploy
+    repeated ContractMeta ContractMeta = 7;
+}
+
+message ContractMeta {
+    bytes CodeHash = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
+    string Meta = 2;
 }
 
 // A payment between two sets of parties
