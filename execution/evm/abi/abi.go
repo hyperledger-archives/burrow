@@ -736,21 +736,17 @@ func (abiSpec *Spec) Pack(fname string, args ...interface{}) ([]byte, *FunctionS
 		if _, ok := abiSpec.Functions[fname]; ok {
 			funcSpec = abiSpec.Functions[fname]
 		} else {
-			funcSpec = abiSpec.Fallback
+			return nil, nil, fmt.Errorf("Unknown function %s", fname)
 		}
 	} else {
-		funcSpec = abiSpec.Constructor
+		if abiSpec.Constructor.Inputs != nil {
+			funcSpec = abiSpec.Constructor
+		} else {
+			return nil, nil, fmt.Errorf("Contract does not have a constructor")
+		}
 	}
 
 	argSpec = funcSpec.Inputs
-
-	if argSpec == nil {
-		if fname == "" {
-			return nil, nil, fmt.Errorf("Contract does not have a constructor")
-		}
-
-		return nil, nil, fmt.Errorf("Unknown function %s", fname)
-	}
 
 	packed := make([]byte, 0)
 

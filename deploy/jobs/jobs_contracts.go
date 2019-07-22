@@ -450,33 +450,29 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 
 	if !do.LocalABI {
 		abiJSON, err = client.GetMetadataForAccount(address)
+		if abiJSON != "" && err == nil {
+			packedBytes, funcSpec, err = abi.EncodeFunctionCall(abiJSON, call.Function, logger, callDataArray...)
+		}
 	}
 
-	if abiJSON != "" && err == nil {
-		packedBytes, funcSpec, err = abi.EncodeFunctionCall(abiJSON, call.Function, logger, callDataArray...)
-		if err != nil {
-			return
-		}
-		callData = hex.EncodeToString(packedBytes)
-	} else {
+	// Sometimes the ABI for the contract needs to be overriden. For example, we might have a proxy contract which
+	// calls another contract via delegatecall from the fallback function. For example:
+	// https://github.com/agreements-network/blackstone/blob/develop/contracts/src/commons-management/AbstractDelegateProxy.sol#L26
+	if funcSpec == nil {
 		logger.TraceMsg("Looking for ABI in", "path", deployScript.BinPath, "bin", call.Bin, "dest", call.Destination)
 		if call.Bin != "" {
 			packedBytes, funcSpec, err = abi.EncodeFunctionCallFromFile(call.Bin, deployScript.BinPath, call.Function, logger, callDataArray...)
-			callData = hex.EncodeToString(packedBytes)
 		}
 		if call.Bin == "" || err != nil {
 			packedBytes, funcSpec, err = abi.EncodeFunctionCallFromFile(call.Destination, deployScript.BinPath, call.Function, logger, callDataArray...)
-			callData = hex.EncodeToString(packedBytes)
 		}
 		if err != nil {
-			if call.Function == "()" {
-				logger.InfoMsg("Calling the fallback function")
-			} else {
-				err = util.ABIErrorHandler(err, call, nil, logger)
-				return
-			}
+			err = util.ABIErrorHandler(err, call, nil, logger)
+			return
 		}
 	}
+
+	callData = hex.EncodeToString(packedBytes)
 
 	if funcSpec.Constant {
 		logger.InfoMsg("Function call to constant function, query-contract type job will be faster than call")
