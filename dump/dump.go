@@ -174,17 +174,21 @@ func (ds *Dumper) Transmit(sink Sink, startHeight, endHeight uint64, options Opt
 				case ev.BeginTx != nil:
 					origin = ev.BeginTx.TxHeader.Origin
 				case ev.Event != nil && ev.Event.Log != nil:
-					evmevent := EVMEvent{Event: ev.Event.Log}
+					row := &Dump{EVMEvent: &EVMEvent{Event: ev.Event.Log}}
 					if origin != nil {
 						// this event was already restored
-						evmevent.ChainID = origin.ChainID
-						evmevent.Time = origin.Time
+						row.EVMEvent.ChainID = origin.ChainID
+						row.EVMEvent.Time = origin.Time
+						row.EVMEvent.Index = origin.Index
+						row.Height = origin.Height
 					} else {
 						// this event was generated on this chain
-						evmevent.ChainID = ds.blockchain.ChainID()
-						evmevent.Time = blockTime
+						row.EVMEvent.ChainID = ds.blockchain.ChainID()
+						row.EVMEvent.Time = blockTime
+						row.EVMEvent.Index = ev.Event.Header.Index
+						row.Height = ev.Event.Header.Height
 					}
-					err := sink.Send(&Dump{Height: ev.Event.Header.Height, EVMEvent: &evmevent})
+					err := sink.Send(row)
 					if err != nil {
 						return err
 					}

@@ -36,11 +36,12 @@ message AccountStorage {
 message EVMEvent {
     // The original ChainID from for this event
     string ChainID = 1;
+    // The original index for this event
+    uint64 Index = 4;
     // The original block time for this transaction
     google.protobuf.Timestamp Time = 2 [(gogoproto.nullable)=false, (gogoproto.stdtime)=true];
     // The event itself
     exec.LogEvent Event = 3;
-
 }
 
 message Dump {
