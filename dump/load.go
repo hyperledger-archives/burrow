@@ -77,6 +77,7 @@ func Load(source Source, st *state.State) error {
 								ChainID: row.EVMEvent.ChainID,
 								Height:  row.Height,
 								Time:    row.EVMEvent.Time,
+								Index:   row.EVMEvent.Index,
 							},
 						},
 					}

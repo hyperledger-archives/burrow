@@ -29,15 +29,17 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type Account struct {
-	Address              github_com_hyperledger_burrow_crypto.Address  `protobuf:"bytes,1,opt,name=Address,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Address"`
-	PublicKey            crypto.PublicKey                              `protobuf:"bytes,2,opt,name=PublicKey,proto3" json:"PublicKey"`
-	Sequence             uint64                                        `protobuf:"varint,3,opt,name=Sequence,proto3" json:"Sequence,omitempty"`
-	Balance              uint64                                        `protobuf:"varint,4,opt,name=Balance,proto3" json:"Balance,omitempty"`
-	EVMCode              Bytecode                                      `protobuf:"bytes,5,opt,name=EVMCode,proto3,customtype=Bytecode" json:"EVMCode"`
-	Permissions          permission.AccountPermissions                 `protobuf:"bytes,6,opt,name=Permissions,proto3" json:"Permissions"`
-	WASMCode             Bytecode                                      `protobuf:"bytes,7,opt,name=WASMCode,proto3,customtype=Bytecode" json:",omitempty"`
-	CodeHash             github_com_hyperledger_burrow_binary.HexBytes `protobuf:"bytes,8,opt,name=CodeHash,proto3,customtype=github.com/hyperledger/burrow/binary.HexBytes" json:"-"`
-	ContractMeta         []*ContractMeta                               `protobuf:"bytes,9,rep,name=ContractMeta,proto3" json:"ContractMeta,omitempty"`
+	Address      github_com_hyperledger_burrow_crypto.Address  `protobuf:"bytes,1,opt,name=Address,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Address"`
+	PublicKey    crypto.PublicKey                              `protobuf:"bytes,2,opt,name=PublicKey,proto3" json:"PublicKey"`
+	Sequence     uint64                                        `protobuf:"varint,3,opt,name=Sequence,proto3" json:"Sequence,omitempty"`
+	Balance      uint64                                        `protobuf:"varint,4,opt,name=Balance,proto3" json:"Balance,omitempty"`
+	EVMCode      Bytecode                                      `protobuf:"bytes,5,opt,name=EVMCode,proto3,customtype=Bytecode" json:"EVMCode"`
+	Permissions  permission.AccountPermissions                 `protobuf:"bytes,6,opt,name=Permissions,proto3" json:"Permissions"`
+	WASMCode     Bytecode                                      `protobuf:"bytes,7,opt,name=WASMCode,proto3,customtype=Bytecode" json:",omitempty"`
+	CodeHash     github_com_hyperledger_burrow_binary.HexBytes `protobuf:"bytes,8,opt,name=CodeHash,proto3,customtype=github.com/hyperledger/burrow/binary.HexBytes" json:"-"`
+	ContractMeta []*ContractMeta                               `protobuf:"bytes,9,rep,name=ContractMeta,proto3" json:"ContractMeta,omitempty"`
+	// The metadata is stored in the deployed account. When the deployed account creates new account (from Solidity/EVM), they point to the original deployed
+	// account where the metadata is stored. This original account is called the forebear.
 	Forebear             *github_com_hyperledger_burrow_crypto.Address `protobuf:"bytes,10,opt,name=Forebear,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Forebear,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                                      `json:"-"`
 	XXX_unrecognized     []byte                                        `json:"-"`
