@@ -281,6 +281,8 @@ func TestWithNoPrimaryKey(t *testing.T) {
 			require.Equal(t, true, c.Primary)
 		case "_index":
 			require.Equal(t, true, c.Primary)
+		case "_eventindex":
+			require.Equal(t, true, c.Primary)
 		default:
 			require.Equal(t, false, c.Primary)
 		}

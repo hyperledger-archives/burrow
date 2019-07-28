@@ -21,6 +21,7 @@ func decodeEvent(header *exec.Header, log *exec.LogEvent, origin *exec.Origin, e
 	data[types.ChainIDLabel] = origin.ChainID
 	data[types.BlockHeightLabel] = fmt.Sprintf("%v", origin.GetHeight())
 	data[types.BlockIndexLabel] = fmt.Sprintf("%v", origin.GetIndex())
+	data[types.EventIndexLabel] = fmt.Sprintf("%v", header.Index)
 	data[types.EventTypeLabel] = header.GetEventType().String()
 	data[types.TxTxHashLabel] = header.TxHash.String()
 

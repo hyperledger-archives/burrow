@@ -37,7 +37,6 @@ require (
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lib/pq v1.1.1
-	github.com/magiconair/properties v1.8.0
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/monax/relic v2.0.0+incompatible

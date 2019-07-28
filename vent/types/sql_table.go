@@ -108,6 +108,7 @@ type SQLColumnNames struct {
 	ChainID       string
 	// context
 	Index       string
+	EventIndex  string
 	EventType   string
 	BlockHeader string
 	TxType      string
@@ -143,6 +144,7 @@ var DefaultSQLColumnNames = SQLColumnNames{
 	ChainID:       "_chainid",
 	// context,
 	Index:       "_index",
+	EventIndex:  "_eventindex",
 	EventType:   "_eventtype",
 	BlockHeader: "_blockheader",
 	TxType:      "_txtype",
@@ -157,8 +159,9 @@ var DefaultSQLColumnNames = SQLColumnNames{
 // labels for column mapping
 const (
 	// event related
-	EventNameLabel = "eventName"
-	EventTypeLabel = "eventType"
+	EventNameLabel  = "eventName"
+	EventTypeLabel  = "eventType"
+	EventIndexLabel = "eventIndex"
 
 	// block related
 	ChainIDLabel     = "chainid"

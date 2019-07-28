@@ -3,6 +3,7 @@
 package service_test
 
 import (
+	"fmt"
 	"math/rand"
 	"path"
 	"runtime"
@@ -55,7 +56,6 @@ func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli rpc
 
 	blockID := txeA.Height
 	eventData, err := db.GetBlock(chainID, blockID)
-
 	require.NoError(t, err)
 	require.Equal(t, blockID, eventData.BlockHeight)
 	require.Equal(t, 3, len(eventData.Tables))
@@ -64,6 +64,9 @@ func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli rpc
 	require.Equal(t, 1, len(tblData))
 	require.Equal(t, "LogEvent", tblData[0].RowData["_eventtype"].(string))
 	require.Equal(t, "UpdateTestEvents", tblData[0].RowData["_eventname"].(string))
+	for i := range tblData {
+		require.Equal(t, fmt.Sprintf("%d", i), tblData[i].RowData["_eventindex"].(string))
+	}
 
 	blockID = txeB.Height
 	eventData, err = db.GetBlock(chainID, blockID)
@@ -75,6 +78,9 @@ func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli rpc
 	require.Equal(t, 1, len(tblData))
 	require.Equal(t, "LogEvent", tblData[0].RowData["_eventtype"].(string))
 	require.Equal(t, "UpdateTestEvents", tblData[0].RowData["_eventname"].(string))
+	for i := range tblData {
+		require.Equal(t, fmt.Sprintf("%d", i), tblData[i].RowData["_eventindex"].(string))
+	}
 
 	// block & tx raw data also persisted
 	if cfg.SpecOpt&sqlsol.Block > 0 {
