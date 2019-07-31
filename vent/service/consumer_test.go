@@ -23,76 +23,93 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	testViewSpec = "sqlsol_view.json"
+	testLogSpec  = "sqlsol_log.json"
+)
+
 var tables = types.DefaultSQLTableNames
 
 func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
 	create := test.CreateContract(t, tcli, inputAddress)
-
-	// generate events
-	name := "TestEvent1"
-	description := "Description of TestEvent1"
-	txeA := test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
-
-	name = "TestEvent2"
-	description = "Description of TestEvent2"
-	test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
-
-	name = "TestEvent3"
-	description = "Description of TestEvent3"
-	test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
-
-	name = "TestEvent4"
-	description = "Description of TestEvent4"
-	txeB := test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
-
-	// create test db
-	db, closeDB := test.NewTestDB(t, cfg)
-	defer closeDB()
-
-	// Run the consumer
-	runConsumer(t, cfg)
-
-	// test data stored in database for two different block ids
 	eventColumnName := "EventTest"
-	ensureEvents(t, db, chainID, eventColumnName, txeA.Height, 1)
-	eventData := ensureEvents(t, db, chainID, eventColumnName, txeB.Height, 1)
 
-	// block & tx raw data also persisted
-	if cfg.SpecOpt&sqlsol.Block > 0 {
-		tblData := eventData.Tables[tables.Block]
-		require.Equal(t, 1, len(tblData))
+	t.Run("view mode", func(t *testing.T) {
+		// create test db
+		db, closeDB := test.NewTestDB(t, cfg)
+		defer closeDB()
+		resolveSpec(cfg, testViewSpec)
 
-	}
-	if cfg.SpecOpt&sqlsol.Tx > 0 {
-		tblData := eventData.Tables[tables.Tx]
-		require.Equal(t, 1, len(tblData))
-		require.Equal(t, txeB.TxHash.String(), tblData[0].RowData["_txhash"].(string))
-	}
+		// generate events
+		name := "TestEvent1"
+		description := "Description of TestEvent1"
+		txeA := test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
 
-	name = "TestEvent5"
-	description = "Description of TestEvent5"
-	txeC := test.CallAddEvents(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
-	runConsumer(t, cfg)
-	ensureEvents(t, db, chainID, eventColumnName, txeC.Height, 2)
+		name = "TestEvent2"
+		description = "Description of TestEvent2"
+		test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
 
-	// Restore
-	err := db.RestoreDB(time.Time{}, "RESTORED")
-	require.NoError(t, err)
+		name = "TestEvent3"
+		description = "Description of TestEvent3"
+		test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
+
+		name = "TestEvent4"
+		description = "Description of TestEvent4"
+		txeB := test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
+
+		// Run the consumer
+		runConsumer(t, cfg)
+
+		// test data stored in database for two different block ids
+		ensureEvents(t, db, chainID, eventColumnName, txeA.Height, 1)
+		eventData := ensureEvents(t, db, chainID, eventColumnName, txeB.Height, 1)
+
+		// block & tx raw data also persisted
+		if cfg.SpecOpt&sqlsol.Block > 0 {
+			tblData := eventData.Tables[tables.Block]
+			require.Equal(t, 1, len(tblData))
+
+		}
+		if cfg.SpecOpt&sqlsol.Tx > 0 {
+			tblData := eventData.Tables[tables.Tx]
+			require.Equal(t, 1, len(tblData))
+			require.Equal(t, txeB.TxHash.String(), tblData[0].RowData["_txhash"].(string))
+		}
+
+		// Restore
+		err := db.RestoreDB(time.Time{}, "RESTORED")
+		require.NoError(t, err)
+	})
+
+	t.Run("log mode", func(t *testing.T) {
+		db, closeDB := test.NewTestDB(t, cfg)
+		defer closeDB()
+		resolveSpec(cfg, testLogSpec)
+
+		name := "TestEvent5"
+		description := "Description of TestEvent5"
+		txeC := test.CallAddEvents(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
+		runConsumer(t, cfg)
+		ensureEvents(t, db, chainID, eventColumnName, txeC.Height, 2)
+	})
+
 }
 
 func testDeleteEvent(t *testing.T, chainID string, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
 	create := test.CreateContract(t, tcli, inputAddress)
 
+	eventColumnName := "EventTest"
+	name := "TestEventForDeletion"
+	description := "to be deleted"
+
+	// test data stored in database for two different block ids
+
 	// create test db
 	db, closeDB := test.NewTestDB(t, cfg)
 	defer closeDB()
-
-	// test data stored in database for two different block ids
-	eventColumnName := "EventTest"
+	resolveSpec(cfg, testViewSpec)
 
 	// Add a test event
-	name := "TestEventForDeletion"
-	description := "to be deleted"
 	txeAdd := test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
 
 	// Spin the consumer
@@ -106,14 +123,7 @@ func testDeleteEvent(t *testing.T, chainID string, cfg *config.VentConfig, tcli 
 	runConsumer(t, cfg)
 	ensureEvents(t, db, chainID, eventColumnName, txeAdd.Height, 0)
 
-	// do the same as above but for duplicate events
-	txeAdd = test.CallAddEvents(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
-	runConsumer(t, cfg)
-	ensureEvents(t, db, chainID, eventColumnName, txeAdd.Height, 2)
-
-	test.CallRemoveEvents(t, tcli, inputAddress, create.Receipt.ContractAddress, name)
-	runConsumer(t, cfg)
-	ensureEvents(t, db, chainID, eventColumnName, txeAdd.Height, 0)
+	// delete not allowed on log mode
 }
 
 func ensureEvents(t *testing.T, db *sqldb.SQLDB, chainID, column string, height, numEvents uint64) types.EventData {
@@ -143,6 +153,7 @@ func ensureEvents(t *testing.T, db *sqldb.SQLDB, chainID, column string, height,
 func testResume(t *testing.T, cfg *config.VentConfig) {
 	_, closeDB := test.NewTestDB(t, cfg)
 	defer closeDB()
+	resolveSpec(cfg, testViewSpec)
 
 	numRestarts := 6
 	// Add some pseudo-random timings
@@ -177,6 +188,7 @@ func testInvalidUTF8(t *testing.T, cfg *config.VentConfig, tcli rpctransact.Tran
 	// create test db
 	_, closeDB := test.NewTestDB(t, cfg)
 	defer closeDB()
+	resolveSpec(cfg, testViewSpec)
 
 	// Run the consumer with this event - this used to create an error on UPSERT
 	runConsumer(t, cfg)
@@ -186,22 +198,20 @@ func testInvalidUTF8(t *testing.T, cfg *config.VentConfig, tcli rpctransact.Tran
 	//require.Contains(t, err.Error(), "pq: invalid byte sequence for encoding \"UTF8\": 0xf3 0x6e")
 }
 
-func newConsumer(t *testing.T, cfg *config.VentConfig) *service.Consumer {
+func resolveSpec(cfg *config.VentConfig, specFile string) {
 	// Resolve relative path to test dir
 	_, testFile, _, _ := runtime.Caller(0)
 	testDir := path.Join(path.Dir(testFile), "..", "test")
 
-	cfg.SpecFileOrDirs = []string{path.Join(testDir, "sqlsol_example.json")}
+	cfg.SpecFileOrDirs = []string{path.Join(testDir, specFile)}
 	cfg.AbiFileOrDirs = []string{path.Join(testDir, "EventsTest.abi")}
 	cfg.SpecOpt = sqlsol.BlockTx
-
-	ch := make(chan types.EventData, 100)
-	return service.NewConsumer(cfg, logging.NewNoopLogger(), ch)
 }
 
 // Run consumer to listen to events
 func runConsumer(t *testing.T, cfg *config.VentConfig) chan types.EventData {
-	consumer := newConsumer(t, cfg)
+	ch := make(chan types.EventData, 100)
+	consumer := service.NewConsumer(cfg, logging.NewNoopLogger(), ch)
 
 	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, cfg.SpecOpt)
 	require.NoError(t, err)

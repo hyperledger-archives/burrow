@@ -282,7 +282,6 @@ func getGlobalFieldMappings() []*types.EventFieldMapping {
 			ColumnName: columns.ChainID,
 			Field:      types.ChainIDLabel,
 			Type:       types.EventFieldTypeString,
-			Primary:    true,
 		},
 		{
 			ColumnName: columns.Height,
@@ -293,13 +292,11 @@ func getGlobalFieldMappings() []*types.EventFieldMapping {
 			ColumnName: columns.Index,
 			Field:      types.BlockIndexLabel,
 			Type:       types.EventFieldTypeUInt,
-			Primary:    true,
 		},
 		{
 			ColumnName: columns.EventIndex,
 			Field:      types.EventIndexLabel,
 			Type:       types.EventFieldTypeUInt,
-			Primary:    true,
 		},
 		{
 			ColumnName: columns.TxHash,

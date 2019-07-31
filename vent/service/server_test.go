@@ -36,7 +36,7 @@ func TestServer(t *testing.T) {
 			_, closeDB := test.NewTestDB(t, cfg)
 			defer closeDB()
 
-			cfg.SpecFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_example.json"}
+			cfg.SpecFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_view.json"}
 			cfg.AbiFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/EventsTest.abi"}
 			cfg.GRPCAddr = kern.GRPCListenAddress().String()
 

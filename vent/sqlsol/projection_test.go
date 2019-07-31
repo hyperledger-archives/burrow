@@ -326,8 +326,6 @@ func TestWithNoPrimaryKey(t *testing.T) {
 	require.NoError(t, err, "projection with primary key should be allowed")
 
 	for _, c := range projection.Tables[tableName].Columns {
-		if c.Name == "name" {
-			require.Equal(t, true, c.Primary)
-		}
+		require.Equal(t, c.Name == "name", c.Primary)
 	}
 }

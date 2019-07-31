@@ -1,0 +1,48 @@
+[
+  {
+    "TableName": "EventTest",
+    "Filter": "EventType = 'LogEvent'",
+    "FieldMappings": [
+      {
+        "Field": "key",
+        "ColumnName": "testkey",
+        "Type": "bytes32",
+        "Primary": false,
+        "Notify": ["keyed_meta"]
+      },
+      {
+        "Field": "name",
+        "ColumnName": "testname",
+        "Type": "bytes32",
+        "Primary": false,
+        "BytesToString": true,
+        "Notify": ["meta", "keyed_meta"]
+      },
+      {
+        "Field": "description",
+        "ColumnName": "testdescription",
+        "Type": "bytes32",
+        "Primary": false,
+        "Notify": ["meta", "keyed_meta"]
+      }
+    ]
+  },
+  {
+    "TableName": "UserAccounts",
+    "Filter": "LOG1 = 'UserAccounts'",
+    "FieldMappings": [
+      {
+        "Field": "userAddress",
+        "ColumnName": "address",
+        "Type": "address",
+        "Primary": false
+      },
+      {
+        "Field": "userName",
+        "ColumnName": "username",
+        "Type": "string",
+        "Primary": false
+      }
+    ]
+  }
+]

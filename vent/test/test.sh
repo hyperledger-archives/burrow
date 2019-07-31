@@ -8,7 +8,7 @@ vent_test_dir="$REPO/vent/test"
 [[ ! -f burrow.toml ]] && burrow spec -f1 | burrow configure -s- > burrow.toml && rm -rf .burrow
 burrow start -v0 &> burrow.log &
 sleep 2s
-burrow vent start --db-block --abi "$vent_test_dir/EventsTest.abi" --spec "$vent_test_dir/sqlsol_example.json"
+burrow vent start --db-block --abi "$vent_test_dir/EventsTest.abi" --spec "$vent_test_dir/sqlsol_view.json"
 # Now:
 # psql -h 127.0.0.1 -p 5432 -U postgres
 # LISTEN height;
