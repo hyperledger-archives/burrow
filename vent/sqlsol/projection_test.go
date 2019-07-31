@@ -275,13 +275,13 @@ func TestWithNoPrimaryKey(t *testing.T) {
 
 	for _, c := range projection.Tables[tableName].Columns {
 		switch c.Name {
-		case "_chainid":
+		case columns.ChainID:
 			require.Equal(t, true, c.Primary)
-		case "_height":
+		case columns.Height:
 			require.Equal(t, true, c.Primary)
-		case "_index":
+		case columns.TxIndex:
 			require.Equal(t, true, c.Primary)
-		case "_eventindex":
+		case columns.EventIndex:
 			require.Equal(t, true, c.Primary)
 		default:
 			require.Equal(t, false, c.Primary)
