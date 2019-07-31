@@ -67,7 +67,7 @@ func TestPostgresConsumer(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			// These are defined n sqlsol_example.json
+			// These are defined in sqlsol_view.json
 			err := listener.Listen("meta")
 			require.NoError(t, err)
 
@@ -101,6 +101,7 @@ func TestPostgresConsumer(t *testing.T) {
 					}
 				}
 			}()
+			resolveSpec(cfg, testViewSpec)
 			runConsumer(t, cfg)
 
 			// Give events a chance

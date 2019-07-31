@@ -16,8 +16,8 @@ import (
 )
 
 // buildEventData builds event data from transactions
-func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass, event *exec.Event, origin *exec.Origin, abiProvider *AbiProvider,
-	l *logging.Logger) (types.EventDataRow, error) {
+func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass, event *exec.Event,
+	txOrigin *exec.Origin, abiProvider *AbiProvider, l *logging.Logger) (types.EventDataRow, error) {
 
 	// a fresh new row to store column/value data
 	row := make(map[string]interface{})
@@ -36,7 +36,7 @@ func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass,
 	}
 
 	// decode event data using the provided abi specification
-	decodedData, err := decodeEvent(eventHeader, eventLog, origin, evAbi)
+	decodedData, err := decodeEvent(eventHeader, eventLog, txOrigin, evAbi)
 	if err != nil {
 		return types.EventDataRow{}, errors.Wrapf(err, "Error decoding event (filter: %s)", eventClass.Filter)
 	}
@@ -134,7 +134,7 @@ func buildTxData(txe *exec.TxExecution) (types.EventDataRow, error) {
 		RowData: map[string]interface{}{
 			columns.Height:    txe.Height,
 			columns.TxHash:    txe.TxHash.String(),
-			columns.Index:     txe.Index,
+			columns.TxIndex:   txe.Index,
 			columns.TxType:    txe.TxType.String(),
 			columns.Envelope:  string(envelope),
 			columns.Events:    string(events),

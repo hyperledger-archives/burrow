@@ -289,8 +289,8 @@ func getGlobalFieldMappings() []*types.EventFieldMapping {
 			Type:       types.EventFieldTypeUInt,
 		},
 		{
-			ColumnName: columns.Index,
-			Field:      types.BlockIndexLabel,
+			ColumnName: columns.TxIndex,
+			Field:      types.TxIndexLabel,
 			Type:       types.EventFieldTypeUInt,
 		},
 		{
@@ -333,8 +333,8 @@ func getGlobalFieldMappingsLogMode() []*types.EventFieldMapping {
 			Primary:    true,
 		},
 		{
-			ColumnName: columns.Index,
-			Field:      types.BlockIndexLabel,
+			ColumnName: columns.TxIndex,
+			Field:      types.TxIndexLabel,
 			Type:       types.EventFieldTypeUInt,
 			Primary:    true,
 		},

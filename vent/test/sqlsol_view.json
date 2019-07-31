@@ -33,12 +33,6 @@
     "Filter": "LOG1 = 'UserAccounts'",
     "FieldMappings": [
       {
-        "Field": "height",
-        "ColumnName": "_height",
-        "Type": "uint",
-        "Notify": ["meta", "keyed_meta"]
-      },
-      {
         "Field": "userAddress",
         "ColumnName": "address",
         "Type": "address",

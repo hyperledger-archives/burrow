@@ -314,9 +314,9 @@ func (pa *PostgresAdapter) UpsertQuery(table *types.SQLTable, row types.EventDat
 		columns += secureColumn
 		insValues += "$" + Cleanf("%d", i)
 
-		//find data for column
+		// find data for column
 		if value, ok := row.RowData[column.Name]; ok {
-			//load hash value
+			// load hash value
 			if column.Name == pa.Columns.TxHash {
 				txHash = value
 			}
@@ -327,7 +327,7 @@ func (pa *PostgresAdapter) UpsertQuery(table *types.SQLTable, row types.EventDat
 			values += fmt.Sprint(value)
 
 			if !column.Primary {
-				// column is no PK
+				// column is not PK
 				// add to update list
 				// INSERT........... ON CONFLICT......DO UPDATE (*updValues)
 				if updValues != "" {

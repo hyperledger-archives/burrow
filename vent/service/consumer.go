@@ -261,11 +261,14 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiProvider 
 			// so check that condition to filter them
 			if txe.Exception == nil {
 
-				origin := txe.Origin
-				if origin == nil {
-					origin = &exec.Origin{
+				txOrigin := txe.Origin
+				if txOrigin == nil {
+					// This is an original transaction from the current chain so we build its origin from context
+					txOrigin = &exec.Origin{
+						Time:    blockExecution.GetHeader().GetTime(),
 						ChainID: c.Burrow.ChainID,
-						Height:  txe.Height,
+						Height:  txe.GetHeight(),
+						Index:   txe.GetIndex(),
 					}
 				}
 
@@ -289,7 +292,7 @@ func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiProvider 
 								"filter", eventClass.Filter)
 
 							// unpack, decode & build event data
-							eventData, err := buildEventData(projection, eventClass, event, origin, abiProvider, c.Log)
+							eventData, err := buildEventData(projection, eventClass, event, txOrigin, abiProvider, c.Log)
 							if err != nil {
 								return errors.Wrapf(err, "Error building event data")
 							}

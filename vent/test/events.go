@@ -46,12 +46,21 @@ func CreateContract(t testing.TB, cli rpctransact.TransactClient, inputAddress c
 func CallRemoveEvent(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address,
 	name string) *exec.TxExecution {
 	return Call(t, cli, inputAddress, contractAddress, "removeThing", name)
+}
 
+func CallRemoveEvents(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address,
+	name string) *exec.TxExecution {
+	return Call(t, cli, inputAddress, contractAddress, "removeThings", name)
 }
 
 func CallAddEvent(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address,
 	name, description string) *exec.TxExecution {
 	return Call(t, cli, inputAddress, contractAddress, "addThing", name, description)
+}
+
+func CallAddEvents(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address,
+	name, description string) *exec.TxExecution {
+	return Call(t, cli, inputAddress, contractAddress, "addThings", name, description)
 }
 
 func Call(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address,

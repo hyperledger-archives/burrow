@@ -12,7 +12,7 @@ import (
 var tables = types.DefaultSQLTableNames
 
 func TestSpecLoader(t *testing.T) {
-	specFile := []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_example.json"}
+	specFile := []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_view.json"}
 	t.Run("successfully add block and transaction tables to event structures", func(t *testing.T) {
 		projection, err := sqlsol.SpecLoader(specFile, sqlsol.BlockTx)
 		require.NoError(t, err)

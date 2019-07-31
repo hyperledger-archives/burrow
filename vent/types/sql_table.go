@@ -107,7 +107,7 @@ type SQLColumnNames struct {
 	BurrowVersion string
 	ChainID       string
 	// context
-	Index       string
+	TxIndex     string
 	EventIndex  string
 	EventType   string
 	BlockHeader string
@@ -143,7 +143,7 @@ var DefaultSQLColumnNames = SQLColumnNames{
 	BurrowVersion: "_burrowversion",
 	ChainID:       "_chainid",
 	// context,
-	Index:       "_index",
+	TxIndex:     "_txindex",
 	EventIndex:  "_eventindex",
 	EventType:   "_eventtype",
 	BlockHeader: "_blockheader",
@@ -164,9 +164,9 @@ const (
 	EventIndexLabel = "eventIndex"
 
 	// block related
-	ChainIDLabel     = "chainid"
+	ChainIDLabel     = "chainID"
 	BlockHeightLabel = "height"
-	BlockIndexLabel  = "index"
+	TxIndexLabel     = "txIndex"
 
 	// transaction related
 	TxTxHashLabel = "txHash"
