@@ -89,7 +89,7 @@ func txTables() types.EventTables {
 					Primary: true,
 				},
 				{
-					Name:    columns.Index,
+					Name:    columns.TxIndex,
 					Type:    types.SQLColumnTypeNumeric,
 					Length:  0,
 					Primary: false,
