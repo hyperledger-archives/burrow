@@ -287,6 +287,7 @@ func getGlobalFieldMappings() []*types.EventFieldMapping {
 			ColumnName: columns.Height,
 			Field:      types.BlockHeightLabel,
 			Type:       types.EventFieldTypeUInt,
+			Primary:    true,
 		},
 		{
 			ColumnName: columns.Index,
