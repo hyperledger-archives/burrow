@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger/burrow/rpc/rpctransact"
 	"github.com/hyperledger/burrow/vent/config"
 	"github.com/hyperledger/burrow/vent/service"
+	"github.com/hyperledger/burrow/vent/sqldb"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/test"
 	"github.com/hyperledger/burrow/vent/types"
@@ -53,49 +54,29 @@ func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli rpc
 
 	// test data stored in database for two different block ids
 	eventColumnName := "EventTest"
-
-	blockID := txeA.Height
-	eventData, err := db.GetBlock(chainID, blockID)
-	require.NoError(t, err)
-	require.Equal(t, blockID, eventData.BlockHeight)
-	require.Equal(t, 3, len(eventData.Tables))
-
-	tblData := eventData.Tables[eventColumnName]
-	require.Equal(t, 1, len(tblData))
-	require.Equal(t, "LogEvent", tblData[0].RowData["_eventtype"].(string))
-	require.Equal(t, "UpdateTestEvents", tblData[0].RowData["_eventname"].(string))
-	for i := range tblData {
-		require.Equal(t, fmt.Sprintf("%d", i), tblData[i].RowData["_eventindex"].(string))
-	}
-
-	blockID = txeB.Height
-	eventData, err = db.GetBlock(chainID, blockID)
-	require.NoError(t, err)
-	require.Equal(t, blockID, eventData.BlockHeight)
-	require.Equal(t, 3, len(eventData.Tables))
-
-	tblData = eventData.Tables[eventColumnName]
-	require.Equal(t, 1, len(tblData))
-	require.Equal(t, "LogEvent", tblData[0].RowData["_eventtype"].(string))
-	require.Equal(t, "UpdateTestEvents", tblData[0].RowData["_eventname"].(string))
-	for i := range tblData {
-		require.Equal(t, fmt.Sprintf("%d", i), tblData[i].RowData["_eventindex"].(string))
-	}
+	ensureEvents(t, db, chainID, eventColumnName, txeA.Height, 1)
+	eventData := ensureEvents(t, db, chainID, eventColumnName, txeB.Height, 1)
 
 	// block & tx raw data also persisted
 	if cfg.SpecOpt&sqlsol.Block > 0 {
-		tblData = eventData.Tables[tables.Block]
+		tblData := eventData.Tables[tables.Block]
 		require.Equal(t, 1, len(tblData))
 
 	}
 	if cfg.SpecOpt&sqlsol.Tx > 0 {
-		tblData = eventData.Tables[tables.Tx]
+		tblData := eventData.Tables[tables.Tx]
 		require.Equal(t, 1, len(tblData))
 		require.Equal(t, txeB.TxHash.String(), tblData[0].RowData["_txhash"].(string))
 	}
 
-	//Restore
-	err = db.RestoreDB(time.Time{}, "RESTORED")
+	name = "TestEvent5"
+	description = "Description of TestEvent5"
+	txeC := test.CallAddEvents(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
+	runConsumer(t, cfg)
+	ensureEvents(t, db, chainID, eventColumnName, txeC.Height, 2)
+
+	// Restore
+	err := db.RestoreDB(time.Time{}, "RESTORED")
 	require.NoError(t, err)
 }
 
@@ -118,29 +99,45 @@ func testDeleteEvent(t *testing.T, chainID string, cfg *config.VentConfig, tcli 
 	runConsumer(t, cfg)
 
 	// Expect block table, tx table, and EventTest table
-	eventData, err := db.GetBlock(chainID, txeAdd.Height)
-	require.NoError(t, err)
-	require.Equal(t, txeAdd.Height, eventData.BlockHeight)
-	require.Equal(t, 3, len(eventData.Tables))
-
-	// Expect data in the EventTest table
-	tblData := eventData.Tables[eventColumnName]
-	require.Equal(t, 1, len(tblData))
-	require.Equal(t, "LogEvent", tblData[0].RowData["_eventtype"].(string))
-	require.Equal(t, "UpdateTestEvents", tblData[0].RowData["_eventname"].(string))
+	ensureEvents(t, db, chainID, eventColumnName, txeAdd.Height, 1)
 
 	// Now emit a deletion event for that table
 	test.CallRemoveEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name)
 	runConsumer(t, cfg)
+	ensureEvents(t, db, chainID, eventColumnName, txeAdd.Height, 0)
 
-	eventData, err = db.GetBlock(chainID, txeAdd.Height)
+	// do the same as above but for duplicate events
+	txeAdd = test.CallAddEvents(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
+	runConsumer(t, cfg)
+	ensureEvents(t, db, chainID, eventColumnName, txeAdd.Height, 2)
+
+	test.CallRemoveEvents(t, tcli, inputAddress, create.Receipt.ContractAddress, name)
+	runConsumer(t, cfg)
+	ensureEvents(t, db, chainID, eventColumnName, txeAdd.Height, 0)
+}
+
+func ensureEvents(t *testing.T, db *sqldb.SQLDB, chainID, column string, height, numEvents uint64) types.EventData {
+	eventData, err := db.GetBlock(chainID, height)
 	require.NoError(t, err)
-	require.Equal(t, txeAdd.Height, eventData.BlockHeight)
+	require.Equal(t, height, eventData.BlockHeight)
 	require.Equal(t, 3, len(eventData.Tables))
 
-	// Check the row was deleted
-	tblData = eventData.Tables[eventColumnName]
-	require.Equal(t, 0, len(tblData))
+	// Check the number of rows
+	tblData := eventData.Tables[column]
+	require.Equal(t, numEvents, uint64(len(tblData)))
+
+	if numEvents > 0 && len(tblData) > 0 {
+		// Expect data in the EventTest table
+		require.Equal(t, "LogEvent", tblData[0].RowData["_eventtype"].(string))
+		require.Equal(t, "UpdateTestEvents", tblData[0].RowData["_eventname"].(string))
+		for i := 0; i < len(tblData); i++ {
+			require.Equal(t, fmt.Sprintf("%d", i), tblData[i].RowData["_eventindex"].(string))
+		}
+	} else if numEvents > 0 && len(tblData) == 0 {
+		require.Failf(t, "no events found", "expected %d", numEvents)
+	}
+
+	return eventData
 }
 
 func testResume(t *testing.T, cfg *config.VentConfig) {
