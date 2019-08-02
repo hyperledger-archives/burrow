@@ -20,10 +20,12 @@ package rpcinfo
 import (
 	"context"
 	"encoding/json"
+	"sort"
 	"testing"
 	"time"
 
 	"github.com/hyperledger/burrow/integration"
+	"github.com/hyperledger/burrow/txs/payload"
 
 	"github.com/hyperledger/burrow/core"
 
@@ -47,6 +49,7 @@ const timeout = 5 * time.Second
 func TestInfoServer(t *testing.T) {
 	kern, shutdown := integration.RunNode(t, rpctest.GenesisDoc, rpctest.PrivateAccounts)
 	defer shutdown()
+	inputAddress := rpctest.PrivateAccounts[0].GetAddress()
 	infoAddress := kern.InfoListenAddress().String()
 	var clients = map[string]infoclient.RPCClient{
 		"JSON RPC": client.NewJSONRPCClient(infoAddress),
@@ -81,8 +84,16 @@ func TestInfoServer(t *testing.T) {
 				amt, gasLim, fee := uint64(1100), uint64(1000), uint64(1000)
 				code := []byte{0x60, 0x5, 0x60, 0x1, 0x55}
 				// Call with nil address will create a contract
-				tx := rpctest.MakeDefaultCallTx(t, rpcClient, nil, code, amt, gasLim, fee)
-				txe := broadcastTxSync(t, cli, tx)
+				txe, err := cli.CallTxSync(context.Background(), &payload.CallTx{
+					Input: &payload.TxInput{
+						Address: inputAddress,
+						Amount:  amt,
+					},
+					Data:     code,
+					GasLimit: gasLim,
+					Fee:      fee,
+				})
+				require.NoError(t, err)
 				assert.Equal(t, true, txe.Receipt.CreatesContract, "This transaction should"+
 					" create a contract")
 				assert.NotEqual(t, 0, len(txe.TxHash), "Receipt should contain a"+
@@ -218,6 +229,41 @@ func TestInfoServer(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Equal(t, rs.Validators.Validators[0].Address, rs.Validators.Proposer.Address)
+			})
+
+			t.Run("Names", func(t *testing.T) {
+				t.Parallel()
+				names := []string{"bib", "flub", "flib"}
+				sort.Strings(names)
+				for _, name := range names {
+					_, err := rpctest.UpdateName(cli, inputAddress, name, name, 99999)
+					require.NoError(t, err)
+				}
+
+				entry, err := infoclient.Name(rpcClient, names[0])
+				require.NoError(t, err)
+				assert.Equal(t, names[0], entry.Name)
+				assert.Equal(t, names[0], entry.Data)
+
+				entry, err = infoclient.Name(rpcClient, "asdasdas")
+				require.NoError(t, err)
+				require.Nil(t, entry)
+
+				var namesOut []string
+				entries, err := infoclient.Names(rpcClient, "")
+				require.NoError(t, err)
+				for _, entry := range entries {
+					namesOut = append(namesOut, entry.Name)
+				}
+				require.Equal(t, names, namesOut)
+
+				namesOut = namesOut[:0]
+				entries, err = infoclient.Names(rpcClient, "fl")
+				require.NoError(t, err)
+				for _, entry := range entries {
+					namesOut = append(namesOut, entry.Name)
+				}
+				require.Equal(t, []string{"flib", "flub"}, namesOut)
 			})
 		})
 	}

@@ -1,7 +1,11 @@
 package rpcinfo
 
 import (
+	"fmt"
+	"regexp"
+
 	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/lib/server"
 )
@@ -20,10 +24,6 @@ const (
 	GetAccountHuman = "account_human"
 	AccountStats    = "account_stats"
 
-	// Simulated call
-	Call     = "call"
-	CallCode = "call_code"
-
 	// Names
 	Name  = "name"
 	Names = "names"
@@ -40,7 +40,24 @@ const (
 	Consensus      = "consensus"
 )
 
+const maxRegexLength = 255
+
+// The methods below all get mounted at the info server address (specified in config at RPC/Info) in the following form:
+//
+// http://<info-host>:<info-port>/<name>?<param1>=<value1>&<param2>=<value2>[&...]
+//
+// For example:
+// http://0.0.0.0:26658/status?block_time_within=10m&block_seen_time_within=1h
+// http://0.0.0.0:26658/names?regex=<regular expression to match name>
+//
+// They keys in the route map below are the endpoint name, and the comma separated values are the url query params
+//
+// They info endpoint also all be called with a JSON-RPC payload like:
+//
+// curl -X POST -d '{"method": "names", "id": "foo", "params": ["loves"]}' http://0.0.0.0:26658
+//
 func GetRoutes(service *rpc.Service) map[string]*server.RPCFunc {
+	// TODO: overhaul this with gRPC-gateway / swagger
 	return map[string]*server.RPCFunc{
 		// Status
 		Status:  server.NewRPCFunc(service.StatusWithin, "block_time_within,block_seen_time_within"),
@@ -71,7 +88,22 @@ func GetRoutes(service *rpc.Service) map[string]*server.RPCFunc {
 		Consensus:      server.NewRPCFunc(service.ConsensusState, ""),
 
 		// Names
-		Name:  server.NewRPCFunc(service.Name, "name"),
-		Names: server.NewRPCFunc(service.Names, ""),
+		Name: server.NewRPCFunc(service.Name, "name"),
+		Names: server.NewRPCFunc(func(regex string) (*rpc.ResultNames, error) {
+			if regex == "" {
+				return service.Names(func(*names.Entry) bool { return true })
+			}
+			// Regex attacks...
+			if len(regex) > maxRegexLength {
+				return nil, fmt.Errorf("regular expression longer than maximum length %d", maxRegexLength)
+			}
+			re, err := regexp.Compile(regex)
+			if err != nil {
+				return nil, fmt.Errorf("could not compile '%s' as regular expression: %v", regex, err)
+			}
+			return service.Names(func(entry *names.Entry) bool {
+				return re.MatchString(entry.Name)
+			})
+		}, "regex"),
 	}
 }

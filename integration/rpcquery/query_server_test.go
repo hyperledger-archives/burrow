@@ -94,9 +94,11 @@ func TestQueryServer(t *testing.T) {
 		for i := 0; i < n; i++ {
 			name := fmt.Sprintf("Flub/%v", i)
 			if i%2 == 0 {
-				rpctest.UpdateName(t, tcli, rpctest.PrivateAccounts[0].GetAddress(), name, dataA, 200)
+				_, err := rpctest.UpdateName(tcli, rpctest.PrivateAccounts[0].GetAddress(), name, dataA, 200)
+				require.NoError(t, err)
 			} else {
-				rpctest.UpdateName(t, tcli, rpctest.PrivateAccounts[1].GetAddress(), name, dataB, 200)
+				_, err := rpctest.UpdateName(tcli, rpctest.PrivateAccounts[1].GetAddress(), name, dataB, 200)
+				require.NoError(t, err)
 			}
 		}
 		qcli := rpctest.NewQueryClient(t, kern.GRPCListenAddress().String())

@@ -83,6 +83,15 @@ func Name(client RPCClient, name string) (*names.Entry, error) {
 	return res.Entry, nil
 }
 
+func Names(client RPCClient, regex string) ([]*names.Entry, error) {
+	res := new(rpc.ResultNames)
+	_, err := client.Call(rpcinfo.Names, pmap("regex", regex), res)
+	if err != nil {
+		return nil, err
+	}
+	return res.Names, nil
+}
+
 func Blocks(client RPCClient, minHeight, maxHeight int) (*rpc.ResultBlocks, error) {
 	res := new(rpc.ResultBlocks)
 	_, err := client.Call(rpcinfo.Blocks, pmap("minHeight", minHeight, "maxHeight", maxHeight), res)

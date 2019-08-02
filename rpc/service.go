@@ -255,20 +255,20 @@ func (s *Service) Name(name string) (*ResultName, error) {
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
-		return nil, fmt.Errorf("name %s not found", name)
-	}
 	return &ResultName{Entry: entry}, nil
 }
 
 func (s *Service) Names(predicate func(*names.Entry) bool) (*ResultNames, error) {
 	var nms []*names.Entry
-	s.nameReg.IterateNames(func(entry *names.Entry) error {
+	err := s.nameReg.IterateNames(func(entry *names.Entry) error {
 		if predicate(entry) {
 			nms = append(nms, entry)
 		}
 		return nil
 	})
+	if err != nil {
+		return nil, fmt.Errorf("could not iterate names: %v", err)
+	}
 	return &ResultNames{
 		BlockHeight: s.blockchain.LastBlockHeight(),
 		Names:       nms,
