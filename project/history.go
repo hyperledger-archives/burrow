@@ -52,6 +52,7 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 		`### Fixed
 - [Dump] Fix dump missing events emitted at end height provided
 - [Dump] EVM events were not dumped if no height was provided to burrow dump remote commandline
+- [RPC/Info] Fix panic in /names and implement properly - now accepts a 'regex' parameter which is a regular expression to match names. Empty for all names.
 
 ### Changed
 - [State] IterateStreamEvents now takes inclusive start and end points (end used to be exclusive) avoid bug-prone conversion

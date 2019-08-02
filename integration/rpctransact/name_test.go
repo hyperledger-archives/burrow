@@ -75,7 +75,8 @@ func TestNameTx(t *testing.T) {
 		const data = "if not now, when"
 		numDesiredBlocks := uint64(2)
 
-		txe := rpctest.UpdateName(t, tcli, inputAddress, name, data, numDesiredBlocks)
+		txe, err := rpctest.UpdateName(tcli, inputAddress, name, data, numDesiredBlocks)
+		require.NoError(t, err)
 
 		entry := txe.Result.NameEntry
 		assert.NotNil(t, entry, "name should return")
@@ -95,7 +96,8 @@ func TestNameTx(t *testing.T) {
 		const updatedData = "these are amongst the things I wish to bestow upon " +
 			"the youth of generations come: a safe supply of honey, and a better " +
 			"money. For what else shall they need"
-		rpctest.UpdateName(t, tcli, inputAddress, name, updatedData, numDesiredBlocks)
+		_, err = rpctest.UpdateName(tcli, inputAddress, name, updatedData, numDesiredBlocks)
+		require.NoError(t, err)
 
 		entry, err = qcli.GetName(context.Background(), &rpcquery.GetNameParam{Name: name})
 		require.NoError(t, err)
@@ -118,7 +120,8 @@ func TestNameTx(t *testing.T) {
 		//now the entry should be expired, so we can update as non owner
 		const data2 = "this is not my beautiful house"
 		owner := rpctest.PrivateAccounts[3].GetAddress()
-		txe = rpctest.UpdateName(t, tcli, owner, name, data2, numDesiredBlocks)
+		txe, err = rpctest.UpdateName(tcli, owner, name, data2, numDesiredBlocks)
+		require.NoError(t, err)
 		entry = txe.Result.NameEntry
 
 		entryQuery, err = qcli.GetName(context.Background(), &rpcquery.GetNameParam{Name: name})

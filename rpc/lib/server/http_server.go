@@ -4,6 +4,7 @@ package server
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -61,16 +62,17 @@ func RecoverAndLogHandler(handler http.Handler, logger *logging.Logger) http.Han
 			// Without this, Chrome & Firefox were retrying aborted ajax requests,
 			// at least to my localhost.
 			if e := recover(); e != nil {
-
 				// If RPCResponse
 				if res, ok := e.(types.RPCResponse); ok {
 					WriteRPCResponseHTTP(rww, res)
 				} else {
 					// For the rest,
-					logger.TraceMsg("Panic in RPC HTTP handler", structure.ErrorKey, e,
+					err := errors.New(fmt.Sprint(e))
+					logger.TraceMsg("Panic in RPC HTTP handler",
+						structure.ErrorKey, err,
 						"stack", string(debug.Stack()))
 					rww.WriteHeader(http.StatusInternalServerError)
-					WriteRPCResponseHTTP(rww, types.RPCInternalError("", e.(error)))
+					WriteRPCResponseHTTP(rww, types.RPCInternalError("", err))
 				}
 			}
 

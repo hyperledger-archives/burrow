@@ -101,10 +101,10 @@ func CallContract(cli rpctransact.TransactClient, inputAddress, contractAddress 
 	return txe, nil
 }
 
-func UpdateName(t testing.TB, cli rpctransact.TransactClient, inputAddress crypto.Address, name, data string,
-	expiresIn uint64) *exec.TxExecution {
+func UpdateName(cli rpctransact.TransactClient, inputAddress crypto.Address, name, data string,
+	expiresIn uint64) (*exec.TxExecution, error) {
 
-	txe, err := cli.NameTxSync(context.Background(), &payload.NameTx{
+	return cli.NameTxSync(context.Background(), &payload.NameTx{
 		Input: &payload.TxInput{
 			Address: inputAddress,
 			Amount:  names.NameCostForExpiryIn(name, data, expiresIn),
@@ -112,8 +112,6 @@ func UpdateName(t testing.TB, cli rpctransact.TransactClient, inputAddress crypt
 		Name: name,
 		Data: data,
 	})
-	require.NoError(t, err)
-	return txe
 }
 
 //-------------------------------------------------------------------------------
