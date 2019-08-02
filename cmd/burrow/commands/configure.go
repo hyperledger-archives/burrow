@@ -20,7 +20,7 @@ import (
 	"github.com/hyperledger/burrow/logging/logconfig/presets"
 	"github.com/hyperledger/burrow/rpc"
 	cli "github.com/jawher/mow.cli"
-	amino "github.com/tendermint/go-amino"
+	"github.com/tendermint/go-amino"
 	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
 	"github.com/tendermint/tendermint/libs/db"
 )
@@ -141,11 +141,11 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 						if err != nil {
 							output.Fatalf("failed to get key: %s: %v", k, err)
 						}
-						json, err := json.Marshal(key)
+						bs, err := json.Marshal(key)
 						if err != nil {
 							output.Fatalf("failed to json marshal key: %s: %v", k, err)
 						}
-						pkg.Keys[addr] = deployment.Key{Name: k, Address: addr, KeyJSON: json}
+						pkg.Keys[addr] = deployment.Key{Name: k, Address: addr, KeyJSON: bs}
 					}
 				} else {
 					keyClient, err := keys.NewRemoteKeyClient(conf.Keys.RemoteAddress, logging.NewNoopLogger())
@@ -213,21 +213,6 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				}
 			}
 
-			if *separateGenesisDoc != "" {
-				if conf.GenesisDoc == nil {
-					output.Fatalf("cannot write separate genesis doc since no GenesisDoc/GenesisSpec was provided")
-				}
-				genesisDocJSON, err := conf.GenesisDoc.JSONBytes()
-				if err != nil {
-					output.Fatalf("could not form GenesisDoc JSON: %v", err)
-				}
-				err = ioutil.WriteFile(*separateGenesisDoc, genesisDocJSON, 0644)
-				if err != nil {
-					output.Fatalf("could not write GenesisDoc JSON: %v", err)
-				}
-				conf.GenesisDoc = nil
-			}
-
 			if *emptyBlocksOpt != "" {
 				conf.Tendermint.CreateEmptyBlocks = *emptyBlocksOpt
 			}
@@ -243,11 +228,11 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					nodeKey := tendermint.NewNodeKey()
 					nodeAddress, _ := crypto.AddressFromHexString(string(nodeKey.ID()))
 
-					json, err := cdc.MarshalJSON(nodeKey)
+					bs, err := cdc.MarshalJSON(nodeKey)
 					if err != nil {
 						output.Fatalf("go-amino failed to json marshal private key: %v", err)
 					}
-					pkg.Keys[nodeAddress] = deployment.Key{Name: val.Name, Address: nodeAddress, KeyJSON: json}
+					pkg.Keys[nodeAddress] = deployment.Key{Name: val.Name, Address: nodeAddress, KeyJSON: bs}
 
 					pkg.Validators = append(pkg.Validators, deployment.Validator{
 						Name:        val.Name,
@@ -264,6 +249,23 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				}
 			}
 
+			// Store this for use in pool
+			genesisDoc := conf.GenesisDoc
+			if *separateGenesisDoc != "" {
+				if conf.GenesisDoc == nil {
+					output.Fatalf("cannot write separate genesis doc since no GenesisDoc/GenesisSpec was provided")
+				}
+				genesisDocJSON, err := conf.GenesisDoc.JSONBytes()
+				if err != nil {
+					output.Fatalf("could not form GenesisDoc JSON: %v", err)
+				}
+				err = ioutil.WriteFile(*separateGenesisDoc, genesisDocJSON, 0644)
+				if err != nil {
+					output.Fatalf("could not write GenesisDoc JSON: %v", err)
+				}
+				conf.GenesisDoc = nil
+			}
+
 			if *pool {
 				for i, val := range pkg.Validators {
 					tmConf, err := conf.Tendermint.Config(fmt.Sprintf(".burrow%03d", i), conf.Execution.TimeoutFactor)
@@ -275,9 +277,10 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					if err != nil {
 						output.Fatalf("failed to create node key for %03d: %v", i, err)
 					}
-					peers = append(peers, fmt.Sprintf("tcp://%s@127.0.0.1:%d", nodeKey.Address.String(), 26656+i))
+					peers = append(peers, fmt.Sprintf("tcp://%s@127.0.0.1:%d",
+						strings.ToLower(nodeKey.Address.String()), 26656+i))
 				}
-				for i, acc := range conf.GenesisDoc.Accounts {
+				for i, acc := range genesisDoc.Accounts {
 					// set stuff
 					conf.Address = &acc.Address
 					conf.Tendermint.PersistentPeers = strings.Join(peers, ",")
@@ -294,9 +297,12 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					conf.Logging.RootSink.Output.FileConfig = &logconfig.FileConfig{Path: fmt.Sprintf("burrow%03d.log", i)}
 
 					if *jsonOutOpt {
-						ioutil.WriteFile(fmt.Sprintf("burrow%03d.json", i), []byte(conf.JSONString()), 0644)
+						err = ioutil.WriteFile(fmt.Sprintf("burrow%03d.json", i), []byte(conf.JSONString()), 0644)
 					} else {
-						ioutil.WriteFile(fmt.Sprintf("burrow%03d.toml", i), []byte(conf.TOMLString()), 0644)
+						err = ioutil.WriteFile(fmt.Sprintf("burrow%03d.toml", i), []byte(conf.TOMLString()), 0644)
+					}
+					if err != nil {
+						output.Fatalf("Could not write Burrow config file: %v", err)
 					}
 				}
 			} else if *jsonOutOpt {

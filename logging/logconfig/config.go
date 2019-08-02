@@ -2,14 +2,12 @@ package logconfig
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 
 	"github.com/eapache/channels"
 	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/logging/structure"
-
-	"encoding/json"
 
 	"github.com/BurntSushi/toml"
 	"github.com/hyperledger/burrow/logging/loggers"
@@ -33,7 +31,6 @@ func DefaultNodeLoggingConfig() *LoggingConfig {
 	// Output only Burrow messages on stdout
 	return &LoggingConfig{
 		RootSink: Sink().
-			SetTransform(FilterTransform(ExcludeWhenAnyMatches, structure.ComponentKey, structure.Tendermint)).
 			SetOutput(StdoutOutput().SetFormat(loggers.JSONFormat)),
 	}
 }
