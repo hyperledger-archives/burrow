@@ -31,6 +31,10 @@ func (eid EventID) String() string {
 	return fmt.Sprintf("%s = %s", EventIDKey, string(eid))
 }
 
+func (eid EventID) MatchError() error {
+	return nil
+}
+
 // Get a query that matches events with a specific eventID
 func QueryForEventID(eventID string) query.Queryable {
 	// Since we're accepting external output here there is a chance it won't parse...

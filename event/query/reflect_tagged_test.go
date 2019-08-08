@@ -44,15 +44,15 @@ func TestReflectTagged_Get(t *testing.T) {
 
 	value, ok = rt.Get("Baz")
 	assert.True(t, ok)
-	assert.Equal(t, "FFFFFF", value)
+	assert.Equal(t, binary.HexBytes{0xFF, 0xFF, 0xFF}, value)
 
 	value, ok = rt.Get("Indices")
 	assert.True(t, ok)
-	assert.Equal(t, "5;7;9", value)
+	assert.Equal(t, []int{5, 7, 9}, value)
 
 	value, ok = rt.Get("Address")
 	assert.True(t, ok)
-	assert.Equal(t, "0102030000000000000000000000000000000000", value)
+	assert.Equal(t, crypto.MustAddressFromHexString("0102030000000000000000000000000000000000"), value)
 
 	// Make sure we see updates through pointer
 	tt.Foo = "Plums"
@@ -83,7 +83,7 @@ func TestExplicitFields(t *testing.T) {
 
 	value, ok = rt.Get("Address")
 	assert.True(t, ok)
-	assert.Equal(t, "0102030000000000000000000000000000000000", value)
+	assert.Equal(t, crypto.MustAddressFromHexString("0102030000000000000000000000000000000000"), value)
 
 	_, ok = rt.Get("Bar")
 	assert.False(t, ok)

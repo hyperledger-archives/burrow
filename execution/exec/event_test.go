@@ -36,36 +36,43 @@ func TestEventTagQueries(t *testing.T) {
 	qry, err := qb.Query()
 	require.NoError(t, err)
 	assert.True(t, qry.Matches(tev))
+	require.NoError(t, qry.MatchError())
 
 	qb = qb.AndContains(event.EventIDKey, "bar")
 	qry, err = qb.Query()
 	require.NoError(t, err)
 	assert.True(t, qry.Matches(tev))
+	require.NoError(t, qry.MatchError())
 
 	qb = qb.AndEquals(event.TxHashKey, hex.EncodeUpperToString(tev.Header.TxHash))
 	qry, err = qb.Query()
 	require.NoError(t, err)
 	assert.True(t, qry.Matches(tev))
+	require.NoError(t, qry.MatchError())
 
 	qb = qb.AndGreaterThanOrEqual(event.HeightKey, tev.Header.Height)
 	qry, err = qb.Query()
 	require.NoError(t, err)
 	assert.True(t, qry.Matches(tev))
+	require.NoError(t, qry.MatchError())
 
 	qb = qb.AndStrictlyLessThan(event.IndexKey, tev.Header.Index+1)
 	qry, err = qb.Query()
 	require.NoError(t, err)
 	assert.True(t, qry.Matches(tev))
+	require.NoError(t, qry.MatchError())
 
 	qb = qb.AndEquals(event.AddressKey, addressHex)
 	qry, err = qb.Query()
 	require.NoError(t, err)
 	assert.True(t, qry.Matches(tev))
+	require.NoError(t, qry.MatchError())
 
 	qb = qb.AndEquals(LogNTextKey(0), "marmot")
 	qry, err = qb.Query()
 	require.NoError(t, err)
 	assert.True(t, qry.Matches(tev))
+	require.NoError(t, qry.MatchError())
 
 	t.Logf("Query: %v", qry)
 	t.Logf("Keys: %v", tev.Keys())

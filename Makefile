@@ -95,6 +95,20 @@ protobuf: $(PROTO_GO_FILES)
 clean_protobuf:
 	@rm -f $(PROTO_GO_FILES_REAL)
 
+
+### PEG query grammar
+
+# This allows us to filter tagged objects with things like (EventID = 'foo' OR Height > 10) AND EventName CONTAINS 'frog'
+
+.PHONY: peg_deps
+peg_deps:
+	go get -u github.com/pointlander/peg
+
+# regenerate the parser
+.PHONY: peg
+peg:
+	peg event/query/query.peg
+
 ### Building github.com/hyperledger/burrow
 
 # Output commit_hash but only if we have the git repo (e.g. not in docker build

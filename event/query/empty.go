@@ -19,3 +19,7 @@ func (Empty) String() string {
 func (Empty) Query() (Query, error) {
 	return Empty{}, nil
 }
+
+func (empty Empty) MatchError() error {
+	return nil
+}

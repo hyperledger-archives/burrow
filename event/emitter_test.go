@@ -2,10 +2,9 @@ package event
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
-
-	"strings"
 
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/logging"
@@ -13,12 +12,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const timeout = 2 * time.Second
+
 func TestEmitter(t *testing.T) {
 	em := NewEmitter()
 	em.SetLogger(logging.NewNoopLogger())
 	ctx := context.Background()
 
-	out, err := em.Subscribe(ctx, "TestEmitter", query.NewBuilder().AndStrictlyGreaterThan("foo", 10), 1)
+	qry := query.NewBuilder().AndStrictlyGreaterThan("foo", 10)
+	out, err := em.Subscribe(ctx, "TestEmitter", qry, 1)
 	require.NoError(t, err)
 
 	msgMiss := struct{ flob string }{"flib"}
@@ -32,7 +34,7 @@ func TestEmitter(t *testing.T) {
 	select {
 	case msg := <-out:
 		assert.Equal(t, msgHit, msg)
-	case <-time.After(time.Second):
+	case <-time.After(time.Second * 100000):
 		t.Errorf("timed out before receiving message matching subscription query")
 	}
 }
@@ -71,9 +73,19 @@ func TestOrdering(t *testing.T) {
 	for _, msg := range msgs {
 		str := msg[0].(string)
 		if strings.HasPrefix(str, "bar") {
-			assert.Equal(t, str, <-out1)
+			assert.Equal(t, str, getTimeout(t, out1))
 		} else {
-			assert.Equal(t, str, <-out2)
+			assert.Equal(t, str, getTimeout(t, out2))
 		}
 	}
+}
+
+func getTimeout(t *testing.T, out <-chan interface{}) interface{} {
+	select {
+	case <-time.After(timeout):
+		t.Fatalf("timed out waiting on channel after %v", timeout)
+	case msg := <-out:
+		return msg
+	}
+	return nil
 }
