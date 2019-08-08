@@ -2,12 +2,11 @@ package query
 
 import (
 	"sort"
-	"strings"
 )
 
 type Tagged interface {
 	Keys() []string
-	Get(key string) (value string, ok bool)
+	Get(key string) (value interface{}, ok bool)
 	// Len returns the number of tags.
 	Len() int
 }
@@ -25,13 +24,13 @@ func MapFromTagged(tagged Tagged) map[string]interface{} {
 	return tags
 }
 
-func (ts TagMap) Get(key string) (value string, ok bool) {
+func (ts TagMap) Get(key string) (value interface{}, ok bool) {
 	var vint interface{}
 	vint, ok = ts[key]
 	if !ok {
 		return "", false
 	}
-	return StringFromValue(vint), true
+	return vint, true
 }
 
 func (ts TagMap) Len() int {
@@ -91,12 +90,12 @@ func (ct *CombinedTags) AddTags(concat bool, tagsList ...Tagged) {
 	}
 }
 
-func (ct *CombinedTags) Get(key string) (string, bool) {
+func (ct *CombinedTags) Get(key string) (interface{}, bool) {
 	ts := ct.ks[key]
 	if len(ts) == 0 {
 		return "", false
 	}
-	values := make([]string, 0, len(ts))
+	values := make([]interface{}, 0, len(ts))
 	for _, t := range ts {
 		value, ok := t.Get(key)
 		if ok {
@@ -104,9 +103,12 @@ func (ct *CombinedTags) Get(key string) (string, bool) {
 		}
 	}
 	if len(values) == 0 {
-		return "", false
+		return nil, false
 	}
-	return strings.Join(values, MultipleValueTagSeparator), true
+	if len(values) == 1 {
+		return values[0], true
+	}
+	return values, true
 }
 
 func (ct *CombinedTags) Len() (length int) {

@@ -15,14 +15,29 @@ func TestMatches(t *testing.T) {
 		txTime = "2018-05-03T14:45:00Z"
 	)
 
+	now := time.Now().Format(TimeLayout)
+
 	testCases := []struct {
 		s       string
 		tags    map[string]interface{}
 		err     bool
 		matches bool
 	}{
+		{"foo > 10", map[string]interface{}{"foo": 11}, false, true},
+		{"foo >= 10", map[string]interface{}{"foo": uint64(11)}, false, true},
+		{"foo >= 10", map[string]interface{}{"foo": uint32(11)}, false, true},
+		{"foo >= 10", map[string]interface{}{"foo": uint(11)}, false, true},
+		{fmt.Sprintf("(foo >= 10 OR foo CONTAINS 'frogs') AND badger < TIME %s", now),
+			map[string]interface{}{"foo": "Ilikefrogs", "badger": time.Unix(343, 0)}, false, true},
+		{fmt.Sprintf("foo >= 10 OR foo CONTAINS 'frogs' AND badger < TIME %s", now),
+			map[string]interface{}{"foo": "Ilikefrogs", "badger": time.Unix(343, 0)}, false, true},
+		{fmt.Sprintf("foo CONTAINS 'frosgs' OR  (foo >= 10 AND badger < TIME %s)", now),
+			map[string]interface{}{"foo": "Ilikefrogs", "badger": time.Unix(343, 0)}, false, false},
+		{fmt.Sprintf("foo CONTAINS 'mute' AND foo >= 10 OR badger < TIME %s", now),
+			map[string]interface{}{"foo": "Ilikefrogs", "badger": time.Unix(343, 0)}, false, true},
+		{fmt.Sprintf("foo CONTAINS 'mute' AND (foo >= 10 OR badger < TIME %s)", now),
+			map[string]interface{}{"foo": "Ilikefrogs", "badger": time.Unix(343, 0)}, false, false},
 		{"tm.events.type='NewBlock'", map[string]interface{}{"tm.events.type": "NewBlock"}, false, true},
-
 		{"tx.gas > 7", map[string]interface{}{"tx.gas": "8"}, false, true},
 		{"tx.gas > 7 AND tx.gas < 9", map[string]interface{}{"tx.gas": "8"}, false, true},
 		{"body.weight >= 3.5", map[string]interface{}{"body.weight": "3.5"}, false, true},
@@ -45,14 +60,22 @@ func TestMatches(t *testing.T) {
 
 	for _, tc := range testCases {
 		q, err := New(tc.s)
+		require.NoError(t, err)
 		if !tc.err {
 			require.Nil(t, err)
 		}
 
+		q.ExplainTo(func(format string, args ...interface{}) {
+			fmt.Printf(format, args...)
+		})
+
+		matches := q.Matches(TagMap(tc.tags))
+		err = q.MatchError()
+		require.NoError(t, err)
 		if tc.matches {
-			assert.True(t, q.Matches(TagMap(tc.tags)), "Query '%s' should match %v", tc.s, tc.tags)
+			assert.True(t, matches, "Query '%s' should match %v", tc.s, tc.tags)
 		} else {
-			assert.False(t, q.Matches(TagMap(tc.tags)), "Query '%s' should not match %v", tc.s, tc.tags)
+			assert.False(t, matches, "Query '%s' should not match %v", tc.s, tc.tags)
 		}
 	}
 }
@@ -60,25 +83,4 @@ func TestMatches(t *testing.T) {
 func TestMustParse(t *testing.T) {
 	assert.Panics(t, func() { MustParse("=") })
 	assert.NotPanics(t, func() { MustParse("tm.events.type='NewBlock'") })
-}
-
-func TestConditions(t *testing.T) {
-	txTime, err := time.Parse(time.RFC3339, "2013-05-03T14:45:00Z")
-	require.NoError(t, err)
-
-	testCases := []struct {
-		s          string
-		conditions []Condition
-	}{
-		{s: "tm.events.type='NewBlock'", conditions: []Condition{{Tag: "tm.events.type", Op: OpEqual, Operand: "NewBlock"}}},
-		{s: "tx.gas > 7 AND tx.gas < 9", conditions: []Condition{{Tag: "tx.gas", Op: OpGreater, Operand: int64(7)}, {Tag: "tx.gas", Op: OpLess, Operand: int64(9)}}},
-		{s: "tx.time >= TIME 2013-05-03T14:45:00Z", conditions: []Condition{{Tag: "tx.time", Op: OpGreaterEqual, Operand: txTime}}},
-	}
-
-	for _, tc := range testCases {
-		q, err := New(tc.s)
-		require.Nil(t, err)
-
-		assert.Equal(t, tc.conditions, q.Conditions())
-	}
 }

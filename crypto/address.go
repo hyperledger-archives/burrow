@@ -92,10 +92,18 @@ func AddressFromHexString(str string) (Address, error) {
 	return AddressFromBytes(bs)
 }
 
+func MustAddressFromHexString(str string) Address {
+	address, err := AddressFromHexString(str)
+	if err != nil {
+		panic(fmt.Errorf("error reading address from hex string: %s", err))
+	}
+	return address
+}
+
 func MustAddressFromBytes(addr []byte) Address {
 	address, err := AddressFromBytes(addr)
 	if err != nil {
-		panic(fmt.Errorf("error reading address from bytes that caller does not expect: %s", err))
+		panic(fmt.Errorf("error reading address from bytes: %s", err))
 	}
 	return address
 }

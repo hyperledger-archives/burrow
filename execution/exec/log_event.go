@@ -15,14 +15,12 @@
 package exec
 
 import (
-	"strings"
-
 	"fmt"
+	"strings"
 
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/event/query"
-	hex "github.com/tmthrgd/go-hex"
+	"github.com/tmthrgd/go-hex"
 )
 
 const logNTextTopicCutset = "\x00"
@@ -52,7 +50,7 @@ func init() {
 	logTagKeys = append(logTagKeys, event.AddressKey)
 }
 
-func (log *LogEvent) Get(key string) (string, bool) {
+func (log *LogEvent) Get(key string) (interface{}, bool) {
 	if log == nil {
 		return "", false
 	}
@@ -69,7 +67,7 @@ func (log *LogEvent) Get(key string) (string, bool) {
 		}
 		return "", false
 	}
-	return query.StringFromValue(value), true
+	return value, true
 }
 
 func (log *LogEvent) GetTopic(i int) Word256 {

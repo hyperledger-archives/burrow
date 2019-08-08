@@ -96,9 +96,9 @@ func (rt *ReflectTagged) Keys() []string {
 	return rt.keys
 }
 
-func (rt *ReflectTagged) Get(key string) (value string, ok bool) {
+func (rt *ReflectTagged) Get(key string) (value interface{}, ok bool) {
 	if _, ok := rt.ks[key]; ok {
-		return StringFromValue(rt.rv.Elem().FieldByName(key).Interface()), true
+		return rt.rv.Elem().FieldByName(key).Interface(), true
 	}
 	return "", false
 }

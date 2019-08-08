@@ -19,11 +19,8 @@ import (
 	"runtime/debug"
 	"testing"
 
-	"fmt"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
@@ -71,8 +68,7 @@ func TestSendTx(t *testing.T) {
 	tx := Enclose("Foo", sendTx).Tx
 	value, ok := tx.Tagged().Get("Inputs")
 	require.True(t, ok)
-	assert.Equal(t, fmt.Sprintf("%v%s%v", sendTx.Inputs[0], query.MultipleValueTagSeparator, sendTx.Inputs[1]),
-		value)
+	assert.Equal(t, sendTx.Inputs, value)
 
 	value, ok = tx.Tagged().Get("ChainID")
 	require.True(t, ok)
@@ -168,7 +164,7 @@ func TestTxWrapper_MarshalJSON(t *testing.T) {
 	tx := Enclose("Foo", callTx).Tx
 	value, ok := tx.Tagged().Get("Input")
 	require.True(t, ok)
-	assert.Equal(t, callTx.Input.String(), value)
+	assert.Equal(t, callTx.Input, value)
 }
 
 func TestNewPermissionsTxWithSequence(t *testing.T) {
