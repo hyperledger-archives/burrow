@@ -81,8 +81,13 @@ func (in *instruction) String() string {
 type Expression struct {
 	// This is our 'bytecode'
 	code      []*instruction
+	stack     []*instruction
 	errors    errors.MultipleErrors
 	explainer func(fmt string, args ...interface{})
+}
+
+func (e *Expression) Init() {
+	e.code = make([]*instruction, 0, 10)
 }
 
 // Evaluate expects an Execute() to have filled the code of the Expression so it can be run in the little stack machine
@@ -91,20 +96,20 @@ func (e *Expression) Evaluate(getTagValue func(tag string) (interface{}, bool)) 
 	if len(e.errors) > 0 {
 		return false, e.errors
 	}
+	e.stack = e.stack[:0]
 	var left, right *instruction
-	stack := make([]*instruction, 0, len(e.code))
 	for _, in := range e.code {
 		if in.op == OpTerminal {
 			// just push terminals on to the stack
-			stack = append(stack, in)
+			e.stack = append(e.stack, in)
 			continue
 		}
 
-		if len(stack) < 2 {
+		if len(e.stack) < 2 {
 			return false, fmt.Errorf("cannot pop from stack for query expression [%v] because stack has "+
 				"fewer than 2 elements", e)
 		}
-		stack, left, right = pop(stack)
+		e.stack, left, right = e.pop()
 		ins := &instruction{}
 		switch in.op {
 		case OpAnd:
@@ -132,13 +137,13 @@ func (e *Expression) Evaluate(getTagValue func(tag string) (interface{}, bool)) 
 		//e.explainf("%v %v %v => %v\n", left, in.op, right, ins.match)
 
 		// Push whether this was a match back on to stack
-		stack = append(stack, ins)
+		e.stack = append(e.stack, ins)
 	}
-	if len(stack) != 1 {
+	if len(e.stack) != 1 {
 		return false, fmt.Errorf("stack for query expression [%v] should have exactly one element after "+
-			"evaulation but has %d", e, len(stack))
+			"evaulation but has %d", e, len(e.stack))
 	}
-	return stack[0].match, nil
+	return e.stack[0].match, nil
 }
 
 func (e *Expression) explainf(fmt string, args ...interface{}) {
@@ -147,8 +152,9 @@ func (e *Expression) explainf(fmt string, args ...interface{}) {
 	}
 }
 
-func pop(stack []*instruction) ([]*instruction, *instruction, *instruction) {
-	return stack[:len(stack)-2], stack[len(stack)-2], stack[len(stack)-1]
+func (e *Expression) pop() ([]*instruction, *instruction, *instruction) {
+	l := len(e.stack) - 2
+	return e.stack[:l], e.stack[l], e.stack[len(e.stack)-1]
 }
 
 func compareString(op Operator, tagValue interface{}, value string) bool {

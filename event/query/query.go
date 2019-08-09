@@ -50,11 +50,14 @@ type Condition struct {
 // New parses the given string and returns a query or error if the string is
 // invalid.
 func New(s string) (*PegQuery, error) {
-	p := &QueryParser{Buffer: s}
+	p := &QueryParser{
+		Buffer: s,
+	}
 	err := p.Init()
 	if err != nil {
 		return nil, err
 	}
+	p.Expression.Init()
 	err = p.Parse()
 	if err != nil {
 		return nil, err
