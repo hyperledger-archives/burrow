@@ -6,11 +6,11 @@ import (
 	"github.com/hyperledger/burrow/event/query"
 )
 
-// EventSpec contains all event class specifications
-type EventSpec []*EventClass
+// ProjectionSpec contains all event class specifications
+type ProjectionSpec []*EventClass
 
-func EventSpecSchema() *jsonschema.Schema {
-	return jsonschema.Reflect(EventSpec{})
+func ProjectionSpecSchema() *jsonschema.Schema {
+	return jsonschema.Reflect(ProjectionSpec{})
 }
 
 // EventClass struct (table name where to persist filtered events and it structure)

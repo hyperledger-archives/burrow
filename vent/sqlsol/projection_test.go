@@ -119,26 +119,26 @@ func TestGetTables(t *testing.T) {
 	})
 }
 
-func TestGetEventSpec(t *testing.T) {
+func TestNewProjectionFromBytes(t *testing.T) {
 	goodJSON := test.GoodJSONConfFile(t)
 
 	byteValue := []byte(goodJSON)
 	tableStruct, _ := sqlsol.NewProjectionFromBytes(byteValue)
 
 	t.Run("successfully returns event specification structures", func(t *testing.T) {
-		eventSpec := tableStruct.EventSpec
-		require.Equal(t, 2, len(eventSpec))
-		require.Equal(t, "LOG0 = 'UserAccounts'", eventSpec[0].Filter)
-		require.Equal(t, "UserAccounts", eventSpec[0].TableName)
+		spec := tableStruct.ProjectionSpec
+		require.Equal(t, 2, len(spec))
+		require.Equal(t, "LOG0 = 'UserAccounts'", spec[0].Filter)
+		require.Equal(t, "UserAccounts", spec[0].TableName)
 
-		require.Equal(t, "Log1Text = 'EVENT_TEST'", eventSpec[1].Filter)
-		require.Equal(t, "TEST_TABLE", eventSpec[1].TableName)
+		require.Equal(t, "Log1Text = 'EVENT_TEST'", spec[1].Filter)
+		require.Equal(t, "TEST_TABLE", spec[1].TableName)
 	})
 }
 
-func TestNewProjectionFromEventSpec(t *testing.T) {
+func TestProjectionSpec(t *testing.T) {
 	tableName := "BurnNotices"
-	eventSpec := types.EventSpec{
+	spec := types.ProjectionSpec{
 		{
 			TableName: tableName,
 			Filter:    "LOG1Text = 'CIA/burn'",
@@ -208,29 +208,29 @@ func TestNewProjectionFromEventSpec(t *testing.T) {
 			},
 		},
 	}
-	projection, err := sqlsol.NewProjectionFromEventSpec(eventSpec)
+	projection, err := sqlsol.NewProjection(spec)
 	require.NoError(t, err, "burn and unreliable field mappings should unify to single column")
 
 	require.Equal(t, []string{"burnt", "name"}, projection.Tables[tableName].NotifyChannels["burn"])
 
 	// Notify sugars on the burn channel
-	field := eventSpec[1].GetFieldMapping("sugars")
+	field := spec[1].GetFieldMapping("sugars")
 	field.Notify = append(field.Notify, "burn")
 
-	projection, err = sqlsol.NewProjectionFromEventSpec(eventSpec)
+	projection, err = sqlsol.NewProjection(spec)
 	require.NoError(t, err)
 	require.Equal(t, []string{"burnt", "name", "tea_sugars"}, projection.Tables[tableName].NotifyChannels["burn"])
 
 	// Create a column conflict between burn and unreliable fields (both map to burnt so the SQL column def must be identical)
-	field = eventSpec[1].GetFieldMapping("unreliable")
+	field = spec[1].GetFieldMapping("unreliable")
 	field.Primary = !field.Primary
-	_, err = sqlsol.NewProjectionFromEventSpec(eventSpec)
+	_, err = sqlsol.NewProjection(spec)
 	require.Error(t, err)
 }
 
 func TestWithNoPrimaryKey(t *testing.T) {
 	tableName := "BurnNotices"
-	eventSpec := types.EventSpec{
+	spec := types.ProjectionSpec{
 		{
 			TableName:         tableName,
 			Filter:            "LOG1Text = 'CIA/burn'",
@@ -264,13 +264,13 @@ func TestWithNoPrimaryKey(t *testing.T) {
 		},
 	}
 
-	_, err := sqlsol.NewProjectionFromEventSpec(eventSpec)
+	_, err := sqlsol.NewProjection(spec)
 	require.Error(t, err, "no DeleteMarkerField allowed if no primary key on")
 
 	// Try again and now check that the right fields are primary
-	eventSpec[0].DeleteMarkerField = ""
+	spec[0].DeleteMarkerField = ""
 
-	projection, err := sqlsol.NewProjectionFromEventSpec(eventSpec)
+	projection, err := sqlsol.NewProjection(spec)
 	require.NoError(t, err, "projection with no primary key should be allowed")
 
 	for _, c := range projection.Tables[tableName].Columns {
@@ -288,7 +288,7 @@ func TestWithNoPrimaryKey(t *testing.T) {
 		}
 	}
 
-	eventSpec = types.EventSpec{
+	spec = types.ProjectionSpec{
 		{
 			TableName: tableName,
 			Filter:    "LOG1Text = 'CIA/burn'",
@@ -322,7 +322,7 @@ func TestWithNoPrimaryKey(t *testing.T) {
 		},
 	}
 
-	projection, err = sqlsol.NewProjectionFromEventSpec(eventSpec)
+	projection, err = sqlsol.NewProjection(spec)
 	require.NoError(t, err, "projection with primary key should be allowed")
 
 	for _, c := range projection.Tables[tableName].Columns {

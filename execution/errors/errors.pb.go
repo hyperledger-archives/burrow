@@ -5,11 +5,13 @@ package errors
 
 import (
 	fmt "fmt"
+	io "io"
+	math "math"
+	math_bits "math/bits"
+
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
-	io "io"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -163,14 +165,7 @@ func (m *Exception) Size() (n int) {
 }
 
 func sovErrors(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozErrors(x uint64) (n int) {
 	return sovErrors(uint64((x << 1) ^ uint64((int64(x) >> 63))))

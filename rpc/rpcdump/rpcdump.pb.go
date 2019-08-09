@@ -6,12 +6,16 @@ package rpcdump
 import (
 	context "context"
 	fmt "fmt"
+	math "math"
+	math_bits "math/bits"
+
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
 	dump "github.com/hyperledger/burrow/dump"
 	grpc "google.golang.org/grpc"
-	math "math"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -152,6 +156,14 @@ type DumpServer interface {
 	GetDump(*GetDumpParam, Dump_GetDumpServer) error
 }
 
+// UnimplementedDumpServer can be embedded to have forward compatible implementations.
+type UnimplementedDumpServer struct {
+}
+
+func (*UnimplementedDumpServer) GetDump(req *GetDumpParam, srv Dump_GetDumpServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetDump not implemented")
+}
+
 func RegisterDumpServer(s *grpc.Server, srv DumpServer) {
 	s.RegisterService(&_Dump_serviceDesc, srv)
 }
@@ -207,14 +219,7 @@ func (m *GetDumpParam) Size() (n int) {
 }
 
 func sovRpcdump(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozRpcdump(x uint64) (n int) {
 	return sovRpcdump(uint64((x << 1) ^ uint64((int64(x) >> 63))))

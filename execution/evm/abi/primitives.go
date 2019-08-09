@@ -29,6 +29,10 @@ var _ EVMType = (*EVMBool)(nil)
 type EVMBool struct {
 }
 
+func (e EVMBool) String() string {
+	return "EVMBool"
+}
+
 func (e EVMBool) GetSignature() string {
 	return "bool"
 }
@@ -63,7 +67,7 @@ func (e EVMBool) pack(v interface{}) ([]byte, error) {
 
 func (e EVMBool) unpack(data []byte, offset int, v interface{}) (int, error) {
 	if len(data)-offset < 32 {
-		return 0, fmt.Errorf("not enough data")
+		return 0, fmt.Errorf("%v: not enough data", e)
 	}
 	data = data[offset:]
 	switch v := v.(type) {
@@ -191,7 +195,7 @@ func (e EVMUint) pack(v interface{}) ([]byte, error) {
 
 func (e EVMUint) unpack(data []byte, offset int, v interface{}) (int, error) {
 	if len(data)-offset < ElementSize {
-		return 0, fmt.Errorf("not enough data")
+		return 0, fmt.Errorf("%v: not enough data", e)
 	}
 
 	data = data[offset:]
@@ -271,10 +275,18 @@ func (e EVMUint) Dynamic() bool {
 	return false
 }
 
+func (e EVMUint) String() string {
+	return fmt.Sprintf("EVMUInt{%v}", e.M)
+}
+
 var _ EVMType = (*EVMInt)(nil)
 
 type EVMInt struct {
 	M uint64
+}
+
+func (e EVMInt) String() string {
+	return fmt.Sprintf("EVMInt{%v}", e.M)
 }
 
 func (e EVMInt) getGoType() interface{} {
@@ -309,7 +321,7 @@ func (e EVMInt) pack(v interface{}) ([]byte, error) {
 	case reflect.String:
 		_, ok := n.SetString(arg.String(), 0)
 		if !ok {
-			return nil, fmt.Errorf("Failed to parse `%s", arg.String())
+			return nil, fmt.Errorf("failed to parse `%s", arg.String())
 		}
 	case reflect.Uint8:
 		fallthrough
@@ -362,7 +374,7 @@ func (e EVMInt) pack(v interface{}) ([]byte, error) {
 
 func (e EVMInt) unpack(data []byte, offset int, v interface{}) (int, error) {
 	if len(data)-offset < ElementSize {
-		return 0, fmt.Errorf("not enough data")
+		return 0, fmt.Errorf("%v: not enough data", e)
 	}
 
 	data = data[offset:]
@@ -469,6 +481,10 @@ var _ EVMType = (*EVMAddress)(nil)
 type EVMAddress struct {
 }
 
+func (e EVMAddress) String() string {
+	return "EVMAddress"
+}
+
 func (e EVMAddress) getGoType() interface{} {
 	return new(crypto.Address)
 }
@@ -536,6 +552,13 @@ type EVMBytes struct {
 	M uint64
 }
 
+func (e EVMBytes) String() string {
+	if e.M == 0 {
+		return "EVMBytes"
+	}
+	return fmt.Sprintf("EVMBytes[%v]", e.M)
+}
+
 func (e EVMBytes) getGoType() interface{} {
 	v := make([]byte, e.M)
 	return &v
@@ -548,7 +571,7 @@ func (e EVMBytes) pack(v interface{}) ([]byte, error) {
 		if ok {
 			b = []byte(s)
 		} else {
-			return nil, fmt.Errorf("cannot map to %s to EVM bytes", reflect.ValueOf(v).Kind().String())
+			return nil, fmt.Errorf("cannot map from %s to EVM bytes", reflect.ValueOf(v).Kind().String())
 		}
 	}
 
@@ -600,7 +623,7 @@ func (e EVMBytes) unpack(data []byte, offset int, v interface{}) (int, error) {
 	case reflect.Slice:
 		v2.SetBytes(data[offset : offset+int(e.M)])
 	default:
-		return 0, fmt.Errorf("cannot map EVM %s to %s", e.GetSignature(), reflect.ValueOf(v).Kind().String())
+		return 0, fmt.Errorf("cannot map EVM %s to %v", e.GetSignature(), reflect.ValueOf(v).Kind())
 	}
 
 	return ElementSize, nil
@@ -625,6 +648,10 @@ func (e EVMBytes) ImplicitCast(o EVMType) bool {
 var _ EVMType = (*EVMString)(nil)
 
 type EVMString struct {
+}
+
+func (e EVMString) String() string {
+	return "EVMString"
 }
 
 func (e EVMString) GetSignature() string {
@@ -708,4 +735,18 @@ func (e EVMFixed) Dynamic() bool {
 
 func (e EVMFixed) ImplicitCast(o EVMType) bool {
 	return false
+}
+
+// quick helper padding
+func pad(input []byte, size int, left bool) []byte {
+	if len(input) >= size {
+		return input[:size]
+	}
+	padded := make([]byte, size)
+	if left {
+		copy(padded[size-len(input):], input)
+	} else {
+		copy(padded, input)
+	}
+	return padded
 }

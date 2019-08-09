@@ -98,7 +98,7 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	require.NoError(t, cache.Error())
 	retValue, err := contract.Dispatch(cache, caller.Address, bc.MustSplice(funcID[:],
 		grantee.Address.Word256(), permFlagToWord256(permission.CreateAccount)), &gas, logger)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, retValue, LeftPadBytes([]byte{1}, 32))
 }
 
