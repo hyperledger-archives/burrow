@@ -1,0 +1,27 @@
+jobs:
+
+- name: valueToSet
+  set:
+    val: 10
+
+- name: simplestorage
+  deploy:
+    contract: simplestorage.sol
+
+- name: setStorage
+  call:
+    destination: $simplestorage
+    function: set
+    data:
+    - $valueToSet
+
+- name: queryStorage
+  query-contract:
+    destination: $simplestorage
+    function: get
+
+- name: assertStorage
+  assert:
+    key: $queryStorage
+    relation: eq
+    val: $valueToSet

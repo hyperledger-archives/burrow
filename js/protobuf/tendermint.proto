@@ -1,0 +1,25 @@
+// Needed to proto2 rather than proto3 to get pointer field for PermArg
+syntax = 'proto3';
+
+option go_package = "github.com/hyperledger/burrow/consensus/tendermint";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+package tendermint;
+
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.goproto_registration) = true;
+option (gogoproto.messagename_all) = true;
+
+message NodeInfo {
+    bytes ID = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+    string ListenAddress = 2;
+    string Network = 3;
+    string Version = 4;
+    bytes Channels = 5 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
+    string Moniker = 6;
+    string RPCAddress = 7;
+    string TxIndex = 8;
+}

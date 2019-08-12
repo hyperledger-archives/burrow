@@ -1,0 +1,33 @@
+syntax = 'proto3';
+
+package names;
+
+option go_package = "github.com/hyperledger/burrow/execution/names";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+// Enable custom Marshal method.
+option (gogoproto.marshaler_all) = true;
+// Enable custom Unmarshal method.
+option (gogoproto.unmarshaler_all) = true;
+// Enable custom Size method (Required by Marshal and Unmarshal).
+option (gogoproto.sizer_all) = true;
+// Enable registration with golang/protobuf for the grpc-gateway.
+option (gogoproto.goproto_registration) = true;
+// Enable generation of XXX_MessageName methods for grpc-go/status.
+option (gogoproto.messagename_all) = true;
+
+// NameReg provides a global key value store based on Name, Data pairs that are subject to expiry and ownership by an
+// account.
+message Entry {
+    option (gogoproto.goproto_stringer) = false;
+    // registered name for the entry
+    string Name = 1;
+    // address that created the entry
+    bytes Owner = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+    // data to store under this name
+    string Data = 3;
+    // block at which this entry expires
+    uint64 Expires = 4;
+}
+

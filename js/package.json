@@ -1,0 +1,61 @@
+{
+  "name": "@monax/burrow",
+  "description": "Javascript library that calls a Hyperledger Burrow server over rpc.",
+  "version": "0.24.2",
+  "author": {
+    "name": "Dennis Mckinnon"
+  },
+  "bugs": {
+    "url": "https://github.com/monax/bosmarmot/issues"
+  },
+  "dependencies": {
+    "@grpc/proto-loader": "^0.4.0",
+    "crypto-js": "3.1.4",
+    "ethereumjs-abi": "^0.6.5",
+    "grpc": "^1.18.0",
+    "protobufjs": "^6.8.6"
+  },
+  "devDependencies": {
+    "fs-extra": "^7.0.1",
+    "mocha": "5.2.0",
+    "solc": "0.4.24",
+    "standard": "9.0.2"
+  },
+  "engines": {
+    "node": ">=6"
+  },
+  "homepage": "https://github.com/monax/bosmarmot/burrow.js",
+  "keywords": [
+    "Burrow",
+    "Hyperledger",
+    "Monax"
+  ],
+  "license": "Apache2.0",
+  "main": "./index.js",
+  "maintainers": [
+    {
+      "name": "Dennis Mckinnon",
+      "email": "contact@monax.io"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/monax/bosmarmot"
+  },
+  "scripts": {
+    "precommit": "standard --fix",
+    "pretest": "standard --fix",
+    "test": "../tests/burrow.js.sh"
+  },
+  "standard": {
+    "globals": [
+      "after",
+      "afterEach",
+      "before",
+      "beforeEach",
+      "describe",
+      "it",
+      "run"
+    ]
+  }
+}
