@@ -6,14 +6,18 @@ package rpcevents
 import (
 	context "context"
 	fmt "fmt"
+	io "io"
+	math "math"
+	math_bits "math/bits"
+
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
 	github_com_hyperledger_burrow_binary "github.com/hyperledger/burrow/binary"
 	exec "github.com/hyperledger/burrow/execution/exec"
 	grpc "google.golang.org/grpc"
-	io "io"
-	math "math"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -762,6 +766,20 @@ type ExecutionEventsServer interface {
 	Events(*BlocksRequest, ExecutionEvents_EventsServer) error
 }
 
+// UnimplementedExecutionEventsServer can be embedded to have forward compatible implementations.
+type UnimplementedExecutionEventsServer struct {
+}
+
+func (*UnimplementedExecutionEventsServer) Stream(req *BlocksRequest, srv ExecutionEvents_StreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method Stream not implemented")
+}
+func (*UnimplementedExecutionEventsServer) Tx(ctx context.Context, req *TxRequest) (*exec.TxExecution, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Tx not implemented")
+}
+func (*UnimplementedExecutionEventsServer) Events(req *BlocksRequest, srv ExecutionEvents_EventsServer) error {
+	return status.Errorf(codes.Unimplemented, "method Events not implemented")
+}
+
 func RegisterExecutionEventsServer(s *grpc.Server, srv ExecutionEventsServer) {
 	s.RegisterService(&_ExecutionEvents_serviceDesc, srv)
 }
@@ -904,9 +922,9 @@ func (m *TxRequest) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintRpcevents(dAtA, i, uint64(m.TxHash.Size()))
-	n1, err := m.TxHash.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
+	n1, err1 := m.TxHash.MarshalTo(dAtA[i:])
+	if err1 != nil {
+		return 0, err1
 	}
 	i += n1
 	if m.Wait {
@@ -944,9 +962,9 @@ func (m *BlocksRequest) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintRpcevents(dAtA, i, uint64(m.BlockRange.Size()))
-		n2, err := m.BlockRange.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		n2, err2 := m.BlockRange.MarshalTo(dAtA[i:])
+		if err2 != nil {
+			return 0, err2
 		}
 		i += n2
 	}
@@ -1125,9 +1143,9 @@ func (m *BlockRange) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintRpcevents(dAtA, i, uint64(m.Start.Size()))
-		n3, err := m.Start.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		n3, err3 := m.Start.MarshalTo(dAtA[i:])
+		if err3 != nil {
+			return 0, err3
 		}
 		i += n3
 	}
@@ -1135,9 +1153,9 @@ func (m *BlockRange) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintRpcevents(dAtA, i, uint64(m.End.Size()))
-		n4, err := m.End.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		n4, err4 := m.End.MarshalTo(dAtA[i:])
+		if err4 != nil {
+			return 0, err4
 		}
 		i += n4
 	}
@@ -1314,14 +1332,7 @@ func (m *BlockRange) Size() (n int) {
 }
 
 func sovRpcevents(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozRpcevents(x uint64) (n int) {
 	return sovRpcevents(uint64((x << 1) ^ uint64((int64(x) >> 63))))
