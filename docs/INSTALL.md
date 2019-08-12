@@ -11,8 +11,6 @@ Go version | Go1.11 or higher
 ```
 go get github.com/hyperledger/burrow
 cd $GOPATH/src/github.com/hyperledger/burrow
-# We need to force enable module support to build from within GOPATH (our protobuf build depends on path, otherwise any checkout location should work)
-export GO111MODULE=on
 make build
 ```
 
