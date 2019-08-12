@@ -29,6 +29,10 @@ var _ EVMType = (*EVMBool)(nil)
 type EVMBool struct {
 }
 
+func (e EVMBool) String() string {
+	return "EVMBool"
+}
+
 func (e EVMBool) GetSignature() string {
 	return "bool"
 }
@@ -63,7 +67,7 @@ func (e EVMBool) pack(v interface{}) ([]byte, error) {
 
 func (e EVMBool) unpack(data []byte, offset int, v interface{}) (int, error) {
 	if len(data)-offset < 32 {
-		return 0, fmt.Errorf("not enough data")
+		return 0, fmt.Errorf("%v: not enough data", e)
 	}
 	data = data[offset:]
 	switch v := v.(type) {
@@ -191,7 +195,7 @@ func (e EVMUint) pack(v interface{}) ([]byte, error) {
 
 func (e EVMUint) unpack(data []byte, offset int, v interface{}) (int, error) {
 	if len(data)-offset < ElementSize {
-		return 0, fmt.Errorf("not enough data")
+		return 0, fmt.Errorf("%v: not enough data", e)
 	}
 
 	data = data[offset:]
@@ -271,10 +275,18 @@ func (e EVMUint) Dynamic() bool {
 	return false
 }
 
+func (e EVMUint) String() string {
+	return fmt.Sprintf("EVMUInt{%v}", e.M)
+}
+
 var _ EVMType = (*EVMInt)(nil)
 
 type EVMInt struct {
 	M uint64
+}
+
+func (e EVMInt) String() string {
+	return fmt.Sprintf("EVMInt{%v}", e.M)
 }
 
 func (e EVMInt) getGoType() interface{} {
@@ -304,39 +316,40 @@ func (e EVMInt) GetSignature() string {
 func (e EVMInt) pack(v interface{}) ([]byte, error) {
 	n := new(big.Int)
 
-	arg := reflect.ValueOf(v)
-	switch arg.Kind() {
-	case reflect.String:
-		_, ok := n.SetString(arg.String(), 0)
+	switch arg := v.(type) {
+	case *big.Int:
+		n.Set(arg)
+	case string:
+		_, ok := n.SetString(arg, 0)
 		if !ok {
-			return nil, fmt.Errorf("Failed to parse `%s", arg.String())
+			return nil, fmt.Errorf("failed to parse `%s", arg)
 		}
-	case reflect.Uint8:
-		fallthrough
-	case reflect.Uint16:
-		fallthrough
-	case reflect.Uint32:
-		fallthrough
-	case reflect.Uint64:
-		fallthrough
-	case reflect.Uint:
-		n.SetUint64(arg.Uint())
-	case reflect.Int8:
-		fallthrough
-	case reflect.Int16:
-		fallthrough
-	case reflect.Int32:
-		fallthrough
-	case reflect.Int64:
-		fallthrough
-	case reflect.Int:
-		n.SetInt64(arg.Int())
+	case uint:
+		n.SetUint64(uint64(arg))
+	case uint8:
+		n.SetUint64(uint64(arg))
+	case uint16:
+		n.SetUint64(uint64(arg))
+	case uint32:
+		n.SetUint64(uint64(arg))
+	case uint64:
+		n.SetUint64(arg)
+	case int:
+		n.SetInt64(int64(arg))
+	case int8:
+		n.SetInt64(int64(arg))
+	case int16:
+		n.SetInt64(int64(arg))
+	case int32:
+		n.SetInt64(int64(arg))
+	case int64:
+		n.SetInt64(arg)
 	default:
 		t := reflect.TypeOf(new(int64))
 		if reflect.TypeOf(v).ConvertibleTo(t) {
 			n.SetInt64(reflect.ValueOf(v).Convert(t).Int())
 		} else {
-			return nil, fmt.Errorf("cannot convert type %s to int%d", arg.Kind().String(), e.M)
+			return nil, fmt.Errorf("cannot convert type %v to int%d", v, e.M)
 		}
 	}
 
@@ -362,7 +375,7 @@ func (e EVMInt) pack(v interface{}) ([]byte, error) {
 
 func (e EVMInt) unpack(data []byte, offset int, v interface{}) (int, error) {
 	if len(data)-offset < ElementSize {
-		return 0, fmt.Errorf("not enough data")
+		return 0, fmt.Errorf("%v: not enough data", e)
 	}
 
 	data = data[offset:]
@@ -384,9 +397,15 @@ func (e EVMInt) unpack(data []byte, offset int, v interface{}) (int, error) {
 			inv[i] = data[i]
 		}
 	}
-	toType := reflect.ValueOf(v).Kind().String()
 
 	switch v := v.(type) {
+	case **big.Int:
+		b := new(big.Int).SetBytes(inv[empty:ElementSize])
+		if sign {
+			*v = b.Sub(big.NewInt(-1), b)
+		} else {
+			*v = b
+		}
 	case *string:
 		b := new(big.Int)
 		b.SetBytes(inv[empty:ElementSize])
@@ -405,51 +424,64 @@ func (e EVMInt) unpack(data []byte, offset int, v interface{}) (int, error) {
 		}
 	case *uint64:
 		if sign {
-			return 0, fmt.Errorf("cannot convert negative EVM int to %s", toType)
+			return 0, fmt.Errorf("cannot convert negative EVM int to %T", *v)
 		}
 		maxLen := int(unsafe.Sizeof(*v))
 		if length > maxLen {
-			return 0, fmt.Errorf("value to large for uint64")
+			return 0, fmt.Errorf("value to large for %T", *v)
 		}
 		*v = binary.BigEndian.Uint64(data[ElementSize-maxLen : ElementSize])
 	case *uint32:
 		if sign {
-			return 0, fmt.Errorf("cannot convert negative EVM int to %s", toType)
+			return 0, fmt.Errorf("cannot convert negative EVM int to %T", *v)
 		}
 		maxLen := int(unsafe.Sizeof(*v))
 		if length > maxLen {
-			return 0, fmt.Errorf("value to large for int32")
+			return 0, fmt.Errorf("value to large for %T", *v)
 		}
 		*v = binary.BigEndian.Uint32(data[ElementSize-maxLen : ElementSize])
 	case *uint16:
 		if sign {
-			return 0, fmt.Errorf("cannot convert negative EVM int to %s", toType)
+			return 0, fmt.Errorf("cannot convert negative EVM int to %T", *v)
 		}
 		maxLen := int(unsafe.Sizeof(*v))
 		if length > maxLen {
-			return 0, fmt.Errorf("value to large for uint16")
+			return 0, fmt.Errorf("value to large for %T", *v)
 		}
 		*v = binary.BigEndian.Uint16(data[ElementSize-maxLen : ElementSize])
+	case *uint8:
+		if sign {
+			return 0, fmt.Errorf("cannot convert negative EVM int to %T", *v)
+		}
+		if length > 1 {
+			return 0, fmt.Errorf("value to large for %T", *v)
+		}
+		*v = data[ElementSize-1]
 	case *int64:
 		maxLen := int(unsafe.Sizeof(*v))
 		if length > maxLen || (inv[ElementSize-maxLen]&0x80) != 0 {
-			return 0, fmt.Errorf("value to large for int64")
+			return 0, fmt.Errorf("value to large for %T", *v)
 		}
 		*v = int64(binary.BigEndian.Uint64(data[ElementSize-maxLen : ElementSize]))
 	case *int32:
 		maxLen := int(unsafe.Sizeof(*v))
 		if length > maxLen || (inv[ElementSize-maxLen]&0x80) != 0 {
-			return 0, fmt.Errorf("value to large for uint64")
+			return 0, fmt.Errorf("value to large for %T", *v)
 		}
 		*v = int32(binary.BigEndian.Uint32(data[ElementSize-maxLen : ElementSize]))
 	case *int16:
 		maxLen := int(unsafe.Sizeof(*v))
 		if length > maxLen || (inv[ElementSize-maxLen]&0x80) != 0 {
-			return 0, fmt.Errorf("value to large for uint16")
+			return 0, fmt.Errorf("value to large for %T", *v)
 		}
 		*v = int16(binary.BigEndian.Uint16(data[ElementSize-maxLen : ElementSize]))
+	case *int8:
+		if length > 1 || (inv[ElementSize-1]&0x80) != 0 {
+			return 0, fmt.Errorf("value to large for %T", *v)
+		}
+		*v = int8(data[ElementSize-1])
 	default:
-		return 0, fmt.Errorf("unable to convert %s to %s", e.GetSignature(), toType)
+		return 0, fmt.Errorf("unable to convert %s to %T", e.GetSignature(), v)
 	}
 
 	return ElementSize, nil
@@ -467,6 +499,10 @@ func (e EVMUint) ImplicitCast(o EVMType) bool {
 var _ EVMType = (*EVMAddress)(nil)
 
 type EVMAddress struct {
+}
+
+func (e EVMAddress) String() string {
+	return "EVMAddress"
 }
 
 func (e EVMAddress) getGoType() interface{} {
@@ -536,6 +572,13 @@ type EVMBytes struct {
 	M uint64
 }
 
+func (e EVMBytes) String() string {
+	if e.M == 0 {
+		return "EVMBytes"
+	}
+	return fmt.Sprintf("EVMBytes[%v]", e.M)
+}
+
 func (e EVMBytes) getGoType() interface{} {
 	v := make([]byte, e.M)
 	return &v
@@ -548,7 +591,7 @@ func (e EVMBytes) pack(v interface{}) ([]byte, error) {
 		if ok {
 			b = []byte(s)
 		} else {
-			return nil, fmt.Errorf("cannot map to %s to EVM bytes", reflect.ValueOf(v).Kind().String())
+			return nil, fmt.Errorf("cannot map from %s to EVM bytes", reflect.ValueOf(v).Kind().String())
 		}
 	}
 
@@ -600,7 +643,7 @@ func (e EVMBytes) unpack(data []byte, offset int, v interface{}) (int, error) {
 	case reflect.Slice:
 		v2.SetBytes(data[offset : offset+int(e.M)])
 	default:
-		return 0, fmt.Errorf("cannot map EVM %s to %s", e.GetSignature(), reflect.ValueOf(v).Kind().String())
+		return 0, fmt.Errorf("cannot map EVM %s to %v", e.GetSignature(), reflect.ValueOf(v).Kind())
 	}
 
 	return ElementSize, nil
@@ -627,6 +670,10 @@ var _ EVMType = (*EVMString)(nil)
 type EVMString struct {
 }
 
+func (e EVMString) String() string {
+	return "EVMString"
+}
+
 func (e EVMString) GetSignature() string {
 	return "string"
 }
@@ -643,18 +690,18 @@ func (e EVMString) pack(v interface{}) ([]byte, error) {
 
 func (e EVMString) unpack(data []byte, offset int, v interface{}) (int, error) {
 	lenType := EVMInt{M: 64}
-	var len int64
-	l, err := lenType.unpack(data, offset, &len)
+	var length int64
+	l, err := lenType.unpack(data, offset, &length)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("could not unpack string length prefix: %v", err)
 	}
 	offset += l
 
 	switch v := v.(type) {
 	case *string:
-		*v = string(data[offset : offset+int(len)])
+		*v = string(data[offset : offset+int(length)])
 	case *[]byte:
-		*v = data[offset : offset+int(len)]
+		*v = data[offset : offset+int(length)]
 	default:
 		return 0, fmt.Errorf("cannot map EVM string to %s", reflect.ValueOf(v).Kind().String())
 	}
@@ -708,4 +755,18 @@ func (e EVMFixed) Dynamic() bool {
 
 func (e EVMFixed) ImplicitCast(o EVMType) bool {
 	return false
+}
+
+// quick helper padding
+func pad(input []byte, size int, left bool) []byte {
+	if len(input) >= size {
+		return input[:size]
+	}
+	padded := make([]byte, size)
+	if left {
+		copy(padded[size-len(input):], input)
+	} else {
+		copy(padded, input)
+	}
+	return padded
 }

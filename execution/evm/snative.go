@@ -242,7 +242,7 @@ func (contract *SNativeContractDescription) Dispatch(st Interface, caller crypto
 	}
 
 	nativeArgs := reflect.New(function.Arguments).Interface()
-	err = abi.UnpackIntoStruct(function.Abi.Inputs, remainingArgs, nativeArgs)
+	err = abi.Unpack(function.Abi.Inputs, remainingArgs, nativeArgs)
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +256,7 @@ func (contract *SNativeContractDescription) Dispatch(st Interface, caller crypto
 		return nil, fmt.Errorf("state error in %v: %v", function, err)
 	}
 
-	return abi.PackIntoStruct(function.Abi.Outputs, nativeRets)
+	return abi.Pack(function.Abi.Outputs, nativeRets)
 }
 
 // We define the address of an SNative contact as the last 20 bytes of the sha3
