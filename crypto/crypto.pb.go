@@ -5,12 +5,14 @@ package crypto
 
 import (
 	fmt "fmt"
+	io "io"
+	math "math"
+	math_bits "math/bits"
+
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
 	github_com_hyperledger_burrow_binary "github.com/hyperledger/burrow/binary"
-	io "io"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -224,9 +226,9 @@ func (m *PublicKey) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x12
 	i++
 	i = encodeVarintCrypto(dAtA, i, uint64(m.PublicKey.Size()))
-	n1, err := m.PublicKey.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
+	n1, err1 := m.PublicKey.MarshalTo(dAtA[i:])
+	if err1 != nil {
+		return 0, err1
 	}
 	i += n1
 	if m.XXX_unrecognized != nil {
@@ -374,14 +376,7 @@ func (m *Signature) Size() (n int) {
 }
 
 func sovCrypto(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozCrypto(x uint64) (n int) {
 	return sovCrypto(uint64((x << 1) ^ uint64((int64(x) >> 63))))
