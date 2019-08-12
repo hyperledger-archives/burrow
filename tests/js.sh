@@ -19,14 +19,12 @@
 export script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$script_dir/test_runner.sh"
 
-export js_dir="${script_dir}/../burrow.js"
-
+export js_dir="${script_dir}/../js"
 
 perform_js_tests(){
   cd "$js_dir"
   test_account="{\"address\": \"$key1_addr\"}"
   echo "Using test account:"
-  echo "$test_account"
   account="$test_account" mocha --bail --exit --recursive ${1}
   test_exit=$?
 }
@@ -38,7 +36,7 @@ burrowjs_tests() {
     test_setup
     trap test_teardown EXIT
 
-    echo "Running burrow.js tests..."
+    echo "Running js tests..."
     perform_js_tests "$1"
 }
 

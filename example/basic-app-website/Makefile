@@ -1,11 +1,11 @@
 #
-# basic-app is intended to provide an example end-to-end use of burrow and burrow.js in a node.js app
+# basic-app is intended to provide an example end-to-end use of burrow and burrow module in a node.js app
 #
 
 
 # One of: Darwin_i386, Darwin_x86_64, Linux_i386, Linux_x86_64
 BURROW_ARCH := Linux_x86_64
-BURROW_VERSION := 0.23.1
+BURROW_VERSION := 0.21.0
 BURROW_RELEASE_URL := "https://github.com/hyperledger/burrow/releases/download/v${BURROW_VERSION}/burrow_${BURROW_VERSION}_${BURROW_ARCH}.tar.gz "
 # Set to 'burrow' to use whatever is on PATH instead
 BURROW_BIN := bin/burrow

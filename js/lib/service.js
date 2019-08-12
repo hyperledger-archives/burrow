@@ -5,7 +5,7 @@ var grpc = require('grpc')
 var protobuf = require('protobufjs')
 var path = require('path')
 
-const PROTO_PATH = path.join(__dirname, '../protobuf/')
+const PROTO_PATH = path.join(__dirname, '../../protobuf/')
 const GITHUB_PATH = path.join(PROTO_PATH, 'github.com/')
 
 const options = {

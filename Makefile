@@ -174,6 +174,17 @@ solidity: $(SOLIDITY_GO_FILES)
 .PHONY: solang
 solang: $(SOLANG_GO_FILES)
 
+# node/js
+#
+# Install dependency
+.PHONY: npm_install
+npm_install:
+	npm install
+
+.PHONY: test_js
+test_js: bin/solc build_burrow
+	./tests/scripts/bin_wrapper.sh npm test
+
 # Test
 
 .PHONY: test

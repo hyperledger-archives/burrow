@@ -1,6 +1,6 @@
 # Example basic-app
 
-This example contains an example solidity contract [simplestorage](simplestorage.sol) and a [node.js application](app.js) that interacts with the contract using [burrow.js](../../burrow.js/README.md). It also contains a [makefile](makefile) that will set up a single node chain, deploy the contract using `burrow deploy`. The node app configures itself to use the the single node chain my looking for [account.json](account.json) and [deploy.output.json](deploy.output.json) files that are emitted by `burrow deploy` and the makefile.
+This example contains an example solidity contract [simplestorage](simplestorage.sol) and a [node.js application](app.js) that interacts with the contract using [burrow module](../../js/README.md). It also contains a [makefile](makefile) that will set up a single node chain, deploy the contract using `burrow deploy`. The node app configures itself to use the the single node chain my looking for [account.json](account.json) and [deploy.output.json](deploy.output.json) files that are emitted by `burrow deploy` and the makefile.
 
 The makefile provides some examples of using the `burrow` command line tooling and you are invited to modify it for your purposes.
 
@@ -41,7 +41,7 @@ make start_app
 This will deploy the contract if necessary, install any node dependencies, and then start an expressjs server, which will run until interrupted.
 
 ### Step three
-In a third terminal you may run the following commands that will call the Solidity smart contract using Javascript and burrow.js:
+In a third terminal you may run the following commands that will call the Solidity smart contract using Javascript and burrow module:
 
 ```shell
 # Inspect current value

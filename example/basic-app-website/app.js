@@ -34,8 +34,8 @@ let store = chain.contracts.new(abi, null, contractAddress)
 const app = express()
 // Apparently this needs to be its own module...
 app.use(bodyParser.json())
-app.use(express.static('public'));
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static('public'))
+app.use(bodyParser.urlencoded({ extended: true }))
 app.set('view engine', 'ejs')
 
 // Some helpers for parsing/validating input
@@ -45,7 +45,7 @@ let asInteger = value => new Promise((resolve, reject) =>
 let param = (obj, prop) => new Promise((resolve, reject) =>
   prop in obj ? resolve(obj[prop]) : reject(`expected key '${prop}' in ${JSON.stringify(obj)}`))
 
-let handlerError = err => {console.log(err); return err.toString()}
+let handlerError = err => { console.log(err); return err.toString() }
 
 // We define some method endpoints
 // Get the value from the contract by calling the Solidity 'get' method
@@ -53,7 +53,7 @@ app.get('/', (req, res) => store.get()
   .then(ret => res.render('index', {valueIs: ret.values.value, error: null}))
   .catch(err => res.send(handlerError(err))))
 
-//this next get occurs when the user presses the get value button on the website
+// this next get occurs when the user presses the get value button on the website
 // Get the value from the contract by calling the Solidity 'get' method
 app.get('/getValue', (req, res) => store.get()
   .then(ret => res.render('index', {valueIs: ret.values.value, error: null}))
@@ -63,8 +63,7 @@ app.get('/getValue', (req, res) => store.get()
 app.post('/', (req, res) => param(req.body, 'valueNum')
   .then(valueNum => asInteger(valueNum))
   .then(valueNum => store.set(valueNum))
-  .then(ret => res.render('index', {valueIs: "logged", error: null}))
-
+  .then(ret => res.render('index', {valueIs: 'logged', error: null}))
 
   .catch(err => res.send(handlerError(err))))
 

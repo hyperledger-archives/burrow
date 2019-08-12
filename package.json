@@ -1,12 +1,16 @@
 {
   "name": "@monax/burrow",
   "description": "Javascript library that calls a Hyperledger Burrow server over rpc.",
-  "version": "0.24.2",
+  "main": "./index.js",
   "author": {
     "name": "Dennis Mckinnon"
   },
+  "files": [
+    "js",
+    "protobuf"
+  ],
   "bugs": {
-    "url": "https://github.com/monax/bosmarmot/issues"
+    "url": "https://github.com/hyperledger/burrow/issues"
   },
   "dependencies": {
     "@grpc/proto-loader": "^0.4.0",
@@ -17,21 +21,20 @@
   },
   "devDependencies": {
     "fs-extra": "^7.0.1",
-    "mocha": "5.2.0",
+    "mocha": "6.2.0",
     "solc": "0.4.24",
     "standard": "9.0.2"
   },
   "engines": {
     "node": ">=6"
   },
-  "homepage": "https://github.com/monax/bosmarmot/burrow.js",
+  "homepage": "https://github.com/hyperledger/burrow/",
   "keywords": [
     "Burrow",
     "Hyperledger",
     "Monax"
   ],
-  "license": "Apache2.0",
-  "main": "./index.js",
+  "license": "Apache-2.0",
   "maintainers": [
     {
       "name": "Dennis Mckinnon",
@@ -40,12 +43,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/monax/bosmarmot"
+    "url": "git+https://github.com/hyperledger/burrow.git"
   },
   "scripts": {
-    "precommit": "standard --fix",
-    "pretest": "standard --fix",
-    "test": "../tests/burrow.js.sh"
+    "precommit": "standard --fix js/**/*.js",
+    "pretest": "standard --fix js/**/*.js",
+    "test": "./tests/js.sh"
   },
   "standard": {
     "globals": [

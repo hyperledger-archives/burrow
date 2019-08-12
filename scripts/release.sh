@@ -15,6 +15,12 @@ function release {
     echo ${DOCKER_PASS} | docker login --username ${DOCKER_USER} --password-stdin
     docker tag ${DOCKER_REPO}:${tag#v} ${DOCKER_REPO}:latest
     docker push ${DOCKER_REPO}
+
+    git config --global user.email "billings@monax.io"
+    npm-cli-login
+    npm version from-git
+    npm publish --access public .
+
     echo "Building and pushing binaries"
     [[ -e "$notes" ]] && goreleaser --release-notes "$notes" || goreleaser
 }
