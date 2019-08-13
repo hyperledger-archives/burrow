@@ -2,8 +2,10 @@ package abi
 
 import (
 	"encoding/json"
+	"reflect"
 
 	"github.com/hyperledger/burrow/crypto/sha3"
+	"github.com/hyperledger/burrow/event/query"
 	"github.com/tmthrgd/go-hex"
 )
 
@@ -28,10 +30,14 @@ type argumentJSON struct {
 const EventIDSize = 32
 
 type EventSpec struct {
-	EventID   EventID
+	ID        EventID
 	Inputs    []Argument
 	Name      string
 	Anonymous bool
+}
+
+func (e *EventSpec) Get(key string) (interface{}, bool) {
+	return query.GetReflect(reflect.ValueOf(e), key)
 }
 
 func (e *EventSpec) UnmarshalJSON(data []byte) error {
@@ -58,7 +64,7 @@ func (e *EventSpec) unmarshalSpec(s *specJSON) error {
 		}
 	}
 	e.Name = s.Name
-	e.EventID = GetEventID(sig)
+	e.ID = GetEventID(sig)
 	e.Inputs = inputs
 	e.Anonymous = s.Anonymous
 	return nil

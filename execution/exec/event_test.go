@@ -15,52 +15,49 @@ import (
 func TestEventTagQueries(t *testing.T) {
 	ev := logEvent()
 
-	tev := ev.Tagged()
-
 	qb := query.NewBuilder().AndEquals(event.EventTypeKey, TypeLog.String())
 	qry, err := qb.Query()
 	require.NoError(t, err)
-	assert.True(t, qry.Matches(tev))
+	assert.True(t, qry.Matches(ev))
 	require.NoError(t, qry.MatchError())
 
 	qb = qb.AndContains(event.EventIDKey, "bar")
 	qry, err = qb.Query()
 	require.NoError(t, err)
-	assert.True(t, qry.Matches(tev))
+	assert.True(t, qry.Matches(ev))
 	require.NoError(t, qry.MatchError())
 
-	qb = qb.AndEquals(event.TxHashKey, hex.EncodeUpperToString(tev.Header.TxHash))
+	qb = qb.AndEquals(event.TxHashKey, hex.EncodeUpperToString(ev.Header.TxHash))
 	qry, err = qb.Query()
 	require.NoError(t, err)
-	assert.True(t, qry.Matches(tev))
+	assert.True(t, qry.Matches(ev))
 	require.NoError(t, qry.MatchError())
 
-	qb = qb.AndGreaterThanOrEqual(event.HeightKey, tev.Header.Height)
+	qb = qb.AndGreaterThanOrEqual(event.HeightKey, ev.Header.Height)
 	qry, err = qb.Query()
 	require.NoError(t, err)
-	assert.True(t, qry.Matches(tev))
+	assert.True(t, qry.Matches(ev))
 	require.NoError(t, qry.MatchError())
 
-	qb = qb.AndStrictlyLessThan(event.IndexKey, tev.Header.Index+1)
+	qb = qb.AndStrictlyLessThan(event.IndexKey, ev.Header.Index+1)
 	qry, err = qb.Query()
 	require.NoError(t, err)
-	assert.True(t, qry.Matches(tev))
+	assert.True(t, qry.Matches(ev))
 	require.NoError(t, qry.MatchError())
 
 	qb = qb.AndEquals(event.AddressKey, ev.Log.Address)
 	qry, err = qb.Query()
 	require.NoError(t, err)
-	assert.True(t, qry.Matches(tev))
+	assert.True(t, qry.Matches(ev))
 	require.NoError(t, qry.MatchError())
 
 	qb = qb.AndEquals(LogNTextKey(0), "marmot")
 	qry, err = qb.Query()
 	require.NoError(t, err)
-	assert.True(t, qry.Matches(tev))
+	assert.True(t, qry.Matches(ev))
 	require.NoError(t, qry.MatchError())
 
 	t.Logf("Query: %v", qry)
-	t.Logf("Keys: %v", tev.Keys())
 }
 
 func BenchmarkMatching(b *testing.B) {
@@ -75,10 +72,9 @@ func BenchmarkMatching(b *testing.B) {
 		AndEquals(LogNTextKey(0), "marmot")
 	qry, err := qb.Query()
 	require.NoError(b, err)
-	tev := ev.Tagged()
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		qry.Matches(tev)
+		qry.Matches(ev)
 	}
 }
 

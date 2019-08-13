@@ -1,15 +1,14 @@
 package exec
 
 import (
-	"reflect"
-
 	"fmt"
+	"reflect"
 
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/event/query"
 )
 
-var eventMessageTag = query.TagMap{event.MessageTypeKey: reflect.TypeOf(&Event{}).String()}
+var eventMessageType = reflect.TypeOf(&Event{}).String()
 
 type EventType uint32
 
@@ -99,38 +98,33 @@ func (ev *Event) Body() string {
 }
 
 // Tags
-type TaggedEvent struct {
-	query.Tagged
-	*Event
-}
+type Events []*Event
 
-type TaggedEvents []*TaggedEvent
-
-func (ev *Event) Tagged() *TaggedEvent {
-	if ev == nil {
-		return &TaggedEvent{
-			Tagged: query.TagMap{},
-		}
-	}
-	return &TaggedEvent{
-		Tagged: query.MergeTags(
-			query.MustReflectTags(ev.Header),
-			eventMessageTag,
-			query.MustReflectTags(ev.Input),
-			query.MustReflectTags(ev.Output),
-			query.MustReflectTags(ev.Call),
-			ev.Log,
-		),
-		Event: ev,
-	}
-}
-
-func (tevs TaggedEvents) Filter(qry query.Query) TaggedEvents {
-	var filtered TaggedEvents
+func (tevs Events) Filter(qry query.Query) Events {
+	var filtered Events
 	for _, tev := range tevs {
 		if qry.Matches(tev) {
 			filtered = append(filtered, tev)
 		}
 	}
 	return filtered
+}
+
+func (ev *Event) Get(key string) (value interface{}, ok bool) {
+	switch key {
+	case event.MessageTypeKey:
+		return eventMessageType, true
+	}
+	if ev == nil {
+		return nil, false
+	}
+	v, ok := ev.Log.Get(key)
+	if ok {
+		return v, true
+	}
+	v, ok = query.GetReflect(reflect.ValueOf(ev.Header), key)
+	if ok {
+		return v, true
+	}
+	return query.GetReflect(reflect.ValueOf(ev), key)
 }

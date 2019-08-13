@@ -82,19 +82,23 @@ func (s *ReadState) IterateStreamEvents(startHeight, endHeight *uint64, consumer
 }
 
 func (s *ReadState) TxsAtHeight(height uint64) ([]*exec.TxExecution, error) {
+	const errHeader = "TxAtHeight():"
 	var stack exec.TxStack
 	var txExecutions []*exec.TxExecution
 	err := s.IterateStreamEvents(&height, &height,
 		func(ev *exec.StreamEvent) error {
 			// Keep trying to consume TxExecutions at from events at this height
-			txe := stack.Consume(ev)
+			txe, err := stack.Consume(ev)
+			if err != nil {
+				return fmt.Errorf("%s %v", errHeader, err)
+			}
 			if txe != nil {
 				txExecutions = append(txExecutions, txe)
 			}
 			return nil
 		})
 	if err != nil && err != io.EOF {
-		return nil, err
+		return nil, fmt.Errorf("%s %v", errHeader, err)
 	}
 	return txExecutions, nil
 }
@@ -133,7 +137,10 @@ func (s *ReadState) TxByHash(txHash []byte) (*exec.TxExecution, error) {
 			return nil, err
 		}
 
-		txe := stack.Consume(ev)
+		txe, err := stack.Consume(ev)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %v", errHeader, err)
+		}
 		if txe != nil {
 			return txe, nil
 		}

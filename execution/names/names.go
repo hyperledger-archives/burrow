@@ -16,6 +16,7 @@ package names
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/hyperledger/burrow/event/query"
 )
@@ -40,16 +41,8 @@ func (e *Entry) String() string {
 	return fmt.Sprintf("NameEntry{%v -> %v; Expires: %v, Owner: %v}", e.Name, e.Data, e.Expires, e.Owner)
 }
 
-type TaggedEntry struct {
-	*Entry
-	query.Tagged
-}
-
-func (e *Entry) Tagged() *TaggedEntry {
-	return &TaggedEntry{
-		Entry:  e,
-		Tagged: query.MustReflectTags(e),
-	}
+func (e *Entry) Get(key string) (value interface{}, ok bool) {
+	return query.GetReflect(reflect.ValueOf(e), key)
 }
 
 type Reader interface {

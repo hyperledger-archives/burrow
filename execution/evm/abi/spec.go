@@ -69,7 +69,7 @@ func ReadSpec(specBytes []byte) (*Spec, error) {
 				return nil, err
 			}
 			abiSpec.EventsByName[ev.Name] = ev
-			abiSpec.EventsByID[ev.EventID] = ev
+			abiSpec.EventsByID[ev.ID] = ev
 		case "function":
 			inputs, err := readArgSpec(s.Inputs)
 			if err != nil {
@@ -107,7 +107,7 @@ func MergeSpec(abiSpec []*Spec) *Spec {
 		// Loop over the signatures, as these are less likely to have collisions
 		for _, e := range s.EventsByID {
 			newSpec.EventsByName[e.Name] = e
-			newSpec.EventsByID[e.EventID] = e
+			newSpec.EventsByID[e.ID] = e
 		}
 	}
 

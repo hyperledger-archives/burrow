@@ -17,7 +17,7 @@ import (
 
 // buildEventData builds event data from transactions
 func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass, event *exec.Event,
-	txOrigin *exec.Origin, abiProvider *AbiProvider, l *logging.Logger) (types.EventDataRow, error) {
+	txOrigin *exec.Origin, evAbi *abi.EventSpec, logger *logging.Logger) (types.EventDataRow, error) {
 
 	// a fresh new row to store column/value data
 	row := make(map[string]interface{})
@@ -26,22 +26,13 @@ func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass,
 	eventHeader := event.GetHeader()
 	eventLog := event.GetLog()
 
-	// Find event spec for this event
-	var eventID abi.EventID
-	copy(eventID[:], eventLog.Topics[0].Bytes())
-
-	evAbi, err := abiProvider.GetEventAbi(eventID, eventLog.Address, l)
-	if err != nil {
-		return types.EventDataRow{}, err
-	}
-
 	// decode event data using the provided abi specification
 	decodedData, err := decodeEvent(eventHeader, eventLog, txOrigin, evAbi)
 	if err != nil {
 		return types.EventDataRow{}, errors.Wrapf(err, "Error decoding event (filter: %s)", eventClass.Filter)
 	}
 
-	l.InfoMsg("Decoded event", decodedData)
+	logger.InfoMsg("Decoded event", decodedData)
 
 	rowAction := types.ActionUpsert
 
@@ -61,14 +52,14 @@ func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass,
 		if err == nil {
 			if fieldMapping.BytesToString {
 				if bs, ok := value.(*[]byte); ok {
-					str := sanitiseBytesForString(*bs, l)
+					str := sanitiseBytesForString(*bs, logger)
 					row[column.Name] = interface{}(str)
 					continue
 				}
 			}
 			row[column.Name] = value
 		} else {
-			l.TraceMsg("could not get column", "err", err)
+			logger.TraceMsg("could not get column", "err", err)
 		}
 	}
 

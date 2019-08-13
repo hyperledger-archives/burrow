@@ -19,6 +19,10 @@ const (
 	BlockTx         = Block | Tx
 )
 
+func (so SpecOpt) Enabled(opt SpecOpt) bool {
+	return so&opt > 0
+}
+
 // SpecLoader loads spec files and parses them
 func SpecLoader(specFileOrDirs []string, opts SpecOpt) (*Projection, error) {
 	var projection *Projection
@@ -34,12 +38,12 @@ func SpecLoader(specFileOrDirs []string, opts SpecOpt) (*Projection, error) {
 	}
 
 	// add block & tx to tables definition
-	if Block&opts > 0 {
+	if opts.Enabled(Block) {
 		for k, v := range blockTables() {
 			projection.Tables[k] = v
 		}
 	}
-	if Tx&opts > 0 {
+	if opts.Enabled(Tx) {
 		for k, v := range txTables() {
 			projection.Tables[k] = v
 		}

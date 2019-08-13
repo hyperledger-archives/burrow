@@ -18,30 +18,30 @@ import (
 
 // Projection contains EventTable, Event & Abi specifications
 type Projection struct {
-	Tables    types.EventTables
-	EventSpec types.EventSpec
+	Tables types.EventTables
+	Spec   types.ProjectionSpec
 }
 
 // NewProjectionFromBytes creates a Projection from a stream of bytes
 func NewProjectionFromBytes(bs []byte) (*Projection, error) {
-	eventSpec := types.EventSpec{}
+	spec := types.ProjectionSpec{}
 
-	err := ValidateJSONEventSpec(bs)
+	err := ValidateJSONSpec(bs)
 	if err != nil {
 		return nil, err
 	}
 
-	err = json.Unmarshal(bs, &eventSpec)
+	err = json.Unmarshal(bs, &spec)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error unmarshalling eventSpec")
+		return nil, errors.Wrap(err, "Error unmarshalling spec")
 	}
 
-	return NewProjectionFromEventSpec(eventSpec)
+	return NewProjection(spec)
 }
 
 // NewProjectionFromFolder creates a Projection from a folder containing spec files
 func NewProjectionFromFolder(specFileOrDirs ...string) (*Projection, error) {
-	eventSpec := types.EventSpec{}
+	spec := types.ProjectionSpec{}
 
 	const errHeader = "NewProjectionFromFolder():"
 
@@ -56,18 +56,18 @@ func NewProjectionFromFolder(specFileOrDirs ...string) (*Projection, error) {
 					return fmt.Errorf("error reading spec file '%s': %v", path, err)
 				}
 
-				err = ValidateJSONEventSpec(bs)
+				err = ValidateJSONSpec(bs)
 				if err != nil {
 					return fmt.Errorf("could not validate spec file '%s': %v", path, err)
 				}
 
-				fileEventSpec := types.EventSpec{}
+				fileEventSpec := types.ProjectionSpec{}
 				err = json.Unmarshal(bs, &fileEventSpec)
 				if err != nil {
 					return fmt.Errorf("error reading spec file '%s': %v", path, err)
 				}
 
-				eventSpec = append(eventSpec, fileEventSpec...)
+				spec = append(spec, fileEventSpec...)
 			}
 
 			return nil
@@ -77,18 +77,18 @@ func NewProjectionFromFolder(specFileOrDirs ...string) (*Projection, error) {
 		}
 	}
 
-	return NewProjectionFromEventSpec(eventSpec)
+	return NewProjection(spec)
 }
 
-// NewProjectionFromEventSpec receives a sqlsol event specification
+// Takes a sqlsol event specification
 // and returns a pointer to a filled projection structure
 // that contains event types mapped to SQL column types
 // and Event tables structures with table and columns info
-func NewProjectionFromEventSpec(eventSpec types.EventSpec) (*Projection, error) {
+func NewProjection(spec types.ProjectionSpec) (*Projection, error) {
 	// builds abi information from specification
 	tables := make(types.EventTables)
 
-	for _, eventClass := range eventSpec {
+	for _, eventClass := range spec {
 		// validate json structure
 		if err := eventClass.Validate(); err != nil {
 			return nil, fmt.Errorf("validation error on %v: %v", eventClass, err)
@@ -167,8 +167,8 @@ func NewProjectionFromEventSpec(eventSpec types.EventSpec) (*Projection, error) 
 	}
 
 	return &Projection{
-		Tables:    tables,
-		EventSpec: eventSpec,
+		Tables: tables,
+		Spec:   spec,
 	}, nil
 }
 
@@ -186,8 +186,8 @@ func (p *Projection) GetColumn(tableName, columnName string) (*types.SQLTableCol
 	return nil, fmt.Errorf("GetColumn: table does not exist projection: %s ", tableName)
 }
 
-func ValidateJSONEventSpec(bs []byte) error {
-	schemaLoader := gojsonschema.NewGoLoader(types.EventSpecSchema())
+func ValidateJSONSpec(bs []byte) error {
+	schemaLoader := gojsonschema.NewGoLoader(types.ProjectionSpecSchema())
 	specLoader := gojsonschema.NewBytesLoader(bs)
 	result, err := gojsonschema.Validate(schemaLoader, specLoader)
 	if err != nil {
@@ -199,7 +199,7 @@ func ValidateJSONEventSpec(bs []byte) error {
 		for i, err := range result.Errors() {
 			errs[i] = err.String()
 		}
-		return fmt.Errorf("EventSpec failed JSONSchema validation:\n%s", strings.Join(errs, "\n"))
+		return fmt.Errorf("ProjectionSpec failed JSONSchema validation:\n%s", strings.Join(errs, "\n"))
 	}
 	return nil
 }

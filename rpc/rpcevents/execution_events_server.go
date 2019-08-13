@@ -73,7 +73,7 @@ func (ees *executionEventsServer) Stream(request *BlocksRequest, stream Executio
 		return fmt.Errorf("could not parse TxExecution query: %v", err)
 	}
 	return ees.streamEvents(stream.Context(), request.BlockRange, func(ev *exec.StreamEvent) error {
-		if qry.Matches(ev.Tagged()) {
+		if qry.Matches(ev) {
 			return stream.Send(ev)
 		}
 		return nil
@@ -81,6 +81,7 @@ func (ees *executionEventsServer) Stream(request *BlocksRequest, stream Executio
 }
 
 func (ees *executionEventsServer) Events(request *BlocksRequest, stream ExecutionEvents_EventsServer) error {
+	const errHeader = "Events()"
 	qry, err := query.NewOrEmpty(request.Query)
 	if err != nil {
 		return fmt.Errorf("could not parse Event query: %v", err)
@@ -99,10 +100,13 @@ func (ees *executionEventsServer) Events(request *BlocksRequest, stream Executio
 
 		default:
 			// We need to consume transaction to exclude events belong to an exceptional transaction
-			txe := stack.Consume(sev)
+			txe, err := stack.Consume(sev)
+			if err != nil {
+				return fmt.Errorf("%s: %v", errHeader, err)
+			}
 			if txe != nil && txe.Exception == nil {
 				for _, ev := range txe.Events {
-					if qry.Matches(ev.Tagged()) {
+					if qry.Matches(ev) {
 						response.Events = append(response.Events, ev)
 					}
 				}

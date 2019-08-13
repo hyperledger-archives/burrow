@@ -20,6 +20,7 @@ import (
 
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/tmthrgd/go-hex"
 )
 
@@ -77,10 +78,8 @@ func (log *LogEvent) GetTopic(i int) Word256 {
 	return Word256{}
 }
 
-func (log *LogEvent) Len() int {
-	return len(logTagKeys)
-}
-
-func (log *LogEvent) Keys() []string {
-	return logTagKeys
+func (log *LogEvent) SolidityEventID() abi.EventID {
+	var eventID abi.EventID
+	copy(eventID[:], log.Topics[0].Bytes())
+	return eventID
 }

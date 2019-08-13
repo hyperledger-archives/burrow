@@ -56,7 +56,7 @@ func TestTransactor_BroadcastTxSync(t *testing.T) {
 		func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error {
 			txe := exec.NewTxExecution(txEnv)
 			txe.Height = height
-			err := evc.Publish(context.Background(), txe, txe.Tagged())
+			err := evc.Publish(context.Background(), txe, txe)
 			if err != nil {
 				return err
 			}

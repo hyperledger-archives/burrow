@@ -20,9 +20,11 @@ func TestTxExecution(t *testing.T) {
 
 	stack := new(TxStack)
 	var txeOut *TxExecution
+	var err error
 
 	for _, ev := range txe.StreamEvents() {
-		txeOut = stack.Consume(ev)
+		txeOut, err = stack.Consume(ev)
+		require.NoError(t, err)
 		if txeOut != nil {
 			require.Equal(t, txe, txeOut)
 		}
@@ -51,9 +53,10 @@ func TestConsumeBlockExecution(t *testing.T) {
 
 	stack := new(BlockAccumulator)
 	var beOut *BlockExecution
-
+	var err error
 	for _, ev := range be.StreamEvents() {
-		beOut = stack.Consume(ev)
+		beOut, err = stack.Consume(ev)
+		require.NoError(t, err)
 		if beOut != nil {
 			require.Equal(t, be, beOut)
 		}

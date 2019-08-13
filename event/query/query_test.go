@@ -23,6 +23,8 @@ func TestMatches(t *testing.T) {
 		err     bool
 		matches bool
 	}{
+		{"Height CONTAINS '2'", map[string]interface{}{"Height": uint64(12)}, false, true},
+		{"Height CONTAINS '2'", map[string]interface{}{"Height": uint64(11)}, false, false},
 		{"foo > 10", map[string]interface{}{"foo": 11}, false, true},
 		{"foo >= 10", map[string]interface{}{"foo": uint64(11)}, false, true},
 		{"foo >= 10", map[string]interface{}{"foo": uint32(11)}, false, true},

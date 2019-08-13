@@ -2,6 +2,7 @@ package exec
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/hyperledger/burrow/binary"
@@ -186,6 +187,10 @@ func (txe *TxExecution) CallError() *errors.CallError {
 	}
 }
 
+func (txe *TxExecution) TaggedEvents() Events {
+	return txe.Events
+}
+
 // Set result
 func (txe *TxExecution) Return(returnValue []byte, gasUsed uint64) {
 	if txe.Result == nil {
@@ -220,35 +225,14 @@ func (txe *TxExecution) Append(tail ...*Event) {
 }
 
 // Tags
-type TaggedTxExecution struct {
-	query.Tagged
-	*TxExecution
-}
-
-func (txe *TxExecution) Tagged() *TaggedTxExecution {
-	var tagged query.Tagged = query.TagMap{}
-	if txe != nil {
-		tagged = query.MergeTags(
-			query.TagMap{
-				event.EventIDKey:   EventStringTxExecution(txe.TxHash),
-				event.EventTypeKey: txe.EventType()},
-			query.MustReflectTags(txe),
-			query.MustReflectTags(txe.TxHeader),
-			txe.Envelope.Tagged(),
-		)
+func (txe *TxExecution) Get(key string) (interface{}, bool) {
+	switch key {
+	case event.EventIDKey:
+		return EventStringTxExecution(txe.TxHash), true
+	case event.EventTypeKey:
+		return txe.EventType(), true
 	}
-	return &TaggedTxExecution{
-		Tagged:      tagged,
-		TxExecution: txe,
-	}
-}
-
-func (txe *TxExecution) TaggedEvents() TaggedEvents {
-	tevs := make(TaggedEvents, len(txe.Events))
-	for i, ev := range txe.Events {
-		tevs[i] = ev.Tagged()
-	}
-	return tevs
+	return query.GetReflect(reflect.ValueOf(txe), key)
 }
 
 func QueryForTxExecution(txHash []byte) query.Queryable {

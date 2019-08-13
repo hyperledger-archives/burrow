@@ -17,6 +17,7 @@ package acm
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/hyperledger/burrow/binary"
@@ -112,18 +113,13 @@ func (acc Account) String() string {
 		acc.Address, acc.Sequence, acc.PublicKey, acc.Balance, len(acc.EVMCode), acc.Permissions)
 }
 
-func (acc *Account) Tagged() query.Tagged {
-	return &TaggedAccount{
-		Account: acc,
-		Tagged: query.MergeTags(query.MustReflectTags(acc, "Address", "Balance", "Sequence", "EVMCode"),
-			query.TagMap{
-				"Permissions": acc.Permissions.Base.ResultantPerms(),
-				"Roles":       acc.Permissions.Roles,
-			}),
+func (acc *Account) Get(key string) (interface{}, bool) {
+	switch key {
+	case "Permissions":
+		return acc.Permissions.Base.ResultantPerms(), true
+	case "Roles":
+		return acc.Permissions.Roles, true
+	default:
+		return query.GetReflect(reflect.ValueOf(acc), key)
 	}
-}
-
-type TaggedAccount struct {
-	*Account
-	query.Tagged
 }

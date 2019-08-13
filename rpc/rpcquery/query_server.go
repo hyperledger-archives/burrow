@@ -119,7 +119,7 @@ func (qs *queryServer) ListAccounts(param *ListAccountsParam, stream Query_ListA
 	}
 	var streamErr error
 	err = qs.accounts.IterateAccounts(func(acc *acm.Account) error {
-		if qry.Matches(acc.Tagged()) {
+		if qry.Matches(acc) {
 			return stream.Send(acc)
 		} else {
 			return nil
@@ -148,7 +148,7 @@ func (qs *queryServer) ListNames(param *ListNamesParam, stream Query_ListNamesSe
 	}
 	var streamErr error
 	err = qs.nameReg.IterateNames(func(entry *names.Entry) error {
-		if qry.Matches(entry.Tagged()) {
+		if qry.Matches(entry) {
 			return stream.Send(entry)
 		} else {
 			return nil
