@@ -18,6 +18,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
@@ -179,8 +180,12 @@ func (tx *Tx) Rehash() []byte {
 	return tx.txHash
 }
 
-func (tx *Tx) Tagged() query.Tagged {
-	return query.MergeTags(query.MustReflectTags(tx), query.MustReflectTags(tx.Payload))
+func (tx *Tx) Get(key string) (interface{}, bool) {
+	v, ok := query.GetReflect(reflect.ValueOf(tx), key)
+	if ok {
+		return v, true
+	}
+	return query.GetReflect(reflect.ValueOf(tx.Payload), key)
 }
 
 // Generate a transaction Receipt containing the Tx hash and other information if the Tx is call.

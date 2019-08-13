@@ -82,7 +82,7 @@ type Expression struct {
 	// This is our 'bytecode'
 	code      []*instruction
 	errors    errors.MultipleErrors
-	explainer func(fmt string, args ...interface{})
+	explainer func(format string, args ...interface{})
 }
 
 // Evaluate expects an Execute() to have filled the code of the Expression so it can be run in the little stack machine

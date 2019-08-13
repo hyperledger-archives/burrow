@@ -30,7 +30,10 @@ func testLoadStudio(t *testing.T, i int) {
 	accum := new(exec.BlockAccumulator)
 	buf := new(bytes.Buffer)
 	err = st.IterateStreamEvents(nil, nil, func(ev *exec.StreamEvent) error {
-		be := accum.Consume(ev)
+		be, err := accum.Consume(ev)
+		if err != nil {
+			return err
+		}
 		if be != nil {
 			buf.WriteString(fmt.Sprintf("Block %d: %X\n\n", be.Height, be.Header.AppHash))
 			for _, txe := range be.TxExecutions {

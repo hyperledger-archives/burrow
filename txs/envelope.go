@@ -2,6 +2,7 @@ package txs
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
@@ -160,10 +161,13 @@ func (txEnv *Envelope) Sign(signingAccounts ...acm.AddressableSigner) error {
 	return nil
 }
 
-func (txEnv *Envelope) Tagged() query.Tagged {
-	if txEnv != nil {
-		return query.MergeTags(query.MustReflectTags(txEnv, "Signatories"), txEnv.Tx.Tagged())
-	} else {
-		return query.TagMap{}
+func (txEnv *Envelope) Get(key string) (interface{}, bool) {
+	if txEnv == nil {
+		return nil, false
 	}
+	v, ok := query.GetReflect(reflect.ValueOf(txEnv), key)
+	if ok {
+		return v, true
+	}
+	return txEnv.Tx.Get(key)
 }

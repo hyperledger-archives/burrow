@@ -29,7 +29,8 @@ type SQLTableColumn struct {
 	Name    string
 	Type    SQLColumnType
 	Primary bool
-	Length  int
+	// Length of variable column type where applicable 0 indicates variable/unbounded length
+	Length int
 }
 
 func (col *SQLTableColumn) String() string {

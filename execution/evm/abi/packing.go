@@ -111,7 +111,7 @@ func argGetter(argSpec []Argument, args []interface{}, ptr bool) (func(int) inte
 func packTopics(eventSpec *EventSpec, getArg func(int) interface{}) ([]binary.Word256, error) {
 	topics := make([]binary.Word256, 0, 5)
 	if !eventSpec.Anonymous {
-		topics = append(topics, binary.Word256(eventSpec.EventID))
+		topics = append(topics, binary.Word256(eventSpec.ID))
 	}
 	for i, a := range eventSpec.Inputs {
 		if a.Indexed {

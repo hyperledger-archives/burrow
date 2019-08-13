@@ -463,7 +463,7 @@ func (exe *executor) updateSequenceNumbers(txEnv *txs.Envelope) error {
 
 func (exe *executor) publishBlock(blockExecution *exec.BlockExecution) {
 	for _, txe := range blockExecution.TxExecutions {
-		publishErr := exe.emitter.Publish(context.Background(), txe, txe.Tagged())
+		publishErr := exe.emitter.Publish(context.Background(), txe, txe)
 		if publishErr != nil {
 			exe.logger.InfoMsg("Error publishing TxExecution",
 				"height", blockExecution.Height,
@@ -471,7 +471,7 @@ func (exe *executor) publishBlock(blockExecution *exec.BlockExecution) {
 				structure.ErrorKey, publishErr)
 		}
 	}
-	publishErr := exe.emitter.Publish(context.Background(), blockExecution, blockExecution.Tagged())
+	publishErr := exe.emitter.Publish(context.Background(), blockExecution, blockExecution)
 	if publishErr != nil {
 		exe.logger.InfoMsg("Error publishing BlockExecution",
 			"height", blockExecution.Height,

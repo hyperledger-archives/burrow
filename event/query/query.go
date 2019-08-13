@@ -10,7 +10,6 @@ package query
 
 import (
 	"fmt"
-	"strings"
 )
 
 type Query interface {
@@ -35,8 +34,7 @@ type MatchError struct {
 }
 
 func (m *MatchError) Error() string {
-	keys := strings.Join(m.Tagged.Keys(), ", ")
-	return fmt.Sprintf("matching error occurred with tagged with keys [%s]: %v", keys, m.Cause)
+	return fmt.Sprintf("matching error occurred with tagged: %v", m.Cause)
 }
 
 // Condition represents a single condition within a query and consists of tag
@@ -53,6 +51,9 @@ func New(s string) (*PegQuery, error) {
 	p := &QueryParser{
 		Buffer: s,
 	}
+	//p.Expression.explainer = func(format string, args ...interface{}) {
+	//	fmt.Printf(format, args...)
+	//}
 	err := p.Init()
 	if err != nil {
 		return nil, err
@@ -89,9 +90,6 @@ func (q *PegQuery) Query() (Query, error) {
 // For example, query "name=John" matches tags = {"name": "John"}. More
 // examples could be found in parser_test.go and query_test.go.
 func (q *PegQuery) Matches(tags Tagged) bool {
-	if tags.Len() == 0 {
-		return false
-	}
 	match, err := q.parser.Evaluate(tags.Get)
 	if err != nil {
 		q.error = &MatchError{Cause: err, Tagged: tags}

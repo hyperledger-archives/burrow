@@ -8,6 +8,6 @@ import (
 )
 
 func TestEventTablesSchema(t *testing.T) {
-	schema := EventSpecSchema()
+	schema := ProjectionSpecSchema()
 	fmt.Println(source.JSONString(schema))
 }

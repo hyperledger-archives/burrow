@@ -19,32 +19,32 @@ func TestGenerateSpecFromAbis(t *testing.T) {
 
 	require.ElementsMatch(t, project[0].FieldMappings,
 		[]*types.EventFieldMapping{
-			&types.EventFieldMapping{
+			{
 				Field:      "trueism",
 				ColumnName: "trueism",
 				Type:       "bool",
 			},
-			&types.EventFieldMapping{
+			{
 				Field:      "german",
 				ColumnName: "german",
 				Type:       "string",
 			},
-			&types.EventFieldMapping{
+			{
 				Field:      "newDepth",
 				ColumnName: "newDepth",
 				Type:       "int128",
 			},
-			&types.EventFieldMapping{
+			{
 				Field:      "bignum",
 				ColumnName: "bignum",
 				Type:       "int256",
 			},
-			&types.EventFieldMapping{
+			{
 				Field:      "hash",
 				ColumnName: "hash",
 				Type:       "bytes32",
 			},
-			&types.EventFieldMapping{
+			{
 				Field:      "direction",
 				ColumnName: "direction",
 				Type:       "bytes32",

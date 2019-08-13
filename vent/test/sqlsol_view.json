@@ -1,7 +1,7 @@
 [
   {
     "TableName": "EventTest",
-    "Filter": "EventType = 'LogEvent'",
+    "Filter": "EventType = 'LogEvent' OR EventType = 'MultiSpoon' OR EventType = 'Splodge-Gniver' OR EventType = 'Splodge-Gniver' OR EventType = 'COLY-BLOPS'",
     "DeleteMarkerField": "__DELETE__",
     "FieldMappings": [
       {

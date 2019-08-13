@@ -76,15 +76,13 @@ func TestAccountTags(t *testing.T) {
 		Permissions: perms,
 		EVMCode:     solidity.Bytecode_StrangeLoop,
 	}
-	tagged := acc.Tagged()
-	assert.Equal(t, []string{"Address", "Balance", "Sequence", "EVMCode", "Permissions", "Roles"}, tagged.Keys())
-	flag, _ := tagged.Get("Permissions")
+	flag, _ := acc.Get("Permissions")
 	permString := permission.String(flag.(permission.PermFlag))
 	assert.Equal(t, "send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | hasRole", permString)
-	roles, _ := tagged.Get("Roles")
+	roles, _ := acc.Get("Roles")
 	assert.Equal(t, []string{"frogs", "dogs"}, roles)
-	tagged.Get("EVMCode")
+	acc.Get("EVMCode")
 	qry, err := query.New("EVMCode CONTAINS '0116002556001600360006101000A815'")
 	require.NoError(t, err)
-	assert.True(t, qry.Matches(tagged))
+	assert.True(t, qry.Matches(acc))
 }

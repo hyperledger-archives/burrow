@@ -126,7 +126,7 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 		cmd.Command("schema", "Print JSONSchema for spec file format to validate table specs",
 			func(cmd *cli.Cmd) {
 				cmd.Action = func() {
-					output.Printf(source.JSONString(types.EventSpecSchema()))
+					output.Printf(source.JSONString(types.ProjectionSpecSchema()))
 				}
 			})
 

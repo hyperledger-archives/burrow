@@ -66,13 +66,38 @@ func TestSendTx(t *testing.T) {
 	testTxSignVerify(t, sendTx)
 
 	tx := Enclose("Foo", sendTx).Tx
-	value, ok := tx.Tagged().Get("Inputs")
+	value, ok := tx.Get("Inputs")
 	require.True(t, ok)
 	assert.Equal(t, sendTx.Inputs, value)
 
-	value, ok = tx.Tagged().Get("ChainID")
+	value, ok = tx.Get("ChainID")
 	require.True(t, ok)
 	assert.Equal(t, "Foo", value)
+}
+
+func TestCallTx(t *testing.T) {
+
+	toAddress := makePrivateAccount("contract1").GetAddress()
+	callTx := &payload.CallTx{
+		Input: &payload.TxInput{
+			Address:  makePrivateAccount("input1").GetAddress(),
+			Amount:   12345,
+			Sequence: 67890,
+		},
+		Address:  &toAddress,
+		GasLimit: 111,
+		Fee:      222,
+		Data:     []byte("data1"),
+	}
+	txEnv := Enclose("Chain1", callTx)
+
+	v, ok := txEnv.Get("Input.Amount")
+	require.True(t, ok)
+	assert.Equal(t, callTx.Input.Amount, v)
+
+	v, ok = txEnv.Get("Address")
+	require.True(t, ok)
+	assert.Equal(t, callTx.Address, v)
 }
 
 func TestCallTxSignable(t *testing.T) {
@@ -162,7 +187,7 @@ func TestTxWrapper_MarshalJSON(t *testing.T) {
 	testTxSignVerify(t, callTx)
 
 	tx := Enclose("Foo", callTx).Tx
-	value, ok := tx.Tagged().Get("Input")
+	value, ok := tx.Get("Input")
 	require.True(t, ok)
 	assert.Equal(t, callTx.Input, value)
 }
