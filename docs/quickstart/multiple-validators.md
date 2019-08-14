@@ -25,7 +25,3 @@ If the connection successed, you will see empty blocks automatically created `Se
 ```bash
 curl -s 127.0.0.1:26758/consensus
 ```
-
-## Send transactions to the blockchain
-
-You can start to [send transactions](send-transactions.md).

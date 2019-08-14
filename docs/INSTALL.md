@@ -1,3 +1,9 @@
+## Minimum requirements
+
+Requirement|Notes
+---|---
+Go version | Go1.11 or higher
+
 ## Installation
 
 - [Install go](https://golang.org/doc/install) version 1.11 or above and have `$GOPATH` set
