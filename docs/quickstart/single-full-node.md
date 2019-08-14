@@ -37,7 +37,3 @@ and the logs will start streaming through.
 
 If you would like to reset your node, you can just delete its working directory with `rm -rf .burrow`. In the context of a
 multi-node chain it will resync with peers, otherwise it will restart from height 0.
-
-## Send transactions to the blockchain
-
-You can start to [send transactions](send-transactions.md).
