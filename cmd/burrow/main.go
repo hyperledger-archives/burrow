@@ -57,8 +57,8 @@ func burrow(output commands.Output) *cli.Cli {
 	app.Command("keys", "A tool for doing a bunch of cool stuff with keys",
 		commands.Keys(output))
 
-	app.Command("examine", "Dump objects from an offline Burrow .burrow directory",
-		commands.Examine(output))
+	app.Command("explore", "Dump objects from an offline Burrow .burrow directory",
+		commands.Explore(output))
 
 	app.Command("deploy", "Deploy and test contracts",
 		commands.Deploy(output))
@@ -77,6 +77,9 @@ func burrow(output commands.Output) *cli.Cli {
 
 	app.Command("restore", "Restore new chain from backup",
 		commands.Restore(output))
+
+	app.Command("accounts", "List accounts and metadata",
+		commands.Accounts(output))
 
 	return app
 }

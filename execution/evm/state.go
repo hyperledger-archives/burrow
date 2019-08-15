@@ -1,12 +1,15 @@
 package evm
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/crypto/sha3"
+	"github.com/hyperledger/burrow/deploy/compile"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/permission"
 )
@@ -29,6 +32,8 @@ type Reader interface {
 	GetPermissions(address crypto.Address) permission.AccountPermissions
 	GetEVMCode(address crypto.Address) acm.Bytecode
 	GetWASMCode(address crypto.Address) acm.Bytecode
+	GetCodeHash(address crypto.Address) []byte
+	GetForebear(address crypto.Address) crypto.Address
 	GetSequence(address crypto.Address) uint64
 	Exists(address crypto.Address) bool
 	// GetBlockHash returns	hash of the specific block
@@ -37,8 +42,9 @@ type Reader interface {
 
 type Writer interface {
 	CreateAccount(address crypto.Address)
-	InitCode(address crypto.Address, code []byte)
 	InitWASMCode(address crypto.Address, code []byte)
+	InitCode(address crypto.Address, code []byte)
+	InitChildCode(address crypto.Address, forebear crypto.Address, code []byte)
 	RemoveAccount(address crypto.Address)
 	SetStorage(address crypto.Address, key binary.Word256, value []byte)
 	AddToBalance(address crypto.Address, amount uint64)
@@ -151,6 +157,14 @@ func (st *State) GetWASMCode(address crypto.Address) acm.Bytecode {
 	return acc.WASMCode
 }
 
+func (st *State) GetCodeHash(address crypto.Address) []byte {
+	acc := st.account(address)
+	if acc == nil || len(acc.CodeHash) == 0 {
+		return nil
+	}
+	return acc.CodeHash
+}
+
 func (st *State) Exists(address crypto.Address) bool {
 	acc, err := st.cache.GetAccount(address)
 	if err != nil {
@@ -171,6 +185,14 @@ func (st *State) GetSequence(address crypto.Address) uint64 {
 	return acc.Sequence
 }
 
+func (st *State) GetForebear(address crypto.Address) crypto.Address {
+	acc := st.account(address)
+	if acc == nil && acc.Forebear != nil {
+		return *acc.Forebear
+	}
+	return address
+}
+
 // Writer
 
 func (st *State) CreateAccount(address crypto.Address) {
@@ -183,6 +205,15 @@ func (st *State) CreateAccount(address crypto.Address) {
 }
 
 func (st *State) InitCode(address crypto.Address, code []byte) {
+	st.initCode(address, nil, code)
+}
+
+func (st *State) InitChildCode(address crypto.Address, parent crypto.Address, code []byte) {
+	st.initCode(address, &parent, code)
+
+}
+
+func (st *State) initCode(address crypto.Address, parent *crypto.Address, code []byte) {
 	acc := st.mustAccount(address)
 	if acc == nil {
 		st.PushError(errors.ErrorCodef(errors.ErrorCodeInvalidAddress,
@@ -194,8 +225,59 @@ func (st *State) InitCode(address crypto.Address, code []byte) {
 			"tried to initialise code for a contract that already exists: %v", address))
 		return
 	}
+
 	acc.EVMCode = code
+
+	// keccak256 hash of a contract's code
+	hash := sha3.NewKeccak256()
+	hash.Write(code)
+	codehash := hash.Sum(nil)
+
+	forebear := &address
+	metamap := acc.ContractMeta
+	if parent != nil {
+		// find our ancestor, i.e. the initial contract that was deployed, from which this contract descends
+		ancestor := st.mustAccount(*parent)
+		if ancestor.Forebear != nil {
+			ancestor = st.mustAccount(*ancestor.Forebear)
+			forebear = ancestor.Forebear
+		} else {
+			forebear = parent
+		}
+		metamap = ancestor.ContractMeta
+	}
+
+	// If we have a list of ABIs for this contract, we also know what contract code it is allowed to create
+	// For compatibility with older contracts, allow any contract to be created if we have no mappings
+	if metamap != nil && len(metamap) > 0 {
+		found := codehashPermitted(codehash, metamap)
+
+		// Libraries lie about their deployed bytecode
+		if !found {
+			deployCodehash := compile.GetDeployCodeHash(code, address)
+			found = codehashPermitted(deployCodehash, metamap)
+		}
+
+		if !found {
+			st.PushError(errors.ErrorCodeInvalidContractCode)
+			return
+		}
+	}
+
+	acc.CodeHash = codehash
+	acc.Forebear = forebear
+
 	st.updateAccount(acc)
+}
+
+func codehashPermitted(codehash []byte, metamap []*acm.ContractMeta) bool {
+	for _, m := range metamap {
+		if bytes.Equal(codehash, m.CodeHash) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (st *State) InitWASMCode(address crypto.Address, code []byte) {
@@ -210,8 +292,28 @@ func (st *State) InitWASMCode(address crypto.Address, code []byte) {
 			"tried to initialise code for a contract that already exists: %v", address))
 		return
 	}
+
 	acc.WASMCode = code
+	// keccak256 hash of a contract's code
+	hash := sha3.NewKeccak256()
+	hash.Write(code)
+	acc.CodeHash = hash.Sum(nil)
 	st.updateAccount(acc)
+}
+
+func (st *State) UpdateMetaMap(address crypto.Address, mapping []*acm.ContractMeta) {
+	acc := st.mustAccount(address)
+	if acc == nil {
+		st.PushError(errors.ErrorCodef(errors.ErrorCodeInvalidAddress,
+			"tried to initialise code for an account that does not exist: %v", address))
+		return
+	}
+	acc.ContractMeta = mapping
+	st.updateAccount(acc)
+}
+
+func (st *State) SetMetadata(metahash acmstate.MetadataHash, abi string) error {
+	return st.cache.SetMetadata(metahash, abi)
 }
 
 func (st *State) RemoveAccount(address crypto.Address) {

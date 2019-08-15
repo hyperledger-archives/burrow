@@ -10,13 +10,6 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 )
 
-const (
-	JSONFormat        = "json"
-	LogfmtFormat      = "logfmt"
-	TerminalFormat    = "terminal"
-	defaultFormatName = TerminalFormat
-)
-
 type Syncable interface {
 	Sync() error
 }
@@ -26,7 +19,7 @@ func NewStreamLogger(writer io.Writer, format string) (log.Logger, error) {
 	var err error
 	switch format {
 	case "":
-		return NewStreamLogger(writer, defaultFormatName)
+		return NewStreamLogger(writer, DefaultFormat)
 	case JSONFormat:
 		logger = log.NewJSONLogger(writer)
 	case LogfmtFormat:

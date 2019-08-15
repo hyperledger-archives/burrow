@@ -16,9 +16,9 @@ package names
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/hyperledger/burrow/event/query"
-	amino "github.com/tendermint/go-amino"
 )
 
 var MinNameRegistrationPeriod uint64 = 5
@@ -37,35 +37,12 @@ const (
 	MaxDataLength = 1 << 16
 )
 
-var cdc = amino.NewCodec()
-
-func (e *Entry) Encode() ([]byte, error) {
-	return cdc.MarshalBinaryBare(e)
-}
-
 func (e *Entry) String() string {
 	return fmt.Sprintf("NameEntry{%v -> %v; Expires: %v, Owner: %v}", e.Name, e.Data, e.Expires, e.Owner)
 }
 
-type TaggedEntry struct {
-	*Entry
-	query.Tagged
-}
-
-func (e *Entry) Tagged() *TaggedEntry {
-	return &TaggedEntry{
-		Entry:  e,
-		Tagged: query.MustReflectTags(e),
-	}
-}
-
-func DecodeEntry(entryBytes []byte) (*Entry, error) {
-	entry := new(Entry)
-	err := cdc.UnmarshalBinaryBare(entryBytes, entry)
-	if err != nil {
-		return nil, err
-	}
-	return entry, nil
+func (e *Entry) Get(key string) (value interface{}, ok bool) {
+	return query.GetReflect(reflect.ValueOf(e), key)
 }
 
 type Reader interface {

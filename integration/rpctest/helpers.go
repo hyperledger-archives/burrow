@@ -6,6 +6,7 @@ import (
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/integration"
@@ -25,8 +26,8 @@ import (
 // so... (I didn't say it had to make sense):
 const UpsieDownsieCallCount = 1 + (34 - 17) + 1 + (34 - 23)
 
-var PrivateAccounts = integration.MakePrivateAccounts(10) // make keys
-var GenesisDoc = integration.TestGenesisDoc(PrivateAccounts)
+var PrivateAccounts = integration.MakePrivateAccounts("mysecret", 10) // make keys
+var GenesisDoc = integration.TestGenesisDoc(PrivateAccounts, 0)
 
 // Helpers
 func NewTransactClient(t testing.TB, listenAddress string) rpctransact.TransactClient {
@@ -47,16 +48,35 @@ func NewQueryClient(t testing.TB, listenAddress string) rpcquery.QueryClient {
 	return rpcquery.NewQueryClient(conn)
 }
 
-func CreateContract(cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte) (*exec.TxExecution, error) {
+type MetadataMap struct {
+	DeployedCode []byte
+	Abi          []byte
+}
+
+func CreateContract(cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte, metamap []MetadataMap) (*exec.TxExecution, error) {
+	var meta []*payload.ContractMeta
+	if metamap != nil {
+		meta = make([]*payload.ContractMeta, len(metamap))
+		for i, m := range metamap {
+			hash := sha3.NewKeccak256()
+			hash.Write([]byte(m.DeployedCode))
+			meta[i] = &payload.ContractMeta{
+				CodeHash: hash.Sum(nil),
+				Meta:     string(m.Abi),
+			}
+		}
+	}
+
 	txe, err := cli.CallTxSync(context.Background(), &payload.CallTx{
 		Input: &payload.TxInput{
 			Address: inputAddress,
 			Amount:  2,
 		},
-		Address:  nil,
-		Data:     bytecode,
-		Fee:      2,
-		GasLimit: 10000,
+		Address:      nil,
+		Data:         bytecode,
+		Fee:          2,
+		GasLimit:     10000,
+		ContractMeta: meta,
 	})
 	if err != nil {
 		return nil, err
@@ -81,10 +101,10 @@ func CallContract(cli rpctransact.TransactClient, inputAddress, contractAddress 
 	return txe, nil
 }
 
-func UpdateName(t testing.TB, cli rpctransact.TransactClient, inputAddress crypto.Address, name, data string,
-	expiresIn uint64) *exec.TxExecution {
+func UpdateName(cli rpctransact.TransactClient, inputAddress crypto.Address, name, data string,
+	expiresIn uint64) (*exec.TxExecution, error) {
 
-	txe, err := cli.NameTxSync(context.Background(), &payload.NameTx{
+	return cli.NameTxSync(context.Background(), &payload.NameTx{
 		Input: &payload.TxInput{
 			Address: inputAddress,
 			Amount:  names.NameCostForExpiryIn(name, data, expiresIn),
@@ -92,8 +112,6 @@ func UpdateName(t testing.TB, cli rpctransact.TransactClient, inputAddress crypt
 		Name: name,
 		Data: data,
 	})
-	require.NoError(t, err)
-	return txe
 }
 
 //-------------------------------------------------------------------------------

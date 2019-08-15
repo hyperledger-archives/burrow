@@ -29,7 +29,8 @@ type SQLTableColumn struct {
 	Name    string
 	Type    SQLColumnType
 	Primary bool
-	Length  int
+	// Length of variable column type where applicable 0 indicates variable/unbounded length
+	Length int
 }
 
 func (col *SQLTableColumn) String() string {
@@ -107,7 +108,8 @@ type SQLColumnNames struct {
 	BurrowVersion string
 	ChainID       string
 	// context
-	Index       string
+	TxIndex     string
+	EventIndex  string
 	EventType   string
 	BlockHeader string
 	TxType      string
@@ -142,7 +144,8 @@ var DefaultSQLColumnNames = SQLColumnNames{
 	BurrowVersion: "_burrowversion",
 	ChainID:       "_chainid",
 	// context,
-	Index:       "_index",
+	TxIndex:     "_txindex",
+	EventIndex:  "_eventindex",
 	EventType:   "_eventtype",
 	BlockHeader: "_blockheader",
 	TxType:      "_txtype",
@@ -157,12 +160,14 @@ var DefaultSQLColumnNames = SQLColumnNames{
 // labels for column mapping
 const (
 	// event related
-	EventNameLabel = "eventName"
-	EventTypeLabel = "eventType"
+	EventNameLabel  = "eventName"
+	EventTypeLabel  = "eventType"
+	EventIndexLabel = "eventIndex"
 
 	// block related
-	ChainIDLabel     = "chainid"
+	ChainIDLabel     = "chainID"
 	BlockHeightLabel = "height"
+	TxIndexLabel     = "txIndex"
 
 	// transaction related
 	TxTxHashLabel = "txHash"

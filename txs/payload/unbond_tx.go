@@ -6,10 +6,15 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 )
 
-func NewUnbondTx(address crypto.Address, height uint64) *UnbondTx {
+func NewUnbondTx(address crypto.Address, amount uint64) *UnbondTx {
 	return &UnbondTx{
-		Address: address,
-		Height:  height,
+		Input: &TxInput{
+			Address: address,
+		},
+		Output: &TxOutput{
+			Address: address,
+			Amount:  amount,
+		},
 	}
 }
 
@@ -22,7 +27,7 @@ func (tx *UnbondTx) GetInputs() []*TxInput {
 }
 
 func (tx *UnbondTx) String() string {
-	return fmt.Sprintf("UnbondTx{%v -> %s,%v}", tx.Input, tx.Address, tx.Height)
+	return fmt.Sprintf("UnbondTx{%v}", tx.Input.Address)
 }
 
 func (tx *UnbondTx) Any() *Any {

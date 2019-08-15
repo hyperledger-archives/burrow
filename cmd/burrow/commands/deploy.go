@@ -59,6 +59,8 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 
 		verboseOpt := cmd.BoolOpt("v verbose", false, "verbose output")
 
+		localAbiOpt := cmd.BoolOpt("local-abi", false, "use local ABIs rather than fetching them from burrow")
+
 		wasmOpt := cmd.BoolOpt("wasm", false, "Compile to WASM using solang (experimental)")
 
 		debugOpt := cmd.BoolOpt("d debug", false, "debug level output")
@@ -75,7 +77,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 
 		cmd.Spec = "[--chain=<host:port>] [--keys=<host:port>] [--mempool-signing] [--dir=<root directory>] " +
 			"[--output=<output file>] [--wasm] [--set=<KEY=VALUE>]... [--bin-path=<path>] [--gas=<gas>] " +
-			"[--jobs=<concurrent playbooks>] [--address=<address>] [--fee=<fee>] [--amount=<amount>] " +
+			"[--jobs=<concurrent playbooks>] [--address=<address>] [--fee=<fee>] [--amount=<amount>] [--local-abi] " +
 			"[--verbose] [--debug] [--timeout=<timeout>] [--proposal-create|--proposal-verify|--proposal-create] FILE..."
 
 		cmd.Action = func() {
@@ -97,6 +99,7 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			args.MempoolSign = *mempoolSigningOpt
 			args.Timeout = *timeoutSecondsOpt
 			args.Path = *pathOpt
+			args.LocalABI = *localAbiOpt
 			args.Wasm = *wasmOpt
 			args.DefaultOutput = *defaultOutputOpt
 			args.DefaultSets = *defaultSetsOpt

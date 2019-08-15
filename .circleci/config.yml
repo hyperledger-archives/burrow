@@ -5,6 +5,8 @@ defaults: &defaults
   working_directory: /go/src/github.com/hyperledger/burrow
   docker:
     - image: hyperledger/burrow:ci
+  environment:
+    - GO_TEST_ARGS: -p 2
 
 tag_filters: &tags_filters
   tags:
@@ -13,9 +15,12 @@ tag_filters: &tags_filters
 setup_docker: &setup_docker
   version: 17.11.0-ce
 
-# Start of CircleCI 2.0 config
-version: 2
+orbs:
+  codecov: codecov/codecov@1.0.4
+
+version: 2.1
 jobs:
+
   test:
     <<: *defaults
     steps:
@@ -26,10 +31,16 @@ jobs:
       # In case we miss compile errors not pulled into test paths
       - run: make build
 
+  test_cover:
+    <<: *defaults
+    steps:
+      - checkout
+      - run: make test_cover
+      - codecov/upload:
+          file: coverage.html
+
   test_integration:
     machine:
-      working_directory: /go/src/github.com/hyperledger/burrow
-      enabled: true
       image: circleci/classic:201808-01
     steps:
       - checkout
@@ -63,13 +74,17 @@ jobs:
 
 
 workflows:
-  version: 2
 
   test_and_release:
     jobs:
       - test:
           filters:
             <<: *tags_filters
+
+      - test_cover:
+          filters:
+            branches:
+              only: develop
 
       - test_integration:
           filters:

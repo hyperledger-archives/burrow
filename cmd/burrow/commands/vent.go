@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"sync"
@@ -10,8 +11,8 @@ import (
 
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/execution/evm/abi"
+	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/vent/config"
-	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/service"
 	"github.com/hyperledger/burrow/vent/sqldb"
 	"github.com/hyperledger/burrow/vent/sqlsol"
@@ -64,21 +65,22 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					}
 				}
 
-				cmd.Spec = "--spec=<spec file or dir> --abi=<abi file or dir> [--db-adapter] [--db-url] [--db-schema] " +
+				cmd.Spec = "--spec=<spec file or dir> [--abi=<abi file or dir>] [--db-adapter] [--db-url] [--db-schema] " +
 					"[--blocks] [--txs] [--grpc-addr] [--http-addr] [--log-level] [--announce-every=<duration>]"
 
 				cmd.Action = func() {
-					log := logger.NewLogger(cfg.LogLevel)
+					log, err := logconfig.New().NewLogger()
+					if err != nil {
+						output.Fatalf("failed to load logger: %v", err)
+					}
+
+					log = log.With("service", "vent")
 					consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
 					server := service.NewServer(cfg, log, consumer)
 
 					projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, cfg.SpecOpt)
 					if err != nil {
 						output.Fatalf("Spec loader error: %v", err)
-					}
-					abiSpec, err := abi.LoadPath(cfg.AbiFileOrDirs...)
-					if err != nil {
-						output.Fatalf("ABI loader error: %v", err)
 					}
 
 					var wg sync.WaitGroup
@@ -93,7 +95,7 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					wg.Add(1)
 
 					go func() {
-						if err := consumer.Run(projection, abiSpec, true); err != nil {
+						if err := consumer.Run(projection, true); err != nil {
 							output.Fatalf("Consumer execution error: %v", err)
 						}
 
@@ -124,7 +126,30 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 		cmd.Command("schema", "Print JSONSchema for spec file format to validate table specs",
 			func(cmd *cli.Cmd) {
 				cmd.Action = func() {
-					output.Printf(source.JSONString(types.EventSpecSchema()))
+					output.Printf(source.JSONString(types.ProjectionSpecSchema()))
+				}
+			})
+
+		cmd.Command("spec", "Generate SQLSOL specification from ABIs",
+			func(cmd *cli.Cmd) {
+				abiFileOpt := cmd.StringsOpt("abi", nil, "EVM Contract ABI file or folder")
+				dest := cmd.StringArg("SPEC", "", "Write resulting spec to this json file")
+
+				cmd.Action = func() {
+					abiSpec, err := abi.LoadPath(*abiFileOpt...)
+					if err != nil {
+						output.Fatalf("ABI loader error: %v", err)
+					}
+
+					spec, err := sqlsol.GenerateSpecFromAbis(abiSpec)
+					if err != nil {
+						output.Fatalf("error generating spec: %s\n", err)
+					}
+
+					err = ioutil.WriteFile(*dest, []byte(source.JSONString(spec)), 0644)
+					if err != nil {
+						output.Fatalf("error writing file: %v\n", err)
+					}
 				}
 			})
 
@@ -155,11 +180,15 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				}
 
 				cmd.Action = func() {
+					log, err := logconfig.New().NewLogger()
+					if err != nil {
+						output.Fatalf("failed to load logger: %v", err)
+					}
 					db, err := sqldb.NewSQLDB(types.SQLConnection{
 						DBAdapter: *dbOpts.adapter,
 						DBURL:     *dbOpts.url,
 						DBSchema:  *dbOpts.schema,
-						Log:       logger.NewLogger("debug"),
+						Log:       log.With("service", "vent"),
 					})
 					if err != nil {
 						output.Fatalf("Could not connect to SQL DB: %v", err)

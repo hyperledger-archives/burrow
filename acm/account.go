@@ -17,14 +17,13 @@ package acm
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 
-	"github.com/hyperledger/burrow/execution/errors"
-
-	amino "github.com/tendermint/go-amino"
-
+	"github.com/gogo/protobuf/proto"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event/query"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/permission"
 )
 
@@ -63,23 +62,6 @@ func (acc *Account) SubtractFromBalance(amount uint64) error {
 	return nil
 }
 
-///---- Serialisation methods
-
-var cdc = amino.NewCodec()
-
-func (acc *Account) Encode() ([]byte, error) {
-	return cdc.MarshalBinaryBare(acc)
-}
-
-func Decode(accBytes []byte) (*Account, error) {
-	ca := new(Account)
-	err := cdc.UnmarshalBinaryBare(accBytes, ca)
-	if err != nil {
-		return nil, err
-	}
-	return ca, nil
-}
-
 // Conversions
 //
 // Using the naming convention is this package of 'As<Type>' being
@@ -111,14 +93,18 @@ func (acc *Account) Copy() *Account {
 }
 
 func (acc *Account) Equal(accOther *Account) bool {
-	accEnc, err := acc.Encode()
+	buf := proto.NewBuffer(nil)
+	err := buf.Marshal(acc)
 	if err != nil {
 		return false
 	}
-	accOtherEnc, err := acc.Encode()
+	accEnc := buf.Bytes()
+	buf.Reset()
+	err = buf.Marshal(accOther)
 	if err != nil {
 		return false
 	}
+	accOtherEnc := buf.Bytes()
 	return bytes.Equal(accEnc, accOtherEnc)
 }
 
@@ -127,18 +113,13 @@ func (acc Account) String() string {
 		acc.Address, acc.Sequence, acc.PublicKey, acc.Balance, len(acc.EVMCode), acc.Permissions)
 }
 
-func (acc *Account) Tagged() query.Tagged {
-	return &TaggedAccount{
-		Account: acc,
-		Tagged: query.MergeTags(query.MustReflectTags(acc, "Address", "Balance", "Sequence", "EVMCode"),
-			query.TagMap{
-				"Permissions": acc.Permissions.Base.ResultantPerms(),
-				"Roles":       acc.Permissions.Roles,
-			}),
+func (acc *Account) Get(key string) (interface{}, bool) {
+	switch key {
+	case "Permissions":
+		return acc.Permissions.Base.ResultantPerms(), true
+	case "Roles":
+		return acc.Permissions.Roles, true
+	default:
+		return query.GetReflect(reflect.ValueOf(acc), key)
 	}
-}
-
-type TaggedAccount struct {
-	*Account
-	query.Tagged
 }

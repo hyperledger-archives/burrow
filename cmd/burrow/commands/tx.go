@@ -43,9 +43,9 @@ func Tx(output Output) func(cmd *cli.Cmd) {
 			address := conf.Address.String()
 
 			cmd.Command("send", "send value to another account", func(cmd *cli.Cmd) {
-				sourceOpt := cmd.StringOpt("source", "", "Address to send from, if not set config is used")
-				targetOpt := cmd.StringOpt("target", "", "Address to receive transfer, required")
-				amountOpt := cmd.StringOpt("amount", "", "Amount of value to send, required")
+				sourceOpt := cmd.StringOpt("s source", "", "Address to send from, if not set config is used")
+				targetOpt := cmd.StringOpt("t target", "", "Address to receive transfer, required")
+				amountOpt := cmd.StringOpt("a amount", "", "Amount of value to send, required")
 				cmd.Spec += "[--source=<address>] [--target=<address>] [--amount=<value>]"
 
 				cmd.Action = func() {
@@ -69,15 +69,65 @@ func Tx(output Output) func(cmd *cli.Cmd) {
 					}))
 				}
 			})
+
+			cmd.Command("bond", "bond a new validator", func(cmd *cli.Cmd) {
+				sourceOpt := cmd.StringOpt("s source", "", "Account with bonding perm, if not set config is used")
+				amountOpt := cmd.StringOpt("a amount", "", "Amount of value to bond, required")
+				cmd.Spec += "[--source=<address>] [--amount=<value>]"
+
+				cmd.Action = func() {
+					bond := &def.Bond{
+						Source: jobs.FirstOf(*sourceOpt, address),
+						Amount: *amountOpt,
+					}
+
+					if err := bond.Validate(); err != nil {
+						output.Fatalf("could not validate BondTx: %v", err)
+					}
+
+					tx, err := jobs.FormulateBondJob(bond, address, client, logger)
+					if err != nil {
+						output.Fatalf("could not formulate BondTx: %v", err)
+					}
+
+					output.Printf("%s", source.JSONString(payload.Any{
+						BondTx: tx,
+					}))
+				}
+			})
+
+			cmd.Command("unbond", "unbond an existing validator", func(cmd *cli.Cmd) {
+				sourceOpt := cmd.StringOpt("s source", "", "Validator to unbond, if not set config is used")
+				amountOpt := cmd.StringOpt("a amount", "", "Amount of value to unbond, required")
+				cmd.Spec += "[--source=<address>] [--amount=<value>]"
+
+				cmd.Action = func() {
+					unbond := &def.Unbond{
+						Source: jobs.FirstOf(*sourceOpt, address),
+						Amount: *amountOpt,
+					}
+
+					if err := unbond.Validate(); err != nil {
+						output.Fatalf("could not validate UnbondTx: %v", err)
+					}
+
+					tx, err := jobs.FormulateUnbondJob(unbond, address, client, logger)
+					if err != nil {
+						output.Fatalf("could not formulate UnbondTx: %v", err)
+					}
+
+					output.Printf("%s", source.JSONString(payload.Any{
+						UnbondTx: tx,
+					}))
+				}
+			})
 		})
 
 		cmd.Command("commit", "read and send a tx to mempool", func(cmd *cli.Cmd) {
-			configOpts := addConfigOptions(cmd)
 			conf, err := configOpts.obtainBurrowConfig()
 			if err != nil {
 				output.Fatalf("could not set up config: %v", err)
 			}
-
 			fileOpt := cmd.StringOpt("f file", "", "Read the tx spec from a file")
 			cmd.Spec += "[--file=<location>]"
 
@@ -104,6 +154,10 @@ func Tx(output Output) func(cmd *cli.Cmd) {
 
 				switch tx := rawTx.GetValue().(type) {
 				case *payload.SendTx:
+					hash, err = makeTx(client, tx)
+				case *payload.BondTx:
+					hash, err = makeTx(client, tx)
+				case *payload.UnbondTx:
 					hash, err = makeTx(client, tx)
 				default:
 					output.Fatalf("payload type not recognized")

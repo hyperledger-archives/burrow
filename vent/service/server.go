@@ -4,21 +4,21 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/vent/config"
-	"github.com/hyperledger/burrow/vent/logger"
 )
 
 // Server exposes HTTP endpoints for the service
 type Server struct {
 	Config   *config.VentConfig
-	Log      *logger.Logger
+	Log      *logging.Logger
 	Consumer *Consumer
 	mux      *http.ServeMux
 	stopCh   chan bool
 }
 
 // NewServer returns a new HTTP server
-func NewServer(cfg *config.VentConfig, log *logger.Logger, consumer *Consumer) *Server {
+func NewServer(cfg *config.VentConfig, log *logging.Logger, consumer *Consumer) *Server {
 	// setup handlers
 	mux := http.NewServeMux()
 
@@ -35,20 +35,20 @@ func NewServer(cfg *config.VentConfig, log *logger.Logger, consumer *Consumer) *
 
 // Run starts the HTTP server
 func (s *Server) Run() {
-	s.Log.Info("msg", "Starting HTTP Server")
+	s.Log.InfoMsg("Starting HTTP Server")
 
 	// start http server
 	httpServer := &http.Server{Addr: s.Config.HTTPAddr, Handler: s}
 
 	go func() {
-		s.Log.Info("msg", "HTTP Server listening", "address", s.Config.HTTPAddr)
+		s.Log.InfoMsg("HTTP Server listening", "address", s.Config.HTTPAddr)
 		httpServer.ListenAndServe()
 	}()
 
 	// wait for stop signal
 	<-s.stopCh
 
-	s.Log.Info("msg", "Shutting down HTTP Server...")
+	s.Log.InfoMsg("Shutting down HTTP Server...")
 
 	httpServer.Shutdown(context.Background())
 }

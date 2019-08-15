@@ -121,28 +121,28 @@ func TestEnsureKeyStore(t *testing.T) {
 		Accounts: NewMustKeyFormat("foo", 4, 5, 6),
 		Storage:  NewMustKeyFormat("foos", 4, 5, 6),
 	}
-	err := EnsureKeyFormatStore(keyStore)
+	_, err := EnsureKeyFormatStore(keyStore)
 	require.NoError(t, err)
 
-	err = EnsureKeyFormatStore(&keyStore)
+	_, err = EnsureKeyFormatStore(&keyStore)
 	require.NoError(t, err, "pointer to keystore should work")
 
 	keyStore = testKeyStore{
 		Accounts: NewMustKeyFormat("foo", 4, 5, 6),
 		Storage:  NewMustKeyFormat("foo", 4, 5, 6),
 	}
-	err = EnsureKeyFormatStore(&keyStore)
+	_, err = EnsureKeyFormatStore(&keyStore)
 	require.Error(t, err, "duplicate prefixes should be detected")
 
 	// Test missing formats
 	keyStore = testKeyStore{}
-	err = EnsureKeyFormatStore(&keyStore)
+	_, err = EnsureKeyFormatStore(&keyStore)
 	require.Error(t, err, "all formats should be set")
 
 	keyStore = testKeyStore{
 		Accounts: NewMustKeyFormat("foo", 4, 5, 6),
 	}
-	err = EnsureKeyFormatStore(&keyStore)
+	_, err = EnsureKeyFormatStore(&keyStore)
 	require.Error(t, err, "all formats should be set")
 
 	keyStore2 := struct {
@@ -153,7 +153,7 @@ func TestEnsureKeyStore(t *testing.T) {
 		Storage:  NewMustKeyFormat("foo2", 1, 2),
 	}
 
-	err = EnsureKeyFormatStore(keyStore2)
+	_, err = EnsureKeyFormatStore(keyStore2)
 	require.NoError(t, err)
 
 	keyStore2 = struct {
@@ -162,10 +162,10 @@ func TestEnsureKeyStore(t *testing.T) {
 	}{
 		Storage: NewMustKeyFormat("foo2", 1, 2),
 	}
-	err = EnsureKeyFormatStore(keyStore2)
+	_, err = EnsureKeyFormatStore(keyStore2)
 	require.NoError(t, err)
 
-	err = EnsureKeyFormatStore(keyStore2)
+	_, err = EnsureKeyFormatStore(keyStore2)
 	require.NoError(t, err)
 
 	keyStore2 = struct {
@@ -176,6 +176,6 @@ func TestEnsureKeyStore(t *testing.T) {
 		Storage:  NewMustKeyFormat("foo", 1, 2),
 	}
 
-	err = EnsureKeyFormatStore(keyStore2)
+	_, err = EnsureKeyFormatStore(keyStore2)
 	require.Error(t, err, "duplicate prefixes should be detected")
 }

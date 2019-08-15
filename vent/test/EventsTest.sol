@@ -34,11 +34,33 @@ contract EventsTest {
         emit UpdateTestEvents(prefix32(_name), TABLE_EVENTS_TEST, prefix32(_description));
     }
 
+    function addThings(string calldata _name, string calldata _description) external {
+        Thing storage thing = things[_name];
+        if (!thing.exists) {
+            length++;
+        }
+        thing.name = _name;
+        thing.description = _description;
+        thing.exists = true;
+        emit UpdateTestEvents(prefix32(_name), TABLE_EVENTS_TEST, prefix32(_description));
+        emit UpdateTestEvents(prefix32(_name), TABLE_EVENTS_TEST, prefix32(_description));
+    }
+
     function removeThing(string calldata _name) external {
         Thing storage thing = things[_name];
         if (thing.exists) {
             length--;
             delete things[_name];
+            emit DeleteTestEvents(prefix32(_name), TABLE_EVENTS_TEST, 0);
+        }
+    }
+
+    function removeThings(string calldata _name) external {
+        Thing storage thing = things[_name];
+        if (thing.exists) {
+            length--;
+            delete things[_name];
+            emit DeleteTestEvents(prefix32(_name), TABLE_EVENTS_TEST, 0);
             emit DeleteTestEvents(prefix32(_name), TABLE_EVENTS_TEST, 0);
         }
     }

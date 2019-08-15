@@ -1,4 +1,3 @@
-// Needed to proto2 rather than proto3 to get pointer field for PermArg
 syntax = 'proto3';
 
 option go_package = "github.com/hyperledger/burrow/acm/balance";
@@ -7,6 +6,7 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 package balance;
 
+option (gogoproto.stable_marshaler_all) = true;
 option (gogoproto.marshaler_all) = true;
 option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.sizer_all) = true;

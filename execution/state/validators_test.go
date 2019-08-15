@@ -20,7 +20,8 @@ func TestValidatorsReadWrite(t *testing.T) {
 	v := validator.FromAccount(acm.NewAccountFromSecret("foobar"), power)
 
 	_, _, err := s.Update(func(up Updatable) error {
-		return up.SetPower(v.GetPublicKey(), v.BigPower())
+		_, err := up.SetPower(v.GetPublicKey(), v.BigPower())
+		return err
 	})
 
 	require.NoError(t, err)
@@ -55,8 +56,15 @@ func testLoadValidatorRing(t *testing.T, commits int) {
 	var version int64
 	var err error
 
+	// we need to add a larger staked entity first
+	// to prevent unbalancing the validator set
+	_, err = s.writeState.SetPower(pub(0), pow(1000))
+	require.NoError(t, err)
+	_, version, err = s.commit()
+	require.NoError(t, err)
+
 	for i := 1; i <= commits; i++ {
-		err = s.writeState.SetPower(pub(i), pow(i))
+		_, err = s.writeState.SetPower(pub(i), pow(i))
 		require.NoError(t, err)
 		_, version, err = s.commit()
 		require.NoError(t, err)

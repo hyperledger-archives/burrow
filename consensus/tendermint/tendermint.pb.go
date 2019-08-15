@@ -5,8 +5,8 @@ package tendermint
 
 import (
 	fmt "fmt"
-	io "io"
 	math "math"
+	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -48,25 +48,16 @@ func (*NodeInfo) Descriptor() ([]byte, []int) {
 	return fileDescriptor_04f926c8da23c367, []int{0}
 }
 func (m *NodeInfo) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
+	return xxx_messageInfo_NodeInfo.Unmarshal(m, b)
 }
 func (m *NodeInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_NodeInfo.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
+	return xxx_messageInfo_NodeInfo.Marshal(b, m, deterministic)
 }
 func (m *NodeInfo) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_NodeInfo.Merge(m, src)
 }
 func (m *NodeInfo) XXX_Size() int {
-	return m.Size()
+	return xxx_messageInfo_NodeInfo.Size(m)
 }
 func (m *NodeInfo) XXX_DiscardUnknown() {
 	xxx_messageInfo_NodeInfo.DiscardUnknown(m)
@@ -128,112 +119,30 @@ func init() { proto.RegisterFile("tendermint.proto", fileDescriptor_04f926c8da23
 func init() { golang_proto.RegisterFile("tendermint.proto", fileDescriptor_04f926c8da23c367) }
 
 var fileDescriptor_04f926c8da23c367 = []byte{
-	// 324 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x91, 0xcf, 0x4e, 0xc2, 0x40,
-	0x10, 0xc6, 0xdd, 0xaa, 0x80, 0x1b, 0x4d, 0x4c, 0x4f, 0x1b, 0x0f, 0x85, 0x18, 0x0f, 0x1c, 0xa4,
-	0x4d, 0xfc, 0xf3, 0x00, 0x02, 0x07, 0x9a, 0x28, 0xd1, 0xc6, 0x78, 0xf0, 0x46, 0xe9, 0x50, 0x36,
-	0xc0, 0x0e, 0xd9, 0xdd, 0x06, 0xfa, 0x76, 0x1e, 0x39, 0xea, 0xd5, 0x03, 0x31, 0xf0, 0x22, 0xa6,
-	0xdb, 0x22, 0x78, 0xd1, 0xdb, 0xfe, 0xbe, 0x6f, 0x67, 0xe6, 0xdb, 0x1d, 0x7a, 0xaa, 0x41, 0x44,
-	0x20, 0x27, 0x5c, 0x68, 0x77, 0x2a, 0x51, 0xa3, 0x4d, 0xb7, 0xca, 0x59, 0x23, 0xe6, 0x7a, 0x98,
-	0x84, 0x6e, 0x1f, 0x27, 0x5e, 0x8c, 0x31, 0x7a, 0xe6, 0x4a, 0x98, 0x0c, 0x0c, 0x19, 0x30, 0xa7,
-	0xbc, 0xf4, 0xfc, 0xc3, 0xa2, 0x95, 0x2e, 0x46, 0xe0, 0x8b, 0x01, 0xda, 0x6d, 0x6a, 0xf9, 0x6d,
-	0x46, 0x6a, 0xa4, 0x7e, 0xdc, 0xbc, 0x59, 0x2c, 0xab, 0x7b, 0x9f, 0xcb, 0xea, 0xe5, 0x4e, 0xbf,
-	0x61, 0x3a, 0x05, 0x39, 0x86, 0x28, 0x06, 0xe9, 0x85, 0x89, 0x94, 0x38, 0xf3, 0xfa, 0x32, 0x9d,
-	0x6a, 0x74, 0xef, 0xa2, 0x48, 0x82, 0x52, 0x81, 0xe5, 0xb7, 0xed, 0x0b, 0x7a, 0x72, 0xcf, 0x95,
-	0x06, 0x51, 0x88, 0xcc, 0xaa, 0x91, 0xfa, 0x51, 0xf0, 0x5b, 0xb4, 0x19, 0x2d, 0x77, 0x41, 0xcf,
-	0x50, 0x8e, 0xd8, 0xbe, 0xf1, 0x37, 0x98, 0x39, 0x2f, 0x20, 0x15, 0x47, 0xc1, 0x0e, 0x72, 0xa7,
-	0x40, 0xfb, 0x89, 0x56, 0x5a, 0xc3, 0x9e, 0x10, 0x30, 0x56, 0xec, 0xd0, 0xa4, 0xbc, 0x2d, 0x52,
-	0x36, 0xfe, 0x4e, 0x19, 0x72, 0xd1, 0x93, 0xa9, 0xdb, 0x81, 0x79, 0x33, 0xd5, 0xa0, 0x82, 0x9f,
-	0x36, 0xd9, 0xb0, 0x07, 0x14, 0x7c, 0x04, 0x92, 0x95, 0xf2, 0x61, 0x05, 0xda, 0x0e, 0xa5, 0xc1,
-	0x63, 0x6b, 0xf3, 0x86, 0xb2, 0x31, 0x77, 0x94, 0xac, 0xf2, 0x79, 0xee, 0x8b, 0x08, 0xe6, 0xac,
-	0x92, 0x57, 0x16, 0xd8, 0xec, 0x2c, 0x56, 0x0e, 0x79, 0x5f, 0x39, 0xe4, 0x6b, 0xe5, 0x90, 0xb7,
-	0xb5, 0x43, 0x16, 0x6b, 0x87, 0xbc, 0x5e, 0xfd, 0xf3, 0x91, 0x28, 0x14, 0x08, 0x95, 0x28, 0x6f,
-	0xbb, 0xcc, 0xb0, 0x64, 0x96, 0x74, 0xfd, 0x1d, 0x00, 0x00, 0xff, 0xff, 0x30, 0x44, 0xcf, 0x05,
-	0xf3, 0x01, 0x00, 0x00,
+	// 323 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x91, 0x4f, 0x4f, 0xf2, 0x40,
+	0x10, 0xc6, 0xdf, 0xed, 0xab, 0x80, 0x1b, 0x4d, 0x4c, 0x4f, 0x1b, 0x0f, 0x85, 0x18, 0x0f, 0x1c,
+	0xa4, 0x4d, 0xfc, 0xf3, 0x01, 0x84, 0x1e, 0x6c, 0xa2, 0x44, 0x1b, 0xe3, 0xc1, 0x1b, 0xa5, 0x43,
+	0xd9, 0x00, 0x3b, 0x64, 0x77, 0x1b, 0xe8, 0xb7, 0xf3, 0xc8, 0xd5, 0x9b, 0xf1, 0x40, 0x0c, 0x7c,
+	0x11, 0xd3, 0x6d, 0x11, 0xbc, 0xe8, 0x6d, 0x7f, 0xcf, 0xb3, 0x33, 0xf3, 0xec, 0x0e, 0x3d, 0xd6,
+	0x20, 0x62, 0x90, 0x13, 0x2e, 0xb4, 0x3b, 0x95, 0xa8, 0xd1, 0xa6, 0x5b, 0xe5, 0xa4, 0x95, 0x70,
+	0x3d, 0x4c, 0x23, 0xb7, 0x8f, 0x13, 0x2f, 0xc1, 0x04, 0x3d, 0x73, 0x25, 0x4a, 0x07, 0x86, 0x0c,
+	0x98, 0x53, 0x51, 0x7a, 0xfa, 0x66, 0xd1, 0x5a, 0x17, 0x63, 0x08, 0xc4, 0x00, 0x6d, 0x9f, 0x5a,
+	0x81, 0xcf, 0x48, 0x83, 0x34, 0x0f, 0xdb, 0x57, 0x8b, 0x65, 0xfd, 0xdf, 0xc7, 0xb2, 0x7e, 0xbe,
+	0xd3, 0x6f, 0x98, 0x4d, 0x41, 0x8e, 0x21, 0x4e, 0x40, 0x7a, 0x51, 0x2a, 0x25, 0xce, 0xbc, 0xbe,
+	0xcc, 0xa6, 0x1a, 0xdd, 0x9b, 0x38, 0x96, 0xa0, 0x54, 0x68, 0x05, 0xbe, 0x7d, 0x46, 0x8f, 0xee,
+	0xb8, 0xd2, 0x20, 0x4a, 0x91, 0x59, 0x0d, 0xd2, 0x3c, 0x08, 0x7f, 0x8a, 0x36, 0xa3, 0xd5, 0x2e,
+	0xe8, 0x19, 0xca, 0x11, 0xfb, 0x6f, 0xfc, 0x0d, 0xe6, 0xce, 0x33, 0x48, 0xc5, 0x51, 0xb0, 0xbd,
+	0xc2, 0x29, 0xd1, 0x7e, 0xa4, 0xb5, 0xce, 0xb0, 0x27, 0x04, 0x8c, 0x15, 0xdb, 0x37, 0x29, 0xaf,
+	0xcb, 0x94, 0xad, 0xdf, 0x53, 0x46, 0x5c, 0xf4, 0x64, 0xe6, 0xde, 0xc2, 0xbc, 0x9d, 0x69, 0x50,
+	0xe1, 0x77, 0x9b, 0x7c, 0xd8, 0x3d, 0x0a, 0x3e, 0x02, 0xc9, 0x2a, 0xc5, 0xb0, 0x12, 0x6d, 0x87,
+	0xd2, 0xf0, 0xa1, 0xb3, 0x79, 0x43, 0xd5, 0x98, 0x3b, 0x4a, 0x5e, 0xf9, 0x34, 0x0f, 0x44, 0x0c,
+	0x73, 0x56, 0x2b, 0x2a, 0x4b, 0x6c, 0xfb, 0xef, 0x2b, 0x87, 0x7c, 0xae, 0x1c, 0xf2, 0xba, 0x76,
+	0xc8, 0x62, 0xed, 0x90, 0x97, 0x8b, 0x3f, 0x3e, 0x11, 0x85, 0x02, 0xa1, 0x52, 0xe5, 0x6d, 0x17,
+	0x19, 0x55, 0xcc, 0x82, 0x2e, 0xbf, 0x02, 0x00, 0x00, 0xff, 0xff, 0xba, 0x9e, 0x0e, 0xac, 0xef,
+	0x01, 0x00, 0x00,
 }
 
-func (m *NodeInfo) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *NodeInfo) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	dAtA[i] = 0xa
-	i++
-	i = encodeVarintTendermint(dAtA, i, uint64(m.ID.Size()))
-	n1, err := m.ID.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n1
-	if len(m.ListenAddress) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintTendermint(dAtA, i, uint64(len(m.ListenAddress)))
-		i += copy(dAtA[i:], m.ListenAddress)
-	}
-	if len(m.Network) > 0 {
-		dAtA[i] = 0x1a
-		i++
-		i = encodeVarintTendermint(dAtA, i, uint64(len(m.Network)))
-		i += copy(dAtA[i:], m.Network)
-	}
-	if len(m.Version) > 0 {
-		dAtA[i] = 0x22
-		i++
-		i = encodeVarintTendermint(dAtA, i, uint64(len(m.Version)))
-		i += copy(dAtA[i:], m.Version)
-	}
-	dAtA[i] = 0x2a
-	i++
-	i = encodeVarintTendermint(dAtA, i, uint64(m.Channels.Size()))
-	n2, err := m.Channels.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n2
-	if len(m.Moniker) > 0 {
-		dAtA[i] = 0x32
-		i++
-		i = encodeVarintTendermint(dAtA, i, uint64(len(m.Moniker)))
-		i += copy(dAtA[i:], m.Moniker)
-	}
-	if len(m.RPCAddress) > 0 {
-		dAtA[i] = 0x3a
-		i++
-		i = encodeVarintTendermint(dAtA, i, uint64(len(m.RPCAddress)))
-		i += copy(dAtA[i:], m.RPCAddress)
-	}
-	if len(m.TxIndex) > 0 {
-		dAtA[i] = 0x42
-		i++
-		i = encodeVarintTendermint(dAtA, i, uint64(len(m.TxIndex)))
-		i += copy(dAtA[i:], m.TxIndex)
-	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	return i, nil
-}
-
-func encodeVarintTendermint(dAtA []byte, offset int, v uint64) int {
-	for v >= 1<<7 {
-		dAtA[offset] = uint8(v&0x7f | 0x80)
-		v >>= 7
-		offset++
-	}
-	dAtA[offset] = uint8(v)
-	return offset + 1
-}
 func (m *NodeInfo) Size() (n int) {
 	if m == nil {
 		return 0
@@ -275,437 +184,8 @@ func (m *NodeInfo) Size() (n int) {
 }
 
 func sovTendermint(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozTendermint(x uint64) (n int) {
 	return sovTendermint(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *NodeInfo) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowTendermint
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: NodeInfo: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: NodeInfo: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ID", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowTendermint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.ID.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ListenAddress", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowTendermint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ListenAddress = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Network", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowTendermint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Network = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowTendermint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Version = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Channels", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowTendermint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if err := m.Channels.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Moniker", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowTendermint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Moniker = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 7:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RPCAddress", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowTendermint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.RPCAddress = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 8:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field TxIndex", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowTendermint
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.TxIndex = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipTendermint(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthTendermint
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func skipTendermint(dAtA []byte) (n int, err error) {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return 0, ErrIntOverflowTendermint
-			}
-			if iNdEx >= l {
-				return 0, io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		wireType := int(wire & 0x7)
-		switch wireType {
-		case 0:
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return 0, ErrIntOverflowTendermint
-				}
-				if iNdEx >= l {
-					return 0, io.ErrUnexpectedEOF
-				}
-				iNdEx++
-				if dAtA[iNdEx-1] < 0x80 {
-					break
-				}
-			}
-			return iNdEx, nil
-		case 1:
-			iNdEx += 8
-			return iNdEx, nil
-		case 2:
-			var length int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return 0, ErrIntOverflowTendermint
-				}
-				if iNdEx >= l {
-					return 0, io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				length |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if length < 0 {
-				return 0, ErrInvalidLengthTendermint
-			}
-			iNdEx += length
-			if iNdEx < 0 {
-				return 0, ErrInvalidLengthTendermint
-			}
-			return iNdEx, nil
-		case 3:
-			for {
-				var innerWire uint64
-				var start int = iNdEx
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return 0, ErrIntOverflowTendermint
-					}
-					if iNdEx >= l {
-						return 0, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					innerWire |= (uint64(b) & 0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				innerWireType := int(innerWire & 0x7)
-				if innerWireType == 4 {
-					break
-				}
-				next, err := skipTendermint(dAtA[start:])
-				if err != nil {
-					return 0, err
-				}
-				iNdEx = start + next
-				if iNdEx < 0 {
-					return 0, ErrInvalidLengthTendermint
-				}
-			}
-			return iNdEx, nil
-		case 4:
-			return iNdEx, nil
-		case 5:
-			iNdEx += 4
-			return iNdEx, nil
-		default:
-			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
-		}
-	}
-	panic("unreachable")
-}
-
-var (
-	ErrInvalidLengthTendermint = fmt.Errorf("proto: negative length found during unmarshaling")
-	ErrIntOverflowTendermint   = fmt.Errorf("proto: integer overflow")
-)

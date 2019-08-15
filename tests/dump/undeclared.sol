@@ -1,7 +1,7 @@
 pragma solidity ^0.5.4;
 
 contract test {
-	event Bar(string a, int b);
+	event Bar(bytes32 a, int b);
 
 	constructor() public {
 		emit Bar("constructor", 0);
@@ -23,7 +23,7 @@ contract test {
 
 		int c = a * b;
 
-		emit Bar("result", c);
+		emit Bar(hex"DEADCAFE", c);
 
 		return c;
 	}

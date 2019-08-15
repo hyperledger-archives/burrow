@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -26,9 +27,7 @@ func TestWriteState_AddBlock(t *testing.T) {
 
 	txIndex := uint64(0)
 	eventIndex := uint64(0)
-	start := height
-	end := height + 1
-	err = s.IterateStreamEvents(&start, &end,
+	err = s.IterateStreamEvents(&height, &height,
 		func(ev *exec.StreamEvent) error {
 			switch {
 			case ev.BeginTx != nil:
@@ -113,7 +112,7 @@ func TestReadState_TxByHash(t *testing.T) {
 			require.NotNil(t, txOut, "should retrieve non-nil transaction by TxHash %v", tx.TxHash)
 			// Make sure we get the same tx
 			require.Equal(t, txHash, txOut.TxHash.String(), "TxHash does not match as string")
-			require.Equal(t, *tx, *txOut)
+			require.Equal(t, source.JSONString(tx), source.JSONString(txOut))
 		}
 	}
 }

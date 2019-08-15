@@ -4,8 +4,70 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/permission"
+	"github.com/tmthrgd/go-hex"
 )
+
+// MetadataHash is the keccak hash for the metadata. This is to make the metadata content-addressed
+type MetadataHash [32]byte
+
+func (h *MetadataHash) Bytes() []byte {
+	b := make([]byte, 32)
+	copy(b, h[:])
+	return b
+}
+
+func (ch *MetadataHash) UnmarshalText(hexBytes []byte) error {
+	bs, err := hex.DecodeString(string(hexBytes))
+	if err != nil {
+		return err
+	}
+	copy(ch[:], bs)
+	return nil
+}
+
+func (ch MetadataHash) MarshalText() ([]byte, error) {
+	return []byte(ch.String()), nil
+}
+
+func (ch MetadataHash) String() string {
+	return hex.EncodeUpperToString(ch[:])
+}
+
+func GetMetadataHash(metadata string) (metahash MetadataHash) {
+	hash := sha3.NewKeccak256()
+	hash.Write([]byte(metadata))
+	copy(metahash[:], hash.Sum(nil))
+	return
+}
+
+// CodeHash is the keccak hash for the code for an account. This is used for the EVM CODEHASH opcode, and to find the
+// correct Metadata for a contract
+type CodeHash [32]byte
+
+func (h *CodeHash) Bytes() []byte {
+	b := make([]byte, 32)
+	copy(b, h[:])
+	return b
+}
+
+func (ch *CodeHash) UnmarshalText(hexBytes []byte) error {
+	bs, err := hex.DecodeString(string(hexBytes))
+	if err != nil {
+		return err
+	}
+	copy(ch[:], bs)
+	return nil
+}
+
+func (ch CodeHash) MarshalText() ([]byte, error) {
+	return []byte(ch.String()), nil
+}
+
+func (ch CodeHash) String() string {
+	return hex.EncodeUpperToString(ch[:])
+}
 
 type AccountGetter interface {
 	// Get an account by its address return nil if it does not exist (which should not be an error)
@@ -45,6 +107,16 @@ type StorageIterable interface {
 	IterateStorage(address crypto.Address, consumer func(key binary.Word256, value []byte) error) (err error)
 }
 
+type MetadataGetter interface {
+	// Get an Metadata by its hash. This is content-addressed
+	GetMetadata(metahash MetadataHash) (string, error)
+}
+
+type MetadataSetter interface {
+	// Set an Metadata according to it keccak-256 hash.
+	SetMetadata(metahash MetadataHash, Metadata string) error
+}
+
 type AccountStats struct {
 	AccountsWithCode    uint64
 	AccountsWithoutCode uint64
@@ -60,6 +132,7 @@ type AccountStatsGetter interface {
 type Reader interface {
 	AccountGetter
 	StorageGetter
+	MetadataGetter
 }
 
 type Iterable interface {
@@ -82,6 +155,7 @@ type IterableStatsReader interface {
 type Writer interface {
 	AccountUpdater
 	StorageSetter
+	MetadataSetter
 }
 
 // Read and write account and storage state

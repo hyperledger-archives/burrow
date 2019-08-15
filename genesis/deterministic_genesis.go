@@ -22,8 +22,7 @@ func NewDeterministicGenesis(seed int64) *deterministicGenesis {
 }
 
 func (dg *deterministicGenesis) GenesisDoc(numAccounts int, numValidators int) (*GenesisDoc, []*acm.PrivateAccount, []*acm.PrivateAccount) {
-
-	accounts := make([]Account, numAccounts)
+	accounts := make([]Account, numAccounts+numValidators)
 	privAccounts := make([]*acm.PrivateAccount, numAccounts)
 	defaultPerms := permission.DefaultAccountPermissions
 	for i := 0; i < numAccounts; i++ {
@@ -44,13 +43,19 @@ func (dg *deterministicGenesis) GenesisDoc(numAccounts int, numValidators int) (
 	for i := 0; i < numValidators; i++ {
 		validator := acm.GeneratePrivateAccountFromSecret(fmt.Sprintf("val_%v", i))
 		privValidators[i] = validator
+		basicAcc := BasicAccount{
+			Address:   validator.GetAddress(),
+			PublicKey: validator.GetPublicKey(),
+			// Avoid max validator cap
+			Amount: uint64(dg.random.Int63()/16 + 1),
+		}
+		fullAcc := Account{
+			BasicAccount: basicAcc,
+			Permissions:  defaultPerms.Clone(),
+		}
+		accounts[numAccounts+i] = fullAcc
 		validators[i] = Validator{
-			BasicAccount: BasicAccount{
-				Address:   validator.GetAddress(),
-				PublicKey: validator.GetPublicKey(),
-				// Avoid max validator cap
-				Amount: uint64(dg.random.Int63()/16 + 1),
-			},
+			BasicAccount: basicAcc,
 			UnbondTo: []BasicAccount{
 				{
 					Address: validator.GetAddress(),

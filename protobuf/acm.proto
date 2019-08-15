@@ -9,6 +9,7 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "permission.proto";
 import "crypto.proto";
 
+option (gogoproto.stable_marshaler_all) = true;
 option (gogoproto.marshaler_all) = true;
 option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.sizer_all) = true;
@@ -24,4 +25,16 @@ message Account {
     bytes EVMCode = 5 [(gogoproto.customtype) = "Bytecode", (gogoproto.nullable) = false];
     permission.AccountPermissions Permissions = 6 [(gogoproto.nullable) = false];
     bytes WASMCode = 7 [(gogoproto.customtype) = "Bytecode", (gogoproto.jsontag) = ",omitempty", (gogoproto.nullable) = false];
+    bytes CodeHash = 8 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false, (gogoproto.jsontag) = "-"];
+    repeated ContractMeta ContractMeta = 9;
+    // The metadata is stored in the deployed account. When the deployed account creates new account (from Solidity/EVM), they point to the original deployed
+    // account where the metadata is stored. This original account is called the forebear.
+    bytes Forebear = 10 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address"];
+}
+
+message ContractMeta {
+    bytes CodeHash = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
+    bytes MetadataHash = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
+    // In the dump format we would like the ABI rather than its hash
+    string Metadata = 3;
 }

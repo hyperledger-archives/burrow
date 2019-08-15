@@ -15,14 +15,13 @@
 package exec
 
 import (
-	"strings"
-
 	"fmt"
+	"strings"
 
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/event/query"
-	hex "github.com/tmthrgd/go-hex"
+	"github.com/hyperledger/burrow/execution/evm/abi"
+	"github.com/tmthrgd/go-hex"
 )
 
 const logNTextTopicCutset = "\x00"
@@ -52,7 +51,7 @@ func init() {
 	logTagKeys = append(logTagKeys, event.AddressKey)
 }
 
-func (log *LogEvent) Get(key string) (string, bool) {
+func (log *LogEvent) Get(key string) (interface{}, bool) {
 	if log == nil {
 		return "", false
 	}
@@ -69,7 +68,7 @@ func (log *LogEvent) Get(key string) (string, bool) {
 		}
 		return "", false
 	}
-	return query.StringFromValue(value), true
+	return value, true
 }
 
 func (log *LogEvent) GetTopic(i int) Word256 {
@@ -79,10 +78,8 @@ func (log *LogEvent) GetTopic(i int) Word256 {
 	return Word256{}
 }
 
-func (log *LogEvent) Len() int {
-	return len(logTagKeys)
-}
-
-func (log *LogEvent) Keys() []string {
-	return logTagKeys
+func (log *LogEvent) SolidityEventID() abi.EventID {
+	var eventID abi.EventID
+	copy(eventID[:], log.Topics[0].Bytes())
+	return eventID
 }

@@ -7,6 +7,7 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 	time "time"
 
 	_ "github.com/gogo/protobuf/gogoproto"
@@ -56,16 +57,12 @@ func (m *SyncInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *SyncInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_SyncInfo.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalTo(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *SyncInfo) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_SyncInfo.Merge(m, src)
@@ -110,38 +107,103 @@ func (m *SyncInfo) GetLatestBlockDuration() time.Duration {
 func (*SyncInfo) XXX_MessageName() string {
 	return "bcm.SyncInfo"
 }
+
+type PersistedState struct {
+	AppHashAfterLastBlock github_com_hyperledger_burrow_binary.HexBytes `protobuf:"bytes,1,opt,name=AppHashAfterLastBlock,proto3,customtype=github.com/hyperledger/burrow/binary.HexBytes" json:"AppHashAfterLastBlock"`
+	LastBlockTime         time.Time                                     `protobuf:"bytes,2,opt,name=LastBlockTime,proto3,stdtime" json:"LastBlockTime"`
+	LastBlockHeight       uint64                                        `protobuf:"varint,3,opt,name=LastBlockHeight,proto3" json:"LastBlockHeight,omitempty"`
+	GenesisHash           github_com_hyperledger_burrow_binary.HexBytes `protobuf:"bytes,4,opt,name=GenesisHash,proto3,customtype=github.com/hyperledger/burrow/binary.HexBytes" json:"GenesisHash"`
+	XXX_NoUnkeyedLiteral  struct{}                                      `json:"-"`
+	XXX_unrecognized      []byte                                        `json:"-"`
+	XXX_sizecache         int32                                         `json:"-"`
+}
+
+func (m *PersistedState) Reset()         { *m = PersistedState{} }
+func (m *PersistedState) String() string { return proto.CompactTextString(m) }
+func (*PersistedState) ProtoMessage()    {}
+func (*PersistedState) Descriptor() ([]byte, []int) {
+	return fileDescriptor_0c9ff3e1ca1cc0f1, []int{1}
+}
+func (m *PersistedState) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PersistedState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalTo(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *PersistedState) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PersistedState.Merge(m, src)
+}
+func (m *PersistedState) XXX_Size() int {
+	return m.Size()
+}
+func (m *PersistedState) XXX_DiscardUnknown() {
+	xxx_messageInfo_PersistedState.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PersistedState proto.InternalMessageInfo
+
+func (m *PersistedState) GetLastBlockTime() time.Time {
+	if m != nil {
+		return m.LastBlockTime
+	}
+	return time.Time{}
+}
+
+func (m *PersistedState) GetLastBlockHeight() uint64 {
+	if m != nil {
+		return m.LastBlockHeight
+	}
+	return 0
+}
+
+func (*PersistedState) XXX_MessageName() string {
+	return "bcm.PersistedState"
+}
 func init() {
 	proto.RegisterType((*SyncInfo)(nil), "bcm.SyncInfo")
 	golang_proto.RegisterType((*SyncInfo)(nil), "bcm.SyncInfo")
+	proto.RegisterType((*PersistedState)(nil), "bcm.PersistedState")
+	golang_proto.RegisterType((*PersistedState)(nil), "bcm.PersistedState")
 }
 
 func init() { proto.RegisterFile("bcm.proto", fileDescriptor_0c9ff3e1ca1cc0f1) }
 func init() { golang_proto.RegisterFile("bcm.proto", fileDescriptor_0c9ff3e1ca1cc0f1) }
 
 var fileDescriptor_0c9ff3e1ca1cc0f1 = []byte{
-	// 350 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x4c, 0x4a, 0xce, 0xd5,
-	0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x4e, 0x4a, 0xce, 0x95, 0xd2, 0x4d, 0xcf, 0x2c, 0xc9,
-	0x28, 0x4d, 0xd2, 0x4b, 0xce, 0xcf, 0xd5, 0x4f, 0xcf, 0x4f, 0xcf, 0xd7, 0x07, 0xcb, 0x25, 0x95,
-	0xa6, 0x81, 0x79, 0x60, 0x0e, 0x98, 0x05, 0xd1, 0x23, 0x25, 0x9f, 0x9e, 0x9f, 0x9f, 0x9e, 0x93,
-	0x8a, 0x50, 0x55, 0x92, 0x99, 0x9b, 0x5a, 0x5c, 0x92, 0x98, 0x5b, 0x00, 0x55, 0x20, 0x87, 0xae,
-	0x20, 0xa5, 0xb4, 0x28, 0xb1, 0x24, 0x33, 0x3f, 0x0f, 0x22, 0xaf, 0xf4, 0x9b, 0x99, 0x8b, 0x23,
-	0xb8, 0x32, 0x2f, 0xd9, 0x33, 0x2f, 0x2d, 0x5f, 0xc8, 0x88, 0x4b, 0xd0, 0x27, 0xb1, 0x24, 0xb5,
-	0xb8, 0xc4, 0x29, 0x27, 0x3f, 0x39, 0xdb, 0x23, 0x35, 0x33, 0x3d, 0xa3, 0x44, 0x82, 0x51, 0x81,
-	0x51, 0x83, 0xc5, 0x89, 0xe5, 0xd5, 0x3d, 0x79, 0x86, 0x20, 0x4c, 0x69, 0xa1, 0x78, 0x2e, 0x7e,
-	0x64, 0xc1, 0xc4, 0xe2, 0x0c, 0x09, 0x26, 0x05, 0x46, 0x0d, 0x1e, 0x27, 0xd3, 0x13, 0xf7, 0xe4,
-	0x19, 0x6e, 0xdd, 0x93, 0x47, 0xf6, 0x51, 0x46, 0x65, 0x41, 0x6a, 0x51, 0x4e, 0x6a, 0x4a, 0x7a,
-	0x6a, 0x91, 0x7e, 0x52, 0x69, 0x51, 0x51, 0x7e, 0xb9, 0x7e, 0x52, 0x66, 0x5e, 0x62, 0x51, 0xa5,
-	0x9e, 0x47, 0x6a, 0x85, 0x53, 0x65, 0x49, 0x6a, 0x71, 0x10, 0xba, 0x69, 0x42, 0xd1, 0x5c, 0xbc,
-	0x10, 0x21, 0xc7, 0x82, 0x02, 0xb0, 0xf1, 0xcc, 0x94, 0x18, 0x8f, 0x6a, 0x96, 0x90, 0x1f, 0x8a,
-	0xeb, 0x43, 0x32, 0x73, 0x53, 0x25, 0x58, 0x14, 0x18, 0x35, 0xb8, 0x8d, 0xa4, 0xf4, 0x20, 0x01,
-	0xa7, 0x07, 0x0b, 0x38, 0xbd, 0x10, 0x58, 0xc8, 0x3a, 0x71, 0x80, 0xac, 0x9e, 0x70, 0x5f, 0x9e,
-	0x31, 0x08, 0x5d, 0xb3, 0x50, 0x18, 0x97, 0x30, 0x92, 0x50, 0x70, 0x6a, 0x6a, 0x1e, 0xd8, 0x4c,
-	0x56, 0x12, 0xcc, 0xc4, 0x66, 0x80, 0x50, 0x28, 0x8a, 0xb9, 0x2e, 0xd0, 0x38, 0x94, 0x60, 0x03,
-	0x9b, 0x2b, 0x89, 0x61, 0x2e, 0x4c, 0x01, 0xc4, 0xd8, 0x19, 0xe8, 0xc6, 0xc2, 0xa5, 0xcd, 0x4f,
-	0x3c, 0x92, 0x63, 0xbc, 0xf0, 0x48, 0x8e, 0xf1, 0xc1, 0x23, 0x39, 0xc6, 0x03, 0x8f, 0xe5, 0x18,
-	0x4f, 0x3c, 0x96, 0x63, 0x8c, 0x52, 0x24, 0x10, 0xa4, 0xc9, 0xb9, 0x49, 0x6c, 0x60, 0xab, 0x8c,
-	0x01, 0x01, 0x00, 0x00, 0xff, 0xff, 0xc2, 0x40, 0x34, 0x06, 0xbf, 0x02, 0x00, 0x00,
+	// 437 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x92, 0x3d, 0x8f, 0x94, 0x40,
+	0x18, 0xc7, 0x6f, 0x76, 0xf1, 0x72, 0xce, 0xf9, 0x12, 0xc7, 0x98, 0xe0, 0x16, 0xb0, 0x5e, 0x45,
+	0x23, 0x24, 0x67, 0xac, 0xac, 0x8e, 0x98, 0x78, 0x9a, 0x8b, 0x31, 0xec, 0xa9, 0x89, 0x16, 0x06,
+	0xd8, 0x67, 0x61, 0x72, 0x0b, 0x43, 0x66, 0x86, 0x28, 0xdf, 0xc2, 0xd2, 0x8f, 0x63, 0xb9, 0x85,
+	0x85, 0xa5, 0xb1, 0x58, 0x0d, 0xd7, 0xf9, 0x15, 0x6c, 0x0c, 0x03, 0x44, 0xe0, 0x2e, 0x31, 0xeb,
+	0x76, 0x3c, 0x6f, 0x3f, 0xe6, 0xf9, 0x3f, 0x7f, 0x7c, 0x35, 0x08, 0x13, 0x3b, 0xe3, 0x4c, 0x32,
+	0x32, 0x0e, 0xc2, 0x64, 0x72, 0x3f, 0xa2, 0x32, 0xce, 0x03, 0x3b, 0x64, 0x89, 0x13, 0xb1, 0x88,
+	0x39, 0xaa, 0x16, 0xe4, 0x0b, 0x15, 0xa9, 0x40, 0x7d, 0xd5, 0x33, 0x13, 0x33, 0x62, 0x2c, 0x5a,
+	0xc2, 0xdf, 0x2e, 0x49, 0x13, 0x10, 0xd2, 0x4f, 0xb2, 0xa6, 0xc1, 0x18, 0x36, 0xcc, 0x73, 0xee,
+	0x4b, 0xca, 0xd2, 0xba, 0x7e, 0xf0, 0x7b, 0x8c, 0xf7, 0x66, 0x45, 0x1a, 0x3e, 0x4d, 0x17, 0x8c,
+	0x1c, 0xe2, 0x5b, 0x27, 0xbe, 0x04, 0x21, 0xdd, 0x25, 0x0b, 0xcf, 0x8e, 0x81, 0x46, 0xb1, 0xd4,
+	0xd1, 0x14, 0x59, 0x9a, 0xab, 0xfd, 0x5a, 0x9b, 0x3b, 0xde, 0xc5, 0x32, 0x79, 0x87, 0x6f, 0x76,
+	0x93, 0xbe, 0x88, 0xf5, 0xd1, 0x14, 0x59, 0xd7, 0xdc, 0x87, 0xab, 0xb5, 0xb9, 0xf3, 0x7d, 0x6d,
+	0x76, 0x37, 0x8a, 0x8b, 0x0c, 0xf8, 0x12, 0xe6, 0x11, 0x70, 0x27, 0xc8, 0x39, 0x67, 0xef, 0x9d,
+	0x80, 0xa6, 0x3e, 0x2f, 0xec, 0x63, 0xf8, 0xe0, 0x16, 0x12, 0x84, 0x37, 0xa4, 0x91, 0xb7, 0xf8,
+	0x7a, 0x9d, 0x3a, 0xca, 0x32, 0x85, 0x1f, 0x6f, 0x83, 0xef, 0xb3, 0xc8, 0xf3, 0xde, 0xeb, 0x4f,
+	0x69, 0x02, 0xba, 0x36, 0x45, 0xd6, 0xfe, 0xe1, 0xc4, 0xae, 0x85, 0xb3, 0x5b, 0xe1, 0xec, 0xd3,
+	0x56, 0x59, 0x77, 0xaf, 0xfa, 0xf5, 0xc7, 0x1f, 0x26, 0xf2, 0x86, 0xc3, 0xe4, 0x15, 0xbe, 0xdd,
+	0x49, 0xcd, 0x00, 0x52, 0xc5, 0xbc, 0xb2, 0x01, 0xf3, 0x32, 0x00, 0x79, 0xd9, 0xe3, 0x3e, 0x6e,
+	0x6e, 0xa8, 0xef, 0x2a, 0xee, 0xdd, 0x0b, 0xdc, 0xb6, 0xa1, 0xc6, 0x7e, 0x1a, 0x62, 0xdb, 0xf2,
+	0xc1, 0x97, 0x11, 0xbe, 0xf1, 0x02, 0xb8, 0xa0, 0x42, 0xc2, 0x7c, 0x26, 0x7d, 0x09, 0xe4, 0x0c,
+	0xdf, 0x69, 0xc4, 0x39, 0x5a, 0x48, 0xe0, 0x27, 0x7e, 0x33, 0xa3, 0x7c, 0xf0, 0xdf, 0xb2, 0x5f,
+	0xce, 0x24, 0xcf, 0xaa, 0xdb, 0x76, 0xc5, 0x1f, 0x6d, 0x20, 0x54, 0x7f, 0x94, 0x58, 0xd5, 0x29,
+	0xfb, 0xd6, 0xad, 0x9c, 0xa2, 0x79, 0xc3, 0x34, 0x79, 0x8d, 0xf7, 0x9f, 0x40, 0x0a, 0x82, 0x0a,
+	0xe5, 0x27, 0x6d, 0x9b, 0xc5, 0xba, 0x24, 0xf7, 0xd1, 0xaa, 0x34, 0xd0, 0xd7, 0xd2, 0x40, 0xdf,
+	0x4a, 0x03, 0xfd, 0x2c, 0x0d, 0xf4, 0xf9, 0xdc, 0x40, 0xab, 0x73, 0x03, 0xbd, 0xb9, 0xf7, 0x0f,
+	0x6a, 0x98, 0x04, 0xbb, 0x6a, 0xd9, 0x07, 0x7f, 0x02, 0x00, 0x00, 0xff, 0xff, 0x25, 0xfd, 0xe5,
+	0xbc, 0x12, 0x04, 0x00, 0x00,
 }
 
 func (m *SyncInfo) Marshal() (dAtA []byte, err error) {
@@ -167,43 +229,93 @@ func (m *SyncInfo) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x12
 	i++
 	i = encodeVarintBcm(dAtA, i, uint64(m.LatestBlockHash.Size()))
-	n1, err := m.LatestBlockHash.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
+	n1, err1 := m.LatestBlockHash.MarshalTo(dAtA[i:])
+	if err1 != nil {
+		return 0, err1
 	}
 	i += n1
 	dAtA[i] = 0x1a
 	i++
 	i = encodeVarintBcm(dAtA, i, uint64(m.LatestAppHash.Size()))
-	n2, err := m.LatestAppHash.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
+	n2, err2 := m.LatestAppHash.MarshalTo(dAtA[i:])
+	if err2 != nil {
+		return 0, err2
 	}
 	i += n2
 	dAtA[i] = 0x22
 	i++
 	i = encodeVarintBcm(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdTime(m.LatestBlockTime)))
-	n3, err := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LatestBlockTime, dAtA[i:])
-	if err != nil {
-		return 0, err
+	n3, err3 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LatestBlockTime, dAtA[i:])
+	if err3 != nil {
+		return 0, err3
 	}
 	i += n3
 	dAtA[i] = 0x2a
 	i++
 	i = encodeVarintBcm(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdTime(m.LatestBlockSeenTime)))
-	n4, err := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LatestBlockSeenTime, dAtA[i:])
-	if err != nil {
-		return 0, err
+	n4, err4 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LatestBlockSeenTime, dAtA[i:])
+	if err4 != nil {
+		return 0, err4
 	}
 	i += n4
 	dAtA[i] = 0x32
 	i++
 	i = encodeVarintBcm(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdDuration(m.LatestBlockDuration)))
-	n5, err := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.LatestBlockDuration, dAtA[i:])
-	if err != nil {
-		return 0, err
+	n5, err5 := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.LatestBlockDuration, dAtA[i:])
+	if err5 != nil {
+		return 0, err5
 	}
 	i += n5
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *PersistedState) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PersistedState) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	dAtA[i] = 0xa
+	i++
+	i = encodeVarintBcm(dAtA, i, uint64(m.AppHashAfterLastBlock.Size()))
+	n6, err6 := m.AppHashAfterLastBlock.MarshalTo(dAtA[i:])
+	if err6 != nil {
+		return 0, err6
+	}
+	i += n6
+	dAtA[i] = 0x12
+	i++
+	i = encodeVarintBcm(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdTime(m.LastBlockTime)))
+	n7, err7 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LastBlockTime, dAtA[i:])
+	if err7 != nil {
+		return 0, err7
+	}
+	i += n7
+	if m.LastBlockHeight != 0 {
+		dAtA[i] = 0x18
+		i++
+		i = encodeVarintBcm(dAtA, i, uint64(m.LastBlockHeight))
+	}
+	dAtA[i] = 0x22
+	i++
+	i = encodeVarintBcm(dAtA, i, uint64(m.GenesisHash.Size()))
+	n8, err8 := m.GenesisHash.MarshalTo(dAtA[i:])
+	if err8 != nil {
+		return 0, err8
+	}
+	i += n8
 	if m.XXX_unrecognized != nil {
 		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
@@ -244,15 +356,29 @@ func (m *SyncInfo) Size() (n int) {
 	return n
 }
 
-func sovBcm(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
+func (m *PersistedState) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.AppHashAfterLastBlock.Size()
+	n += 1 + l + sovBcm(uint64(l))
+	l = github_com_gogo_protobuf_types.SizeOfStdTime(m.LastBlockTime)
+	n += 1 + l + sovBcm(uint64(l))
+	if m.LastBlockHeight != 0 {
+		n += 1 + sovBcm(uint64(m.LastBlockHeight))
+	}
+	l = m.GenesisHash.Size()
+	n += 1 + l + sovBcm(uint64(l))
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
 	}
 	return n
+}
+
+func sovBcm(x uint64) (n int) {
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozBcm(x uint64) (n int) {
 	return sovBcm(uint64((x << 1) ^ uint64((int64(x) >> 63))))
@@ -467,6 +593,178 @@ func (m *SyncInfo) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if err := github_com_gogo_protobuf_types.StdDurationUnmarshal(&m.LatestBlockDuration, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipBcm(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthBcm
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthBcm
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *PersistedState) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowBcm
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PersistedState: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PersistedState: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AppHashAfterLastBlock", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowBcm
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthBcm
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthBcm
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.AppHashAfterLastBlock.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LastBlockTime", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowBcm
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthBcm
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthBcm
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := github_com_gogo_protobuf_types.StdTimeUnmarshal(&m.LastBlockTime, dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LastBlockHeight", wireType)
+			}
+			m.LastBlockHeight = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowBcm
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.LastBlockHeight |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field GenesisHash", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowBcm
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthBcm
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthBcm
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.GenesisHash.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

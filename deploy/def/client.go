@@ -12,6 +12,7 @@ import (
 	hex "github.com/tmthrgd/go-hex"
 
 	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/evm/abi"
@@ -41,7 +42,7 @@ type Client struct {
 	queryClient           rpcquery.QueryClient
 	executionEventsClient rpcevents.ExecutionEventsClient
 	keyClient             keys.KeyClient
-	AllSpecs              *abi.AbiSpec
+	AllSpecs              *abi.Spec
 }
 
 func NewClient(chain, keysClientAddress string, mempoolSigning bool, timeout time.Duration) *Client {
@@ -122,7 +123,7 @@ func (c *Client) Status(logger *logging.Logger) (*rpc.ResultStatus, error) {
 	return c.queryClient.Status(ctx, &rpcquery.StatusParam{})
 }
 
-func (c *Client) GetKeyAddress(key string, logger *logging.Logger) (crypto.Address, error) {
+func (c *Client) ParseAddress(key string, logger *logging.Logger) (crypto.Address, error) {
 	address, err := crypto.AddressFromHexString(key)
 	if err == nil {
 		return address, nil
@@ -138,6 +139,29 @@ func (c *Client) GetAccount(address crypto.Address) (*acm.Account, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 	return c.queryClient.GetAccount(ctx, &rpcquery.GetAccountParam{Address: address})
+}
+
+func (c *Client) GetMetadataForAccount(address crypto.Address) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	metadata, err := c.queryClient.GetMetadata(ctx, &rpcquery.GetMetadataParam{Address: &address})
+	if err != nil {
+		return "", err
+	}
+
+	return metadata.Metadata, nil
+}
+
+func (c *Client) GetMetadata(metahash acmstate.MetadataHash) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	var bs binary.HexBytes = metahash.Bytes()
+	metadata, err := c.queryClient.GetMetadata(ctx, &rpcquery.GetMetadataParam{MetadataHash: &bs})
+	if err != nil {
+		return "", err
+	}
+
+	return metadata.Metadata, nil
 }
 
 func (c *Client) GetStorage(address crypto.Address, key binary.Word256) ([]byte, error) {
@@ -338,9 +362,33 @@ func (c *Client) UpdateAccount(arg *GovArg, logger *logging.Logger) (*payload.Go
 		Permissions: arg.Permissions,
 		Roles:       arg.Permissions,
 	}
-	err = c.getIdentity(update, arg.Address, arg.PublicKey, logger)
-	if err != nil {
-		return nil, err
+	if arg.Address != "" {
+		addr, err := c.ParseAddress(arg.Address, logger)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse address: %v", err)
+		}
+		update.Address = &addr
+	}
+	if arg.PublicKey != "" {
+		pubKey, err := publicKeyFromString(arg.PublicKey)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse publicKey: %v", err)
+		}
+		update.PublicKey = &pubKey
+	} else {
+		// Attempt to get public key from connected key client
+		if arg.Address != "" {
+			// Try key client
+			pubKey, err := c.PublicKeyFromAddress(update.Address)
+			if err != nil {
+				logger.InfoMsg("did not get public key", "address", *update.Address)
+			} else {
+				update.PublicKey = pubKey
+			}
+			// We can still proceed with just address set
+		} else {
+			return nil, fmt.Errorf("neither target address or public key were provided")
+		}
 	}
 
 	_, err = permission.PermFlagFromStringList(arg.Permissions)
@@ -369,38 +417,15 @@ func (c *Client) UpdateAccount(arg *GovArg, logger *logging.Logger) (*payload.Go
 	return tx, nil
 }
 
-func (c *Client) getIdentity(account *spec.TemplateAccount, address, publicKey string, logger *logging.Logger) error {
-	if address != "" {
-		addr, err := c.GetKeyAddress(address, logger)
-		if err != nil {
-			return fmt.Errorf("could not parse address: %v", err)
-		}
-		account.Address = &addr
+func (c *Client) PublicKeyFromAddress(address *crypto.Address) (*crypto.PublicKey, error) {
+	if c.keyClient != nil {
+		return nil, fmt.Errorf("key client is not set")
 	}
-	if publicKey != "" {
-		pubKey, err := publicKeyFromString(publicKey)
-		if err != nil {
-			return fmt.Errorf("could not parse publicKey: %v", err)
-		}
-		account.PublicKey = &pubKey
-	} else {
-		// Attempt to get public key from connected key client
-		if address != "" {
-			// Try key client
-			if c.keyClient != nil {
-				pubKey, err := c.keyClient.PublicKey(*account.Address)
-				if err != nil {
-					logger.InfoMsg("Could not retrieve public key from keys server", "address", *account.Address)
-				} else {
-					account.PublicKey = &pubKey
-				}
-			}
-			// We can still proceed with just address set
-		} else {
-			return fmt.Errorf("neither target address or public key were provided")
-		}
+	pubKey, err := c.keyClient.PublicKey(*address)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve public key from keys server: %v", err)
 	}
-	return nil
+	return &pubKey, nil
 }
 
 func publicKeyFromString(publicKey string) (crypto.PublicKey, error) {
@@ -428,6 +453,7 @@ type CallArg struct {
 	Gas      string
 	Data     string
 	WASM     string
+	Metadata map[acmstate.CodeHash]string
 }
 
 func (c *Client) Call(arg *CallArg, logger *logging.Logger) (*payload.CallTx, error) {
@@ -444,12 +470,13 @@ func (c *Client) Call(arg *CallArg, logger *logging.Logger) (*payload.CallTx, er
 	}
 	var contractAddress *crypto.Address
 	if arg.Address != "" {
-		address, err := c.GetKeyAddress(arg.Address, logger)
+		address, err := crypto.AddressFromHexString(arg.Address)
 		if err != nil {
 			return nil, err
 		}
 		contractAddress = &address
 	}
+
 	fee, err := c.ParseUint64(arg.Fee)
 	if err != nil {
 		return nil, err
@@ -462,18 +489,30 @@ func (c *Client) Call(arg *CallArg, logger *logging.Logger) (*payload.CallTx, er
 	if err != nil {
 		return nil, err
 	}
+
 	wasm, err := hex.DecodeString(arg.WASM)
 	if err != nil {
 		return nil, err
 	}
-	tx := &payload.CallTx{
-		Input:    input,
-		Address:  contractAddress,
-		Data:     code,
-		WASM:     wasm,
-		Fee:      fee,
-		GasLimit: gas,
+
+	metas := make([]*payload.ContractMeta, 0)
+	for codehash, metadata := range arg.Metadata {
+		metas = append(metas, &payload.ContractMeta{
+			CodeHash: codehash.Bytes(),
+			Meta:     metadata,
+		})
 	}
+
+	tx := &payload.CallTx{
+		Input:        input,
+		Address:      contractAddress,
+		Data:         code,
+		WASM:         wasm,
+		Fee:          fee,
+		GasLimit:     gas,
+		ContractMeta: metas,
+	}
+
 	return tx, nil
 }
 
@@ -490,7 +529,7 @@ func (c *Client) Send(arg *SendArg, logger *logging.Logger) (*payload.SendTx, er
 	if err != nil {
 		return nil, err
 	}
-	outputAddress, err := c.GetKeyAddress(arg.Output, logger)
+	outputAddress, err := c.ParseAddress(arg.Output, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -501,6 +540,49 @@ func (c *Client) Send(arg *SendArg, logger *logging.Logger) (*payload.SendTx, er
 			Amount:  input.Amount,
 		}},
 	}
+	return tx, nil
+}
+
+type BondArg struct {
+	Input    string
+	Amount   string
+	Sequence string
+}
+
+func (c *Client) Bond(arg *BondArg, logger *logging.Logger) (*payload.BondTx, error) {
+	logger.InfoMsg("BondTx", "account", arg)
+	err := c.dial(logger)
+	if err != nil {
+		return nil, err
+	}
+	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true, logger)
+	if err != nil {
+		return nil, err
+	}
+	return &payload.BondTx{
+		Input: input,
+	}, nil
+}
+
+type UnbondArg struct {
+	Output   string
+	Amount   string
+	Sequence string
+}
+
+func (c *Client) Unbond(arg *UnbondArg, logger *logging.Logger) (*payload.UnbondTx, error) {
+	logger.InfoMsg("UnbondTx", "account", arg)
+	if err := c.dial(logger); err != nil {
+		return nil, err
+	}
+	input, err := c.TxInput(arg.Output, arg.Amount, arg.Sequence, true, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	tx := payload.NewUnbondTx(input.Address, input.Amount)
+	tx.Input = input
+
 	return tx, nil
 }
 
@@ -556,7 +638,7 @@ func (c *Client) Permissions(arg *PermArg, logger *logging.Logger) (*payload.Per
 		Action: action,
 	}
 	if arg.Target != "" {
-		target, err := c.GetKeyAddress(arg.Target, logger)
+		target, err := c.ParseAddress(arg.Target, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -597,7 +679,7 @@ func (c *Client) TxInput(inputString, amountString, sequenceString string, allow
 	var err error
 	var inputAddress crypto.Address
 	if inputString != "" {
-		inputAddress, err = c.GetKeyAddress(inputString, logger)
+		inputAddress, err = c.ParseAddress(inputString, logger)
 		if err != nil {
 			return nil, fmt.Errorf("TxInput(): could not obtain input address from '%s': %v", inputString, err)
 		}

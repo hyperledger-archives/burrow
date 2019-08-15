@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"testing"
+	"testing/quick"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,21 +27,21 @@ func mockDBWithStuff() dbm.DB {
 }
 
 func TestPrefixDBSimple(t *testing.T) {
-	db := mockDBWithStuff()
-	pdb := NewPrefixDB(db, "key")
+	db := NewPrefixDB(dbm.NewMemDB(), "key")
 
-	checkValue(t, pdb, []byte("key"), nil)
-	checkValue(t, pdb, []byte(""), []byte("value"))
-	checkValue(t, pdb, []byte("key1"), nil)
-	checkValue(t, pdb, []byte("1"), []byte("value1"))
-	checkValue(t, pdb, []byte("key2"), nil)
-	checkValue(t, pdb, []byte("2"), []byte("value2"))
-	checkValue(t, pdb, []byte("key3"), nil)
-	checkValue(t, pdb, []byte("3"), []byte("value3"))
-	checkValue(t, pdb, []byte("something"), nil)
-	checkValue(t, pdb, []byte("k"), nil)
-	checkValue(t, pdb, []byte("ke"), nil)
-	checkValue(t, pdb, []byte("kee"), nil)
+	set := func(key []byte, value []byte) interface{} {
+		db.Set(key, value)
+		return value
+	}
+
+	get := func(key []byte, value []byte) interface{} {
+		act := db.Get(key)
+		return act
+	}
+
+	if err := quick.CheckEqual(set, get, nil); err != nil {
+		t.Error(err)
+	}
 }
 
 func TestPrefixDBIterator1(t *testing.T) {

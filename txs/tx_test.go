@@ -19,11 +19,8 @@ import (
 	"runtime/debug"
 	"testing"
 
-	"fmt"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
@@ -69,14 +66,38 @@ func TestSendTx(t *testing.T) {
 	testTxSignVerify(t, sendTx)
 
 	tx := Enclose("Foo", sendTx).Tx
-	value, ok := tx.Tagged().Get("Inputs")
+	value, ok := tx.Get("Inputs")
 	require.True(t, ok)
-	assert.Equal(t, fmt.Sprintf("%v%s%v", sendTx.Inputs[0], query.MultipleValueTagSeparator, sendTx.Inputs[1]),
-		value)
+	assert.Equal(t, sendTx.Inputs, value)
 
-	value, ok = tx.Tagged().Get("ChainID")
+	value, ok = tx.Get("ChainID")
 	require.True(t, ok)
 	assert.Equal(t, "Foo", value)
+}
+
+func TestCallTx(t *testing.T) {
+
+	toAddress := makePrivateAccount("contract1").GetAddress()
+	callTx := &payload.CallTx{
+		Input: &payload.TxInput{
+			Address:  makePrivateAccount("input1").GetAddress(),
+			Amount:   12345,
+			Sequence: 67890,
+		},
+		Address:  &toAddress,
+		GasLimit: 111,
+		Fee:      222,
+		Data:     []byte("data1"),
+	}
+	txEnv := Enclose("Chain1", callTx)
+
+	v, ok := txEnv.Get("Input.Amount")
+	require.True(t, ok)
+	assert.Equal(t, callTx.Input.Amount, v)
+
+	v, ok = txEnv.Get("Address")
+	require.True(t, ok)
+	assert.Equal(t, callTx.Address, v)
 }
 
 func TestCallTxSignable(t *testing.T) {
@@ -113,27 +134,10 @@ func TestNameTxSignable(t *testing.T) {
 
 func TestBondTxSignable(t *testing.T) {
 	bondTx := &payload.BondTx{
-		Inputs: []*payload.TxInput{
-			{
-				Address:  makePrivateAccount("input1").GetAddress(),
-				Amount:   12345,
-				Sequence: 67890,
-			},
-			{
-				Address:  makePrivateAccount("input2").GetAddress(),
-				Amount:   111,
-				Sequence: 222,
-			},
-		},
-		UnbondTo: []*payload.TxOutput{
-			{
-				Address: makePrivateAccount("output1").GetAddress(),
-				Amount:  333,
-			},
-			{
-				Address: makePrivateAccount("output2").GetAddress(),
-				Amount:  444,
-			},
+		Input: &payload.TxInput{
+			Address:  makePrivateAccount("input1").GetAddress(),
+			Amount:   12345,
+			Sequence: 67890,
 		},
 	}
 	testTxMarshalJSON(t, bondTx)
@@ -143,10 +147,10 @@ func TestBondTxSignable(t *testing.T) {
 func TestUnbondTxSignable(t *testing.T) {
 	unbondTx := &payload.UnbondTx{
 		Input: &payload.TxInput{
-			Address: makePrivateAccount("fooo1").GetAddress(),
+			Address:  makePrivateAccount("input1").GetAddress(),
+			Amount:   12345,
+			Sequence: 67890,
 		},
-		Address: makePrivateAccount("address1").GetAddress(),
-		Height:  111,
 	}
 	testTxMarshalJSON(t, unbondTx)
 	testTxSignVerify(t, unbondTx)
@@ -183,9 +187,9 @@ func TestTxWrapper_MarshalJSON(t *testing.T) {
 	testTxSignVerify(t, callTx)
 
 	tx := Enclose("Foo", callTx).Tx
-	value, ok := tx.Tagged().Get("Input")
+	value, ok := tx.Get("Input")
 	require.True(t, ok)
-	assert.Equal(t, callTx.Input.String(), value)
+	assert.Equal(t, callTx.Input, value)
 }
 
 func TestNewPermissionsTxWithSequence(t *testing.T) {

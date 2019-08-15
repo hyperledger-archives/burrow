@@ -4,10 +4,9 @@ import (
 	"crypto/sha256"
 	"fmt"
 
-	amino "github.com/tendermint/go-amino"
+	"github.com/golang/protobuf/proto"
+	"github.com/hyperledger/burrow/encoding"
 )
-
-var cdc = amino.NewCodec()
 
 func NewProposalTx(propsal *Proposal) *ProposalTx {
 	return &ProposalTx{
@@ -34,8 +33,9 @@ func (tx *ProposalTx) Any() *Any {
 }
 
 func DecodeProposal(proposalBytes []byte) (*Proposal, error) {
+	buf := proto.NewBuffer(proposalBytes)
 	proposal := new(Proposal)
-	err := cdc.UnmarshalBinaryBare(proposalBytes, proposal)
+	err := buf.Unmarshal(proposal)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,12 @@ func DecodeProposal(proposalBytes []byte) (*Proposal, error) {
 }
 
 func (p *Proposal) Encode() ([]byte, error) {
-	return cdc.MarshalBinaryBare(p)
+	buf := proto.NewBuffer(nil)
+	err := buf.Marshal(p)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func (p *Proposal) Hash() []byte {
@@ -67,7 +72,7 @@ func (v *Vote) String() string {
 
 func DecodeBallot(ballotBytes []byte) (*Ballot, error) {
 	ballot := new(Ballot)
-	err := cdc.UnmarshalBinaryBare(ballotBytes, ballot)
+	err := encoding.Decode(ballotBytes, ballot)
 	if err != nil {
 		return nil, err
 	}
@@ -75,5 +80,5 @@ func DecodeBallot(ballotBytes []byte) (*Ballot, error) {
 }
 
 func (p *Ballot) Encode() ([]byte, error) {
-	return cdc.MarshalBinaryBare(p)
+	return encoding.Encode(p)
 }

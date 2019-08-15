@@ -29,7 +29,6 @@ import (
 	"github.com/hyperledger/burrow/execution/proposal"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/storage"
 	"github.com/hyperledger/burrow/txs"
 	dbm "github.com/tendermint/tendermint/libs/db"
@@ -59,9 +58,11 @@ type KeyFormatStore struct {
 	Validator *storage.MustKeyFormat
 	Event     *storage.MustKeyFormat
 	TxHash    *storage.MustKeyFormat
+	Abi       *storage.MustKeyFormat
 }
 
 var keys = KeyFormatStore{
+	// Stored in the forest
 	// AccountAddress -> Account
 	Account: storage.NewMustKeyFormat("a", crypto.AddressLength),
 	// AccountAddress, Key -> Value
@@ -72,14 +73,21 @@ var keys = KeyFormatStore{
 	Proposal: storage.NewMustKeyFormat("p", sha256.Size),
 	// ValidatorAddress -> Power
 	Validator: storage.NewMustKeyFormat("v", crypto.AddressLength),
-	// Height, EventIndex -> StreamEvent
+	// Height -> StreamEvent
 	Event: storage.NewMustKeyFormat("e", uint64Length),
+
+	// Stored on the plain
 	// TxHash -> TxHeight, TxIndex
 	TxHash: storage.NewMustKeyFormat("th", txs.HashLength),
+	// CodeHash -> Abi
+	Abi: storage.NewMustKeyFormat("abi", sha256.Size),
 }
 
+var Prefixes [][]byte
+
 func init() {
-	err := storage.EnsureKeyFormatStore(keys)
+	var err error
+	Prefixes, err = storage.EnsureKeyFormatStore(keys)
 	if err != nil {
 		panic(fmt.Errorf("KeyFormatStore is invalid: %v", err))
 	}
@@ -125,13 +133,19 @@ func NewState(db dbm.DB) *State {
 	}
 	plain := storage.NewPrefixDB(db, plainPrefix)
 	ring := validator.NewRing(nil, DefaultValidatorsWindowSize)
-	rs := ReadState{Forest: forest, Plain: plain, History: ring}
-	ws := writeState{forest: forest, plain: plain, ring: ring}
 	return &State{
-		db:         db,
-		ReadState:  rs,
-		writeState: ws,
-		logger:     logging.NewNoopLogger(),
+		db: db,
+		ReadState: ReadState{
+			Forest:  forest,
+			Plain:   plain,
+			History: ring,
+		},
+		writeState: writeState{
+			forest: forest,
+			plain:  plain,
+			ring:   ring,
+		},
+		logger: logging.NewNoopLogger(),
 	}
 }
 
@@ -158,20 +172,8 @@ func MakeGenesisState(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*State, error)
 	if err != nil {
 		return nil, fmt.Errorf("%s %v", errHeader, err)
 	}
-	// global permissions are saved as the 0 address
-	// so they are included in the accounts tree
-	globalPerms := permission.DefaultAccountPermissions
-	globalPerms = genesisDoc.GlobalPermissions
-	// XXX: make sure the set bits are all true
-	// Without it the HasPermission() functions will fail
-	globalPerms.Base.SetBit = permission.AllPermFlags
-
-	permsAcc := &acm.Account{
-		Address:     acm.GlobalPermissionsAddress,
-		Balance:     1337,
-		Permissions: globalPerms,
-	}
-	err = s.writeState.UpdateAccount(permsAcc)
+	// Set up fallback global permissions
+	err = s.writeState.UpdateAccount(genesisDoc.GlobalPermissionsAccount())
 	if err != nil {
 		return nil, fmt.Errorf("%s %v", errHeader, err)
 	}

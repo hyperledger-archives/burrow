@@ -173,6 +173,16 @@ func newExecutor(name string, runCall bool, params Params, backend ExecutorState
 			StateWriter:  exe.stateCache,
 			Logger:       exe.logger,
 		},
+		payload.TypeBond: &contexts.BondContext{
+			ValidatorSet: exe.validatorCache,
+			StateWriter:  exe.stateCache,
+			Logger:       exe.logger,
+		},
+		payload.TypeUnbond: &contexts.UnbondContext{
+			ValidatorSet: exe.validatorCache,
+			StateWriter:  exe.stateCache,
+			Logger:       exe.logger,
+		},
 	}
 
 	exe.contexts = map[payload.Type]contexts.Context{
@@ -233,8 +243,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 			}
 		}()
 
-		// Validate inputs and check sequence numbers
-		err = validateInputs(txEnv.Tx, exe.stateCache)
+		err = exe.validateInputsAndStorePublicKeys(txEnv)
 		if err != nil {
 			logger.InfoMsg("Transaction validate failed", structure.ErrorKey, err)
 			txe.PushError(err)
@@ -248,10 +257,10 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 			return nil, err
 		}
 
-		// Initialise public keys and increment sequence numbers for Tx inputs
-		err = exe.updateSignatories(txEnv)
+		// Increment sequence numbers for Tx inputs
+		err = exe.updateSequenceNumbers(txEnv)
 		if err != nil {
-			logger.InfoMsg("Updating signatories failed", structure.ErrorKey, err)
+			logger.InfoMsg("Updating sequences failed", structure.ErrorKey, err)
 			txe.PushError(err)
 			return nil, err
 		}
@@ -261,9 +270,14 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 	return nil, fmt.Errorf("unknown transaction type: %v", txEnv.Tx.Type())
 }
 
-func validateInputs(tx *txs.Tx, getter acmstate.AccountGetter) error {
-	for _, in := range tx.GetInputs() {
-		acc, err := getter.GetAccount(in.Address)
+// Validate inputs, check sequence numbers and capture public keys
+func (exe *executor) validateInputsAndStorePublicKeys(txEnv *txs.Envelope) error {
+	for s, in := range txEnv.Tx.GetInputs() {
+		err := exe.updateSignatory(txEnv.Signatories[s])
+		if err != nil {
+			return fmt.Errorf("failed to update public key for input %X: %v", in.Address, err)
+		}
+		acc, err := exe.stateCache.GetAccount(in.Address)
 		if err != nil {
 			return err
 		}
@@ -285,7 +299,7 @@ func validateInputs(tx *txs.Tx, getter acmstate.AccountGetter) error {
 			return errors.ErrorCodeInsufficientFunds
 		}
 		// Check for Input permission
-		v, err := acc.Permissions.Base.Compose(acmstate.GlobalAccountPermissions(getter).Base).Get(permission.Input)
+		v, err := acc.Permissions.Base.Compose(acmstate.GlobalAccountPermissions(exe.stateCache).Base).Get(permission.Input)
 		if err != nil {
 			return err
 		}
@@ -294,6 +308,22 @@ func validateInputs(tx *txs.Tx, getter acmstate.AccountGetter) error {
 		}
 	}
 	return nil
+}
+
+func (exe *executor) updateSignatory(sig txs.Signatory) error {
+	// pointer dereferences are safe since txEnv.Validate() is run by
+	// txEnv.Verify() above which checks they are non-nil
+	acc, err := exe.stateCache.GetAccount(*sig.Address)
+	if err != nil {
+		return fmt.Errorf("error getting account on which to set public key: %v", *sig.Address)
+	}
+	// Important that verify has been run against signatories at this point
+	if sig.PublicKey.GetAddress() != acc.Address {
+		return fmt.Errorf("unexpected mismatch between address %v and supplied public key %v",
+			acc.Address, sig.PublicKey)
+	}
+	acc.PublicKey = *sig.PublicKey
+	return exe.stateCache.UpdateAccount(acc)
 }
 
 // Commit the current state - optionally pass in the tendermint ABCI header for that to be included with the BeginBlock
@@ -374,6 +404,12 @@ func (exe *executor) GetAccount(address crypto.Address) (*acm.Account, error) {
 	return exe.stateCache.GetAccount(address)
 }
 
+func (exe *executor) GetMetadata(metahash acmstate.MetadataHash) (string, error) {
+	exe.RLock()
+	defer exe.RUnlock()
+	return exe.stateCache.GetMetadata(metahash)
+}
+
 // Storage
 func (exe *executor) GetStorage(address crypto.Address, key binary.Word256) ([]byte, error) {
 	exe.RLock()
@@ -401,21 +437,13 @@ func (exe *executor) finaliseBlockExecution(header *abciTypes.Header) (*exec.Blo
 	return be, nil
 }
 
-// Capture public keys and update sequence numbers
-func (exe *executor) updateSignatories(txEnv *txs.Envelope) error {
+// update sequence numbers
+func (exe *executor) updateSequenceNumbers(txEnv *txs.Envelope) error {
 	for _, sig := range txEnv.Signatories {
-		// pointer dereferences are safe since txEnv.Validate() is run by txEnv.Verify() above which checks they are
-		// non-nil
 		acc, err := exe.stateCache.GetAccount(*sig.Address)
 		if err != nil {
 			return fmt.Errorf("error getting account on which to set public key: %v", *sig.Address)
 		}
-		// Important that verify has been run against signatories at this point
-		if sig.PublicKey.GetAddress() != acc.Address {
-			return fmt.Errorf("unexpected mismatch between address %v and supplied public key %v",
-				acc.Address, sig.PublicKey)
-		}
-		acc.PublicKey = *sig.PublicKey
 
 		exe.logger.TraceMsg("Incrementing sequence number Tx signatory/input",
 			"height", exe.block.Height,
@@ -423,10 +451,11 @@ func (exe *executor) updateSignatories(txEnv *txs.Envelope) error {
 			"account", acc.Address,
 			"old_sequence", acc.Sequence,
 			"new_sequence", acc.Sequence+1)
+
 		acc.Sequence++
 		err = exe.stateCache.UpdateAccount(acc)
 		if err != nil {
-			return fmt.Errorf("error updating account after setting public key: %v", err)
+			return fmt.Errorf("error updating account after incrementing sequence: %v", err)
 		}
 	}
 	return nil
@@ -434,7 +463,7 @@ func (exe *executor) updateSignatories(txEnv *txs.Envelope) error {
 
 func (exe *executor) publishBlock(blockExecution *exec.BlockExecution) {
 	for _, txe := range blockExecution.TxExecutions {
-		publishErr := exe.emitter.Publish(context.Background(), txe, txe.Tagged())
+		publishErr := exe.emitter.Publish(context.Background(), txe, txe)
 		if publishErr != nil {
 			exe.logger.InfoMsg("Error publishing TxExecution",
 				"height", blockExecution.Height,
@@ -442,7 +471,7 @@ func (exe *executor) publishBlock(blockExecution *exec.BlockExecution) {
 				structure.ErrorKey, publishErr)
 		}
 	}
-	publishErr := exe.emitter.Publish(context.Background(), blockExecution, blockExecution.Tagged())
+	publishErr := exe.emitter.Publish(context.Background(), blockExecution, blockExecution)
 	if publishErr != nil {
 		exe.logger.InfoMsg("Error publishing BlockExecution",
 			"height", blockExecution.Height,

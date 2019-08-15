@@ -7,19 +7,15 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/bcm"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/libs/db"
 )
-
-var cdc = amino.NewCodec()
-
-type Option uint64
 
 const (
 	// Whether to send/receive these classes of data
@@ -27,6 +23,35 @@ const (
 	Names
 	Events
 )
+
+// Chunk account storage into rows that are less than 1 MiB
+const thresholdAccountStorageBytesPerRow = 1 << 20
+
+type Sink interface {
+	Send(*Dump) error
+}
+
+type Blockchain interface {
+	ChainID() string
+	LastBlockHeight() uint64
+}
+
+type Dumper struct {
+	state      *state.State
+	blockchain Blockchain
+	logger     *logging.Logger
+}
+
+// Return a Dumper that can Transmit Dump rows to a Sink by pulling them out of the the provided State
+func NewDumper(state *state.State, blockchain Blockchain) *Dumper {
+	return &Dumper{
+		state:      state,
+		blockchain: blockchain,
+		logger:     logging.NewNoopLogger(),
+	}
+}
+
+type Option uint64
 
 const (
 	None Option = 0
@@ -37,26 +62,15 @@ func (options Option) Enabled(option Option) bool {
 	return options&option > 0
 }
 
-type Dumper struct {
-	state      *state.State
-	blockchain bcm.BlockchainInfo
-	logger     *logging.Logger
-}
+// Transmit Dump rows to the provided Sink over the inclusive range of heights provided, if endHeight is 0 the latest
+// height is used.
 
-func NewDumper(state *state.State, blockchain bcm.BlockchainInfo, logger *logging.Logger) *Dumper {
-	return &Dumper{
-		state:      state,
-		blockchain: blockchain,
-		logger:     logger,
+func (ds *Dumper) Transmit(sink Sink, startHeight, endHeight uint64, options Option) error {
+	lastHeight := ds.blockchain.LastBlockHeight()
+	if endHeight == 0 || endHeight > lastHeight {
+		endHeight = lastHeight
 	}
-}
-
-func (ds *Dumper) Transmit(stream Sender, startHeight, endHeight uint64, options Option) error {
-	height := endHeight
-	if height == 0 {
-		height = ds.blockchain.LastBlockHeight()
-	}
-	st, err := ds.state.LoadHeight(height)
+	st, err := ds.state.LoadHeight(endHeight)
 	if err != nil {
 		return err
 	}
@@ -64,30 +78,67 @@ func (ds *Dumper) Transmit(stream Sender, startHeight, endHeight uint64, options
 	if options.Enabled(Accounts) {
 		ds.logger.InfoMsg("Dumping accounts")
 		err = st.IterateAccounts(func(acc *acm.Account) error {
-			err = stream.Send(&Dump{Height: height, Account: acc})
-			if err != nil {
-				return err
+			// Since we tend to want to handle accounts and their storage as a single unit we multiplex account
+			// and storage within the same row. If the storage gets too large we chunk it and send in separate rows
+			// (so that we stay well below the 4MiB GRPC message size limit and generally maintain stream-ability)
+			row := &Dump{
+				Height:  endHeight,
+				Account: acc,
+				AccountStorage: &AccountStorage{
+					Address: acc.Address,
+					Storage: make([]*Storage, 0),
+				},
 			}
 
-			storage := AccountStorage{
-				Address: acc.Address,
-				Storage: make([]*Storage, 0),
+			for _, m := range acc.ContractMeta {
+				var metahash acmstate.MetadataHash
+				copy(metahash[:], m.MetadataHash.Bytes())
+				meta, err := ds.state.GetMetadata(metahash)
+				if err != nil {
+					return err
+				}
+				m.Metadata = meta
+				m.MetadataHash = []byte{}
 			}
 
+			var storageBytes int
 			err = st.IterateStorage(acc.Address, func(key binary.Word256, value []byte) error {
-				storage.Storage = append(storage.Storage, &Storage{Key: key, Value: value})
+				if storageBytes > thresholdAccountStorageBytesPerRow {
+					// Send the current row
+					err = sink.Send(row)
+					if err != nil {
+						return err
+					}
+					// Start a new pure storage row
+					row = &Dump{
+						Height: endHeight,
+						AccountStorage: &AccountStorage{
+							Address: acc.Address,
+							Storage: make([]*Storage, 0),
+						},
+					}
+				}
+				row.AccountStorage.Storage = append(row.AccountStorage.Storage, &Storage{Key: key, Value: value})
+				storageBytes += len(key) + len(value)
 				return nil
 			})
-
 			if err != nil {
 				return err
 			}
 
-			if len(storage.Storage) > 0 {
-				return stream.Send(&Dump{
-					Height:         height,
-					AccountStorage: &storage,
-				})
+			// Don't send empty storage
+			if len(row.AccountStorage.Storage) == 0 {
+				row.AccountStorage = nil
+				// Don't send an empty row
+				if row.Account == nil {
+					// We started a new storage row, but there was no subsequent storage to go in it
+					return nil
+				}
+			}
+
+			err = sink.Send(row)
+			if err != nil {
+				return err
 			}
 
 			return nil
@@ -101,7 +152,7 @@ func (ds *Dumper) Transmit(stream Sender, startHeight, endHeight uint64, options
 	if options.Enabled(Names) {
 		ds.logger.InfoMsg("Dumping names")
 		err = st.IterateNames(func(entry *names.Entry) error {
-			return stream.Send(&Dump{Height: height, Name: entry})
+			return sink.Send(&Dump{Height: endHeight, Name: entry})
 		})
 		if err != nil {
 			return err
@@ -123,17 +174,21 @@ func (ds *Dumper) Transmit(stream Sender, startHeight, endHeight uint64, options
 				case ev.BeginTx != nil:
 					origin = ev.BeginTx.TxHeader.Origin
 				case ev.Event != nil && ev.Event.Log != nil:
-					evmevent := EVMEvent{Event: ev.Event.Log}
+					row := &Dump{EVMEvent: &EVMEvent{Event: ev.Event.Log}}
 					if origin != nil {
 						// this event was already restored
-						evmevent.ChainID = origin.ChainID
-						evmevent.Time = origin.Time
+						row.EVMEvent.ChainID = origin.ChainID
+						row.EVMEvent.Time = origin.Time
+						row.EVMEvent.Index = origin.Index
+						row.Height = origin.Height
 					} else {
 						// this event was generated on this chain
-						evmevent.ChainID = ds.blockchain.ChainID()
-						evmevent.Time = blockTime
+						row.EVMEvent.ChainID = ds.blockchain.ChainID()
+						row.EVMEvent.Time = blockTime
+						row.EVMEvent.Index = ev.Event.Header.Index
+						row.Height = ev.Event.Header.Height
 					}
-					err := stream.Send(&Dump{Height: ev.Event.Header.Height, EVMEvent: &evmevent})
+					err := sink.Send(row)
 					if err != nil {
 						return err
 					}
@@ -150,7 +205,8 @@ func (ds *Dumper) Transmit(stream Sender, startHeight, endHeight uint64, options
 	return nil
 }
 
-func (ds *Dumper) Pipe(startHeight, endHeight uint64, options Option) Pipe {
+// Return a Source that is a Pipe fed from this Dumper's Transmit function
+func (ds *Dumper) Source(startHeight, endHeight uint64, options Option) Source {
 	p := make(Pipe)
 	go func() {
 		err := ds.Transmit(p, startHeight, endHeight, options)
@@ -162,11 +218,17 @@ func (ds *Dumper) Pipe(startHeight, endHeight uint64, options Option) Pipe {
 	return p
 }
 
-func Write(stream Receiver, out io.Writer, useJSON bool, options Option) error {
+func (ds *Dumper) WithLogger(logger *logging.Logger) *Dumper {
+	ds.logger = logger
+	return ds
+}
+
+// Write a dump to the Writer out by pulling rows from stream
+func Write(out io.Writer, source Source, useBinaryEncoding bool, options Option) error {
 	st := state.NewState(db.NewMemDB())
 	_, _, err := st.Update(func(ws state.Updatable) error {
 		for {
-			resp, err := stream.Recv()
+			resp, err := source.Recv()
 			if err == io.EOF {
 				break
 			}
@@ -201,22 +263,25 @@ func Write(stream Receiver, out io.Writer, useJSON bool, options Option) error {
 				}
 			}
 
-			var bs []byte
-			if useJSON {
-				bs, err = json.Marshal(resp)
-				if bs != nil {
-					bs = append(bs, []byte("\n")...)
+			if useBinaryEncoding {
+				_, err := encoding.WriteMessage(out, resp)
+				if err != nil {
+					return fmt.Errorf("failed write to binary dump message: %v", err)
 				}
-			} else {
-				bs, err = cdc.MarshalBinaryLengthPrefixed(resp)
+				return nil
 			}
+
+			bs, err := json.Marshal(resp)
 			if err != nil {
 				return fmt.Errorf("failed to marshall dump: %v", err)
 			}
 
-			n, err := out.Write(bs)
-			if err == nil && n < len(bs) {
-				return fmt.Errorf("failed to write dump: %v", err)
+			if len(bs) > 0 {
+				bs = append(bs, []byte("\n")...)
+				n, err := out.Write(bs)
+				if err == nil && n < len(bs) {
+					return fmt.Errorf("failed to write dump: %v", err)
+				}
 			}
 		}
 

@@ -151,6 +151,21 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		ctx.Logger.TraceMsg("Creating new contract",
 			"contract_address", callee,
 			"init_code", code)
+
+		// store abis
+		if len(ctx.tx.ContractMeta) > 0 {
+			metamap := make([]*acm.ContractMeta, len(ctx.tx.ContractMeta))
+			for i, abi := range ctx.tx.ContractMeta {
+				metahash := acmstate.GetMetadataHash(abi.Meta)
+				metamap[i] = &acm.ContractMeta{
+					MetadataHash: metahash[:],
+					CodeHash:     abi.CodeHash,
+				}
+				txCache.SetMetadata(metahash, abi.Meta)
+			}
+
+			txCache.UpdateMetaMap(callee, metamap)
+		}
 	} else {
 		if outAcc == nil || (len(outAcc.EVMCode) == 0 && len(outAcc.WASMCode) == 0) {
 			// if you call an account that doesn't exist
@@ -191,7 +206,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 	txHash := ctx.txe.Envelope.Tx.Hash()
 	logger := ctx.Logger.With(structure.TxHashKey, txHash)
 	var exception errors.CodedError
-	if wcode != nil {
+	if len(wcode) != 0 {
 		if createContract {
 			txCache.InitWASMCode(callee, wcode)
 		}

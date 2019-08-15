@@ -9,7 +9,6 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/keys"
-	"github.com/hyperledger/burrow/logging/lifecycle"
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/project"
@@ -34,7 +33,7 @@ func (kern *Kernel) LoadKeysFromConfig(conf *keys.KeysConfig) (err error) {
 
 // LoadLoggerFromConfig adds a logging configuration to the kernel
 func (kern *Kernel) LoadLoggerFromConfig(conf *logconfig.LoggingConfig) error {
-	logger, err := lifecycle.NewLoggerFromLoggingConfig(conf)
+	logger, err := conf.NewLogger()
 	kern.SetLogger(logger)
 	return err
 }

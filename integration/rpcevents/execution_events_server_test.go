@@ -131,8 +131,8 @@ func TestExecutionEventsTest(t *testing.T) {
 				assert.Contains(t, strconv.FormatUint(be.Height, 10), "2")
 				return nil
 			})
-			// should record blocks 2 and 12
-			require.Len(t, blocks, 2)
+			require.Equal(t, io.EOF, err)
+			require.Len(t, blocks, 2, "should record blocks 2 and 12")
 			assert.Equal(t, uint64(2), blocks[0].Height)
 			assert.Equal(t, uint64(12), blocks[1].Height)
 
@@ -142,7 +142,8 @@ func TestExecutionEventsTest(t *testing.T) {
 		t.Run("GetEventsSend", func(t *testing.T) {
 			numSends := 1100
 			request := &rpcevents.BlocksRequest{BlockRange: doSends(t, numSends, tcli, kern, inputAddress0, 2004)}
-			responses := getEvents(t, request, ecli)
+			responses, err := getEvents(t, request, ecli)
+			require.NoError(t, err)
 			assert.Equal(t, numSends*2, countEventsAndCheckConsecutive(t, responses),
 				"should receive 1 input, 1 output per send")
 		})
@@ -153,7 +154,8 @@ func TestExecutionEventsTest(t *testing.T) {
 				BlockRange: doSends(t, numSends, tcli, kern, inputAddress1, 2004),
 				Query:      "TxHash CONTAINS 'AA'",
 			}
-			responses := getEvents(t, request, ecli)
+			responses, err := getEvents(t, request, ecli)
+			require.NoError(t, err)
 			for _, response := range responses {
 				for _, ev := range response.Events {
 					require.Contains(t, ev.Header.TxHash.String(), "AA")
@@ -165,17 +167,18 @@ func TestExecutionEventsTest(t *testing.T) {
 			numSends := 500
 			request := &rpcevents.BlocksRequest{
 				BlockRange: doSends(t, numSends, tcli, kern, inputAddress0, 999),
-				Query: query.NewBuilder().AndEquals("Address", inputAddress0.String()).
+				Query: query.NewBuilder().AndEquals("Input.Address", inputAddress0.String()).
 					AndEquals(event.EventTypeKey, exec.TypeAccountInput.String()).String(),
 			}
-			responses := getEvents(t, request, ecli)
+			responses, err := getEvents(t, request, ecli)
+			require.NoError(t, err)
 			assert.Equal(t, numSends, countEventsAndCheckConsecutive(t, responses), "should receive every single input event per send")
 		})
 
 		t.Run("Revert", func(t *testing.T) {
-			txe, err := rpctest.CreateContract(tcli, inputAddress0, solidity.Bytecode_Revert)
+			txe, err := rpctest.CreateContract(tcli, inputAddress0, solidity.Bytecode_Revert, nil)
 			require.NoError(t, err)
-			spec, err := abi.ReadAbiSpec(solidity.Abi_Revert)
+			spec, err := abi.ReadSpec(solidity.Abi_Revert)
 			require.NoError(t, err)
 			data, _, err := spec.Pack("RevertAt", 4)
 			require.NoError(t, err)
@@ -190,14 +193,15 @@ func TestExecutionEventsTest(t *testing.T) {
 				Query: query.Must(query.NewBuilder().AndEquals(event.EventIDKey, exec.EventStringLogEvent(contractAddress)).
 					AndEquals(event.TxHashKey, txe.TxHash).Query()).String(),
 			}
-			evs := getEvents(t, request, ecli)
+			evs, err := getEvents(t, request, ecli)
+			require.NoError(t, err)
 			n := countEventsAndCheckConsecutive(t, evs)
 			assert.Equal(t, 0, n, "should not see reverted events")
 		})
 	})
 }
 
-func getEvents(t *testing.T, request *rpcevents.BlocksRequest, ecli rpcevents.ExecutionEventsClient) []*rpcevents.EventsResponse {
+func getEvents(t *testing.T, request *rpcevents.BlocksRequest, ecli rpcevents.ExecutionEventsClient) ([]*rpcevents.EventsResponse, error) {
 	evs, err := ecli.Events(context.Background(), request)
 	require.NoError(t, err)
 	var responses []*rpcevents.EventsResponse
@@ -207,11 +211,11 @@ func getEvents(t *testing.T, request *rpcevents.BlocksRequest, ecli rpcevents.Ex
 			if err == io.EOF {
 				break
 			}
-			require.NoError(t, err)
+			return nil, err
 		}
 		responses = append(responses, resp)
 	}
-	return responses
+	return responses, nil
 }
 
 func doSends(t *testing.T, numSends int, cli rpctransact.TransactClient, kern *core.Kernel, inputAddress crypto.Address,

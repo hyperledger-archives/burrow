@@ -3,6 +3,7 @@ package state
 import (
 	"math/big"
 
+	"github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/genesis"
 
 	"github.com/hyperledger/burrow/acm/validator"
@@ -81,7 +82,7 @@ func LoadValidatorRing(version int64, ringSize int,
 
 func (ws *writeState) MakeGenesisValidators(genesisDoc *genesis.GenesisDoc) error {
 	for _, gv := range genesisDoc.Validators {
-		err := ws.SetPower(gv.PublicKey, new(big.Int).SetUint64(gv.Amount))
+		_, err := ws.SetPower(gv.PublicKey, new(big.Int).SetUint64(gv.Amount))
 		if err != nil {
 			return err
 		}
@@ -98,7 +99,8 @@ func (s *ReadState) Power(id crypto.Address) (*big.Int, error) {
 	if len(bs) == 0 {
 		return new(big.Int), nil
 	}
-	v, err := validator.Decode(bs)
+	v := new(validator.Validator)
+	err = encoding.Decode(bs, v)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +113,8 @@ func (s *ReadState) IterateValidators(fn func(id crypto.Addressable, power *big.
 		return err
 	}
 	return tree.Iterate(nil, nil, true, func(_, value []byte) error {
-		v, err := validator.Decode(value)
+		v := new(validator.Validator)
+		err = encoding.Decode(value, v)
 		if err != nil {
 			return err
 		}
@@ -119,24 +122,14 @@ func (s *ReadState) IterateValidators(fn func(id crypto.Addressable, power *big.
 	})
 }
 
-func (ws *writeState) AlterPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
-	// AlterPower in ring
-	flow, err := ws.ring.AlterPower(id, power)
+func (ws *writeState) SetPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
+	// SetPower in ring
+	flow, err := ws.ring.SetPower(id, power)
 	if err != nil {
 		return nil, err
 	}
 	// Set power in versioned state
 	return flow, ws.setPower(id, power)
-}
-
-func (ws *writeState) SetPower(id crypto.PublicKey, power *big.Int) error {
-	// SetPower in ring
-	err := ws.ring.SetPower(id, power)
-	if err != nil {
-		return err
-	}
-	// Set power in versioned state
-	return ws.setPower(id, power)
 }
 
 func (ws *writeState) setPower(id crypto.PublicKey, power *big.Int) error {
@@ -149,8 +142,7 @@ func (ws *writeState) setPower(id crypto.PublicKey, power *big.Int) error {
 		tree.Delete(key)
 		return nil
 	}
-	v := validator.New(id, power)
-	bs, err := v.Encode()
+	bs, err := encoding.Encode(validator.New(id, power))
 	if err != nil {
 		return err
 	}

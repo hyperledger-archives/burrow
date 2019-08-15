@@ -47,6 +47,7 @@ func NewLogger(outputLogger log.Logger) *Logger {
 	// long will start dropping log lines by using a ring buffer.
 	swapLogger := new(log.SwapLogger)
 	swapLogger.Swap(outputLogger)
+
 	return &Logger{
 		Output: swapLogger,
 		// logging contexts
@@ -129,7 +130,7 @@ func (l *Logger) SwapOutput(infoLogger log.Logger) {
 	l.Output.Swap(infoLogger)
 }
 
-// Record structured Info lo`g line with a message
+// Record structured Info log line with a message
 func (l *Logger) InfoMsg(message string, keyvals ...interface{}) error {
 	return Msg(l.Info, message, keyvals...)
 }

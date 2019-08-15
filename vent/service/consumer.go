@@ -4,17 +4,15 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/hyperledger/burrow/rpc"
 
-	"github.com/hyperledger/burrow/execution/exec"
-
-	"github.com/hyperledger/burrow/execution/evm/abi"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	"github.com/hyperledger/burrow/vent/config"
-	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/sqldb"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/types"
@@ -26,12 +24,13 @@ import (
 // Consumer contains basic configuration for consumer to run
 type Consumer struct {
 	Config         *config.VentConfig
-	Log            *logger.Logger
-	Closing        bool
+	Logger         *logging.Logger
 	DB             *sqldb.SQLDB
 	GRPCConnection *grpc.ClientConn
 	// external events channel used for when vent is leveraged as a library
 	EventsChannel chan types.EventData
+	Done          chan struct{}
+	shutdownOnce  sync.Once
 	Status
 }
 
@@ -44,22 +43,22 @@ type Status struct {
 // NewConsumer constructs a new consumer configuration.
 // The event channel will be passed a collection of rows generated from all of the events in a single block
 // It will be closed by the consumer when it is finished
-func NewConsumer(cfg *config.VentConfig, log *logger.Logger, eventChannel chan types.EventData) *Consumer {
+func NewConsumer(cfg *config.VentConfig, log *logging.Logger, eventChannel chan types.EventData) *Consumer {
 	return &Consumer{
 		Config:        cfg,
-		Log:           log,
-		Closing:       false,
+		Logger:        log,
 		EventsChannel: eventChannel,
+		Done:          make(chan struct{}),
 	}
 }
 
 // Run connects to a grpc service and subscribes to log events,
 // then gets tables structures, maps them & parse event data.
 // Store data in SQL event tables, it runs forever
-func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stream bool) error {
+func (c *Consumer) Run(projection *sqlsol.Projection, stream bool) error {
 	var err error
 
-	c.Log.Info("msg", "Connecting to Burrow gRPC server")
+	c.Logger.InfoMsg("Connecting to Burrow gRPC server")
 
 	c.GRPCConnection, err = grpc.Dial(c.Config.GRPCAddr, grpc.WithInsecure())
 	if err != nil {
@@ -75,18 +74,23 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 		return errors.Wrapf(err, "Error getting chain status")
 	}
 
-	if len(projection.EventSpec) == 0 {
-		c.Log.Info("msg", "No events specifications found")
+	abiProvider, err := NewAbiProvider(c.Config.AbiFileOrDirs, rpcquery.NewQueryClient(c.GRPCConnection), c.Logger)
+	if err != nil {
+		return errors.Wrapf(err, "Error loading ABIs")
+	}
+
+	if len(projection.Spec) == 0 {
+		c.Logger.InfoMsg("No events specifications found")
 		return nil
 	}
 
-	c.Log.Info("msg", "Connecting to SQL database")
+	c.Logger.InfoMsg("Connecting to SQL database")
 
 	connection := types.SQLConnection{
 		DBAdapter: c.Config.DBAdapter,
 		DBURL:     c.Config.DBURL,
 		DBSchema:  c.Config.DBSchema,
-		Log:       c.Log,
+		Log:       c.Logger,
 	}
 
 	c.DB, err = sqldb.NewSQLDB(connection)
@@ -100,7 +104,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 		return fmt.Errorf("could not clean tables after ChainID change: %v", err)
 	}
 
-	c.Log.Info("msg", "Synchronizing config and database projection structures")
+	c.Logger.InfoMsg("Synchronizing config and database projection structures")
 
 	err = c.DB.SynchronizeDB(c.Burrow.ChainID, projection.Tables)
 	if err != nil {
@@ -109,17 +113,16 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 
 	// doneCh is used for sending a "done" signal from each goroutine to the main thread
 	// eventCh is used for sending received events to the main thread to be stored in the db
-	doneCh := make(chan struct{})
 	errCh := make(chan error, 1)
 	eventCh := make(chan types.EventData)
 
 	go func() {
 		defer func() {
-			close(doneCh)
+			c.Shutdown()
 		}()
-		go c.announceEvery(doneCh)
+		go c.announceEvery(c.Done)
 
-		c.Log.Info("msg", "Getting last processed block number from SQL log table")
+		c.Logger.InfoMsg("Getting last processed block number from SQL log table")
 
 		// NOTE [Silas]: I am preserving the comment below that dates from the early days of Vent. I have looked at the
 		// bosmarmot git history and I cannot see why the original author thought that it was the case that there was
@@ -166,16 +169,17 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 
 		// get blocks
 
-		c.Log.Debug("msg", "Waiting for blocks...")
+		c.Logger.TraceMsg("Waiting for blocks...")
 
-		err = rpcevents.ConsumeBlockExecutions(stream, c.makeBlockConsumer(projection, abiSpec, eventCh))
+		err = rpcevents.ConsumeBlockExecutions(stream,
+			NewBlockConsumer(projection, c.Config.SpecOpt, abiProvider.GetEventAbi, eventCh, c.Done, c.Logger))
 
 		if err != nil {
 			if err == io.EOF {
-				c.Log.Info("msg", "EOF stream received...")
+				c.Logger.InfoMsg("EOF stream received...")
 			} else {
-				if c.Closing {
-					c.Log.Debug("msg", "GRPC connection closed")
+				if finished(c.Done) {
+					c.Logger.TraceMsg("GRPC connection closed")
 				} else {
 					errCh <- errors.Wrapf(err, "Error receiving blocks")
 					return
@@ -188,128 +192,28 @@ func (c *Consumer) Run(projection *sqlsol.Projection, abiSpec *abi.AbiSpec, stre
 		select {
 		// Process block events
 		case blk := <-eventCh:
+			c.Status.LastProcessedHeight = blk.BlockHeight
 			err := c.commitBlock(projection, blk)
 			if err != nil {
-				c.Log.Info("msg", "error committing block", "err", err)
+				c.Logger.InfoMsg("error committing block", "err", err)
 				return err
 			}
 
 		// Await completion
-		case <-doneCh:
+		case <-c.Done:
 			select {
 
 			// Select possible error
 			case err := <-errCh:
-				c.Log.Info("msg", "finished with error", "err", err)
+				c.Logger.InfoMsg("finished with error", "err", err)
 				return err
 
 			// Or fallback to success
 			default:
-				c.Log.Info("msg", "finished successfully")
+				c.Logger.InfoMsg("finished successfully")
 				return nil
 			}
 		}
-	}
-}
-
-func (c *Consumer) makeBlockConsumer(projection *sqlsol.Projection, abiSpec *abi.AbiSpec,
-	eventCh chan<- types.EventData) func(blockExecution *exec.BlockExecution) error {
-
-	return func(blockExecution *exec.BlockExecution) error {
-		if c.Closing {
-			return io.EOF
-		}
-
-		// set new block number
-		fromBlock := blockExecution.Height
-
-		defer func() {
-			c.Status.LastProcessedHeight = fromBlock
-		}()
-
-		c.Log.Debug("msg", "Block received", "height", blockExecution.Height, "num_txs", len(blockExecution.TxExecutions))
-
-		// create a fresh new structure to store block data at this height
-		blockData := sqlsol.NewBlockData(fromBlock)
-
-		if c.Config.SpecOpt&sqlsol.Block > 0 {
-			blkRawData, err := buildBlkData(projection.Tables, blockExecution)
-			if err != nil {
-				return errors.Wrapf(err, "Error building block raw data")
-			}
-			// set row in structure
-			blockData.AddRow(tables.Block, blkRawData)
-		}
-
-		// get transactions for a given block
-		for _, txe := range blockExecution.TxExecutions {
-			c.Log.Debug("msg", "Getting transaction", "TxHash", txe.TxHash, "num_events", len(txe.Events))
-
-			if c.Config.SpecOpt&sqlsol.Tx > 0 {
-				txRawData, err := buildTxData(txe)
-				if err != nil {
-					return errors.Wrapf(err, "Error building tx raw data")
-				}
-				// set row in structure
-				blockData.AddRow(tables.Tx, txRawData)
-			}
-
-			// reverted transactions don't have to update event data tables
-			// so check that condition to filter them
-			if txe.Exception == nil {
-
-				origin := txe.Origin
-				if origin == nil {
-					origin = &exec.Origin{
-						ChainID: c.Burrow.ChainID,
-						Height:  txe.Height,
-					}
-				}
-
-				// get events for a given transaction
-				for _, event := range txe.Events {
-
-					taggedEvent := event.Tagged()
-
-					// see which spec filter matches with the one in event data
-					for _, eventClass := range projection.EventSpec {
-						qry, err := eventClass.Query()
-
-						if err != nil {
-							return errors.Wrapf(err, "Error parsing query from filter string")
-						}
-
-						// there's a matching filter, add data to the rows
-						if qry.Matches(taggedEvent) {
-
-							c.Log.Info("msg", fmt.Sprintf("Matched event header: %v", event.Header),
-								"filter", eventClass.Filter)
-
-							// unpack, decode & build event data
-							eventData, err := buildEventData(projection, eventClass, event, origin, abiSpec, c.Log)
-							if err != nil {
-								return errors.Wrapf(err, "Error building event data")
-							}
-
-							// set row in structure
-							blockData.AddRow(eventClass.TableName, eventData)
-						}
-					}
-				}
-			}
-		}
-
-		// upsert rows in specific SQL event tables and update block number
-		// store block data in SQL tables (if any)
-		if blockData.PendingRows(fromBlock) {
-			// gets block data to upsert
-			blk := blockData.Data
-
-			c.Log.Info("msg", fmt.Sprintf("Upserting rows in SQL tables %v", blk), "block", fromBlock)
-
-			eventCh <- blk
-		}
-		return nil
 	}
 }
 
@@ -329,7 +233,7 @@ func (c *Consumer) commitBlock(projection *sqlsol.Projection, blockEvents types.
 
 // Health returns the health status for the consumer
 func (c *Consumer) Health() error {
-	if c.Closing {
+	if finished(c.Done) {
 		return errors.New("closing service")
 	}
 
@@ -356,15 +260,17 @@ func (c *Consumer) Health() error {
 
 // Shutdown gracefully shuts down the events consumer
 func (c *Consumer) Shutdown() {
-	c.Log.Info("msg", "Shutting down vent consumer...")
-	c.Closing = true
-	c.GRPCConnection.Close()
+	c.shutdownOnce.Do(func() {
+		c.Logger.InfoMsg("Shutting down vent consumer...")
+		close(c.Done)
+		c.GRPCConnection.Close()
+	})
 }
 
 func (c *Consumer) updateStatus(qcli rpcquery.QueryClient) {
 	stat, err := qcli.Status(context.Background(), &rpcquery.StatusParam{})
 	if err != nil {
-		c.Log.Error("msg", "could not get blockchain status", "err", err)
+		c.Logger.InfoMsg("could not get blockchain status", "err", err)
 		return
 	}
 	c.Status.Burrow = stat
@@ -398,11 +304,20 @@ func (c *Consumer) announceEvery(doneCh <-chan struct{}) {
 			select {
 			case <-ticker.C:
 				c.updateStatus(qcli)
-				c.Log.Info(c.statusMessage()...)
+				c.Logger.InfoMsg("Announcement", c.statusMessage()...)
 			case <-doneCh:
 				ticker.Stop()
 				return
 			}
 		}
+	}
+}
+
+func finished(doneCh chan struct{}) bool {
+	select {
+	case <-doneCh:
+		return true
+	default:
+		return false
 	}
 }

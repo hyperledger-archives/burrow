@@ -9,14 +9,77 @@ import (
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	hex "github.com/tmthrgd/go-hex"
+	"github.com/tmthrgd/go-hex"
 )
 
 func TestEventTagQueries(t *testing.T) {
-	addressHex := "DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF"
-	address, err := crypto.AddressFromHexString(addressHex)
+	ev := logEvent()
+
+	qb := query.NewBuilder().AndEquals(event.EventTypeKey, TypeLog.String())
+	qry, err := qb.Query()
 	require.NoError(t, err)
-	ev := &Event{
+	assert.True(t, qry.Matches(ev))
+	require.NoError(t, qry.MatchError())
+
+	qb = qb.AndContains(event.EventIDKey, "bar")
+	qry, err = qb.Query()
+	require.NoError(t, err)
+	assert.True(t, qry.Matches(ev))
+	require.NoError(t, qry.MatchError())
+
+	qb = qb.AndEquals(event.TxHashKey, hex.EncodeUpperToString(ev.Header.TxHash))
+	qry, err = qb.Query()
+	require.NoError(t, err)
+	assert.True(t, qry.Matches(ev))
+	require.NoError(t, qry.MatchError())
+
+	qb = qb.AndGreaterThanOrEqual(event.HeightKey, ev.Header.Height)
+	qry, err = qb.Query()
+	require.NoError(t, err)
+	assert.True(t, qry.Matches(ev))
+	require.NoError(t, qry.MatchError())
+
+	qb = qb.AndStrictlyLessThan(event.IndexKey, ev.Header.Index+1)
+	qry, err = qb.Query()
+	require.NoError(t, err)
+	assert.True(t, qry.Matches(ev))
+	require.NoError(t, qry.MatchError())
+
+	qb = qb.AndEquals(event.AddressKey, ev.Log.Address)
+	qry, err = qb.Query()
+	require.NoError(t, err)
+	assert.True(t, qry.Matches(ev))
+	require.NoError(t, qry.MatchError())
+
+	qb = qb.AndEquals(LogNTextKey(0), "marmot")
+	qry, err = qb.Query()
+	require.NoError(t, err)
+	assert.True(t, qry.Matches(ev))
+	require.NoError(t, qry.MatchError())
+
+	t.Logf("Query: %v", qry)
+}
+
+func BenchmarkMatching(b *testing.B) {
+	b.StopTimer()
+	ev := logEvent()
+	qb := query.NewBuilder().AndEquals(event.EventTypeKey, TypeLog.String()).
+		AndContains(event.EventIDKey, "bar").
+		AndEquals(event.TxHashKey, hex.EncodeUpperToString(ev.Header.TxHash)).
+		AndGreaterThanOrEqual(event.HeightKey, ev.Header.Height).
+		AndStrictlyLessThan(event.IndexKey, ev.Header.Index+1).
+		AndEquals(event.AddressKey, ev.Log.Address).
+		AndEquals(LogNTextKey(0), "marmot")
+	qry, err := qb.Query()
+	require.NoError(b, err)
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		qry.Matches(ev)
+	}
+}
+
+func logEvent() *Event {
+	return &Event{
 		Header: &Header{
 			EventType: TypeLog,
 			EventID:   "foo/bar",
@@ -25,48 +88,8 @@ func TestEventTagQueries(t *testing.T) {
 			Index:     2,
 		},
 		Log: &LogEvent{
-			Address: address,
+			Address: crypto.MustAddressFromHexString("DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF"),
 			Topics:  []binary.Word256{binary.RightPadWord256([]byte("marmot"))},
 		},
 	}
-
-	tev := ev.Tagged()
-
-	qb := query.NewBuilder().AndEquals(event.EventTypeKey, TypeLog.String())
-	qry, err := qb.Query()
-	require.NoError(t, err)
-	assert.True(t, qry.Matches(tev))
-
-	qb = qb.AndContains(event.EventIDKey, "bar")
-	qry, err = qb.Query()
-	require.NoError(t, err)
-	assert.True(t, qry.Matches(tev))
-
-	qb = qb.AndEquals(event.TxHashKey, hex.EncodeUpperToString(tev.Header.TxHash))
-	qry, err = qb.Query()
-	require.NoError(t, err)
-	assert.True(t, qry.Matches(tev))
-
-	qb = qb.AndGreaterThanOrEqual(event.HeightKey, tev.Header.Height)
-	qry, err = qb.Query()
-	require.NoError(t, err)
-	assert.True(t, qry.Matches(tev))
-
-	qb = qb.AndStrictlyLessThan(event.IndexKey, tev.Header.Index+1)
-	qry, err = qb.Query()
-	require.NoError(t, err)
-	assert.True(t, qry.Matches(tev))
-
-	qb = qb.AndEquals(event.AddressKey, addressHex)
-	qry, err = qb.Query()
-	require.NoError(t, err)
-	assert.True(t, qry.Matches(tev))
-
-	qb = qb.AndEquals(LogNTextKey(0), "marmot")
-	qry, err = qb.Query()
-	require.NoError(t, err)
-	assert.True(t, qry.Matches(tev))
-
-	t.Logf("Query: %v", qry)
-	t.Logf("Keys: %v", tev.Keys())
 }

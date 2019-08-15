@@ -1,6 +1,7 @@
 package rpcquery
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint"
+	"github.com/hyperledger/burrow/deploy/compile"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/execution/proposal"
@@ -59,6 +61,52 @@ func (qs *queryServer) GetAccount(ctx context.Context, param *GetAccountParam) (
 	return acc, err
 }
 
+// GetMetadata returns empty metadata string if not found. Metadata can be retrieved by account, or
+// by metadata hash
+func (qs *queryServer) GetMetadata(ctx context.Context, param *GetMetadataParam) (*MetadataResult, error) {
+	metadata := MetadataResult{}
+	var metahash acmstate.MetadataHash
+	var err error
+	if param.Address != nil {
+		acc, err := qs.accounts.GetAccount(*param.Address)
+		if err != nil {
+			return &metadata, err
+		}
+		if acc != nil && acc.CodeHash != nil {
+			codehash := acc.CodeHash
+			if acc.Forebear != nil {
+				acc, err = qs.accounts.GetAccount(*acc.Forebear)
+				if err != nil {
+					return &metadata, err
+				}
+			}
+
+			found := false
+			for _, m := range acc.ContractMeta {
+				if bytes.Equal(m.CodeHash, codehash) {
+					copy(metahash[:], m.MetadataHash)
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				deployCodehash := compile.GetDeployCodeHash(acc.EVMCode, *param.Address)
+				for _, m := range acc.ContractMeta {
+					if bytes.Equal(m.CodeHash, deployCodehash) {
+						copy(metahash[:], m.MetadataHash)
+						break
+					}
+				}
+			}
+		}
+	} else if param.MetadataHash != nil {
+		copy(metahash[:], *param.MetadataHash)
+	}
+	metadata.Metadata, err = qs.accounts.GetMetadata(metahash)
+	return &metadata, err
+}
+
 func (qs *queryServer) GetStorage(ctx context.Context, param *GetStorageParam) (*StorageValue, error) {
 	val, err := qs.accounts.GetStorage(param.Address, param.Key)
 	return &StorageValue{Value: val}, err
@@ -71,7 +119,7 @@ func (qs *queryServer) ListAccounts(param *ListAccountsParam, stream Query_ListA
 	}
 	var streamErr error
 	err = qs.accounts.IterateAccounts(func(acc *acm.Account) error {
-		if qry.Matches(acc.Tagged()) {
+		if qry.Matches(acc) {
 			return stream.Send(acc)
 		} else {
 			return nil
@@ -100,7 +148,7 @@ func (qs *queryServer) ListNames(param *ListNamesParam, stream Query_ListNamesSe
 	}
 	var streamErr error
 	err = qs.nameReg.IterateNames(func(entry *names.Entry) error {
-		if qry.Matches(entry.Tagged()) {
+		if qry.Matches(entry) {
 			return stream.Send(entry)
 		} else {
 			return nil

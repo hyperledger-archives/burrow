@@ -9,15 +9,15 @@ import (
 
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/exec"
-	"github.com/hyperledger/burrow/vent/logger"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/types"
 	"github.com/pkg/errors"
 )
 
 // buildEventData builds event data from transactions
-func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass, event *exec.Event, origin *exec.Origin, abiSpec *abi.AbiSpec,
-	l *logger.Logger) (types.EventDataRow, error) {
+func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass, event *exec.Event,
+	txOrigin *exec.Origin, evAbi *abi.EventSpec, logger *logging.Logger) (types.EventDataRow, error) {
 
 	// a fresh new row to store column/value data
 	row := make(map[string]interface{})
@@ -27,12 +27,12 @@ func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass,
 	eventLog := event.GetLog()
 
 	// decode event data using the provided abi specification
-	decodedData, err := decodeEvent(eventHeader, eventLog, origin, abiSpec)
+	decodedData, err := decodeEvent(eventHeader, eventLog, txOrigin, evAbi)
 	if err != nil {
 		return types.EventDataRow{}, errors.Wrapf(err, "Error decoding event (filter: %s)", eventClass.Filter)
 	}
 
-	l.Info("msg", fmt.Sprintf("Unpacked data: %v", decodedData), "eventName", decodedData[types.EventNameLabel])
+	logger.InfoMsg("Decoded event", decodedData)
 
 	rowAction := types.ActionUpsert
 
@@ -52,14 +52,14 @@ func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass,
 		if err == nil {
 			if fieldMapping.BytesToString {
 				if bs, ok := value.(*[]byte); ok {
-					str := sanitiseBytesForString(*bs, l)
+					str := sanitiseBytesForString(*bs, logger)
 					row[column.Name] = interface{}(str)
 					continue
 				}
 			}
 			row[column.Name] = value
 		} else {
-			l.Debug("msg", "could not get column", "err", err)
+			logger.TraceMsg("could not get column", "err", err)
 		}
 	}
 
@@ -75,7 +75,7 @@ func buildBlkData(tbls types.EventTables, block *exec.BlockExecution) (types.Eve
 	if _, ok := tbls[tables.Block]; ok {
 		blockHeader, err := json.Marshal(block.Header)
 		if err != nil {
-			return types.EventDataRow{}, fmt.Errorf("couldn not marshal BlockHeader in block %v", block)
+			return types.EventDataRow{}, fmt.Errorf("could not marshal BlockHeader in block %v", block)
 		}
 
 		row[columns.Height] = fmt.Sprintf("%v", block.Height)
@@ -125,7 +125,7 @@ func buildTxData(txe *exec.TxExecution) (types.EventDataRow, error) {
 		RowData: map[string]interface{}{
 			columns.Height:    txe.Height,
 			columns.TxHash:    txe.TxHash.String(),
-			columns.Index:     txe.Index,
+			columns.TxIndex:   txe.Index,
 			columns.TxType:    txe.TxType.String(),
 			columns.Envelope:  string(envelope),
 			columns.Events:    string(events),
@@ -137,10 +137,10 @@ func buildTxData(txe *exec.TxExecution) (types.EventDataRow, error) {
 	}, nil
 }
 
-func sanitiseBytesForString(bs []byte, l *logger.Logger) string {
+func sanitiseBytesForString(bs []byte, l *logging.Logger) string {
 	str, err := UTF8StringFromBytes(bs)
 	if err != nil {
-		l.Error("msg", "buildEventData() received invalid bytes for utf8 string - proceeding with sanitised version",
+		l.InfoMsg("buildEventData() received invalid bytes for utf8 string - proceeding with sanitised version",
 			"err", err)
 	}
 	// The only null bytes in utf8 are for the null code point/character so this is fine in general

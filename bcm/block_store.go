@@ -18,7 +18,7 @@ type BlockStore struct {
 
 func NewBlockStore(blockStore state.BlockStoreRPC) *BlockStore {
 	return &BlockStore{
-		txDecoder:     txs.NewAminoCodec(),
+		txDecoder:     txs.NewProtobufCodec(),
 		BlockStoreRPC: blockStore,
 	}
 }

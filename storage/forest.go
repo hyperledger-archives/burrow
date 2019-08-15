@@ -3,9 +3,9 @@ package storage
 import (
 	"fmt"
 
+	"github.com/golang/protobuf/proto"
+
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/hyperledger/burrow/binary"
-	"github.com/tendermint/go-amino"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/xlab/treeprint"
 )
@@ -86,13 +86,6 @@ type ImmutableForest struct {
 	// Determines whether we use LoadVersionForOverwriting on underlying MutableTrees - since ImmutableForest is used
 	// by MutableForest in a writing context sometimes we do need to load a version destructively
 	overwriting bool
-}
-
-// This is the object that is stored in the leaves of the commitsTree - it captures the sub-tree hashes so that the
-// commitsTree's hash becomes a mixture of the hashes of all the sub-trees.
-type CommitID struct {
-	Hash    binary.HexBytes
-	Version int64
 }
 
 type ForestOption func(*ImmutableForest)
@@ -307,14 +300,18 @@ func (imf *ImmutableForest) newTree(prefix []byte) *RWTree {
 
 // CommitID serialisation
 
-var codec = amino.NewCodec()
-
 func (cid *CommitID) UnmarshalBinary(data []byte) error {
-	return codec.UnmarshalBinaryBare(data, cid)
+	buf := proto.NewBuffer(data)
+	return buf.Unmarshal(cid)
 }
 
-func (cid *CommitID) MarshalBinary() (data []byte, err error) {
-	return codec.MarshalBinaryBare(cid)
+func (cid *CommitID) MarshalBinary() ([]byte, error) {
+	buf := proto.NewBuffer(nil)
+	err := buf.Marshal(cid)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func (cid CommitID) String() string {

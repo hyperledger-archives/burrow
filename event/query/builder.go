@@ -31,11 +31,6 @@ const (
 	dateString  = "DATE"
 )
 
-type Query interface {
-	Matches(tags Tagged) bool
-	String() string
-}
-
 type Queryable interface {
 	Query() (Query, error)
 }

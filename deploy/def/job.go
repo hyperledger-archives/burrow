@@ -39,6 +39,10 @@ type Job struct {
 	Build *Build `mapstructure:"build,omitempty" json:"build,omitempty" yaml:"build,omitempty" toml:"build"`
 	// Send tokens from one account to another
 	Send *Send `mapstructure:"send,omitempty" json:"send,omitempty" yaml:"send,omitempty" toml:"send"`
+	// Bond tokens from an account
+	Bond *Bond `mapstructure:"bond,omitempty" json:"bond,omitempty" yaml:"bond,omitempty" toml:"bond"`
+	// Unbond tokens from an account
+	Unbond *Unbond `mapstructure:"unbond,omitempty" json:"unbond,omitempty" yaml:"unbond,omitempty" toml:"unbond"`
 	// Utilize monax:db's native name registry to register a name
 	RegisterName *RegisterName `mapstructure:"register,omitempty" json:"register,omitempty" yaml:"register,omitempty" toml:"register"`
 	// Sends a transaction which will update the permissions of an account. Must be sent from an account which

@@ -95,6 +95,20 @@ protobuf: $(PROTO_GO_FILES)
 clean_protobuf:
 	@rm -f $(PROTO_GO_FILES_REAL)
 
+
+### PEG query grammar
+
+# This allows us to filter tagged objects with things like (EventID = 'foo' OR Height > 10) AND EventName CONTAINS 'frog'
+
+.PHONY: peg_deps
+peg_deps:
+	go get -u github.com/pointlander/peg
+
+# regenerate the parser
+.PHONY: peg
+peg:
+	peg event/query/query.peg
+
 ### Building github.com/hyperledger/burrow
 
 # Output commit_hash but only if we have the git repo (e.g. not in docker build
@@ -130,7 +144,7 @@ build_burrow_sqlite: commit_hash
 .PHONY: install
 install: build_burrow
 	mkdir -p ${BIN_PATH}
-	cp ${REPO}/bin/burrow ${BIN_PATH}/burrow
+	install -T ${REPO}/bin/burrow ${BIN_PATH}/burrow
 
 # build burrow with checks for race conditions
 .PHONY: build_race_db
@@ -164,7 +178,13 @@ solang: $(SOLANG_GO_FILES)
 
 .PHONY: test
 test: check bin/solc
-	@tests/scripts/bin_wrapper.sh go test ./... ${GOPACKAGES_NOVENDOR}
+# on circleci we might want to limit memory usage through GO_TEST_ARGS
+	@tests/scripts/bin_wrapper.sh go test ./... ${GO_TEST_ARGS}
+
+.PHONY: test_cover
+test_cover: check bin/solc
+	@tests/scripts/bin_wrapper.sh go test -coverprofile=c.out ./... ${GO_TEST_ARGS}
+	@tests/scripts/bin_wrapper.sh go tool cover -html=c.out -o coverage.html
 
 .PHONY: test_keys
 test_keys: build_burrow

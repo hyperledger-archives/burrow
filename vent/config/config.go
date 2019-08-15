@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/vent/sqlsol"
-
 	"github.com/hyperledger/burrow/vent/types"
 )
 

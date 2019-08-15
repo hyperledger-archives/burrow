@@ -7,8 +7,7 @@ package keys;
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "crypto.proto";
 
-option (gogoproto.marshaler_all) = true;
-option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.stable_marshaler_all) = true;
 option (gogoproto.sizer_all) = true;
 option (gogoproto.goproto_registration) = true;
 option (gogoproto.messagename_all) = true;
@@ -63,7 +62,7 @@ message GenResponse {
 message PubRequest {
     string Address = 1;
     string Name = 2;
-} 
+}
 
 message PubResponse {
     bytes PublicKey = 1;

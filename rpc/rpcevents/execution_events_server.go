@@ -73,7 +73,7 @@ func (ees *executionEventsServer) Stream(request *BlocksRequest, stream Executio
 		return fmt.Errorf("could not parse TxExecution query: %v", err)
 	}
 	return ees.streamEvents(stream.Context(), request.BlockRange, func(ev *exec.StreamEvent) error {
-		if qry.Matches(ev.Tagged()) {
+		if qry.Matches(ev) {
 			return stream.Send(ev)
 		}
 		return nil
@@ -81,6 +81,7 @@ func (ees *executionEventsServer) Stream(request *BlocksRequest, stream Executio
 }
 
 func (ees *executionEventsServer) Events(request *BlocksRequest, stream ExecutionEvents_EventsServer) error {
+	const errHeader = "Events()"
 	qry, err := query.NewOrEmpty(request.Query)
 	if err != nil {
 		return fmt.Errorf("could not parse Event query: %v", err)
@@ -99,10 +100,13 @@ func (ees *executionEventsServer) Events(request *BlocksRequest, stream Executio
 
 		default:
 			// We need to consume transaction to exclude events belong to an exceptional transaction
-			txe := stack.Consume(sev)
+			txe, err := stack.Consume(sev)
+			if err != nil {
+				return fmt.Errorf("%s: %v", errHeader, err)
+			}
 			if txe != nil && txe.Exception == nil {
 				for _, ev := range txe.Events {
-					if qry.Matches(ev.Tagged()) {
+					if qry.Matches(ev) {
 						response.Events = append(response.Events, ev)
 					}
 				}
@@ -116,7 +120,6 @@ func (ees *executionEventsServer) Events(request *BlocksRequest, stream Executio
 func (ees *executionEventsServer) streamEvents(ctx context.Context, blockRange *BlockRange,
 	consumer func(execution *exec.StreamEvent) error) error {
 
-	// Converts the bounds to half-open interval needed
 	start, end, streaming := blockRange.Bounds(ees.tip.LastBlockHeight())
 	ees.logger.TraceMsg("Streaming blocks", "start", start, "end", end, "streaming", streaming)
 
@@ -125,32 +128,29 @@ func (ees *executionEventsServer) streamEvents(ctx context.Context, blockRange *
 	start, err := ees.iterateStreamEvents(start, end, consumer)
 
 	// If we are not streaming and all blocks requested were retrieved from state then we are done
-	if !streaming && start >= end {
+	if !streaming && start > end {
 		return err
 	}
 
 	return ees.subscribeBlockExecution(ctx, func(block *exec.BlockExecution) error {
-		streamEnd := block.Height
-		if streamEnd < start {
+		if block.Height < start {
 			// We've managed to receive a block event we already processed directly from state above - wait for next block
 			return nil
 		}
-
-		finished := !streaming && streamEnd >= end
-		if finished {
-			// Truncate streamEnd to final end to get exactly the blocks we want from state
-			streamEnd = end
-		}
-		if start < streamEnd {
-			// This implies there are some blocks between the previous batchEnd (now start) and the current BlockExecution that
-			// we have not emitted so we will pull them from state. This can occur if a block is emitted during/after
-			// the initial streaming but before we have subscribed to block events or if we spill BlockExecutions
-			// when streaming them and need to catch up
-			_, err := ees.iterateStreamEvents(start, streamEnd, consumer)
+		// Check if we have missed blocks we need to catch up on
+		if start < block.Height {
+			// We expect start == block.Height when processing consecutive blocks but we may have missed a block by
+			// dropping an event - if so we can fill in here
+			catchupEnd := block.Height
+			if catchupEnd > end {
+				catchupEnd = end
+			}
+			start, err = ees.iterateStreamEvents(start, catchupEnd, consumer)
 			if err != nil {
 				return err
 			}
 		}
+		finished := !streaming && block.Height > end
 		if finished {
 			return io.EOF
 		}

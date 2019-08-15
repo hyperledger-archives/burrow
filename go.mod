@@ -18,6 +18,7 @@ require (
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/elgs/gojq v0.0.0-20160421194050-81fa9a608a13
 	github.com/elgs/gosplitargs v0.0.0-20161028071935-a491c5eeb3c8 // indirect
+	github.com/fatih/color v1.7.0
 	github.com/fortytw2/leaktest v1.3.0 // indirect
 	github.com/go-kit/kit v0.8.0
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
@@ -34,8 +35,10 @@ require (
 	github.com/jawher/mow.cli v1.1.0
 	github.com/jmhodges/levigo v1.0.0 // indirect
 	github.com/jmoiron/sqlx v1.2.0
+	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lib/pq v1.1.1
 	github.com/magiconair/properties v1.8.0
+	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/monax/relic v2.0.0+incompatible
 	github.com/perlin-network/life v0.0.0-20190521143330-57f3819c2df0
@@ -49,7 +52,7 @@ require (
 	github.com/spf13/viper v1.3.2
 	github.com/streadway/simpleuuid v0.0.0-20130420165545-6617b501e485
 	github.com/stretchr/testify v1.3.0
-	github.com/syndtr/goleveldb v1.0.0 // indirect
+	github.com/syndtr/goleveldb v1.0.0
 	github.com/tendermint/go-amino v0.14.1
 	github.com/tendermint/iavl v0.12.2
 	github.com/tendermint/tendermint v0.31.5
@@ -64,6 +67,6 @@ require (
 	golang.org/x/text v0.3.2 // indirect
 	google.golang.org/grpc v1.20.1
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6 // indirect
+	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v2 v2.2.2
-	honnef.co/go/tools v0.0.0-20190614002413-cb51c254f01b // indirect
 )

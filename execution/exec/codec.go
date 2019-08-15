@@ -2,4 +2,4 @@ package exec
 
 import "github.com/hyperledger/burrow/txs"
 
-var cdc = txs.NewAminoCodec()
+var cdc = txs.NewProtobufCodec()

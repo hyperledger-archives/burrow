@@ -11,6 +11,7 @@ type DeployArgs struct {
 	Chain         string   `mapstructure:"," json:"," yaml:"," toml:","`
 	KeysService   string   `mapstructure:"," json:"," yaml:"," toml:","`
 	MempoolSign   bool     `mapstructure:"," json:"," yaml:"," toml:","`
+	LocalABI      bool     `mapstructure:"," json:"," yaml:"," toml:","`
 	Wasm          bool     `mapstructure:"," json:"," yaml:"," toml:","`
 	Timeout       int      `mapstructure:"," json:"," yaml:"," toml:","`
 	Address       string   `mapstructure:"," json:"," yaml:"," toml:","`

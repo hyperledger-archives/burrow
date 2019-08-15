@@ -46,8 +46,8 @@ $burrow_bin deploy -o '' -a Validator_0 --dir $burrow_dump deploy.yaml
 title="Dumping chain..."
 echo -e "${title//?/-}\n${title}\n${title//?/-}\n"
 
-$burrow_bin dump remote dump.bin
-$burrow_bin dump remote -j dump.json
+$burrow_bin dump remote -b dump.bin
+$burrow_bin dump remote dump.json
 height=$(head -1  dump.json | jq .Height)
 
 kill $burrow_pid
@@ -70,9 +70,20 @@ sleep 13
 title="Dumping restored chain for comparison..."
 echo -e "\n${title//?/-}\n${title}\n${title//?/-}\n"
 
-$burrow_bin dump remote -j --height $height dump-after-restore.json
+$burrow_bin dump remote --height $height dump-after-restore.json
 
 kill $burrow_pid
+
+#
+# The contract emits an event which contains the hex string DEADCAFE. So,
+# this string should be present both in contract code and as an emitted
+# event. We should have two in our dump.
+#
+deadcafe=$(grep DEADCAFE dump.json | wc -l)
+if [[ $deadcafe -ne 2 ]]; then
+	echo "DUMP FAILURE -- missing DEADCAFE"
+	exit 1
+fi
 
 if cmp dump.json dump-after-restore.json
 then

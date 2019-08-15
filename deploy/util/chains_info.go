@@ -23,7 +23,7 @@ func GetBlockHeight(client *def.Client, logger *logging.Logger) (latestBlockHeig
 }
 
 func AccountsInfo(account, field string, client *def.Client, logger *logging.Logger) (string, error) {
-	address, err := client.GetKeyAddress(account, logger)
+	address, err := client.ParseAddress(account, logger)
 	if err != nil {
 		return "", err
 	}

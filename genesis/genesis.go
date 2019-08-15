@@ -38,7 +38,7 @@ const ShortHashSuffixBytes = 3
 // core types for a genesis definition
 
 type BasicAccount struct {
-	// Address  is convenient to have in file for reference, but otherwise ignored since derived from PublicKey
+	// Address is convenient to have in file for reference, but otherwise ignored since derived from PublicKey
 	Address   crypto.Address
 	PublicKey crypto.PublicKey
 	Amount    uint64
@@ -56,10 +56,9 @@ type Validator struct {
 	UnbondTo []BasicAccount
 }
 
-//------------------------------------------------------------
-// GenesisDoc is stored in the state database
-
 const DefaultProposalThreshold uint64 = 3
+
+var DefaultPermissionsAccount = PermissionsAccount(permission.DefaultAccountPermissions)
 
 type params struct {
 	ProposalThreshold uint64
@@ -77,6 +76,21 @@ type GenesisDoc struct {
 	// memo
 	hash    []byte
 	chainID string
+}
+
+func (genesisDoc *GenesisDoc) GlobalPermissionsAccount() *acm.Account {
+	return PermissionsAccount(genesisDoc.GlobalPermissions)
+}
+
+func PermissionsAccount(globalPerms permission.AccountPermissions) *acm.Account {
+	// Ensure the set bits are all true otherwise the HasPermission() functions will fail
+	globalPerms.Base.SetBit = permission.AllPermFlags
+
+	return &acm.Account{
+		Address:     acm.GlobalPermissionsAddress,
+		Balance:     1337,
+		Permissions: globalPerms,
+	}
 }
 
 func (genesisDoc *GenesisDoc) JSONString() string {

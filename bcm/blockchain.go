@@ -20,11 +20,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger/burrow/encoding"
 	"github.com/tendermint/tendermint/types"
 
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
-	amino "github.com/tendermint/go-amino"
 	dbm "github.com/tendermint/tendermint/libs/db"
 )
 
@@ -59,13 +59,6 @@ type Blockchain struct {
 }
 
 var _ BlockchainInfo = &Blockchain{}
-
-type PersistedState struct {
-	AppHashAfterLastBlock []byte
-	LastBlockTime         time.Time
-	LastBlockHeight       uint64
-	GenesisHash           []byte
-}
 
 // LoadOrNewBlockchain returns true if state already exists
 func LoadOrNewBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc, logger *logging.Logger) (_ *Blockchain, exists bool, _ error) {
@@ -175,19 +168,13 @@ func (bc *Blockchain) save() error {
 	return nil
 }
 
-var cdc = amino.NewCodec()
-
 func (bc *Blockchain) Encode() ([]byte, error) {
-	encodedState, err := cdc.MarshalBinaryBare(bc.persistedState)
-	if err != nil {
-		return nil, err
-	}
-	return encodedState, nil
+	return encoding.Encode(&bc.persistedState)
 }
 
 func decodeBlockchain(encodedState []byte, genesisDoc *genesis.GenesisDoc) (*Blockchain, error) {
 	bc := NewBlockchain(nil, genesisDoc)
-	err := cdc.UnmarshalBinaryBare(encodedState, &bc.persistedState)
+	err := encoding.Decode(encodedState, &bc.persistedState)
 	if err != nil {
 		return nil, err
 	}

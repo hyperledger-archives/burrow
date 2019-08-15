@@ -19,6 +19,8 @@ import (
 	"sync"
 
 	"github.com/hyperledger/burrow/event/query"
+	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/tendermint/tendermint/libs/common"
 )
 
@@ -60,6 +62,7 @@ type Server struct {
 
 	mtx           sync.RWMutex
 	subscriptions map[string]map[string]query.Query // subscriber -> query (string) -> query.Query
+	logger        *logging.Logger
 }
 
 // Option sets a parameter for the server.
@@ -71,6 +74,7 @@ type Option func(*Server)
 func NewServer(options ...Option) *Server {
 	s := &Server{
 		subscriptions: make(map[string]map[string]query.Query),
+		logger:        logging.NewNoopLogger(),
 	}
 	s.BaseService = *common.NewBaseService(nil, "PubSub", s)
 
@@ -93,6 +97,12 @@ func BufferCapacity(cap int) Option {
 		if cap > 0 {
 			s.cmdsCap = cap
 		}
+	}
+}
+
+func WithLogger(logger *logging.Logger) Option {
+	return func(s *Server) {
+		s.logger = logger.WithScope("PubSub")
 	}
 }
 
@@ -210,6 +220,7 @@ type state struct {
 	queries map[query.Query]map[string]chan interface{}
 	// client -> query -> struct{}
 	clients map[string]map[query.Query]struct{}
+	logger  *logging.Logger
 }
 
 // OnStart implements Service.OnStart by starting the server.
@@ -217,6 +228,7 @@ func (s *Server) OnStart() error {
 	go s.loop(state{
 		queries: make(map[query.Query]map[string]chan interface{}),
 		clients: make(map[string]map[query.Query]struct{}),
+		logger:  s.logger,
 	})
 	return nil
 }
@@ -325,6 +337,10 @@ func (state *state) send(msg interface{}, tags query.Tagged) {
 					// matters then we need a queue per client. Possible for us it does not...
 				}
 			}
+		}
+		err := q.MatchError()
+		if err != nil {
+			state.logger.InfoMsg("pubsub Server could not execute query", structure.ErrorKey, err)
 		}
 	}
 }

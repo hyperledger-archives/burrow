@@ -5,12 +5,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/hyperledger/burrow/txs"
-
+	"github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/execution/exec"
 )
-
-var cdc = txs.NewAminoCodec()
 
 func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
 	// If there are no transactions, do not store anything. This reduces the amount of data we store and
@@ -19,12 +16,12 @@ func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
 		return nil
 	}
 
-	streamEventBytes := make([]byte, 0)
-
+	buf := new(bytes.Buffer)
+	var offset int
 	for _, ev := range be.StreamEvents() {
 		if ev.BeginTx != nil {
-			val := &exec.TxExecutionKey{Height: be.Height, Offset: uint64(len(streamEventBytes))}
-			bs, err := val.Encode()
+			val := &exec.TxExecutionKey{Height: be.Height, Offset: uint64(offset)}
+			bs, err := encoding.Encode(val)
 			if err != nil {
 				return err
 			}
@@ -32,12 +29,11 @@ func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
 			ws.plain.Set(keys.TxHash.Key(ev.BeginTx.TxHeader.TxHash), bs)
 		}
 
-		bs, err := cdc.MarshalBinaryLengthPrefixed(ev)
+		n, err := encoding.WriteMessage(buf, ev)
 		if err != nil {
 			return err
 		}
-
-		streamEventBytes = append(streamEventBytes, bs...)
+		offset += n
 	}
 
 	tree, err := ws.forest.Writer(keys.Event.Prefix())
@@ -45,59 +41,64 @@ func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
 		return err
 	}
 	key := keys.Event.KeyNoPrefix(be.Height)
-	tree.Set(key, streamEventBytes)
+	tree.Set(key, buf.Bytes())
 
 	return nil
 }
 
-func (s *ReadState) IterateStreamEvents(start, end *uint64, consumer func(*exec.StreamEvent) error) error {
+// Iterate SteamEvents over the closed interval [startHeight, endHeight] - i.e. startHeight and endHeight inclusive
+func (s *ReadState) IterateStreamEvents(startHeight, endHeight *uint64, consumer func(*exec.StreamEvent) error) error {
 	tree, err := s.Forest.Reader(keys.Event.Prefix())
 	if err != nil {
 		return err
 	}
 	var startKey, endKey []byte
-	if start != nil {
-		startKey = keys.Event.KeyNoPrefix(*start)
+	if startHeight != nil {
+		startKey = keys.Event.KeyNoPrefix(*startHeight)
 	}
-	if end != nil {
-		endKey = keys.Event.KeyNoPrefix(*end)
+	if endHeight != nil {
+		// Convert to inclusive end bounds since this generally makes more sense for block height
+		endKey = keys.Event.KeyNoPrefix(*endHeight + 1)
 	}
 	return tree.Iterate(startKey, endKey, true, func(_, value []byte) error {
-		r := bytes.NewReader(value)
+		buf := bytes.NewBuffer(value)
 
-		for r.Len() > 0 {
+		for {
 			ev := new(exec.StreamEvent)
-			_, err := cdc.UnmarshalBinaryLengthPrefixedReader(r, ev, 0)
+			_, err := encoding.ReadMessage(buf, ev)
 			if err != nil {
+				if err == io.EOF {
+					return nil
+				}
 				return err
 			}
 
 			err = consumer(ev)
 			if err != nil {
-				break
+				return err
 			}
 		}
-
-		return err
 	})
 }
 
 func (s *ReadState) TxsAtHeight(height uint64) ([]*exec.TxExecution, error) {
+	const errHeader = "TxAtHeight():"
 	var stack exec.TxStack
 	var txExecutions []*exec.TxExecution
-	start := height
-	end := height + 1
-	err := s.IterateStreamEvents(&start, &end,
+	err := s.IterateStreamEvents(&height, &height,
 		func(ev *exec.StreamEvent) error {
 			// Keep trying to consume TxExecutions at from events at this height
-			txe := stack.Consume(ev)
+			txe, err := stack.Consume(ev)
+			if err != nil {
+				return fmt.Errorf("%s %v", errHeader, err)
+			}
 			if txe != nil {
 				txExecutions = append(txExecutions, txe)
 			}
 			return nil
 		})
 	if err != nil && err != io.EOF {
-		return nil, err
+		return nil, fmt.Errorf("%s %v", errHeader, err)
 	}
 	return txExecutions, nil
 }
@@ -109,7 +110,8 @@ func (s *ReadState) TxByHash(txHash []byte) (*exec.TxExecution, error) {
 		return nil, nil
 	}
 
-	key, err := exec.DecodeTxExecutionKey(bs)
+	key := new(exec.TxExecutionKey)
+	err := encoding.Decode(bs, key)
 	if err != nil {
 		return nil, err
 	}
@@ -125,17 +127,20 @@ func (s *ReadState) TxByHash(txHash []byte) (*exec.TxExecution, error) {
 			errHeader, txHash)
 	}
 
-	r := bytes.NewReader(bs[key.Offset:])
+	buf := bytes.NewBuffer(bs[key.Offset:])
 	var stack exec.TxStack
 
 	for {
 		ev := new(exec.StreamEvent)
-		_, err := cdc.UnmarshalBinaryLengthPrefixedReader(r, ev, 0)
+		_, err := encoding.ReadMessage(buf, ev)
 		if err != nil {
 			return nil, err
 		}
 
-		txe := stack.Consume(ev)
+		txe, err := stack.Consume(ev)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %v", errHeader, err)
+		}
 		if txe != nil {
 			return txe, nil
 		}

@@ -18,7 +18,7 @@ jobs:
   deploy:
       contract: Set.bin
 
-- name: deployContractNormal
+- name: deployContractBin
   deploy:
       contract: C.bin
       libraries: Set:$deployLibBin

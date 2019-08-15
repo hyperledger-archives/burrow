@@ -11,11 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/integration/rpctest"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/vent/config"
-	"github.com/hyperledger/burrow/vent/logger"
 	"github.com/hyperledger/burrow/vent/service"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/test"
@@ -37,21 +36,19 @@ func TestServer(t *testing.T) {
 			_, closeDB := test.NewTestDB(t, cfg)
 			defer closeDB()
 
-			cfg.SpecFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_example.json"}
+			cfg.SpecFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_view.json"}
 			cfg.AbiFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/EventsTest.abi"}
 			cfg.GRPCAddr = kern.GRPCListenAddress().String()
 
-			log := logger.NewLogger(cfg.LogLevel)
+			log := logging.NewNoopLogger()
 			consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
-
 			projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, sqlsol.None)
-			abiSpec, err := abi.LoadPath(cfg.AbiFileOrDirs...)
 
 			var wg sync.WaitGroup
 
 			wg.Add(1)
 			go func() {
-				err := consumer.Run(projection, abiSpec, true)
+				err := consumer.Run(projection, true)
 				require.NoError(t, err)
 
 				wg.Done()

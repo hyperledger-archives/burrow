@@ -1,7 +1,6 @@
 package acmstate
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/hyperledger/burrow/acm"
@@ -111,8 +110,7 @@ func TestStateCache_UpdateAccount(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, balance, accNewOut.Balance)
 
-	fmt.Println(accNewOut == accNew)
-	fmt.Println(accNewOut == accNew)
+	require.Equal(t, accNewOut == accNew, false)
 }
 
 func TestStateCache_RemoveAccount(t *testing.T) {

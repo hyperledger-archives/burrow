@@ -70,6 +70,13 @@ message CallTx {
     bytes Data = 5 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
     // WASM bytecode
     bytes WASM = 6 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false, (gogoproto.jsontag)="tags,omitempty"];
+    // Set of contracts this code will deploy
+    repeated ContractMeta ContractMeta = 7;
+}
+
+message ContractMeta {
+    bytes CodeHash = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
+    string Meta = 2;
 }
 
 // A payment between two sets of parties
@@ -108,8 +115,8 @@ message BondTx {
     option (gogoproto.goproto_stringer) = false;
     option (gogoproto.goproto_getters) = false;
 
-    repeated TxInput Inputs = 1;
-    repeated TxOutput UnbondTo = 2;
+    // Input must be the validator that desires to bond
+    TxInput Input = 1;
 }
 
 message UnbondTx {
@@ -117,8 +124,8 @@ message UnbondTx {
     option (gogoproto.goproto_getters) = false;
 
     TxInput Input = 1;
-    bytes Address = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
-    uint64 Height = 3;
+    // Account to unbond
+    TxOutput Output = 2;
 }
 
 message GovTx {

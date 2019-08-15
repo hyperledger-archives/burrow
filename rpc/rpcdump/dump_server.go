@@ -15,7 +15,7 @@ var _ DumpServer = &dumpServer{}
 
 func NewDumpServer(state *state.State, blockchain bcm.BlockchainInfo, logger *logging.Logger) *dumpServer {
 	return &dumpServer{
-		dumper: dump.NewDumper(state, blockchain, logger),
+		dumper: dump.NewDumper(state, blockchain).WithLogger(logger),
 	}
 }
 
