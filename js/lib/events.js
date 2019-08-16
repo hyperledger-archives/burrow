@@ -21,7 +21,7 @@ Events.prototype.listen = function (Query, options, callback) {
     }
   }
 
-  return this.burrow.executionEvents.Events({BlockRange, Query}, function (err, data) {
+  return this.burrow.executionEvents.Events({ BlockRange, Query }, function (err, data) {
     if (err) {
       return callback(err)
     }
