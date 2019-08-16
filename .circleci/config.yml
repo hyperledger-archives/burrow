@@ -39,6 +39,16 @@ jobs:
       - codecov/upload:
           file: coverage.html
 
+  test_js:
+    machine:
+      image: circleci/classic:201808-01
+    steps:
+      - checkout
+      # js tests do not need to in docker, however nodejs crashes
+      # while running mocha when not using image above (not OOM).
+      # above image needs newer go so docker is used.
+      - run: docker-compose run burrow make npm_install test_js
+
   test_integration:
     machine:
       image: circleci/classic:201808-01
@@ -90,6 +100,10 @@ workflows:
           filters:
             <<: *tags_filters
 
+      - test_js:
+          filters:
+            <<: *tags_filters
+
       - build_docker:
           filters:
             # tags filters and branch filters are applied disjunctively, so we
@@ -101,6 +115,7 @@ workflows:
           requires:
           - test
           - test_integration
+          - test_js
           filters:
             branches:
               only: develop
@@ -109,6 +124,7 @@ workflows:
           requires:
           - test
           - test_integration
+          - test_js
           filters:
             <<: *tags_filters
             branches:

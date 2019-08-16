@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--Website originally created by  https://github.com/bmorelli25-->
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Test</title>
+    <link rel="stylesheet" type="text/css" href="/css/style.css">
+    
+  </head>
+  <body>
+    <div class="container">
+      <fieldset>
+        <form action="/" method="post">
+                    <input name="valueNum" type="number" class="ghost-input" placeholder="Enter a new value" required>
+          <input type="submit" class="ghost-button" value="Set Value">
+        </form>
+      </fieldset>
+      <fieldset>
+        <form action="/getValue" method="get">
+          <input type="submit" class="ghost-button" value="Get Value">
+        </form>
+        <% if(valueIs !== null){ %>
+          <p><%= valueIs %></p>
+        <% } %>
+
+        <% if(valueIs !== null){ %>
+          <p><%= error %></p>
+        <% } %>
+      </fieldset>
+    </div>
+  </body>
+</html>
