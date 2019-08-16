@@ -7,6 +7,8 @@ jobs:
 - name: simplestorage
   deploy:
     contract: simplestorage.sol
+    data:
+    - 0
 
 - name: setStorage
   call:

@@ -9,7 +9,7 @@
   "author": "Silas Davis",
   "license": "Apache-2.0",
   "dependencies": {
-    "@monax/burrow": "^0.20.8",
+    "@monax/burrow": "^0.24.3",
     "body-parser": "^1.18.3",
     "express": "^4.16.4"
   }
