@@ -23,7 +23,7 @@
     "fs-extra": "^7.0.1",
     "mocha": "6.2.0",
     "solc": "0.4.24",
-    "standard": "9.0.2"
+    "standard": "13.1.0"
   },
   "engines": {
     "node": ">=6"

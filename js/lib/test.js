@@ -9,7 +9,7 @@ const blockchainUrl = (urlObj) => {
   if (process.env.BURROW_GRPC_PORT) envUrl.port = process.env.BURROW_GRPC_PORT
   if (process.env.BURROW_HOST) envUrl.hostname = process.env.BURROW_HOST
 
-  urlObj = Object.assign({port: '20997', hostname: '127.0.0.1'}, envUrl, urlObj)
+  urlObj = Object.assign({ port: '20997', hostname: '127.0.0.1' }, envUrl, urlObj)
   return url.format(urlObj)
 }
 
@@ -23,7 +23,7 @@ const compile = (source, name) => {
   const abi = JSON.parse(contract.interface)
   const bytecode = contract.bytecode
 
-  return {abi, bytecode}
+  return { abi, bytecode }
 }
 
 // Return a contract manager in the test harness.

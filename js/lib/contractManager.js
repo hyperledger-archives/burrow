@@ -21,7 +21,7 @@ var defaultHandlers = {
 var nullHandler = function (result) { return result }
 
 function ContractManager (burrow, options) {
-  options = Object.assign({objectReturn: false}, options)
+  options = Object.assign({ objectReturn: false }, options)
   var handlers = Object.assign({}, defaultHandlers, options.handlers)
   this.burrow = burrow
   this.handlers = handlers
