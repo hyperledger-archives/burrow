@@ -26,6 +26,10 @@ Hyperledger Burrow is a permissioned blockchain node that executes smart contrac
 - **Application Binary Interface (ABI):** Transactions need to be formulated in a binary format that can be processed by the blockchain node. Current tooling provides functionality to compile, deploy and link solidity smart contracts and formulate transactions to call smart contracts on the chain.
 - **API Gateway:** Burrow exposes REST and JSON-RPC endpoints to interact with the blockchain network and the application state through broadcasting transactions, or querying the current state of the application. Websockets allow subscribing to events, which is particularly valuable as the consensus engine and smart contract application can give unambiguously finalised results to transactions within one blocktime of about one second.
 
+## JavaScript Client
+
+There is a [JavaScript API](https://github.com/hyperledger/burrow/tree/develop/js)
+
 ## Project Roadmap
 
 Project information generally updated on a quarterly basis can be found on the [Hyperledger Burrow Wiki](https://wiki.hyperledger.org/display/burrow).
