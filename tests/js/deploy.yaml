@@ -1,0 +1,12 @@
+jobs:
+
+- name: randomDeploy
+  deploy:
+      contract: random.sol
+
+- name: randomRegister
+  register:
+       name: random
+       data: $randomDeploy
+       amount: 5000
+       fee: 2000

@@ -91,4 +91,22 @@ ContractManager.prototype.new = function (abi, byteCode, address, handlers) {
   return new Contract(abi, address, byteCode, this.burrow, handlers)
 }
 
+/**
+ * Creates a contract object interface from an address without ABI.
+ * The contract must be deployed using a recent burrow deploy which registers
+ * metadata.
+ *
+ * @method address
+ * @param {string} address - default contract address [can be null]
+ * @returns {Contract} returns contract interface object
+ */
+ContractManager.prototype.address = function (address, handlers) {
+  handlers = Object.assign({}, this.handlers, handlers)
+  return this.burrow.query.GetMetadata({ Address: Buffer.from(address, 'hex') })
+    .then((data) => {
+      const abi = JSON.parse(data.Metadata).Abi
+      return this.burrow.contracts.new(abi, null, address, handlers)
+    })
+}
+
 module.exports = ContractManager
