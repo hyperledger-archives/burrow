@@ -9,8 +9,9 @@
   "author": "Silas Davis, website section added by Luke Riley",
   "license": "Apache-2.0",
   "dependencies": {
-    "@monax/burrow": "^0.20.4",
+    "@monax/burrow": "^0.24.3",
     "body-parser": "^1.18.3",
-    "express": "^4.16.3"
+    "express": "^4.16.3",
+    "ejs": "^2.6.2"
   }
 }
