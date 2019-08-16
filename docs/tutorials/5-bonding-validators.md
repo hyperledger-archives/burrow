@@ -1,9 +1,5 @@
 # Bonding Validators
 
-As Burrow runs on Tendermint, it supports the notion of bonding validators.
-
-## Example
-
 We need at least one validator to start the chain, so run the following to construct 
 a genesis of two accounts with the `Bond` permission, one of which is pre-bonded:
 
