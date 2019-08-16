@@ -1,6 +1,6 @@
 # Network with seed nodes
 
-## What is a seed node
+## What is a seed node?
 
 According to [Tendermint documentation](https://tendermint.com/docs/tendermint-core/using-tendermint.html#seed):
 >A seed node is a node who relays the addresses of other peers which they know
