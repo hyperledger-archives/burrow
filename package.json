@@ -37,8 +37,16 @@
   "license": "Apache-2.0",
   "maintainers": [
     {
-      "name": "Dennis Mckinnon",
-      "email": "contact@monax.io"
+      "name": "Silas Davis",
+      "email": "silas@monax.io"
+    },
+    {
+      "name": "Sean Young",
+      "email": "sean.young@monax.io"
+    },
+    {
+      "name": "Greg Hill",
+      "email": "greg.hill@monax.io"
     }
   ],
   "repository": {
