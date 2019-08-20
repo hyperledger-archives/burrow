@@ -4,7 +4,7 @@ Note that this example is the same as the the basic-app example, apart from step
 
 This example contains an example solidity contract [simplestorage](simplestorage.sol) and a [node.js application](app.js) that interacts with the contract using [burrow](../../js/README.md). It also contains a [makefile](makefile) that will set up a single node chain, deploy the contract using `burrow deploy`. The node app configures itself to use the the single node chain my looking for [account.json](account.json) and [deploy.output.json](deploy.output.json) files that are emitted by `burrow deploy` and the makefile.
 
-The makefile provides some examples of using the `burrow` command line tooling and you are invited to modify it for your purposes.
+The makefile provides some examples of using the `burrow` command line tooling and you are invited to modify it for your purposes (i.e. change from linux target to darwin)
 
 ## Dependencies
 To run the makefile you will need to have installed:
@@ -13,6 +13,7 @@ To run the makefile you will need to have installed:
 - Node.js (the `node` binary)
 - npm (the node package manager)
 - jq (the JSON tool)
+- GO
 
 Burrow will be downloaded for you when using the makefile, but you may override `BURROW_BIN` and `BURROW_ARCH` in the makefile to change this behaviour. By default Burrow is downloaded for `Linux_x86_64.
 
