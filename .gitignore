@@ -22,3 +22,4 @@ commit_hash.txt
 tests/keys/
 .output.json
 vendor/
+node_modules

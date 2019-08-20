@@ -16,15 +16,20 @@
 # run_pkgs_tests.sh [appXX]
 
 
-export script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "$script_dir/test_runner.sh"
+export jsscript_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source "$jsscript_dir/../test_runner.sh"
 
 export js_dir="${script_dir}/../js"
 
+
 perform_js_tests(){
+  cd "$jsscript_dir"
+  # First deploy a solidity file using burrow deploy so it has metadata
+  $burrow_bin deploy --chain=$BURROW_HOST:$BURROW_GRPC_PORT -a $key1_addr deploy.yaml
   cd "$js_dir"
   test_account="{\"address\": \"$key1_addr\"}"
   echo "Using test account:"
+  echo $test_account
   account="$test_account" mocha --bail --exit --recursive ${1}
   test_exit=$?
 }

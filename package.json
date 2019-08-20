@@ -48,7 +48,7 @@
   "scripts": {
     "precommit": "standard --fix js/**/*.js",
     "pretest": "standard --fix js/**/*.js",
-    "test": "./tests/js.sh"
+    "test": "./tests/js/js.sh"
   },
   "standard": {
     "globals": [

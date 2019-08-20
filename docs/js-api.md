@@ -305,6 +305,16 @@ When the contract interface object is created via deploy, the default address is
 `Object` - The return data object is a contract interface, which refers to the contract which is deployed at `contract.address`. (This functionality used to be called `new`.)
 
 ##### burrow.contracts.new
+```burrow.contracts.address(address)```
+
+Returns a new contract interface object, without having to pass in the ABI. The ABI is retrieved from burrow; the contract must have been deployed with burrow deploy 0.28.0 or later.
+
+###### Parameters
+3. `String` - Hex encoded address of the default contract you want the interface to access
+###### Returns
+`Object` - The return data object is a contract interface.
+
+##### burrow.contracts.new
 ```burrow.contracts.new(abi, [bytecode[, address]])```
 
 Returns a new contract interface object. All you really need to create an interface is the abi, however you can also include the bytecode of the contract. If you do so you can create new contracts of this type by calling `contract._constructor(...)` which will deploy a new contract and return its address. If you provide an address, then this will be the default contract address used however you can also omit this at be sure to use the `.at()` and `.atSim()` versions of functions. Also note you must provide bytecode is you wish to provide address, though bytecode argument can be null.
