@@ -18,9 +18,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"sync"
 
 	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
 	"github.com/hyperledger/burrow/event"
@@ -49,19 +51,21 @@ type Transactor struct {
 	BlockchainInfo  bcm.BlockchainInfo
 	Emitter         *event.Emitter
 	MempoolAccounts *Accounts
+	ValidatorSet    validator.Reader
 	checkTxAsync    func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error
 	txEncoder       txs.Encoder
 	logger          *logging.Logger
 }
 
 func NewTransactor(tip bcm.BlockchainInfo, emitter *event.Emitter, mempoolAccounts *Accounts,
-	checkTxAsync func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error, txEncoder txs.Encoder,
+	validators validator.Reader, checkTxAsync func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error, txEncoder txs.Encoder,
 	logger *logging.Logger) *Transactor {
 
 	return &Transactor{
 		BlockchainInfo:  tip,
 		Emitter:         emitter,
 		MempoolAccounts: mempoolAccounts,
+		ValidatorSet:    validators,
 		checkTxAsync:    checkTxAsync,
 		txEncoder:       txEncoder,
 		logger:          logger.With(structure.ComponentKey, "Transactor"),
@@ -164,6 +168,11 @@ func (trans *Transactor) SignTxMempool(txEnv *txs.Envelope) (*txs.Envelope, Unlo
 	signers := make([]acm.AddressableSigner, len(inputs))
 	unlockers := make([]UnlockFunc, len(inputs))
 	for i, input := range inputs {
+		power, err := trans.ValidatorSet.Power(input.Address)
+		// If the address is a validator and has power, it should not be used for signing
+		if err == nil && power.Cmp(big.NewInt(0)) != 0 {
+			return nil, nil, fmt.Errorf("cannot mempool sign using validator key %s", input.Address)
+		}
 		ssa, err := trans.MempoolAccounts.SequentialSigningAccount(input.Address)
 		if err != nil {
 			return nil, nil, err

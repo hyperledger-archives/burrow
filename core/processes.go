@@ -99,7 +99,7 @@ func NoConsensusLauncher(kern *Kernel) process.Launcher {
 			// Provide execution accounts against backend state since we will commit immediately
 			accounts := execution.NewAccounts(kern.committer, kern.keyClient, AccountsRingMutexCount)
 			// Elide consensus and use a CheckTx function that immediately commits any valid transaction
-			kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter, accounts, proc.CheckTx, kern.txCodec,
+			kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter, accounts, kern.State, proc.CheckTx, kern.txCodec,
 				kern.Logger)
 			return proc, nil
 		},
@@ -126,7 +126,7 @@ func TendermintLauncher(kern *Kernel) process.Launcher {
 			accounts := execution.NewAccounts(kern.checker, kern.keyClient, AccountsRingMutexCount)
 			// Pass transactions to Tendermint's CheckTx function for broadcast and consensus
 			checkTx := kern.Node.MempoolReactor().Mempool.CheckTx
-			kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter, accounts, checkTx, kern.txCodec,
+			kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter, accounts, kern.State, checkTx, kern.txCodec,
 				kern.Logger)
 
 			if err := kern.Node.Start(); err != nil {

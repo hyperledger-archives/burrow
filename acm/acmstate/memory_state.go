@@ -2,6 +2,7 @@ package acmstate
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
@@ -89,4 +90,8 @@ func (ms *MemoryState) IterateStorage(address crypto.Address, consumer func(key 
 		}
 	}
 	return nil
+}
+
+func (ms *MemoryState) Power(acc crypto.Address) (*big.Int, error) {
+	return big.NewInt(0), nil
 }

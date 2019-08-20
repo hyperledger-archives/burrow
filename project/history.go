@@ -49,7 +49,8 @@ func FullVersion() string {
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases(
 		"",
-		``,
+		`### Changed
+- [State] Validator accounts can no longer be used for mempool signing`,
 		"0.28.0 - 2019-08-14",
 		`### Changed
 - [State] IterateStreamEvents now takes inclusive start and end points (end used to be exclusive) avoid bug-prone conversion

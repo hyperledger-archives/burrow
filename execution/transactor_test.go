@@ -52,7 +52,8 @@ func TestTransactor_BroadcastTxSync(t *testing.T) {
 	err := txEnv.Sign(privAccount)
 	require.NoError(t, err)
 	height := uint64(35)
-	trans := NewTransactor(bc, evc, NewAccounts(acmstate.NewMemoryState(), mock.NewKeyClient(privAccount), 100),
+	state := acmstate.NewMemoryState()
+	trans := NewTransactor(bc, evc, NewAccounts(state, mock.NewKeyClient(privAccount), 100), state,
 		func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error {
 			txe := exec.NewTxExecution(txEnv)
 			txe.Height = height

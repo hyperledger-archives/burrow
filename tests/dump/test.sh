@@ -25,7 +25,7 @@ burrow_bin=${burrow_bin:-burrow}
 title="Creating new chain..."
 echo -e "\n${title//?/-}\n${title}\n${title//?/-}\n"
 
-$burrow_bin spec -n "Fresh Chain" -v1 | $burrow_bin configure -n BurrowTestDumpNode -e "always" -s- --separate-genesis-doc genesis.json > burrow.toml
+$burrow_bin spec -n "Fresh Chain" -r1 | $burrow_bin configure -n BurrowTestDumpNode -e "always" -s- --separate-genesis-doc genesis.json > burrow.toml
 
 $burrow_bin start 2>> burrow.log &
 
@@ -41,7 +41,7 @@ sleep 1
 title="Creating code, events and names..."
 echo -e "\n${title//?/-}\n${title}\n${title//?/-}\n"
 
-$burrow_bin deploy -o '' -a Validator_0 --dir $burrow_dump deploy.yaml
+$burrow_bin deploy -o '' -a Root_0 --dir $burrow_dump deploy.yaml
 
 title="Dumping chain..."
 echo -e "${title//?/-}\n${title}\n${title//?/-}\n"

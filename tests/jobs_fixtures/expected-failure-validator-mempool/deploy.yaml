@@ -1,0 +1,7 @@
+jobs:
+
+- name: foobar
+  register:
+    source: Validator_0
+    name: foo
+    data: bar

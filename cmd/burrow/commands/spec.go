@@ -20,7 +20,7 @@ func Spec(output Output) func(cmd *cli.Cmd) {
 
 		accountNamePrefixOpt := cmd.StringOpt("x name-prefix", "", "Prefix added to the names of accounts in GenesisSpec")
 		fullOpt := cmd.IntOpt("f full-accounts", 0, "Number of preset Full type accounts")
-		validatorOpt := cmd.IntOpt("v validator-accounts", 0, "Number of preset Validator type accounts")
+		validatorOpt := cmd.IntOpt("v validator-accounts", 1, "Number of preset Validator type accounts")
 		rootOpt := cmd.IntOpt("r root-accounts", 0, "Number of preset Root type accounts")
 		developerOpt := cmd.IntOpt("d developer-accounts", 0, "Number of preset Developer type accounts")
 		participantsOpt := cmd.IntOpt("p participant-accounts", 0, "Number of preset Participant type accounts")

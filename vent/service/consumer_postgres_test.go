@@ -24,7 +24,7 @@ func TestPostgresConsumer(t *testing.T) {
 	privateAccounts := rpctest.PrivateAccounts
 	kern, shutdown := integration.RunNode(t, rpctest.GenesisDoc, privateAccounts)
 	defer shutdown()
-	inputAddress := privateAccounts[0].GetAddress()
+	inputAddress := privateAccounts[1].GetAddress()
 	grpcAddress := kern.GRPCListenAddress().String()
 	tcli := test.NewTransactClient(t, grpcAddress)
 
