@@ -81,6 +81,9 @@ func burrow(output commands.Output) *cli.Cli {
 	app.Command("accounts", "List accounts and metadata",
 		commands.Accounts(output))
 
+	app.Command("listabis", "Describe events and functions in ABI files",
+		commands.Listabis(output))
+
 	return app
 }
 
