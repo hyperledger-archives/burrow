@@ -14,6 +14,7 @@ To run the makefile you will need to have installed:
 - npm (the node package manager)
 - jq (the JSON tool)
 - GO
+- Solc (solidity compiler)
 
 Burrow will be downloaded for you when using the makefile, but you may override `BURROW_BIN` and `BURROW_ARCH` in the makefile to change this behaviour. By default Burrow is downloaded for `Linux_x86_64.
 
