@@ -47,15 +47,15 @@ func (pq parsedQuery) Query() (Query, error) {
 	return pq.query, nil
 }
 
-// A yet-to-parsed query
-type String string
-
 func Must(qry Query, err error) Query {
 	if err != nil {
 		panic(fmt.Errorf("could not compile: %v", qry))
 	}
 	return qry
 }
+
+// A yet-to-be-parsed query
+type String string
 
 func (qs String) Query() (Query, error) {
 	if isEmpty(string(qs)) {

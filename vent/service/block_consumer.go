@@ -8,6 +8,7 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/types"
 	"github.com/pkg/errors"
@@ -77,13 +78,18 @@ func NewBlockConsumer(projection *sqlsol.Projection, opt sqlsol.SpecOpt, getEven
 						continue
 					}
 
+					var tagged query.Tagged = event
 					eventID := event.Log.SolidityEventID()
-					eventSpec, err := getEventSpec(eventID, event.Log.Address)
-					if err != nil {
-						return errors.Wrapf(err, "could not get ABI for solidity event with id %v at address %v",
-							eventID, event.Log.Address)
+					eventSpec, eventSpecErr := getEventSpec(eventID, event.Log.Address)
+					if eventSpecErr != nil {
+						logger.InfoMsg("could not get ABI for solidity event",
+							structure.ErrorKey, eventSpecErr,
+							"event_id", eventID,
+							"address", event.Log.Address)
+					} else {
+						// Since we have the event ABI we will allow matching on ABI fields
+						tagged = query.TagsFor(event, query.TaggedPrefix("Event", eventSpec))
 					}
-					tagged := query.TagsFor(event, query.TaggedPrefix("Event", eventSpec))
 
 					// see which spec filter matches with the one in event data
 					for _, eventClass := range projection.Spec {
@@ -95,6 +101,11 @@ func NewBlockConsumer(projection *sqlsol.Projection, opt sqlsol.SpecOpt, getEven
 
 						// there's a matching filter, add data to the rows
 						if qry.Matches(tagged) {
+							if eventSpecErr != nil {
+								return errors.Wrapf(eventSpecErr, "could not get ABI for solidity event matching "+
+									"projection filter \"%s\" with id %v at address %v",
+									eventClass.Filter, eventID, event.Log.Address)
+							}
 
 							logger.InfoMsg("Matched event", "header", event.Header,
 								"filter", eventClass.Filter)

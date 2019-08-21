@@ -1,4 +1,9 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.28.2] - 2019-08-21
+### Fixed
+- [Vent] The new decode event ABI _before_ filter provides more keys but means vent must have access to all possible LogEvent ABIs when it is started. This is not practical in general so we now will will only err if an event matches but we have no ABI. This means we might not notice we have forgot to include an ABI since an event that _would_ have matched on an ABI spec field (prefixed 'Event') will not just not match, and so fail silently. 
+
+
 ## [0.28.1] - 2019-08-21
 ### Fixed
 - [Vent] Log for _vent_log insert now faithfully captures what is being inserted
@@ -547,6 +552,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.28.2]: https://github.com/hyperledger/burrow/compare/v0.28.1...v0.28.2
 [0.28.1]: https://github.com/hyperledger/burrow/compare/v0.28.0...v0.28.1
 [0.28.0]: https://github.com/hyperledger/burrow/compare/v0.27.0...v0.28.0
 [0.27.0]: https://github.com/hyperledger/burrow/compare/v0.26.2...v0.27.0

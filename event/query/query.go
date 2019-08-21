@@ -51,9 +51,9 @@ func New(s string) (*PegQuery, error) {
 	p := &QueryParser{
 		Buffer: s,
 	}
-	//p.Expression.explainer = func(format string, args ...interface{}) {
-	//	fmt.Printf(format, args...)
-	//}
+	p.Expression.explainer = func(format string, args ...interface{}) {
+		fmt.Printf(format, args...)
+	}
 	err := p.Init()
 	if err != nil {
 		return nil, err
