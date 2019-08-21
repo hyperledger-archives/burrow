@@ -1,0 +1,72 @@
+{
+  "name": "@monax/burrow",
+  "description": "Javascript library that calls a Hyperledger Burrow server over rpc.",
+  "main": "./index.js",
+  "author": {
+    "name": "Dennis Mckinnon"
+  },
+  "files": [
+    "js",
+    "protobuf"
+  ],
+  "bugs": {
+    "url": "https://github.com/hyperledger/burrow/issues"
+  },
+  "dependencies": {
+    "@grpc/proto-loader": "^0.4.0",
+    "crypto-js": "3.1.4",
+    "ethereumjs-abi": "^0.6.5",
+    "grpc": "^1.18.0",
+    "protobufjs": "^6.8.6"
+  },
+  "devDependencies": {
+    "fs-extra": "^7.0.1",
+    "mocha": "6.2.0",
+    "solc": "0.4.24",
+    "standard": "13.1.0"
+  },
+  "engines": {
+    "node": ">=6"
+  },
+  "homepage": "https://github.com/hyperledger/burrow/",
+  "keywords": [
+    "Burrow",
+    "Hyperledger",
+    "Monax"
+  ],
+  "license": "Apache-2.0",
+  "maintainers": [
+    {
+      "name": "Silas Davis",
+      "email": "silas@monax.io"
+    },
+    {
+      "name": "Sean Young",
+      "email": "sean.young@monax.io"
+    },
+    {
+      "name": "Greg Hill",
+      "email": "greg.hill@monax.io"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hyperledger/burrow.git"
+  },
+  "scripts": {
+    "precommit": "standard --fix js/**/*.js",
+    "pretest": "standard --fix js/**/*.js",
+    "test": "./tests/js/js.sh"
+  },
+  "standard": {
+    "globals": [
+      "after",
+      "afterEach",
+      "before",
+      "beforeEach",
+      "describe",
+      "it",
+      "run"
+    ]
+  }
+}

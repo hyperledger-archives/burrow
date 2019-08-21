@@ -316,11 +316,11 @@ func (db *SQLDB) SetBlock(chainID string, eventTables types.EventTables, eventDa
 	}
 	defer logStmt.Close()
 
-	var safeTable string
+	var tableName string
 loop:
 	// for each table in the block
-	for en, table := range eventTables {
-		safeTable = safe(table.Name)
+	for _, table := range eventTables {
+		tableName = safe(table.Name)
 		dataRows := eventData.Tables[table.Name]
 		// for Each Row
 		for _, row := range dataRows {
@@ -349,17 +349,17 @@ loop:
 				break loop // exits from all loops -> continue in close log stmt
 			}
 
-			query := queryVal.Query
+			sqlQuery := queryVal.Query
 
 			// Perform row action
-			db.Log.InfoMsg("msg", "action", row.Action, "query", query, "value", queryVal.Values)
-			if _, err = tx.Exec(query, queryVal.Pointers...); err != nil {
+			db.Log.InfoMsg("msg", "action", row.Action, "query", sqlQuery, "value", queryVal.Values)
+			if _, err = tx.Exec(sqlQuery, queryVal.Pointers...); err != nil {
 				db.Log.InfoMsg(fmt.Sprintf("error performing %s on row", row.Action), "err", err, "value", queryVal.Values)
 				break loop // exits from all loops -> continue in close log stmt
 			}
 
 			// Marshal the rowData map
-			jsonData, err := getJSON(row.RowData)
+			rowData, err := getJSON(row.RowData)
 			if err != nil {
 				db.Log.InfoMsg("error marshaling rowData", "err", err, "value", fmt.Sprintf("%v", row.RowData))
 				break loop // exits from all loops -> continue in close log stmt
@@ -374,11 +374,22 @@ loop:
 
 			eventName, _ := row.RowData[db.Columns.EventName].(string)
 			// Insert in log
-			db.Log.InfoMsg("INSERT LOG", "action", "INSERT", "query", logQuery, "value",
-				fmt.Sprintf("chainid = %s tableName = %s eventName = %s block = %d", chainID, safeTable, en, eventData.BlockHeight))
+			db.Log.InfoMsg("INSERT LOG",
+				"log_query", logQuery,
+				"chain_id", chainID,
+				"table_name", tableName,
+				"event_name", eventName,
+				"event_filter", row.EventClass.GetFilter(),
+				"block_height", eventData.BlockHeight,
+				"tx_hash", txHash,
+				"row_action", row.Action,
+				"row_data", rowData,
+				"sql_query", sqlQuery,
+				"sql_values", sqlValues,
+			)
 
-			if _, err = logStmt.Exec(chainID, safeTable, eventName, row.EventClass.GetFilter(), eventData.BlockHeight, txHash,
-				row.Action, jsonData, query, sqlValues); err != nil {
+			if _, err = logStmt.Exec(chainID, tableName, eventName, row.EventClass.GetFilter(), eventData.BlockHeight, txHash,
+				row.Action, rowData, sqlQuery, sqlValues); err != nil {
 				db.Log.InfoMsg("Error inserting into log", "err", err)
 				break loop // exits from all loops -> continue in close log stmt
 			}
@@ -405,7 +416,7 @@ loop:
 
 			// Table does not exists
 			if db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeUndefinedTable) {
-				db.Log.InfoMsg("Table not found", "value", safeTable)
+				db.Log.InfoMsg("Table not found", "value", tableName)
 				//Synchronize DB
 				if err = db.SynchronizeDB(chainID, eventTables); err != nil {
 					return err
@@ -416,7 +427,7 @@ loop:
 
 			// Columns do not match
 			if db.DBAdapter.ErrorEquals(err, types.SQLErrorTypeUndefinedColumn) {
-				db.Log.InfoMsg("Column not found", "value", safeTable)
+				db.Log.InfoMsg("Column not found", "value", tableName)
 				//Synchronize DB
 				if err = db.SynchronizeDB(chainID, eventTables); err != nil {
 					return err

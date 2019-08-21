@@ -1,12 +1,7 @@
-# Set up a single full account node
-
-## Usage
-
-The end result will be a `burrow.toml` that will be read in from your current working directory when starting `burrow`.
+# Configure & Run Burrow
 
 ## Configuration
 
-### Configure Burrow
 The quick-and-dirty one-liner looks like:
 
 ```shell
@@ -14,7 +9,7 @@ The quick-and-dirty one-liner looks like:
 burrow spec -p1 -f1 | burrow configure -s- > burrow.toml
 ```
 
-which translates into:
+Which translates into:
 
 ```shell
 # This is a place we can store config files and burrow's working directory '.burrow'
