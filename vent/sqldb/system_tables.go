@@ -17,23 +17,20 @@ func (db *SQLDB) systemTablesDefinition() types.EventTables {
 					Primary: true,
 				},
 				{
-					Name:   columns.ChainID,
-					Type:   types.SQLColumnTypeVarchar,
-					Length: 100,
+					Name: columns.ChainID,
+					Type: types.SQLColumnTypeVarchar,
 				},
 				{
 					Name: columns.TimeStamp,
 					Type: types.SQLColumnTypeTimeStamp,
 				},
 				{
-					Name:   columns.TableName,
-					Type:   types.SQLColumnTypeVarchar,
-					Length: 100,
+					Name: columns.TableName,
+					Type: types.SQLColumnTypeVarchar,
 				},
 				{
-					Name:   columns.EventName,
-					Type:   types.SQLColumnTypeVarchar,
-					Length: 100,
+					Name: columns.EventName,
+					Type: types.SQLColumnTypeVarchar,
 				},
 				{
 					Name: columns.EventFilter,
@@ -42,9 +39,8 @@ func (db *SQLDB) systemTablesDefinition() types.EventTables {
 				// We use varchar for height - there is no uint64 type though numeric could have been used. We obtain the
 				// maximum height by maxing over the serial ID type
 				{
-					Name:   columns.Height,
-					Type:   types.SQLColumnTypeVarchar,
-					Length: 100,
+					Name: columns.Height,
+					Type: types.SQLColumnTypeVarchar,
 				},
 				{
 					Name:   columns.TxHash,
@@ -54,7 +50,7 @@ func (db *SQLDB) systemTablesDefinition() types.EventTables {
 				{
 					Name:   columns.Action,
 					Type:   types.SQLColumnTypeVarchar,
-					Length: 20,
+					Length: 50,
 				},
 				{
 					Name: columns.DataRow,
@@ -77,34 +73,28 @@ func (db *SQLDB) systemTablesDefinition() types.EventTables {
 				{
 					Name:    columns.TableName,
 					Type:    types.SQLColumnTypeVarchar,
-					Length:  100,
 					Primary: true,
 				},
 				{
 					Name:    columns.ColumnName,
 					Type:    types.SQLColumnTypeVarchar,
-					Length:  100,
 					Primary: true,
 				},
 				{
-					Name:   columns.ColumnType,
-					Type:   types.SQLColumnTypeInt,
-					Length: 0,
+					Name: columns.ColumnType,
+					Type: types.SQLColumnTypeInt,
 				},
 				{
-					Name:   columns.ColumnLength,
-					Type:   types.SQLColumnTypeInt,
-					Length: 0,
+					Name: columns.ColumnLength,
+					Type: types.SQLColumnTypeInt,
 				},
 				{
-					Name:   columns.PrimaryKey,
-					Type:   types.SQLColumnTypeInt,
-					Length: 0,
+					Name: columns.PrimaryKey,
+					Type: types.SQLColumnTypeInt,
 				},
 				{
-					Name:   columns.ColumnOrder,
-					Type:   types.SQLColumnTypeInt,
-					Length: 0,
+					Name: columns.ColumnOrder,
+					Type: types.SQLColumnTypeInt,
 				},
 			},
 		},
@@ -114,13 +104,11 @@ func (db *SQLDB) systemTablesDefinition() types.EventTables {
 				{
 					Name:    columns.ChainID,
 					Type:    types.SQLColumnTypeVarchar,
-					Length:  100,
 					Primary: true,
 				},
 				{
-					Name:   columns.BurrowVersion,
-					Type:   types.SQLColumnTypeVarchar,
-					Length: 100,
+					Name: columns.BurrowVersion,
+					Type: types.SQLColumnTypeVarchar,
 				},
 				{
 					Name: columns.Height,
