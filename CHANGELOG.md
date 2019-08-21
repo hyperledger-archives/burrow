@@ -1,5 +1,11 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
-## [Unreleased]
+## [0.28.1] - 2019-08-21
+### Fixed
+- [Vent] Log for _vent_log insert now faithfully captures what is being inserted
+- [Vent] Remove arbitrary 100 character limits on system table text fields
+
+### Added
+- [JS] Burrow.js now included in Burrow repo and tested with Burrow CI! Future burrow.js releases will now match version of Burrow.
 
 
 ## [0.28.0] - 2019-08-14
@@ -541,7 +547,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
-[Unreleased]: https://github.com/hyperledger/burrow/compare/v0.28.0...HEAD
+[0.28.1]: https://github.com/hyperledger/burrow/compare/v0.28.0...v0.28.1
 [0.28.0]: https://github.com/hyperledger/burrow/compare/v0.27.0...v0.28.0
 [0.27.0]: https://github.com/hyperledger/burrow/compare/v0.26.2...v0.27.0
 [0.26.2]: https://github.com/hyperledger/burrow/compare/v0.26.1...v0.26.2
