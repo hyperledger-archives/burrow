@@ -383,13 +383,13 @@ loop:
 				"block_height", eventData.BlockHeight,
 				"tx_hash", txHash,
 				"row_action", row.Action,
-				"row_data", rowData,
+				"row_data", string(rowData),
 				"sql_query", sqlQuery,
-				"sql_values", sqlValues,
+				"sql_values", string(sqlValues),
 			)
 
-			if _, err = logStmt.Exec(chainID, tableName, eventName, row.EventClass.GetFilter(), eventData.BlockHeight, txHash,
-				row.Action, rowData, sqlQuery, sqlValues); err != nil {
+			if _, err = logStmt.Exec(chainID, tableName, eventName, row.EventClass.GetFilter(), eventData.BlockHeight,
+				txHash, row.Action, rowData, sqlQuery, sqlValues); err != nil {
 				db.Log.InfoMsg("Error inserting into log", "err", err)
 				break loop // exits from all loops -> continue in close log stmt
 			}
