@@ -16,15 +16,13 @@ package evm
 
 import (
 	bin "encoding/binary"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
 
-	"fmt"
-
-	"github.com/hyperledger/burrow/acm/acmstate"
-
 	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
@@ -37,7 +35,7 @@ import (
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	hex "github.com/tmthrgd/go-hex"
+	"github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ripemd160"
 )
 
