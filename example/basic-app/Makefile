@@ -24,7 +24,7 @@ bin/burrow:
 
 # Generate the chain
 burrow.toml genesis.json:
-	${BURROW_BIN} spec --full-accounts=1 > genesis-spec.json | ${BURROW_BIN} configure  --separate-genesis-doc=genesis.json --genesis-spec=genesis-spec.json > burrow.toml
+	${BURROW_BIN} spec --full-accounts 1 | ${BURROW_BIN} configure --genesis-spec=- --separate-genesis-doc=genesis.json > burrow.toml
 
 # Dump account information to file for app
 account.json: genesis.json
