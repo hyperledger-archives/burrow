@@ -47,11 +47,11 @@ func (w *Word256) UnmarshalText(hexBytes []byte) error {
 }
 
 func (w Word256) MarshalText() ([]byte, error) {
-	return []byte(hex.EncodeUpperToString(w[:])), nil
+	return []byte(w.String()), nil
 }
 
 func (w Word256) String() string {
-	return string(w[:])
+	return hex.EncodeUpperToString(w[:])
 }
 
 func (w Word256) Copy() Word256 {
