@@ -1,5 +1,5 @@
 {
-  "name": "@monax/burrow",
+  "name": "@hyperledger/burrow",
   "description": "Javascript library that calls a Hyperledger Burrow server over rpc.",
   "main": "./index.js",
   "author": {
