@@ -5,10 +5,6 @@ package payload
 
 import (
 	fmt "fmt"
-	io "io"
-	math "math"
-	math_bits "math/bits"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
@@ -16,6 +12,8 @@ import (
 	github_com_hyperledger_burrow_crypto "github.com/hyperledger/burrow/crypto"
 	spec "github.com/hyperledger/burrow/genesis/spec"
 	permission "github.com/hyperledger/burrow/permission"
+	io "io"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1123,9 +1121,9 @@ func (m *Any) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.CallTx.Size()))
-		n1, err1 := m.CallTx.MarshalTo(dAtA[i:])
-		if err1 != nil {
-			return 0, err1
+		n1, err := m.CallTx.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n1
 	}
@@ -1133,9 +1131,9 @@ func (m *Any) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.SendTx.Size()))
-		n2, err2 := m.SendTx.MarshalTo(dAtA[i:])
-		if err2 != nil {
-			return 0, err2
+		n2, err := m.SendTx.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n2
 	}
@@ -1143,9 +1141,9 @@ func (m *Any) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1a
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.NameTx.Size()))
-		n3, err3 := m.NameTx.MarshalTo(dAtA[i:])
-		if err3 != nil {
-			return 0, err3
+		n3, err := m.NameTx.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n3
 	}
@@ -1153,9 +1151,9 @@ func (m *Any) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x22
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.PermsTx.Size()))
-		n4, err4 := m.PermsTx.MarshalTo(dAtA[i:])
-		if err4 != nil {
-			return 0, err4
+		n4, err := m.PermsTx.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n4
 	}
@@ -1163,9 +1161,9 @@ func (m *Any) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x2a
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.GovTx.Size()))
-		n5, err5 := m.GovTx.MarshalTo(dAtA[i:])
-		if err5 != nil {
-			return 0, err5
+		n5, err := m.GovTx.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n5
 	}
@@ -1173,9 +1171,9 @@ func (m *Any) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x32
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.BondTx.Size()))
-		n6, err6 := m.BondTx.MarshalTo(dAtA[i:])
-		if err6 != nil {
-			return 0, err6
+		n6, err := m.BondTx.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n6
 	}
@@ -1183,9 +1181,9 @@ func (m *Any) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x3a
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.UnbondTx.Size()))
-		n7, err7 := m.UnbondTx.MarshalTo(dAtA[i:])
-		if err7 != nil {
-			return 0, err7
+		n7, err := m.UnbondTx.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n7
 	}
@@ -1193,9 +1191,9 @@ func (m *Any) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x42
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.BatchTx.Size()))
-		n8, err8 := m.BatchTx.MarshalTo(dAtA[i:])
-		if err8 != nil {
-			return 0, err8
+		n8, err := m.BatchTx.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n8
 	}
@@ -1203,9 +1201,9 @@ func (m *Any) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x4a
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.ProposalTx.Size()))
-		n9, err9 := m.ProposalTx.MarshalTo(dAtA[i:])
-		if err9 != nil {
-			return 0, err9
+		n9, err := m.ProposalTx.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n9
 	}
@@ -1233,9 +1231,9 @@ func (m *TxInput) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.Address.Size()))
-	n10, err10 := m.Address.MarshalTo(dAtA[i:])
-	if err10 != nil {
-		return 0, err10
+	n10, err := m.Address.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n10
 	if m.Amount != 0 {
@@ -1272,9 +1270,9 @@ func (m *TxOutput) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.Address.Size()))
-	n11, err11 := m.Address.MarshalTo(dAtA[i:])
-	if err11 != nil {
-		return 0, err11
+	n11, err := m.Address.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n11
 	if m.Amount != 0 {
@@ -1307,9 +1305,9 @@ func (m *CallTx) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.Input.Size()))
-		n12, err12 := m.Input.MarshalTo(dAtA[i:])
-		if err12 != nil {
-			return 0, err12
+		n12, err := m.Input.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n12
 	}
@@ -1317,9 +1315,9 @@ func (m *CallTx) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.Address.Size()))
-		n13, err13 := m.Address.MarshalTo(dAtA[i:])
-		if err13 != nil {
-			return 0, err13
+		n13, err := m.Address.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n13
 	}
@@ -1336,17 +1334,17 @@ func (m *CallTx) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x2a
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.Data.Size()))
-	n14, err14 := m.Data.MarshalTo(dAtA[i:])
-	if err14 != nil {
-		return 0, err14
+	n14, err := m.Data.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n14
 	dAtA[i] = 0x32
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.WASM.Size()))
-	n15, err15 := m.WASM.MarshalTo(dAtA[i:])
-	if err15 != nil {
-		return 0, err15
+	n15, err := m.WASM.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n15
 	if len(m.ContractMeta) > 0 {
@@ -1385,9 +1383,9 @@ func (m *ContractMeta) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.CodeHash.Size()))
-	n16, err16 := m.CodeHash.MarshalTo(dAtA[i:])
-	if err16 != nil {
-		return 0, err16
+	n16, err := m.CodeHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n16
 	if len(m.Meta) > 0 {
@@ -1466,18 +1464,18 @@ func (m *PermsTx) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.Input.Size()))
-		n17, err17 := m.Input.MarshalTo(dAtA[i:])
-		if err17 != nil {
-			return 0, err17
+		n17, err := m.Input.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n17
 	}
 	dAtA[i] = 0x12
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.PermArgs.Size()))
-	n18, err18 := m.PermArgs.MarshalTo(dAtA[i:])
-	if err18 != nil {
-		return 0, err18
+	n18, err := m.PermArgs.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n18
 	if m.XXX_unrecognized != nil {
@@ -1505,9 +1503,9 @@ func (m *NameTx) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.Input.Size()))
-		n19, err19 := m.Input.MarshalTo(dAtA[i:])
-		if err19 != nil {
-			return 0, err19
+		n19, err := m.Input.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n19
 	}
@@ -1553,9 +1551,9 @@ func (m *BondTx) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.Input.Size()))
-		n20, err20 := m.Input.MarshalTo(dAtA[i:])
-		if err20 != nil {
-			return 0, err20
+		n20, err := m.Input.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n20
 	}
@@ -1584,9 +1582,9 @@ func (m *UnbondTx) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.Input.Size()))
-		n21, err21 := m.Input.MarshalTo(dAtA[i:])
-		if err21 != nil {
-			return 0, err21
+		n21, err := m.Input.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n21
 	}
@@ -1594,9 +1592,9 @@ func (m *UnbondTx) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.Output.Size()))
-		n22, err22 := m.Output.MarshalTo(dAtA[i:])
-		if err22 != nil {
-			return 0, err22
+		n22, err := m.Output.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n22
 	}
@@ -1670,9 +1668,9 @@ func (m *ProposalTx) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.Input.Size()))
-		n23, err23 := m.Input.MarshalTo(dAtA[i:])
-		if err23 != nil {
-			return 0, err23
+		n23, err := m.Input.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n23
 	}
@@ -1685,9 +1683,9 @@ func (m *ProposalTx) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1a
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.ProposalHash.Size()))
-		n24, err24 := m.ProposalHash.MarshalTo(dAtA[i:])
-		if err24 != nil {
-			return 0, err24
+		n24, err := m.ProposalHash.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n24
 	}
@@ -1695,9 +1693,9 @@ func (m *ProposalTx) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x22
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.Proposal.Size()))
-		n25, err25 := m.Proposal.MarshalTo(dAtA[i:])
-		if err25 != nil {
-			return 0, err25
+		n25, err := m.Proposal.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n25
 	}
@@ -1770,9 +1768,9 @@ func (m *Vote) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.Address.Size()))
-	n26, err26 := m.Address.MarshalTo(dAtA[i:])
-	if err26 != nil {
-		return 0, err26
+	n26, err := m.Address.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n26
 	if m.VotingWeight != 0 {
@@ -1817,9 +1815,9 @@ func (m *Proposal) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1a
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.BatchTx.Size()))
-		n27, err27 := m.BatchTx.MarshalTo(dAtA[i:])
-		if err27 != nil {
-			return 0, err27
+		n27, err := m.BatchTx.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n27
 	}
@@ -1848,9 +1846,9 @@ func (m *Ballot) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.Proposal.Size()))
-		n28, err28 := m.Proposal.MarshalTo(dAtA[i:])
-		if err28 != nil {
-			return 0, err28
+		n28, err := m.Proposal.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n28
 	}
@@ -1858,9 +1856,9 @@ func (m *Ballot) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintPayload(dAtA, i, uint64(m.FinalizingTx.Size()))
-		n29, err29 := m.FinalizingTx.MarshalTo(dAtA[i:])
-		if err29 != nil {
-			return 0, err29
+		n29, err := m.FinalizingTx.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n29
 	}
@@ -2286,7 +2284,14 @@ func (m *Ballot) Size() (n int) {
 }
 
 func sovPayload(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozPayload(x uint64) (n int) {
 	return sovPayload(uint64((x << 1) ^ uint64((int64(x) >> 63))))

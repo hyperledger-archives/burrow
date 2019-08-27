@@ -1,6 +1,7 @@
 - Burrow
     - [Introduction](README.md)
     - [Installation](INSTALL.md)
+    - [Developers](developers.md)
     - [JS API](js-api.md)
 
 - Transactions
