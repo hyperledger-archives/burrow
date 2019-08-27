@@ -5,7 +5,6 @@
 Download a binary from our list of [releases](https://github.com/hyperledger/burrow/releases)
 and copy it to a suitable location.
 
-
 ## Source
 
 [Install Go](https://golang.org/doc/install) (Version >= 1.11) and set `$GOPATH`.
@@ -21,7 +20,6 @@ This will build the `burrow` binary and put it in the `bin/` directory. It can b
 You can also install `burrow` into `$BIN_PATH/bin` with `make install`, where `$BIN_PATH` defaults to `$HOME/go/bin`
 if not set in environment.
 
-
 ## Docker
 
 Each release is also tagged and pushed to [Docker Hub](https://hub.docker.com/r/hyperledger/burrow).
@@ -32,7 +30,7 @@ burrow spec -v4
 docker run hyperledger/burrow spec -v4
 ```
 
-Note: ensure to mount local volumes for secrets / configurations when running a container to prevent data loss.
+> Ensure to mount local volumes for secrets / configurations when running a container to prevent data loss.
 
 ## Kubernetes
 

@@ -5,11 +5,6 @@ package bcm
 
 import (
 	fmt "fmt"
-	io "io"
-	math "math"
-	math_bits "math/bits"
-	time "time"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	github_com_gogo_protobuf_types "github.com/gogo/protobuf/types"
@@ -17,6 +12,9 @@ import (
 	_ "github.com/golang/protobuf/ptypes/duration"
 	_ "github.com/golang/protobuf/ptypes/timestamp"
 	github_com_hyperledger_burrow_binary "github.com/hyperledger/burrow/binary"
+	io "io"
+	math "math"
+	time "time"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -229,41 +227,41 @@ func (m *SyncInfo) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x12
 	i++
 	i = encodeVarintBcm(dAtA, i, uint64(m.LatestBlockHash.Size()))
-	n1, err1 := m.LatestBlockHash.MarshalTo(dAtA[i:])
-	if err1 != nil {
-		return 0, err1
+	n1, err := m.LatestBlockHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n1
 	dAtA[i] = 0x1a
 	i++
 	i = encodeVarintBcm(dAtA, i, uint64(m.LatestAppHash.Size()))
-	n2, err2 := m.LatestAppHash.MarshalTo(dAtA[i:])
-	if err2 != nil {
-		return 0, err2
+	n2, err := m.LatestAppHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n2
 	dAtA[i] = 0x22
 	i++
 	i = encodeVarintBcm(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdTime(m.LatestBlockTime)))
-	n3, err3 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LatestBlockTime, dAtA[i:])
-	if err3 != nil {
-		return 0, err3
+	n3, err := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LatestBlockTime, dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n3
 	dAtA[i] = 0x2a
 	i++
 	i = encodeVarintBcm(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdTime(m.LatestBlockSeenTime)))
-	n4, err4 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LatestBlockSeenTime, dAtA[i:])
-	if err4 != nil {
-		return 0, err4
+	n4, err := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LatestBlockSeenTime, dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n4
 	dAtA[i] = 0x32
 	i++
 	i = encodeVarintBcm(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdDuration(m.LatestBlockDuration)))
-	n5, err5 := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.LatestBlockDuration, dAtA[i:])
-	if err5 != nil {
-		return 0, err5
+	n5, err := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.LatestBlockDuration, dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n5
 	if m.XXX_unrecognized != nil {
@@ -290,17 +288,17 @@ func (m *PersistedState) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintBcm(dAtA, i, uint64(m.AppHashAfterLastBlock.Size()))
-	n6, err6 := m.AppHashAfterLastBlock.MarshalTo(dAtA[i:])
-	if err6 != nil {
-		return 0, err6
+	n6, err := m.AppHashAfterLastBlock.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n6
 	dAtA[i] = 0x12
 	i++
 	i = encodeVarintBcm(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdTime(m.LastBlockTime)))
-	n7, err7 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LastBlockTime, dAtA[i:])
-	if err7 != nil {
-		return 0, err7
+	n7, err := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LastBlockTime, dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n7
 	if m.LastBlockHeight != 0 {
@@ -311,9 +309,9 @@ func (m *PersistedState) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x22
 	i++
 	i = encodeVarintBcm(dAtA, i, uint64(m.GenesisHash.Size()))
-	n8, err8 := m.GenesisHash.MarshalTo(dAtA[i:])
-	if err8 != nil {
-		return 0, err8
+	n8, err := m.GenesisHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n8
 	if m.XXX_unrecognized != nil {
@@ -378,7 +376,14 @@ func (m *PersistedState) Size() (n int) {
 }
 
 func sovBcm(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozBcm(x uint64) (n int) {
 	return sovBcm(uint64((x << 1) ^ uint64((int64(x) >> 63))))
