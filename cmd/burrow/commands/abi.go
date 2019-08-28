@@ -98,7 +98,7 @@ func Abi(output Output) func(cmd *cli.Cmd) {
 								}
 							}
 
-							output.Fatalf(fmt.Sprintf("%s(%s)", name, strings.Join(args, ",")))
+							output.Printf(fmt.Sprintf("%s(%s)", name, strings.Join(args, ",")))
 						}
 
 					}
@@ -147,7 +147,7 @@ func Abi(output Output) func(cmd *cli.Cmd) {
 						}
 					}
 
-					output.Fatalf(strings.Join(args, "\n"))
+					output.Printf(strings.Join(args, "\n"))
 				}
 			})
 	}
