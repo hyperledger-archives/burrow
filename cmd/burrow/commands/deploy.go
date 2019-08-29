@@ -78,7 +78,8 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 		cmd.Spec = "[--chain=<host:port>] [--keys=<host:port>] [--mempool-signing] [--dir=<root directory>] " +
 			"[--output=<output file>] [--wasm] [--set=<KEY=VALUE>]... [--bin-path=<path>] [--gas=<gas>] " +
 			"[--jobs=<concurrent playbooks>] [--address=<address>] [--fee=<fee>] [--amount=<amount>] [--local-abi] " +
-			"[--verbose] [--debug] [--timeout=<timeout>] [--proposal-create|--proposal-verify|--proposal-create] FILE..."
+			"[--verbose] [--debug] [--timeout=<timeout>] " +
+			"[--list-proposals=<state> | --proposal-create| --proposal-verify | --proposal-vote] [FILE...]"
 
 		cmd.Action = func() {
 			args := new(def.DeployArgs)
@@ -132,6 +133,9 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf(err.Error())
 				}
 			} else {
+				if len(*playbooksOpt) == 0 {
+					output.Fatalf("incorrect usage: missing deployment yaml file(s)")
+				}
 				failures, err := pkgs.RunPlaybooks(args, *playbooksOpt, logger)
 				if err != nil {
 					fmt.Fprintln(os.Stderr, err)

@@ -15,11 +15,11 @@ import (
 	"github.com/hyperledger/burrow/txs/payload"
 )
 
-func getAccountSequence(seq string, addressStr string, seqCache *acmstate.Cache) (string, error) {
+func getAccountSequence(seq string, addressStr string, seqCache *acmstate.Cache, client *def.Client, logger *logging.Logger) (string, error) {
 	if seq != "" {
 		return seq, nil
 	}
-	address, err := crypto.AddressFromHexString(addressStr)
+	address, err := client.ParseAddress(addressStr, logger)
 	if err != nil {
 		return "", err
 	}
@@ -63,7 +63,7 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 		case *def.UpdateAccount:
 			announceProposalJob(job.Name, "UpdateAccount", logger)
 			job.UpdateAccount.Source = FirstOf(job.UpdateAccount.Source, script.Account)
-			job.UpdateAccount.Sequence, err = getAccountSequence(job.UpdateAccount.Sequence, job.UpdateAccount.Source, seqCache)
+			job.UpdateAccount.Sequence, err = getAccountSequence(job.UpdateAccount.Sequence, job.UpdateAccount.Source, seqCache, client, logger)
 			if err != nil {
 				return err
 			}
@@ -76,7 +76,7 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 		case *def.RegisterName:
 			announceProposalJob(job.Name, "RegisterName", logger)
 			job.RegisterName.Source = FirstOf(job.RegisterName.Source, script.Account)
-			job.RegisterName.Sequence, err = getAccountSequence(job.RegisterName.Sequence, job.RegisterName.Source, seqCache)
+			job.RegisterName.Sequence, err = getAccountSequence(job.RegisterName.Sequence, job.RegisterName.Source, seqCache, client, logger)
 			if err != nil {
 				return err
 			}
@@ -90,7 +90,7 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 		case *def.Call:
 			announceProposalJob(job.Name, "Call", logger)
 			job.Call.Source = FirstOf(job.Call.Source, script.Account)
-			job.Call.Sequence, err = getAccountSequence(job.Call.Sequence, job.Call.Source, seqCache)
+			job.Call.Sequence, err = getAccountSequence(job.Call.Sequence, job.Call.Source, seqCache, client, logger)
 			if err != nil {
 				return err
 			}
@@ -102,7 +102,7 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 		case *def.Deploy:
 			announceProposalJob(job.Name, "Deploy", logger)
 			job.Deploy.Source = FirstOf(job.Deploy.Source, script.Account)
-			job.Deploy.Sequence, err = getAccountSequence(job.Deploy.Sequence, job.Deploy.Source, seqCache)
+			job.Deploy.Sequence, err = getAccountSequence(job.Deploy.Sequence, job.Deploy.Source, seqCache, client, logger)
 			if err != nil {
 				return err
 			}
@@ -112,7 +112,7 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 			}
 			var deployAddress crypto.Address
 			// Predict address
-			callee, err := crypto.AddressFromHexString(job.Deploy.Source)
+			callee, err := client.ParseAddress(job.Deploy.Source, logger)
 			if err != nil {
 				return err
 			}
@@ -126,7 +126,7 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 		case *def.Permission:
 			announceProposalJob(job.Name, "Permission", logger)
 			job.Permission.Source = FirstOf(job.Permission.Source, script.Account)
-			job.Permission.Sequence, err = getAccountSequence(job.Permission.Sequence, job.Permission.Source, seqCache)
+			job.Permission.Sequence, err = getAccountSequence(job.Permission.Sequence, job.Permission.Source, seqCache, client, logger)
 			if err != nil {
 				return err
 			}
@@ -138,7 +138,7 @@ func recurseJobs(proposeBatch *payload.BatchTx, jobs []*def.Job, prop *def.Propo
 		case *def.Send:
 			announceProposalJob(job.Name, "Send", logger)
 			job.Send.Source = FirstOf(job.Send.Source, script.Account)
-			job.Send.Sequence, err = getAccountSequence(job.Send.Sequence, job.Send.Source, seqCache)
+			job.Send.Sequence, err = getAccountSequence(job.Send.Sequence, job.Send.Source, seqCache, client, logger)
 			if err != nil {
 				return err
 			}
@@ -195,14 +195,11 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playb
 			return "", err
 		}
 
-		voteAddresses := make([]string, 0, len(ballot.Votes))
-		for _, v := range ballot.Votes {
-			voteAddresses = append(voteAddresses, v.Address.String())
-		}
+		logger.InfoMsg("Proposal VERIFY SUCCESSFUL", "votes count", len(ballot.Votes))
 
-		logger.InfoMsg("Proposal VERIFY SUCCESSFUL",
-			"votes count", len(ballot.Votes),
-			"votes", voteAddresses)
+		for i, v := range ballot.Votes {
+			logger.InfoMsg("Vote", "no", i+1, "address", v.Address.String())
+		}
 
 		return "", err
 	} else if do.ProposeVote {
@@ -224,7 +221,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playb
 			return "", err
 		}
 
-		logger.InfoMsg("Voting for proposal", "hash", proposalHash)
+		logger.InfoMsg("Voting for proposal", "hash", fmt.Sprintf("%X", proposalHash))
 
 		h := binary.HexBytes(proposalHash)
 		proposalTx = &payload.ProposalTx{ProposalHash: &h, VotingWeight: 1, Input: input}
@@ -233,7 +230,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playb
 		if err != nil {
 			return "", err
 		}
-		logger.InfoMsg("Creating Proposal", "hash", proposalHash)
+		logger.InfoMsg("Creating Proposal", "hash", fmt.Sprintf("%X", proposalHash))
 
 		bs, _ := json.Marshal(proposal)
 		logger.TraceMsg("Proposal json", "json", string(bs))
