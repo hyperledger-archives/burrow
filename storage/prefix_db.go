@@ -3,7 +3,7 @@ package storage
 import (
 	"fmt"
 
-	dbm "github.com/tendermint/tendermint/libs/db"
+	dbm "github.com/tendermint/tm-db"
 )
 
 type PrefixDB struct {

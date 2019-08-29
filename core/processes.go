@@ -125,7 +125,7 @@ func TendermintLauncher(kern *Kernel) process.Launcher {
 			// Provide execution accounts against checker state so that we can assign sequence numbers
 			accounts := execution.NewAccounts(kern.checker, kern.keyClient, AccountsRingMutexCount)
 			// Pass transactions to Tendermint's CheckTx function for broadcast and consensus
-			checkTx := kern.Node.MempoolReactor().Mempool.CheckTx
+			checkTx := kern.Node.Mempool().CheckTx
 			kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter, accounts, checkTx, kern.txCodec,
 				kern.Logger)
 

@@ -19,10 +19,10 @@ import (
 	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/blockchain"
-	dbm "github.com/tendermint/tendermint/libs/db"
 	sm "github.com/tendermint/tendermint/state"
+	"github.com/tendermint/tendermint/store"
 	"github.com/tendermint/tendermint/types"
+	dbm "github.com/tendermint/tm-db"
 )
 
 // This serves as a testbed for looking at non-deterministic burrow instances capture from the wild
@@ -78,7 +78,7 @@ func makeChain(t *testing.T, max uint64) (*genesis.GenesisDoc, dbm.DB, dbm.DB) {
 	genesisDoc, _, validators := genesis.NewDeterministicGenesis(0).GenesisDoc(0, 1)
 
 	tmDB := dbm.NewMemDB()
-	bs := blockchain.NewBlockStore(tmDB)
+	bs := store.NewBlockStore(tmDB)
 	gd := tendermint.DeriveGenesisDoc(genesisDoc, nil)
 	st, err := sm.MakeGenesisState(&types.GenesisDoc{
 		ChainID:    gd.ChainID,
@@ -115,7 +115,7 @@ func makeChain(t *testing.T, max uint64) (*genesis.GenesisDoc, dbm.DB, dbm.DB) {
 	return genesisDoc, tmDB, burrowDB
 }
 
-func makeBlock(t *testing.T, st sm.State, bs *blockchain.BlockStore, commit func(*types.Block), val *acm.PrivateAccount) {
+func makeBlock(t *testing.T, st sm.State, bs *store.BlockStore, commit func(*types.Block), val *acm.PrivateAccount) {
 	height := bs.Height() + 1
 	tx := makeTx(t, st.ChainID, height, val)
 	block, _ := st.MakeBlock(height, []types.Tx{tx}, new(types.Commit), nil,

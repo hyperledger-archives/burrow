@@ -84,7 +84,7 @@ func (nv *NodeView) RunID() simpleuuid.UUID {
 // Pass -1 to get all available transactions
 func (nv *NodeView) MempoolTransactions(maxTxs int) ([]*txs.Envelope, error) {
 	var transactions []*txs.Envelope
-	for _, txBytes := range nv.tmNode.MempoolReactor().Mempool.ReapMaxTxs(maxTxs) {
+	for _, txBytes := range nv.tmNode.Mempool().ReapMaxTxs(maxTxs) {
 		txEnv, err := nv.txDecoder.DecodeTx(txBytes)
 		if err != nil {
 			return nil, err

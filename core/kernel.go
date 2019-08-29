@@ -43,9 +43,9 @@ import (
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/streadway/simpleuuid"
-	"github.com/tendermint/tendermint/blockchain"
-	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/store"
 	tmTypes "github.com/tendermint/tendermint/types"
+	dbm "github.com/tendermint/tm-db"
 )
 
 const (
@@ -166,7 +166,7 @@ func (kern *Kernel) LoadDump(genesisDoc *genesis.GenesisDoc, restoreFile string,
 		return fmt.Errorf("existing state found, please remove before restoring")
 	}
 
-	kern.Blockchain.SetBlockStore(bcm.NewBlockStore(blockchain.NewBlockStore(kern.database)))
+	kern.Blockchain.SetBlockStore(bcm.NewBlockStore(store.NewBlockStore(kern.database)))
 
 	if kern.State, err = state.MakeGenesisState(kern.database, genesisDoc); err != nil {
 		return fmt.Errorf("could not build genesis state: %v", err)

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/tendermint/iavl"
-	dbm "github.com/tendermint/tendermint/libs/db"
+	dbm "github.com/tendermint/tm-db"
 )
 
 // We wrap IAVL's tree types in order to implement standard DB interface and iteration helpers

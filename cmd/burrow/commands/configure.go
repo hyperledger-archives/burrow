@@ -22,7 +22,7 @@ import (
 	cli "github.com/jawher/mow.cli"
 	"github.com/tendermint/go-amino"
 	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
-	"github.com/tendermint/tendermint/libs/db"
+	dbm "github.com/tendermint/tm-db"
 )
 
 // Configure generates burrow configuration(s)
@@ -181,7 +181,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("failed to read restore dump: %v", err)
 				}
 
-				st, err := state.MakeGenesisState(db.NewMemDB(), conf.GenesisDoc)
+				st, err := state.MakeGenesisState(dbm.NewMemDB(), conf.GenesisDoc)
 				if err != nil {
 					output.Fatalf("could not generate state from genesis: %v", err)
 				}

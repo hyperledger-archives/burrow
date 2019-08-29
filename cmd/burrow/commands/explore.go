@@ -12,7 +12,7 @@ import (
 
 	"github.com/hyperledger/burrow/txs"
 	cli "github.com/jawher/mow.cli"
-	"github.com/tendermint/tendermint/libs/db"
+	dbm "github.com/tendermint/tm-db"
 )
 
 // Explore chain state(s)
@@ -37,7 +37,7 @@ func Explore(output Output) func(cmd *cli.Cmd) {
 				output.Fatalf("genesis doc is required")
 			}
 
-			explorer = bcm.NewBlockExplorer(db.DBBackendType(tmConf.DBBackend), tmConf.DBDir())
+			explorer = bcm.NewBlockExplorer(dbm.DBBackendType(tmConf.DBBackend), tmConf.DBDir())
 		}
 
 		cmd.Command("dump", "pretty print the state tree at the given height", func(cmd *cli.Cmd) {
