@@ -5,6 +5,8 @@ package rpc
 
 import (
 	fmt "fmt"
+	math "math"
+
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
@@ -12,7 +14,6 @@ import (
 	bcm "github.com/hyperledger/burrow/bcm"
 	github_com_hyperledger_burrow_binary "github.com/hyperledger/burrow/binary"
 	tendermint "github.com/hyperledger/burrow/consensus/tendermint"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
