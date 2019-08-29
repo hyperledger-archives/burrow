@@ -2,6 +2,7 @@ package abci
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
 	"github.com/hyperledger/burrow/execution"
@@ -27,14 +28,15 @@ func ExecuteTx(logHeader string, executor execution.Executor, txDecoder txs.Deco
 		}
 	}
 	tags := []common.KVPair{{Key: []byte(structure.TxHashKey), Value: []byte(txEnv.Tx.Hash().String())}}
+	events := []types.Event{{Type: "", Attributes: tags}}
 
 	txe, err := executor.Execute(txEnv)
 	if err != nil {
 		ex := errors.AsException(err)
 		return types.ResponseCheckTx{
-			Code: codes.TxExecutionErrorCode,
-			Tags: tags,
-			Log:  logf("Could not execute transaction: %s, error: %v", txEnv, ex.Exception),
+			Code:   codes.TxExecutionErrorCode,
+			Events: events,
+			Log:    logf("Could not execute transaction: %s, error: %v", txEnv, ex.Exception),
 		}
 	}
 
@@ -48,28 +50,30 @@ func ExecuteTx(logHeader string, executor execution.Executor, txDecoder txs.Deco
 	bs, err := txe.Receipt.Encode()
 	if err != nil {
 		return types.ResponseCheckTx{
-			Code: codes.EncodingErrorCode,
-			Tags: tags,
-			Log:  logf("Could not serialise receipt: %s", err),
+			Code:   codes.EncodingErrorCode,
+			Events: events,
+			Log:    logf("Could not serialise receipt: %s", err),
 		}
 	}
 	return types.ResponseCheckTx{
-		Code: codes.TxExecutionSuccessCode,
-		Tags: tags,
-		Log:  logf("Execution success - TxExecution in data"),
-		Data: bs,
+		Code:   codes.TxExecutionSuccessCode,
+		Events: events,
+		Log:    logf("Execution success - TxExecution in data"),
+		Data:   bs,
 	}
 }
 
 // Some ABCI type helpers
 
-func WithTags(logger *logging.Logger, tags []common.KVPair) *logging.Logger {
-	keyvals := make([]interface{}, len(tags)*2)
-	for i, kvp := range tags {
-		keyvals[i] = string(kvp.Key)
-		keyvals[i+1] = string(kvp.Value)
+func WithEvents(logger *logging.Logger, events []types.Event) *logging.Logger {
+	for _, e := range events {
+		values := make([]string, 0, len(e.Attributes))
+		for _, kvp := range e.Attributes {
+			values = append(values, fmt.Sprintf("%s:%s", string(kvp.Key), string(kvp.Value)))
+		}
+		logger = logger.With(e.Type, strings.Join(values, ","))
 	}
-	return logger.With(keyvals...)
+	return logger
 }
 
 func DeliverTxFromCheckTx(ctr types.ResponseCheckTx) types.ResponseDeliverTx {
@@ -77,7 +81,7 @@ func DeliverTxFromCheckTx(ctr types.ResponseCheckTx) types.ResponseDeliverTx {
 		Code:      ctr.Code,
 		Log:       ctr.Log,
 		Data:      ctr.Data,
-		Tags:      ctr.Tags,
+		Events:    ctr.Events,
 		GasUsed:   ctr.GasUsed,
 		GasWanted: ctr.GasWanted,
 		Info:      ctr.Info,

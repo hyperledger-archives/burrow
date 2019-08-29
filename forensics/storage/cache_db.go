@@ -2,7 +2,7 @@ package storage
 
 import (
 	"github.com/hyperledger/burrow/storage"
-	dbm "github.com/tendermint/tendermint/libs/db"
+	dbm "github.com/tendermint/tm-db"
 )
 
 type CacheDB struct {

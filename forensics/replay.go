@@ -23,10 +23,9 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/pkg/errors"
-	"github.com/tendermint/tendermint/blockchain"
-	"github.com/tendermint/tendermint/libs/db"
-	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/store"
 	"github.com/tendermint/tendermint/types"
+	dbm "github.com/tendermint/tm-db"
 	"github.com/xlab/treeprint"
 )
 
@@ -46,7 +45,7 @@ func NewReplay(burrowDB, tmDB dbm.DB, genesisDoc *genesis.GenesisDoc) *Replay {
 	// Avoid writing through to underlying DB
 	cacheDB := storage.NewCacheDB(burrowDB)
 	return &Replay{
-		Explorer:   bcm.NewBlockStore(blockchain.NewBlockStore(tmDB)),
+		Explorer:   bcm.NewBlockStore(store.NewBlockStore(tmDB)),
 		db:         burrowDB,
 		cacheDB:    cacheDB,
 		blockchain: bcm.NewBlockchain(cacheDB, genesisDoc),
@@ -57,7 +56,7 @@ func NewReplay(burrowDB, tmDB dbm.DB, genesisDoc *genesis.GenesisDoc) *Replay {
 
 func NewReplayFromDir(genesisDoc *genesis.GenesisDoc, dbDir string) *Replay {
 	burrowDB := dbm.NewDB(core.BurrowDBName, dbm.GoLevelDBBackend, dbDir)
-	tmDB := db.NewDB("blockstore", dbm.LevelDBBackend, path.Join(dbDir, "data"))
+	tmDB := dbm.NewDB("blockstore", dbm.GoLevelDBBackend, path.Join(dbDir, "data"))
 	return NewReplay(burrowDB, tmDB, genesisDoc)
 }
 

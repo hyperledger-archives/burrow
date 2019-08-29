@@ -125,7 +125,7 @@ func connectKernels(k1, k2 *core.Kernel) {
 		panic(fmt.Errorf("could not get kernel address: %v", err))
 	}
 	fmt.Printf("Connecting %v -> %v\n", k1Address, k2Address)
-	err = k1.Node.Switch().DialPeerWithAddress(k2Address, false)
+	err = k1.Node.Switch().DialPeerWithAddress(k2Address)
 	if err != nil {
 		switch e := err.(type) {
 		case p2p.ErrRejected:

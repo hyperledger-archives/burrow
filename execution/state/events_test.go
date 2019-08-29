@@ -11,11 +11,11 @@ import (
 	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/libs/db"
+	dbm "github.com/tendermint/tm-db"
 )
 
 func TestWriteState_AddBlock(t *testing.T) {
-	s := NewState(db.NewMemDB())
+	s := NewState(dbm.NewMemDB())
 	height := uint64(100)
 	numTxs := uint64(5)
 	events := uint64(10)
@@ -57,7 +57,7 @@ func TestWriteState_AddBlock(t *testing.T) {
 }
 
 func TestNestedTxs(t *testing.T) {
-	s := NewState(db.NewMemDB())
+	s := NewState(dbm.NewMemDB())
 	height := uint64(2)
 	numTxs := uint64(4)
 	events := uint64(2)
@@ -85,7 +85,7 @@ func TestNestedTxs(t *testing.T) {
 }
 
 func TestReadState_TxByHash(t *testing.T) {
-	s := NewState(db.NewMemDB())
+	s := NewState(dbm.NewMemDB())
 	maxHeight := uint64(3)
 	numTxs := uint64(4)
 	events := uint64(2)
@@ -179,7 +179,7 @@ func mkEvent(height, tx, index uint64) *exec.Event {
 }
 
 func BenchmarkAddBlockAndIterator(b *testing.B) {
-	s := NewState(db.NewMemDB())
+	s := NewState(dbm.NewMemDB())
 	numTxs := uint64(5)
 	events := uint64(10)
 	for height := uint64(0); height < 2000; height++ {

@@ -51,7 +51,7 @@ import (
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/require"
-	dbm "github.com/tendermint/tendermint/libs/db"
+	dbm "github.com/tendermint/tm-db"
 	hex "github.com/tmthrgd/go-hex"
 )
 

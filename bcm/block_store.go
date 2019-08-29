@@ -5,10 +5,10 @@ import (
 	"runtime/debug"
 
 	"github.com/hyperledger/burrow/txs"
-	"github.com/tendermint/tendermint/blockchain"
-	"github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/state"
+	"github.com/tendermint/tendermint/store"
 	"github.com/tendermint/tendermint/types"
+	dbm "github.com/tendermint/tm-db"
 )
 
 type BlockStore struct {
@@ -23,8 +23,8 @@ func NewBlockStore(blockStore state.BlockStoreRPC) *BlockStore {
 	}
 }
 
-func NewBlockExplorer(dbBackendType db.DBBackendType, dbDir string) *BlockStore {
-	return NewBlockStore(blockchain.NewBlockStore(db.NewDB("blockstore", dbBackendType, dbDir)))
+func NewBlockExplorer(dbBackendType dbm.DBBackendType, dbDir string) *BlockStore {
+	return NewBlockStore(store.NewBlockStore(dbm.NewDB("blockstore", dbBackendType, dbDir)))
 }
 
 func (bs *BlockStore) Block(height int64) (_ *Block, err error) {
