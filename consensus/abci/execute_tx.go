@@ -27,19 +27,16 @@ func ExecuteTx(logHeader string, executor execution.Executor, txDecoder txs.Deco
 			Log:  logf("Decoding error: %s", err),
 		}
 	}
-	tags := []common.KVPair{{Key: []byte(structure.TxHashKey), Value: []byte(txEnv.Tx.Hash().String())}}
-	events := []types.Event{{Type: "", Attributes: tags}}
-
 	txe, err := executor.Execute(txEnv)
 	if err != nil {
 		ex := errors.AsException(err)
 		return types.ResponseCheckTx{
-			Code:   codes.TxExecutionErrorCode,
-			Events: events,
-			Log:    logf("Could not execute transaction: %s, error: %v", txEnv, ex.Exception),
+			Code: codes.TxExecutionErrorCode,
+			Log:  logf("Could not execute transaction: %s, error: %v", txEnv, ex.Exception),
 		}
 	}
 
+	tags := []common.KVPair{{Key: []byte(structure.TxHashKey), Value: []byte(txEnv.Tx.Hash().String())}}
 	if txe.Receipt.CreatesContract {
 		tags = append(tags, common.KVPair{
 			Key:   []byte("created_contract_address"),
@@ -47,6 +44,7 @@ func ExecuteTx(logHeader string, executor execution.Executor, txDecoder txs.Deco
 		})
 	}
 
+	events := []types.Event{{Type: "ExecuteTx", Attributes: tags}}
 	bs, err := txe.Receipt.Encode()
 	if err != nil {
 		return types.ResponseCheckTx{

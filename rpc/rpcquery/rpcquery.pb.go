@@ -6,6 +6,8 @@ package rpcquery
 import (
 	context "context"
 	fmt "fmt"
+	math "math"
+
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
@@ -18,7 +20,6 @@ import (
 	payload "github.com/hyperledger/burrow/txs/payload"
 	types "github.com/tendermint/tendermint/abci/types"
 	grpc "google.golang.org/grpc"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

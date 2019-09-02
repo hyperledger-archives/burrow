@@ -83,10 +83,8 @@ func NewVM(params Params, origin crypto.Address, nonce []byte, logger *logging.L
 }
 
 func (vm *VM) Debugf(format string, a ...interface{}) {
-	// Uncomment for quick and dirty debug
-	//fmt.Printf(format, a...)
 	if vm.debugOpcodes {
-		vm.logger.TraceMsg(fmt.Sprintf(format, a...), "tag", "DebugOpcodes")
+		fmt.Printf(format, a...)
 	}
 }
 
@@ -517,11 +515,11 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 
 		case ORIGIN: // 0x32
 			stack.Push(vm.origin.Word256())
-			vm.Debugf(" => %X\n", vm.origin)
+			vm.Debugf(" => %v\n", vm.origin)
 
 		case CALLER: // 0x33
 			stack.Push(caller.Word256())
-			vm.Debugf(" => %X\n", caller)
+			vm.Debugf(" => %v\n", caller)
 
 		case CALLVALUE: // 0x34
 			stack.PushU64(value)
@@ -705,7 +703,7 @@ func (vm *VM) execute(callState Interface, eventSink EventSink, caller, callee c
 			loc, data := stack.Pop(), stack.Pop()
 			useGasNegative(gas, GasStorageUpdate, callState)
 			callState.SetStorage(callee, loc, data.Bytes())
-			vm.Debugf("%s {0x%X := 0x%X}\n", callee, loc, data)
+			vm.Debugf("%v {%v := %v}\n", callee, loc, data)
 
 		case JUMP: // 0x56
 			to := stack.Pop64()
