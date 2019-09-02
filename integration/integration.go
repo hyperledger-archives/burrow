@@ -105,7 +105,7 @@ func NewTestConfig(genesisDoc *genesis.GenesisDoc,
 	conf.RPC.Info.ListenHost = rpc.LocalHost
 	conf.RPC.Info.ListenPort = freeport
 	conf.Execution.TimeoutFactor = 0.5
-	conf.Execution.VMOptions = []execution.VMOption{execution.DebugOpcodes}
+	conf.Execution.VMOptions = []execution.VMOption{}
 	for _, opt := range options {
 		if opt != nil {
 			opt(conf)
