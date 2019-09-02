@@ -70,6 +70,7 @@ func (btc *BurrowTendermintConfig) Config(rootDir string, timeoutFactor float64)
 		// This creates load on leveldb for no purpose. The default indexer is "kv" and allows retrieval the TxResult
 		// for which we use use TxReceipt (returned from ABCI DeliverTx) - we have our own much richer index
 		conf.TxIndex.Indexer = "null"
+		conf.Mempool.MaxTxBytes = 1024 * 1024 * 4 // 4MB
 
 		// Consensus
 		switch strings.ToLower(btc.CreateEmptyBlocks) {

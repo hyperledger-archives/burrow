@@ -1,6 +1,7 @@
 - Burrow
     - [Introduction](README.md)
     - [Installation](INSTALL.md)
+    - [Developers](developers.md)
     - [JS API](js-api.md)
 
 - Transactions
@@ -14,9 +15,13 @@
     - [Bonding](tutorials/5-bonding-validators.md)
     - [Seed Nodes](tutorials/6-seed-nodes.md)
     - [Dump / Restore](tutorials/7-dump-restore.md)
+    - [Proposals](tutorials/8-proposals.md)
 
 - Reference
     - [Genesis](reference/genesis.md)
+    - [Deploy yaml](reference/deploy-yaml.md)
     - [Logging](reference/logging.md)
     - [Permissions](reference/permissions.md)
     - [State](reference/state.md)
+    - [WASM](reference/wasm.md)
+ 

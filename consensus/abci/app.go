@@ -182,7 +182,7 @@ func (app *App) checkValidatorMatches(ours validator.Reader, v types.Validator) 
 	return nil
 }
 
-func (app *App) CheckTx(txBytes []byte) types.ResponseCheckTx {
+func (app *App) CheckTx(req types.RequestCheckTx) types.ResponseCheckTx {
 	const logHeader = "CheckTx"
 	defer func() {
 		if r := recover(); r != nil {
@@ -190,9 +190,9 @@ func (app *App) CheckTx(txBytes []byte) types.ResponseCheckTx {
 		}
 	}()
 
-	checkTx := ExecuteTx(logHeader, app.checker, app.txDecoder, txBytes)
+	checkTx := ExecuteTx(logHeader, app.checker, app.txDecoder, req.GetTx())
 
-	logger := WithTags(app.logger, checkTx.Tags)
+	logger := WithEvents(app.logger, checkTx.Events)
 
 	if checkTx.Code == codes.TxExecutionSuccessCode {
 		logger.InfoMsg("Execution success")
@@ -205,7 +205,7 @@ func (app *App) CheckTx(txBytes []byte) types.ResponseCheckTx {
 	return checkTx
 }
 
-func (app *App) DeliverTx(txBytes []byte) types.ResponseDeliverTx {
+func (app *App) DeliverTx(req types.RequestDeliverTx) types.ResponseDeliverTx {
 	const logHeader = "DeliverTx"
 	defer func() {
 		if r := recover(); r != nil {
@@ -213,9 +213,9 @@ func (app *App) DeliverTx(txBytes []byte) types.ResponseDeliverTx {
 		}
 	}()
 
-	checkTx := ExecuteTx(logHeader, app.committer, app.txDecoder, txBytes)
+	checkTx := ExecuteTx(logHeader, app.committer, app.txDecoder, req.GetTx())
 
-	logger := WithTags(app.logger, checkTx.Tags)
+	logger := WithEvents(app.logger, checkTx.Events)
 
 	if checkTx.Code == codes.TxExecutionSuccessCode {
 		logger.InfoMsg("Execution success")

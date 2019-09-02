@@ -7,7 +7,6 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
-	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -163,7 +162,14 @@ func (m *TestMessage) Size() (n int) {
 }
 
 func sovEncoding(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozEncoding(x uint64) (n int) {
 	return sovEncoding(uint64((x << 1) ^ uint64((int64(x) >> 63))))

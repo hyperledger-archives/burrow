@@ -321,7 +321,6 @@ type QueryArg struct {
 }
 
 func (c *Client) QueryContract(arg *QueryArg, logger *logging.Logger) (*exec.TxExecution, error) {
-	logger.InfoMsg("Query contract", "query", arg)
 	tx, err := c.Call(&CallArg{
 		Input:   arg.Input,
 		Address: arg.Address,

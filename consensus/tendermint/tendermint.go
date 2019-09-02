@@ -14,11 +14,11 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/crypto/ed25519"
-	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/proxy"
 	tmTypes "github.com/tendermint/tendermint/types"
+	dbm "github.com/tendermint/tm-db"
 )
 
 // Serves as a wrapper around the Tendermint node's closeable resources (database connections)
@@ -71,7 +71,7 @@ func NewNode(conf *config.Config, privValidator tmTypes.PrivValidator, genesisDo
 	if err != nil {
 		return nil, err
 	}
-	app.SetMempoolLocker(nde.MempoolReactor().Mempool)
+	app.SetMempoolLocker(nde.Mempool())
 	return nde, nil
 }
 

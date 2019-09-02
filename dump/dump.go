@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/logging"
-	"github.com/tendermint/tendermint/libs/db"
+	dbm "github.com/tendermint/tm-db"
 )
 
 const (
@@ -225,7 +225,7 @@ func (ds *Dumper) WithLogger(logger *logging.Logger) *Dumper {
 
 // Write a dump to the Writer out by pulling rows from stream
 func Write(out io.Writer, source Source, useBinaryEncoding bool, options Option) error {
-	st := state.NewState(db.NewMemDB())
+	st := state.NewState(dbm.NewMemDB())
 	_, _, err := st.Update(func(ws state.Updatable) error {
 		for {
 			resp, err := source.Recv()

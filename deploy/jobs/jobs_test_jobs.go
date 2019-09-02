@@ -20,6 +20,8 @@ func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, script *def.
 		return "", nil, err
 	}
 
+	query.Source = FirstOf(query.Source, script.Account)
+
 	// Get the packed data from the ABI functions
 	var data string
 	var packedBytes []byte
@@ -36,6 +38,10 @@ func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, script *def.
 		return "", nil, err
 	}
 
+	logger.InfoMsg("Query contract",
+		"destination", query.Destination,
+		"function", query.Function,
+		"data", fmt.Sprint(query.Data))
 	// Call the client
 	txe, err := client.QueryContract(&def.QueryArg{
 		Input:   query.Source,

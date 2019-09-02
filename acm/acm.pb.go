@@ -7,7 +7,6 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
-	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -227,17 +226,17 @@ func (m *Account) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintAcm(dAtA, i, uint64(m.Address.Size()))
-	n1, err1 := m.Address.MarshalTo(dAtA[i:])
-	if err1 != nil {
-		return 0, err1
+	n1, err := m.Address.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n1
 	dAtA[i] = 0x12
 	i++
 	i = encodeVarintAcm(dAtA, i, uint64(m.PublicKey.Size()))
-	n2, err2 := m.PublicKey.MarshalTo(dAtA[i:])
-	if err2 != nil {
-		return 0, err2
+	n2, err := m.PublicKey.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n2
 	if m.Sequence != 0 {
@@ -253,33 +252,33 @@ func (m *Account) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x2a
 	i++
 	i = encodeVarintAcm(dAtA, i, uint64(m.EVMCode.Size()))
-	n3, err3 := m.EVMCode.MarshalTo(dAtA[i:])
-	if err3 != nil {
-		return 0, err3
+	n3, err := m.EVMCode.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n3
 	dAtA[i] = 0x32
 	i++
 	i = encodeVarintAcm(dAtA, i, uint64(m.Permissions.Size()))
-	n4, err4 := m.Permissions.MarshalTo(dAtA[i:])
-	if err4 != nil {
-		return 0, err4
+	n4, err := m.Permissions.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n4
 	dAtA[i] = 0x3a
 	i++
 	i = encodeVarintAcm(dAtA, i, uint64(m.WASMCode.Size()))
-	n5, err5 := m.WASMCode.MarshalTo(dAtA[i:])
-	if err5 != nil {
-		return 0, err5
+	n5, err := m.WASMCode.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n5
 	dAtA[i] = 0x42
 	i++
 	i = encodeVarintAcm(dAtA, i, uint64(m.CodeHash.Size()))
-	n6, err6 := m.CodeHash.MarshalTo(dAtA[i:])
-	if err6 != nil {
-		return 0, err6
+	n6, err := m.CodeHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n6
 	if len(m.ContractMeta) > 0 {
@@ -298,9 +297,9 @@ func (m *Account) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x52
 		i++
 		i = encodeVarintAcm(dAtA, i, uint64(m.Forebear.Size()))
-		n7, err7 := m.Forebear.MarshalTo(dAtA[i:])
-		if err7 != nil {
-			return 0, err7
+		n7, err := m.Forebear.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n7
 	}
@@ -328,17 +327,17 @@ func (m *ContractMeta) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintAcm(dAtA, i, uint64(m.CodeHash.Size()))
-	n8, err8 := m.CodeHash.MarshalTo(dAtA[i:])
-	if err8 != nil {
-		return 0, err8
+	n8, err := m.CodeHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n8
 	dAtA[i] = 0x12
 	i++
 	i = encodeVarintAcm(dAtA, i, uint64(m.MetadataHash.Size()))
-	n9, err9 := m.MetadataHash.MarshalTo(dAtA[i:])
-	if err9 != nil {
-		return 0, err9
+	n9, err := m.MetadataHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n9
 	if len(m.Metadata) > 0 {
@@ -423,7 +422,14 @@ func (m *ContractMeta) Size() (n int) {
 }
 
 func sovAcm(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozAcm(x uint64) (n int) {
 	return sovAcm(uint64((x << 1) ^ uint64((int64(x) >> 63))))

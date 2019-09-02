@@ -117,7 +117,7 @@ func (st *Stack) PopAddress() crypto.Address {
 func (st *Stack) Pop64() int64 {
 	d := st.Pop()
 	if Is64BitOverflow(d) {
-		st.pushErr(errors.ErrorCodef(errors.ErrorCodeCallStackOverflow, "int64 overflow from word: %v", d))
+		st.pushErr(errors.ErrorCodef(errors.ErrorCodeIntegerOverflow, "int64 overflow from word: %v", d))
 		return 0
 	}
 	return Int64FromWord256(d)
@@ -126,7 +126,7 @@ func (st *Stack) Pop64() int64 {
 func (st *Stack) PopU64() uint64 {
 	d := st.Pop()
 	if Is64BitOverflow(d) {
-		st.pushErr(errors.ErrorCodef(errors.ErrorCodeCallStackOverflow, "int64 overflow from word: %v", d))
+		st.pushErr(errors.ErrorCodef(errors.ErrorCodeIntegerOverflow, "uint64 overflow from word: %v", d))
 		return 0
 	}
 	return Uint64FromWord256(d)

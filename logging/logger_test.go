@@ -15,16 +15,20 @@
 package logging
 
 import (
-	"os"
+	"bytes"
 	"testing"
 
 	"github.com/go-kit/kit/log"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLogger(t *testing.T) {
-	stderrLogger := log.NewLogfmtLogger(os.Stderr)
-	logger := NewLogger(stderrLogger)
+	var buf bytes.Buffer
+	bufLogger := log.NewLogfmtLogger(&buf)
+	logger := NewLogger(bufLogger)
+	logger = logger.With("foo", "bar")
 	logger.Trace.Log("hello", "barry")
+	require.Equal(t, "log_channel=Trace foo=bar hello=barry\n", buf.String())
 }
 
 func TestNewNoopInfoTraceLogger(t *testing.T) {

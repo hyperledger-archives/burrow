@@ -12,8 +12,8 @@
 
 SHELL := /bin/bash
 REPO := $(shell pwd)
-GOFILES_NOVENDOR := $(shell go list -f "{{.Dir}}" ./...)
-PACKAGES_NOVENDOR := $(shell go list ./...)
+GOFILES := $(shell go list -f "{{.Dir}}" ./...)
+PACKAGES := $(shell go list ./... )
 
 # Protobuf generated go files
 PROTO_FILES = $(shell find . -path ./vendor -prune -o -path ./.gopath_bos -prune -o -type f -name '*.proto' -print)
@@ -40,26 +40,26 @@ export GO111MODULE=on
 .PHONY: check
 check:
 	@echo "Checking code for formatting style compliance."
-	@gofmt -l -d ${GOFILES_NOVENDOR}
-	@gofmt -l ${GOFILES_NOVENDOR} | read && echo && echo "Your marmot has found a problem with the formatting style of the code." 1>&2 && exit 1 || true
+	@gofmt -l -d ${GOFILES}
+	@gofmt -l ${GOFILES} | read && echo && echo "Your marmot has found a problem with the formatting style of the code." 1>&2 && exit 1 || true
 
 # Just fix it
 .PHONY: fix
 fix:
-	@goimports -l -w ${GOFILES_NOVENDOR}
+	@goimports -l -w ${GOFILES}
 
 # fmt runs gofmt -w on the code, modifying any files that do not match
 # the style guide.
 .PHONY: fmt
 fmt:
 	@echo "Correcting any formatting style corrections."
-	@gofmt -l -w ${GOFILES_NOVENDOR}
+	@gofmt -l -w ${GOFILES}
 
 # lint installs golint and prints recommendations for coding style.
 lint:
 	@echo "Running lint checks."
 	go get -u github.com/golang/lint/golint
-	@for file in $(GOFILES_NOVENDOR); do \
+	@for file in $(GOFILES); do \
 		echo; \
 		golint --set_exit_status $${file}; \
 	done
@@ -69,13 +69,13 @@ lint:
 .PHONY: vet
 vet:
 	@echo "Running go vet."
-	@go vet ${PACKAGES_NOVENDOR}
+	@go vet ${PACKAGES}
 
 # run the megacheck tool for code compliance
 .PHONY: megacheck
 megacheck:
 	@go get honnef.co/go/tools/cmd/megacheck
-	@for pkg in ${PACKAGES_NOVENDOR}; do megacheck "$$pkg"; done
+	@for pkg in ${PACKAGES}; do megacheck "$$pkg"; done
 
 # Protobuffing
 .PHONY: protobuf_deps
@@ -235,7 +235,7 @@ bin/solc: ./tests/scripts/deps/solc.sh
 # test burrow with checks for race conditions
 .PHONY: test_race
 test_race: build_race
-	@go test -race ${PACKAGES_NOVENDOR}
+	@go test -race ${PACKAGES}
 
 ### Clean up
 

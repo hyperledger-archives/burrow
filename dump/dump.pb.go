@@ -7,7 +7,6 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
-	math_bits "math/bits"
 	time "time"
 
 	_ "github.com/gogo/protobuf/gogoproto"
@@ -344,17 +343,17 @@ func (m *Storage) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintDump(dAtA, i, uint64(m.Key.Size()))
-	n1, err1 := m.Key.MarshalTo(dAtA[i:])
-	if err1 != nil {
-		return 0, err1
+	n1, err := m.Key.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n1
 	dAtA[i] = 0x12
 	i++
 	i = encodeVarintDump(dAtA, i, uint64(m.Value.Size()))
-	n2, err2 := m.Value.MarshalTo(dAtA[i:])
-	if err2 != nil {
-		return 0, err2
+	n2, err := m.Value.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n2
 	if m.XXX_unrecognized != nil {
@@ -381,9 +380,9 @@ func (m *AccountStorage) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0xa
 	i++
 	i = encodeVarintDump(dAtA, i, uint64(m.Address.Size()))
-	n3, err3 := m.Address.MarshalTo(dAtA[i:])
-	if err3 != nil {
-		return 0, err3
+	n3, err := m.Address.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n3
 	if len(m.Storage) > 0 {
@@ -428,18 +427,18 @@ func (m *EVMEvent) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x12
 	i++
 	i = encodeVarintDump(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdTime(m.Time)))
-	n4, err4 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.Time, dAtA[i:])
-	if err4 != nil {
-		return 0, err4
+	n4, err := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.Time, dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
 	i += n4
 	if m.Event != nil {
 		dAtA[i] = 0x1a
 		i++
 		i = encodeVarintDump(dAtA, i, uint64(m.Event.Size()))
-		n5, err5 := m.Event.MarshalTo(dAtA[i:])
-		if err5 != nil {
-			return 0, err5
+		n5, err := m.Event.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n5
 	}
@@ -478,9 +477,9 @@ func (m *Dump) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintDump(dAtA, i, uint64(m.Account.Size()))
-		n6, err6 := m.Account.MarshalTo(dAtA[i:])
-		if err6 != nil {
-			return 0, err6
+		n6, err := m.Account.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n6
 	}
@@ -488,9 +487,9 @@ func (m *Dump) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1a
 		i++
 		i = encodeVarintDump(dAtA, i, uint64(m.AccountStorage.Size()))
-		n7, err7 := m.AccountStorage.MarshalTo(dAtA[i:])
-		if err7 != nil {
-			return 0, err7
+		n7, err := m.AccountStorage.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n7
 	}
@@ -498,9 +497,9 @@ func (m *Dump) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x22
 		i++
 		i = encodeVarintDump(dAtA, i, uint64(m.EVMEvent.Size()))
-		n8, err8 := m.EVMEvent.MarshalTo(dAtA[i:])
-		if err8 != nil {
-			return 0, err8
+		n8, err := m.EVMEvent.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n8
 	}
@@ -508,9 +507,9 @@ func (m *Dump) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x2a
 		i++
 		i = encodeVarintDump(dAtA, i, uint64(m.Name.Size()))
-		n9, err9 := m.Name.MarshalTo(dAtA[i:])
-		if err9 != nil {
-			return 0, err9
+		n9, err := m.Name.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
 		i += n9
 	}
@@ -622,7 +621,14 @@ func (m *Dump) Size() (n int) {
 }
 
 func sovDump(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozDump(x uint64) (n int) {
 	return sovDump(uint64((x << 1) ^ uint64((int64(x) >> 63))))
