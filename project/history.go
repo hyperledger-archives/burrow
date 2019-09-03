@@ -247,7 +247,7 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [Deploy] burrow deploy can use key names where addresses are used
 - [Governance] Added threshold-based governance via Proposal mechanism which allows entities with Root permission to propose and vote on batches of transactions to be executed on a running network with no single entity being able to do so.
 - [Governance] Added command line and query introspection of proposals as well as burrow deploy support
-- [Vent] Merged Vent our SQL projection and mapping layer into the Burrow repository and binary via 'burrow vent'. See [Vent Readme](./vent/README.md)
+- [Vent] Merged Vent our SQL projection and mapping layer into the Burrow repository and binary via 'burrow vent'. See [Vent Readme](./vent/vent.md)
 - [State] Improved read-write separation with RWTree and ImmutableForest data structures
 - [State] Implemented dump/restore to port state between different version of Burrow or to compress the execution of a chain (with a proof) onto a fresh chain
 

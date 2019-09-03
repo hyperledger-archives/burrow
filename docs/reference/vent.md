@@ -1,47 +1,92 @@
-# Vent Component
+# Vent - SQL mapping layer
 
-Vent reads sqlsol specification & abi files, parses their contents, and maps column types to corresponding sql types to create or alter database structures. It listens for a stream of block events from Burrow's GRPC service then parses, unpacks, decodes event data, and builds rows to be upserted in matching event tables, rows are upserted atomically in a single database transaction per block.
+Vent reads specification files called 'projections', parses their contents, and maps EVM LOG event fields to corresponding SQL columns to create or alter database structures. It listens for a stream of block events from Burrow's GRPC service then parses, unpacks, decodes event data, and builds rows to be upserted in matching event tables, rows are upserted atomically in a single database transaction per block.
 
-Block height and context info are stored in Log tables in order to resume getting pending blocks or rewind to a previous state.
+There are two modes of operation: view mode and log mode. In view mode a primary key is used to locate the row in a table which should be updated (if exists) or inserted (if it does not exist). If the event contains a field matching the optional `DeleteMarkerField` then the row will instead be deleted. As such in view mode Vent can map a stream of EVM LOG events to a CRUD-style table - a view over entities as defined by the choice primary key. Alternatively if no primary keys are specified for a projection Vent operates in log mode where all matched events are inserted - and so log mode operates as an append-only log. Note there is no explicit setting for mode - it depends on the presence or absence of a `"Primary": true` entry in one of the `FieldMappings` of a projection (see below for an example).
 
-## SQLSol specification
-SQLSol is the name (object relational mapping between Solidity events and SQL tables) given to the configuration files that Vent uses to interpret EVM events as updates or deletion from SQL tables
+Vent writes each block of updates atomically and is guaranteed to be crash tolerant. If the Vent process is killed it will resume at the last written height. Burrow stores all previous events in its state so even if you delete the Vent database it can be regenerated deterministically. This feature being a core feature of Vent.
 
-Given a sqlsol specification, like the following:
+## Projections
+A projection is the name  given to the configuration files that Vent uses to interpret EVM events as updates or deletion from SQL tables. They provide an object relational mapping between Solidity events and SQL tables.
+
+Given a projection, like the following:
 
 ```json
 [
   {
     "TableName" : "EventTest",
-    "Filter" : "Log1Text = 'LOGEVENT1'",
+    "Filter" : "Log1Text = 'I am LOG1'",
     "DeleteMarkerField": "__DELETE__",
     "FieldMappings"  : [
-      {"Field": "key", "ColumnName" : "testname", "Type": "bytes32", "Primary" : true},
-      {"Field": "description", "ColumnName" : "testdescription", "Type": "bytes32", "Primary" : false, "BytesToString": true}
-    ]
-  },
-  {
-    "TableName" : "UserAccounts",
-    "Filter" : "Log1Text = 'USERACCOUNTS'",
-    "FieldMappings"  : [
-      {"Field": "userAddress", "ColumnName" : "address", "Type": "address", "Primary" : true},
-      {"Field": "userName", "ColumnName" : "username", "Type": "string", "Primary" : false}
+      {
+        "Field": "key", 
+        "ColumnName" : "testname", 
+        "Type": "bytes32", 
+        "Primary" : true
+      },
+      {
+        "Field": "description", 
+        "ColumnName" : "testdescription", 
+        "Type": "bytes32", 
+        "BytesToString": true
+      }
     ]
   }
 ]
-
 ```
 
-Burrow can emit a JSONSchema for the sqlsol file format with `burrow vent schema`. You can use this to validate your sqlsol files using any of the [JSONSchema](https://json-schema.org/) tooling.
+And a solidity contract like:
 
-### SQLSol specification
-A sqlsol file is defined as a JSON array of `EventClass` objections. Each `EventClass` specifies a class of events that should be consumed (specified via a filter) in order to generate a SQL table. An `EventClass` holds `FieldMappings` that specify how to map the event fields of a matched EVM event to a destination column (identified by `ColumnName`) of the destination table (indentified by `TableName`)
+```solidity
+pragma solidity ^0.4.25;
+
+contract EventEmitter {
+    event UpdateEvent(
+        // The first indexed field will appear as the the LOG1 topic - we can use it like a namespace
+        bytes32 indexed IAmLog1,
+        // Our primary key in our projection above
+        bytes32 key,
+        // Some 'mutable' text - we can update this by emitting an UpdateEvent with the same key but a new description
+        bytes32 description
+    );
+
+    event DeletionEvent(
+        bytes32 indexed IAmLog1,
+        bytes32 key,
+        // This marker field can be of any type - it is purely matched on name - if an event contains a field with the
+        // the specified marker field it is interpreted as an instruction to delete the row corresponding to key
+        bool __DELETE__
+    );
+    
+    function update() external {
+        // Update or inserts 'key0001' row
+        emit UpdateEvent("I am LOG1", "key0001", "some description");
+    }
+
+    function update2() external {
+        // Update or inserts 'key0001' row
+        emit UpdateEvent("I am LOG1", "key0001", "a different description");
+    }
+
+    function remove() external {
+        // Removes 'key0001' row
+        emit DeletionEvent("I am LOG1", "key0001", true);
+    }
+}
+```
+
+We can maintain a view-mode table that feels like that of a ordinary CRUD app though it is backed by a stream of events coming from our Solidity contracts.
+
+Burrow can also emit a JSONSchema for the projection file format with `burrow vent schema`. You can use this to validate your projections using any of the [JSONSchema](https://json-schema.org/) tooling.
+
+### Projection specification
+A projection file is defined as a JSON array of `EventClass` objections. Each `EventClass` specifies a class of events that should be consumed (specified via a filter) in order to generate a SQL table. An `EventClass` holds `FieldMappings` that specify how to map the event fields of a matched EVM event to a destination column (identified by `ColumnName`) of the destination table (identified by `TableName`)
 
 #### EventClass
 | Field | Type | Required? | Description |
 |-------|------|-----------|-------------|
 | `TableName` | String | Required | The case-sensitive name of the destination SQL table for the `EventClass`|
-| `Filter` | String | Required | A filter to be applied to EVM Log events using the [available tags](../protobuf/rpcevents.proto) written according to the event [query.peg](../event/query/query.peg) grammar |
+| `Filter` | String | Required | A filter to be applied to EVM Log events using the [available tags](../../protobuf/rpcevents.proto) written according to the event [query.peg](../../event/query/query.peg) grammar |
 | `FieldMappings` | array of `FieldMapping` | Required | Mappings between EVM event fields and columns see table below |
 | `DeleteMarkerField` | String | Optional | Field name of an event field that when present in a matched event indicates the event should result on a deletion of a row (matched on the primary keys of that row) rather than the default upsert action |
 
@@ -64,7 +109,6 @@ Abi files can be generated from bin files like so:
 ```bash
 cat *.bin | jq '.Abi[] | select(.type == "event")' > events.abi
 ```
-
 
 ## Adapters:
 
@@ -118,17 +162,17 @@ make test_integration_vent
 ## Run Vent Command:
 
 ```bash
-# Install vent command:
-go install ./vent
+# Install burrow (from root of repo):
+make install
 
 # Print command help:
-vent --help
+burrow vent --help
 
 # Run vent command with postgres adapter, spec & abi files path, also stores block & tx data:
-vent --db-adapter="postgres" --db-url="postgres://user:pass@localhost:5432/vent?sslmode=disable" --db-schema="vent" --grpc-addr="localhost:10997" --http-addr="0.0.0.0:8080" --log-level="debug" --spec-file="<sqlsol specification file path>" --abi-file="<abi file path>" --db-block=true
+burrow vent start --db-adapter="postgres" --db-url="postgres://user:pass@localhost:5432/vent?sslmode=disable" --db-schema="vent" --grpc-addr="localhost:10997" --http-addr="0.0.0.0:8080" --log-level="debug" --spec="<sqlsol specification file path>" --abi="<abi file path>" --db-block=true
 
 # Run vent command with sqlite adapter, spec & abi directories path, does not store block & tx data:
-vent --db-adapter="sqlite" --db-url="./vent.sqlite" --grpc-addr="localhost:10997" --http-addr="0.0.0.0:8080" --log-level="debug" --spec-dir="<sqlsol specification directory path>" --abi-dir="<abi files directory path>"
+burrow vent start --db-adapter="sqlite" --db-url="./vent.sqlite" --grpc-addr="localhost:10997" --http-addr="0.0.0.0:8080" --log-level="debug" --spec="<sqlsol specification directory path>" --abi="<abi files directory path>"
 ```
 
 Configuration Flags:

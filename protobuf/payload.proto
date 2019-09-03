@@ -20,6 +20,7 @@ option (gogoproto.goproto_registration) = true;
 // Enable generation of XXX_MessageName methods for grpc-go/status.
 option (gogoproto.messagename_all) = true;
 
+// Any encodes a sum type for which only one should be set
 message Any {
     option (gogoproto.onlyone) = true;
 

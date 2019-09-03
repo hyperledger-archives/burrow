@@ -87,19 +87,3 @@ Here is an example `genesis.json`:
 }
 
 ```
-
-### Accounts
-
-Accounts are identified by an address - this is the EVM's 20-byte native identifier and is encoded in hex in the GenesisDoc
-
-TODO: Public key is redundant but included for reference
-
-TODO: Amount is native token
-
-### Validators
-TODO
-
-### Genesis making
-
-TODO: burrow spec
-TODO: burrow configure
