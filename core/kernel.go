@@ -61,6 +61,7 @@ type Kernel struct {
 	// Expose these public-facing interfaces to allow programmatic extension of the Kernel by other projects
 	Emitter        *event.Emitter
 	Service        *rpc.Service
+	EthService     *rpc.EthService
 	Launchers      []process.Launcher
 	State          *state.State
 	Blockchain     *bcm.Blockchain

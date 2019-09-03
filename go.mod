@@ -11,7 +11,7 @@ require (
 	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
 	github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf // indirect
-	github.com/btcsuite/btcd v0.0.0-20190418232430-6867ff32788a
+	github.com/btcsuite/btcd v0.0.0-20190523000118-16327141da8c
 	github.com/cep21/xdgbasedir v0.0.0-20170329171747-21470bfc93b9
 	github.com/eapache/channels v1.1.0
 	github.com/eapache/queue v1.1.0 // indirect
@@ -31,7 +31,6 @@ require (
 	github.com/imdario/mergo v0.3.7
 	github.com/jawher/mow.cli v1.1.0
 	github.com/jmoiron/sqlx v1.2.0
-	github.com/kisielk/errcheck v1.2.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lib/pq v1.1.1
 	github.com/mattn/go-colorable v0.1.2 // indirect
@@ -61,7 +60,6 @@ require (
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
 	golang.org/x/sys v0.0.0-20190825160603-fb81701db80f // indirect
 	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20190826060629-95c3470cfb70 // indirect
 	google.golang.org/grpc v1.22.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect

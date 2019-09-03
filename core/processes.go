@@ -14,12 +14,14 @@ import (
 	"github.com/hyperledger/burrow/process"
 	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc/lib/server"
 	"github.com/hyperledger/burrow/rpc/metrics"
 	"github.com/hyperledger/burrow/rpc/rpcdump"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/rpcinfo"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	"github.com/hyperledger/burrow/rpc/rpctransact"
+	"github.com/hyperledger/burrow/rpc/web3"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/tendermint/version"
 	hex "github.com/tmthrgd/go-hex"
@@ -31,6 +33,7 @@ const (
 	NoConsensusProcessName = "NoConsensusExecution"
 	TendermintProcessName  = "Tendermint"
 	StartupProcessName     = "StartupAnnouncer"
+	Web3ProcessName        = "rpcConfig/web3"
 	InfoProcessName        = "rpcConfig/info"
 	GRPCProcessName        = "rpcConfig/GRPC"
 	MetricsProcessName     = "rpcConfig/metrics"
@@ -44,6 +47,7 @@ func DefaultProcessLaunchers(kern *Kernel, rpcConfig *rpc.RPCConfig, keysConfig 
 		NoConsensusLauncher(kern),
 		TendermintLauncher(kern),
 		StartupLauncher(kern),
+		Web3Launcher(kern, rpcConfig.Web3),
 		InfoLauncher(kern, rpcConfig.Info),
 		MetricsLauncher(kern, rpcConfig.Metrics),
 		GRPCLauncher(kern, rpcConfig.GRPC, keysConfig),
@@ -117,10 +121,6 @@ func TendermintLauncher(kern *Kernel) process.Launcher {
 				return nil, fmt.Errorf("%s cannot get NodeView %v", errHeader, err)
 			}
 
-			accountState := kern.State
-			nameRegState := kern.State
-			kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, kern.State, nodeView, kern.Logger)
-
 			kern.Blockchain.SetBlockStore(bcm.NewBlockStore(nodeView.BlockStore()))
 			// Provide execution accounts against checker state so that we can assign sequence numbers
 			accounts := execution.NewAccounts(kern.checker, kern.keyClient, AccountsRingMutexCount)
@@ -128,6 +128,13 @@ func TendermintLauncher(kern *Kernel) process.Launcher {
 			checkTx := kern.Node.Mempool().CheckTx
 			kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter, accounts, checkTx, kern.txCodec,
 				kern.Logger)
+
+			accountState := kern.State
+			eventsState := kern.State
+			nameRegState := kern.State
+			validatorState := kern.State
+			kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, validatorState, nodeView, kern.Logger)
+			kern.EthService = rpc.NewEthService(accountState, eventsState, kern.Blockchain, validatorState, nodeView, kern.Transactor, kern.keyStore, kern.Logger)
 
 			if err := kern.Node.Start(); err != nil {
 				return nil, fmt.Errorf("%s error starting Tendermint node: %v", errHeader, err)
@@ -216,6 +223,30 @@ func InfoLauncher(kern *Kernel, conf *rpc.ServerConfig) process.Launcher {
 				return nil, err
 			}
 			return server, nil
+		},
+	}
+}
+
+func Web3Launcher(kern *Kernel, conf *rpc.ServerConfig) process.Launcher {
+	return process.Launcher{
+		Name:    Web3ProcessName,
+		Enabled: conf.Enabled,
+		Launch: func() (process.Process, error) {
+			listener, err := process.ListenerFromAddress(fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort))
+			if err != nil {
+				return nil, err
+			}
+			err = kern.registerListener(Web3ProcessName, listener)
+			if err != nil {
+				return nil, err
+			}
+
+			srv, err := server.StartHTTPServer(listener, web3.NewServer(kern.EthService), kern.Logger)
+			if err != nil {
+				return nil, err
+			}
+
+			return srv, nil
 		},
 	}
 }
