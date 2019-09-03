@@ -227,7 +227,7 @@ func (exe *executor) Execute(txEnv *txs.Envelope) (txe *exec.TxExecution, err er
 	logger.InfoMsg("Executing transaction", "tx", txEnv.String())
 
 	// Verify transaction signature against inputs
-	err = txEnv.Verify(exe.stateCache, exe.params.ChainID)
+	err = txEnv.Verify(exe.params.ChainID)
 	if err != nil {
 		logger.InfoMsg("Transaction Verify failed", structure.ErrorKey, err)
 		return nil, err

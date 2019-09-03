@@ -14,3 +14,31 @@ Hyperledger Burrow is a permissioned blockchain node that executes smart contrac
 - **Permissioned Ethereum Virtual Machine:** This virtual machine is built to observe the Ethereum operation code specification and additionally asserts the correct permissions have been granted. Permissioning is enforced through secure native functions and underlies all smart contract code. An arbitrary but finite amount of gas is handed out for every execution to ensure a finite execution duration - “You don’t need money to play, when you have permission to play”.
 - **Application Binary Interface (ABI):** Transactions need to be formulated in a binary format that can be processed by the blockchain node. Current tooling provides functionality to compile, deploy and link solidity smart contracts and formulate transactions to call smart contracts on the chain.
 - **API Gateway:** Burrow exposes REST and JSON-RPC endpoints to interact with the blockchain network and the application state through broadcasting transactions, or querying the current state of the application. Websockets allow subscribing to events, which is particularly valuable as the consensus engine and smart contract application can give unambiguously finalised results to transactions within one blocktime of about one second.
+
+## Installation
+
+Release binaries for different architectures can be found at https://github.com/hyperledger/burrow/releases.
+
+Alternatively you can install directly from source. To do this checkout the repository and from the root run:
+
+```shell
+# With GNU Make installed:
+make install
+```
+
+This will install the `burrow` binary into `$GOPATH/bin` so you will need to have `GOPATH` set and included on you `$PATH` if you want to have the executable available on your system. See the [Go GOPATH documentation](https://golang.org/doc/code.html#GOPATH) for details.
+
+## Very quick start
+
+You can spin up a single node chain with:
+
+```shell
+mkdir burrow-chain && cd burrow-chain
+burrow spec -v1 | burrow configure -s- | burrow start -c-
+```
+
+For a more complete (and useful) introduction see our sequence of [tutorials](/docs/tutorials).
+
+## Documentation
+
+The canonical location for these docs is: https://hyperledger.github.io/burrow/

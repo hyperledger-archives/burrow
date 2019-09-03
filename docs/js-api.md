@@ -117,7 +117,7 @@ burrow.transact.SendTxSync(
     .catch(err => console.error(err))
 ```
 
-The return `txe` (short for `TxExecution`) logged to the console in the `then` block  contains the history and fingerprint of the `SendTx` execution. You can see an example of this in [basic app](../example/basic-app/app.js). 
+The return `txe` (short for `TxExecution`) logged to the console in the `then` block  contains the history and fingerprint of the `SendTx` execution. You can see an example of this in [basic app](example/basic-app/app.js). 
 
 #### NameReg access
 

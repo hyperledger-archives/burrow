@@ -4,6 +4,10 @@
     - [Developers](developers.md)
     - [JS API](js-api.md)
 
+- Examples
+    - [Basic JS API](example/basic-app/README.md)
+    - [Basic JS API and website](example/basic-app-website/README.md)
+
 - Transactions
     - [Bond / Unbond](txs/bond.md)
 
@@ -23,5 +27,6 @@
     - [Logging](reference/logging.md)
     - [Permissions](reference/permissions.md)
     - [State](reference/state.md)
+    - [Vent](reference/vent.md)
     - [WASM](reference/wasm.md)
  
