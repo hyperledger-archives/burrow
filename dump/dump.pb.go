@@ -5,10 +5,6 @@ package dump
 
 import (
 	fmt "fmt"
-	io "io"
-	math "math"
-	time "time"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	github_com_gogo_protobuf_types "github.com/gogo/protobuf/types"
@@ -19,6 +15,9 @@ import (
 	github_com_hyperledger_burrow_crypto "github.com/hyperledger/burrow/crypto"
 	exec "github.com/hyperledger/burrow/execution/exec"
 	names "github.com/hyperledger/burrow/execution/names"
+	io "io"
+	math "math"
+	time "time"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

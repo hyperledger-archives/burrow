@@ -6,13 +6,12 @@ package rpcdump
 import (
 	context "context"
 	fmt "fmt"
-	math "math"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
 	dump "github.com/hyperledger/burrow/dump"
 	grpc "google.golang.org/grpc"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
