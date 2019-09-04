@@ -7,7 +7,6 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
-	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -47,7 +46,7 @@ func (m *AccountPermissions) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return xxx_messageInfo_AccountPermissions.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +102,7 @@ func (m *BasePermissions) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return xxx_messageInfo_BasePermissions.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -166,7 +165,7 @@ func (m *PermArgs) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_PermArgs.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -258,7 +257,7 @@ var fileDescriptor_c837ef01cbda0ad8 = []byte{
 func (m *AccountPermissions) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -266,45 +265,43 @@ func (m *AccountPermissions) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *AccountPermissions) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *AccountPermissions) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.Roles) > 0 {
-		for iNdEx := len(m.Roles) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.Roles[iNdEx])
-			copy(dAtA[i:], m.Roles[iNdEx])
-			i = encodeVarintPermission(dAtA, i, uint64(len(m.Roles[iNdEx])))
-			i--
-			dAtA[i] = 0x12
-		}
-	}
-	{
-		size, err := m.Base.MarshalToSizedBuffer(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
-		i = encodeVarintPermission(dAtA, i, uint64(size))
-	}
-	i--
 	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
+	i++
+	i = encodeVarintPermission(dAtA, i, uint64(m.Base.Size()))
+	n1, err := m.Base.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n1
+	if len(m.Roles) > 0 {
+		for _, s := range m.Roles {
+			dAtA[i] = 0x12
+			i++
+			l = len(s)
+			for l >= 1<<7 {
+				dAtA[i] = uint8(uint64(l)&0x7f | 0x80)
+				l >>= 7
+				i++
+			}
+			dAtA[i] = uint8(l)
+			i++
+			i += copy(dAtA[i:], s)
+		}
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *BasePermissions) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -312,32 +309,26 @@ func (m *BasePermissions) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *BasePermissions) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *BasePermissions) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	i = encodeVarintPermission(dAtA, i, uint64(m.SetBit))
-	i--
-	dAtA[i] = 0x10
-	i = encodeVarintPermission(dAtA, i, uint64(m.Perms))
-	i--
 	dAtA[i] = 0x8
-	return len(dAtA) - i, nil
+	i++
+	i = encodeVarintPermission(dAtA, i, uint64(m.Perms))
+	dAtA[i] = 0x10
+	i++
+	i = encodeVarintPermission(dAtA, i, uint64(m.SetBit))
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *PermArgs) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -345,65 +336,55 @@ func (m *PermArgs) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *PermArgs) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *PermArgs) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
+	dAtA[i] = 0x8
+	i++
+	i = encodeVarintPermission(dAtA, i, uint64(m.Action))
+	if m.Target != nil {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintPermission(dAtA, i, uint64(m.Target.Size()))
+		n2, err := m.Target.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n2
+	}
+	if m.Permission != nil {
+		dAtA[i] = 0x18
+		i++
+		i = encodeVarintPermission(dAtA, i, uint64(*m.Permission))
+	}
+	if m.Role != nil {
+		dAtA[i] = 0x22
+		i++
+		i = encodeVarintPermission(dAtA, i, uint64(len(*m.Role)))
+		i += copy(dAtA[i:], *m.Role)
+	}
 	if m.Value != nil {
-		i--
+		dAtA[i] = 0x28
+		i++
 		if *m.Value {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
 		}
-		i--
-		dAtA[i] = 0x28
+		i++
 	}
-	if m.Role != nil {
-		i -= len(*m.Role)
-		copy(dAtA[i:], *m.Role)
-		i = encodeVarintPermission(dAtA, i, uint64(len(*m.Role)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if m.Permission != nil {
-		i = encodeVarintPermission(dAtA, i, uint64(*m.Permission))
-		i--
-		dAtA[i] = 0x18
-	}
-	if m.Target != nil {
-		{
-			size := m.Target.Size()
-			i -= size
-			if _, err := m.Target.MarshalTo(dAtA[i:]); err != nil {
-				return 0, err
-			}
-			i = encodeVarintPermission(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x12
-	}
-	i = encodeVarintPermission(dAtA, i, uint64(m.Action))
-	i--
-	dAtA[i] = 0x8
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func encodeVarintPermission(dAtA []byte, offset int, v uint64) int {
-	offset -= sovPermission(v)
-	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return base
+	return offset + 1
 }
 func (m *AccountPermissions) Size() (n int) {
 	if m == nil {
@@ -464,7 +445,14 @@ func (m *PermArgs) Size() (n int) {
 }
 
 func sovPermission(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozPermission(x uint64) (n int) {
 	return sovPermission(uint64((x << 1) ^ uint64((int64(x) >> 63))))

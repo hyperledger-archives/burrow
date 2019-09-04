@@ -7,7 +7,6 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
-	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -44,7 +43,7 @@ func (m *Exception) XXX_Unmarshal(b []byte) error {
 }
 func (m *Exception) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
+	n, err := m.MarshalTo(b)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +106,7 @@ var fileDescriptor_24fe73c7f0ddb19c = []byte{
 func (m *Exception) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -115,44 +114,35 @@ func (m *Exception) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *Exception) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Exception) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if m.CodeNumber != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintErrors(dAtA, i, uint64(m.CodeNumber))
 	}
 	if len(m.Exception) > 0 {
-		i -= len(m.Exception)
-		copy(dAtA[i:], m.Exception)
-		i = encodeVarintErrors(dAtA, i, uint64(len(m.Exception)))
-		i--
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintErrors(dAtA, i, uint64(len(m.Exception)))
+		i += copy(dAtA[i:], m.Exception)
 	}
-	if m.CodeNumber != 0 {
-		i = encodeVarintErrors(dAtA, i, uint64(m.CodeNumber))
-		i--
-		dAtA[i] = 0x8
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func encodeVarintErrors(dAtA []byte, offset int, v uint64) int {
-	offset -= sovErrors(v)
-	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return base
+	return offset + 1
 }
 func (m *Exception) Size() (n int) {
 	if m == nil {
@@ -174,7 +164,14 @@ func (m *Exception) Size() (n int) {
 }
 
 func sovErrors(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozErrors(x uint64) (n int) {
 	return sovErrors(uint64((x << 1) ^ uint64((int64(x) >> 63))))

@@ -7,7 +7,6 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
-	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -55,7 +54,7 @@ func (m *NodeIdentity) XXX_Unmarshal(b []byte) error {
 }
 func (m *NodeIdentity) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
+	n, err := m.MarshalTo(b)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +129,7 @@ var fileDescriptor_41af05d40a615591 = []byte{
 func (m *NodeIdentity) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -138,63 +137,50 @@ func (m *NodeIdentity) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *NodeIdentity) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *NodeIdentity) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	{
-		size := m.ValidatorPublicKey.Size()
-		i -= size
-		if _, err := m.ValidatorPublicKey.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintRegistry(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x22
-	if len(m.TendermintNodeID) > 0 {
-		i -= len(m.TendermintNodeID)
-		copy(dAtA[i:], m.TendermintNodeID)
-		i = encodeVarintRegistry(dAtA, i, uint64(len(m.TendermintNodeID)))
-		i--
-		dAtA[i] = 0x1a
+	if len(m.Moniker) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintRegistry(dAtA, i, uint64(len(m.Moniker)))
+		i += copy(dAtA[i:], m.Moniker)
 	}
 	if len(m.NetworkAddress) > 0 {
-		i -= len(m.NetworkAddress)
-		copy(dAtA[i:], m.NetworkAddress)
-		i = encodeVarintRegistry(dAtA, i, uint64(len(m.NetworkAddress)))
-		i--
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintRegistry(dAtA, i, uint64(len(m.NetworkAddress)))
+		i += copy(dAtA[i:], m.NetworkAddress)
 	}
-	if len(m.Moniker) > 0 {
-		i -= len(m.Moniker)
-		copy(dAtA[i:], m.Moniker)
-		i = encodeVarintRegistry(dAtA, i, uint64(len(m.Moniker)))
-		i--
-		dAtA[i] = 0xa
+	if len(m.TendermintNodeID) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintRegistry(dAtA, i, uint64(len(m.TendermintNodeID)))
+		i += copy(dAtA[i:], m.TendermintNodeID)
 	}
-	return len(dAtA) - i, nil
+	dAtA[i] = 0x22
+	i++
+	i = encodeVarintRegistry(dAtA, i, uint64(m.ValidatorPublicKey.Size()))
+	n1, err := m.ValidatorPublicKey.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n1
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func encodeVarintRegistry(dAtA []byte, offset int, v uint64) int {
-	offset -= sovRegistry(v)
-	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return base
+	return offset + 1
 }
 func (m *NodeIdentity) Size() (n int) {
 	if m == nil {
@@ -223,7 +209,14 @@ func (m *NodeIdentity) Size() (n int) {
 }
 
 func sovRegistry(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozRegistry(x uint64) (n int) {
 	return sovRegistry(uint64((x << 1) ^ uint64((int64(x) >> 63))))

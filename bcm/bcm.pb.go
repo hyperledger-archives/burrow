@@ -7,7 +7,6 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
-	math_bits "math/bits"
 	time "time"
 
 	_ "github.com/gogo/protobuf/gogoproto"
@@ -58,7 +57,7 @@ func (m *SyncInfo) XXX_Unmarshal(b []byte) error {
 }
 func (m *SyncInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
+	n, err := m.MarshalTo(b)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +128,7 @@ func (m *PersistedState) XXX_Unmarshal(b []byte) error {
 }
 func (m *PersistedState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
+	n, err := m.MarshalTo(b)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +208,7 @@ var fileDescriptor_0c9ff3e1ca1cc0f1 = []byte{
 func (m *SyncInfo) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -217,75 +216,65 @@ func (m *SyncInfo) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *SyncInfo) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *SyncInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	n1, err1 := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.LatestBlockDuration, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(m.LatestBlockDuration):])
-	if err1 != nil {
-		return 0, err1
-	}
-	i -= n1
-	i = encodeVarintBcm(dAtA, i, uint64(n1))
-	i--
-	dAtA[i] = 0x32
-	n2, err2 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LatestBlockSeenTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.LatestBlockSeenTime):])
-	if err2 != nil {
-		return 0, err2
-	}
-	i -= n2
-	i = encodeVarintBcm(dAtA, i, uint64(n2))
-	i--
-	dAtA[i] = 0x2a
-	n3, err3 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LatestBlockTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.LatestBlockTime):])
-	if err3 != nil {
-		return 0, err3
-	}
-	i -= n3
-	i = encodeVarintBcm(dAtA, i, uint64(n3))
-	i--
-	dAtA[i] = 0x22
-	{
-		size := m.LatestAppHash.Size()
-		i -= size
-		if _, err := m.LatestAppHash.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintBcm(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x1a
-	{
-		size := m.LatestBlockHash.Size()
-		i -= size
-		if _, err := m.LatestBlockHash.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintBcm(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x12
 	if m.LatestBlockHeight != 0 {
-		i = encodeVarintBcm(dAtA, i, uint64(m.LatestBlockHeight))
-		i--
 		dAtA[i] = 0x8
+		i++
+		i = encodeVarintBcm(dAtA, i, uint64(m.LatestBlockHeight))
 	}
-	return len(dAtA) - i, nil
+	dAtA[i] = 0x12
+	i++
+	i = encodeVarintBcm(dAtA, i, uint64(m.LatestBlockHash.Size()))
+	n1, err := m.LatestBlockHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n1
+	dAtA[i] = 0x1a
+	i++
+	i = encodeVarintBcm(dAtA, i, uint64(m.LatestAppHash.Size()))
+	n2, err := m.LatestAppHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n2
+	dAtA[i] = 0x22
+	i++
+	i = encodeVarintBcm(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdTime(m.LatestBlockTime)))
+	n3, err := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LatestBlockTime, dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n3
+	dAtA[i] = 0x2a
+	i++
+	i = encodeVarintBcm(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdTime(m.LatestBlockSeenTime)))
+	n4, err := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LatestBlockSeenTime, dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n4
+	dAtA[i] = 0x32
+	i++
+	i = encodeVarintBcm(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdDuration(m.LatestBlockDuration)))
+	n5, err := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.LatestBlockDuration, dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n5
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *PersistedState) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -293,65 +282,53 @@ func (m *PersistedState) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *PersistedState) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *PersistedState) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	{
-		size := m.GenesisHash.Size()
-		i -= size
-		if _, err := m.GenesisHash.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintBcm(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x22
-	if m.LastBlockHeight != 0 {
-		i = encodeVarintBcm(dAtA, i, uint64(m.LastBlockHeight))
-		i--
-		dAtA[i] = 0x18
-	}
-	n4, err4 := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LastBlockTime, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdTime(m.LastBlockTime):])
-	if err4 != nil {
-		return 0, err4
-	}
-	i -= n4
-	i = encodeVarintBcm(dAtA, i, uint64(n4))
-	i--
-	dAtA[i] = 0x12
-	{
-		size := m.AppHashAfterLastBlock.Size()
-		i -= size
-		if _, err := m.AppHashAfterLastBlock.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintBcm(dAtA, i, uint64(size))
-	}
-	i--
 	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
+	i++
+	i = encodeVarintBcm(dAtA, i, uint64(m.AppHashAfterLastBlock.Size()))
+	n6, err := m.AppHashAfterLastBlock.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n6
+	dAtA[i] = 0x12
+	i++
+	i = encodeVarintBcm(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdTime(m.LastBlockTime)))
+	n7, err := github_com_gogo_protobuf_types.StdTimeMarshalTo(m.LastBlockTime, dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n7
+	if m.LastBlockHeight != 0 {
+		dAtA[i] = 0x18
+		i++
+		i = encodeVarintBcm(dAtA, i, uint64(m.LastBlockHeight))
+	}
+	dAtA[i] = 0x22
+	i++
+	i = encodeVarintBcm(dAtA, i, uint64(m.GenesisHash.Size()))
+	n8, err := m.GenesisHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n8
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func encodeVarintBcm(dAtA []byte, offset int, v uint64) int {
-	offset -= sovBcm(v)
-	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return base
+	return offset + 1
 }
 func (m *SyncInfo) Size() (n int) {
 	if m == nil {
@@ -400,7 +377,14 @@ func (m *PersistedState) Size() (n int) {
 }
 
 func sovBcm(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozBcm(x uint64) (n int) {
 	return sovBcm(uint64((x << 1) ^ uint64((int64(x) >> 63))))

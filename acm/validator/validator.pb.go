@@ -6,7 +6,6 @@ package validator
 import (
 	fmt "fmt"
 	math "math"
-	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -125,7 +124,14 @@ func (m *Validator) Size() (n int) {
 }
 
 func sovValidator(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozValidator(x uint64) (n int) {
 	return sovValidator(uint64((x << 1) ^ uint64((int64(x) >> 63))))

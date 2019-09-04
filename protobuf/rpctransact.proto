@@ -29,7 +29,8 @@ service Transact {
     rpc BroadcastTxSync (TxEnvelopeParam) returns (exec.TxExecution);
     // Broadcast a transaction to the mempool - if the transaction is not signed signing will be attempted server-side
     rpc BroadcastTxAsync (TxEnvelopeParam) returns (txs.Receipt);
-
+    // Broadcast a transaction to the mempool, stream Receipt and TxExecution
+    rpc BroadcastTxStream (TxEnvelopeParam) returns (stream BroadcastTxResult);
     // Sign transaction server-side
     rpc SignTx (TxEnvelopeParam) returns (TxEnvelope);
     // Formulate a transaction from a Payload and retrun the envelop with the Tx bytes ready to sign
@@ -77,3 +78,7 @@ message TxEnvelopeParam {
     google.protobuf.Duration Timeout = 3 [(gogoproto.nullable) = false, (gogoproto.stdduration) = true];
 }
 
+message BroadcastTxResult {
+    txs.Receipt Receipt = 1;
+    exec.TxExecution TxExecution = 2;
+}

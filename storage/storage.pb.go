@@ -7,7 +7,6 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
-	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -46,7 +45,7 @@ func (m *CommitID) XXX_Unmarshal(b []byte) error {
 }
 func (m *CommitID) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
+	n, err := m.MarshalTo(b)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +107,7 @@ var fileDescriptor_0d2c4ccf1453ffdb = []byte{
 func (m *CommitID) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -116,44 +115,35 @@ func (m *CommitID) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *CommitID) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *CommitID) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Version != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintStorage(dAtA, i, uint64(m.Version))
 	}
 	if len(m.Hash) > 0 {
-		i -= len(m.Hash)
-		copy(dAtA[i:], m.Hash)
-		i = encodeVarintStorage(dAtA, i, uint64(len(m.Hash)))
-		i--
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintStorage(dAtA, i, uint64(len(m.Hash)))
+		i += copy(dAtA[i:], m.Hash)
 	}
-	if m.Version != 0 {
-		i = encodeVarintStorage(dAtA, i, uint64(m.Version))
-		i--
-		dAtA[i] = 0x8
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func encodeVarintStorage(dAtA []byte, offset int, v uint64) int {
-	offset -= sovStorage(v)
-	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return base
+	return offset + 1
 }
 func (m *CommitID) Size() (n int) {
 	if m == nil {
@@ -175,7 +165,14 @@ func (m *CommitID) Size() (n int) {
 }
 
 func sovStorage(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozStorage(x uint64) (n int) {
 	return sovStorage(uint64((x << 1) ^ uint64((int64(x) >> 63))))

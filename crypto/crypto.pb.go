@@ -7,7 +7,6 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
-	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -45,7 +44,7 @@ func (m *PublicKey) XXX_Unmarshal(b []byte) error {
 }
 func (m *PublicKey) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
+	n, err := m.MarshalTo(b)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +93,7 @@ func (m *PrivateKey) XXX_Unmarshal(b []byte) error {
 }
 func (m *PrivateKey) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
+	n, err := m.MarshalTo(b)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +133,7 @@ func (m *Signature) XXX_Unmarshal(b []byte) error {
 }
 func (m *Signature) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
+	n, err := m.MarshalTo(b)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +205,7 @@ var fileDescriptor_527278fb02d03321 = []byte{
 func (m *PublicKey) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -214,41 +213,33 @@ func (m *PublicKey) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *PublicKey) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *PublicKey) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	{
-		size := m.PublicKey.Size()
-		i -= size
-		if _, err := m.PublicKey.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintCrypto(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x12
 	if m.CurveType != 0 {
-		i = encodeVarintCrypto(dAtA, i, uint64(m.CurveType))
-		i--
 		dAtA[i] = 0x8
+		i++
+		i = encodeVarintCrypto(dAtA, i, uint64(m.CurveType))
 	}
-	return len(dAtA) - i, nil
+	dAtA[i] = 0x12
+	i++
+	i = encodeVarintCrypto(dAtA, i, uint64(m.PublicKey.Size()))
+	n1, err := m.PublicKey.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n1
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *PrivateKey) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -256,45 +247,37 @@ func (m *PrivateKey) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *PrivateKey) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *PrivateKey) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.PrivateKey) > 0 {
-		i -= len(m.PrivateKey)
-		copy(dAtA[i:], m.PrivateKey)
-		i = encodeVarintCrypto(dAtA, i, uint64(len(m.PrivateKey)))
-		i--
-		dAtA[i] = 0x1a
+	if m.CurveType != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintCrypto(dAtA, i, uint64(m.CurveType))
 	}
 	if len(m.PublicKey) > 0 {
-		i -= len(m.PublicKey)
-		copy(dAtA[i:], m.PublicKey)
-		i = encodeVarintCrypto(dAtA, i, uint64(len(m.PublicKey)))
-		i--
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintCrypto(dAtA, i, uint64(len(m.PublicKey)))
+		i += copy(dAtA[i:], m.PublicKey)
 	}
-	if m.CurveType != 0 {
-		i = encodeVarintCrypto(dAtA, i, uint64(m.CurveType))
-		i--
-		dAtA[i] = 0x8
+	if len(m.PrivateKey) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintCrypto(dAtA, i, uint64(len(m.PrivateKey)))
+		i += copy(dAtA[i:], m.PrivateKey)
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *Signature) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -302,44 +285,35 @@ func (m *Signature) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *Signature) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Signature) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if m.CurveType != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintCrypto(dAtA, i, uint64(m.CurveType))
 	}
 	if len(m.Signature) > 0 {
-		i -= len(m.Signature)
-		copy(dAtA[i:], m.Signature)
-		i = encodeVarintCrypto(dAtA, i, uint64(len(m.Signature)))
-		i--
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintCrypto(dAtA, i, uint64(len(m.Signature)))
+		i += copy(dAtA[i:], m.Signature)
 	}
-	if m.CurveType != 0 {
-		i = encodeVarintCrypto(dAtA, i, uint64(m.CurveType))
-		i--
-		dAtA[i] = 0x8
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func encodeVarintCrypto(dAtA []byte, offset int, v uint64) int {
-	offset -= sovCrypto(v)
-	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return base
+	return offset + 1
 }
 func (m *PublicKey) Size() (n int) {
 	if m == nil {
@@ -401,7 +375,14 @@ func (m *Signature) Size() (n int) {
 }
 
 func sovCrypto(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozCrypto(x uint64) (n int) {
 	return sovCrypto(uint64((x << 1) ^ uint64((int64(x) >> 63))))

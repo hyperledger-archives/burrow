@@ -15,8 +15,6 @@ burrow???.toml
 .idea
 .vscode
 
-.gopath_bos
-
 commit_hash.txt
 
 tests/keys/
