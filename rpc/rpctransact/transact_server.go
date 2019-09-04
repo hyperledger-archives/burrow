@@ -8,7 +8,6 @@ import (
 
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/bcm"
-
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/txs"
@@ -50,6 +49,22 @@ func (ts *transactServer) BroadcastTxSync(ctx context.Context, param *TxEnvelope
 		return nil, fmt.Errorf("%s no transaction envelope or payload provided", errHeader)
 	}
 	return ts.transactor.BroadcastTxSync(ctx, txEnv)
+}
+
+func (ts *transactServer) BroadcastTxStream(param *TxEnvelopeParam, stream Transact_BroadcastTxStreamServer) error {
+	const errHeader = "BroadcastTxStream():"
+	if param.Timeout == 0 {
+		param.Timeout = maxBroadcastSyncTimeout
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), param.Timeout)
+	defer cancel()
+	txEnv := param.GetEnvelope(ts.transactor.BlockchainInfo.ChainID())
+	if txEnv == nil {
+		return fmt.Errorf("%s no transaction envelope or payload provided", errHeader)
+	}
+	return ts.transactor.BroadcastTxStream(ctx, stream.Context(), txEnv, func(receipt *txs.Receipt, txe *exec.TxExecution) error {
+		return stream.Send(&BroadcastTxResult{Receipt: receipt, TxExecution: txe})
+	})
 }
 
 func (ts *transactServer) BroadcastTxAsync(ctx context.Context, param *TxEnvelopeParam) (*txs.Receipt, error) {

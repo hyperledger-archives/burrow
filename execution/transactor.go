@@ -105,6 +105,62 @@ func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelop
 	}
 }
 
+func (trans *Transactor) BroadcastTxStream(ctx context.Context, streamCtx context.Context, txEnv *txs.Envelope, consumer func(receipt *txs.Receipt, txe *exec.TxExecution) error) error {
+	// Sign unless already signed - note we must attempt signing before subscribing so we get accurate final TxHash
+	unlock, err := trans.MaybeSignTxMempool(txEnv)
+	if err != nil {
+		return err
+	}
+	// We will try and call this before the function exits unless we error but it is idempotent
+	defer unlock()
+	// Subscribe before submitting to mempool
+	txHash := txEnv.Tx.Hash()
+	subID := event.GenSubID()
+	out, err := trans.Emitter.Subscribe(ctx, subID, exec.QueryForTxExecution(txHash), SubscribeBufferSize)
+	if err != nil {
+		// We do not want to hold the lock with a defer so we must
+		return err
+	}
+	defer trans.Emitter.UnsubscribeAll(context.Background(), subID)
+	// Push Tx to mempool
+	checkTxReceipt, err := trans.CheckTxSync(ctx, txEnv)
+	unlock()
+	if err != nil {
+		return err
+	}
+	err = consumer(checkTxReceipt, nil)
+	if err != nil {
+		return err
+	}
+
+	// Get all the execution events for this Tx
+	select {
+	case <-streamCtx.Done():
+		// Other endpoint is gone
+		return nil
+	case <-ctx.Done():
+		syncInfo := bcm.GetSyncInfo(trans.BlockchainInfo)
+		bs, err := json.Marshal(syncInfo)
+		syncInfoString := string(bs)
+		if err != nil {
+			syncInfoString = fmt.Sprintf("{error could not marshal SyncInfo: %v}", err)
+		}
+		return fmt.Errorf("waiting for tx %v, SyncInfo: %s", checkTxReceipt.TxHash, syncInfoString)
+	case msg := <-out:
+		txe := msg.(*exec.TxExecution)
+		callError := txe.CallError()
+		if callError != nil && callError.ErrorCode() != errors.Codes.ExecutionReverted {
+			return errors.Wrap(callError, "exception during transaction execution")
+		}
+		err = consumer(nil, txe)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Broadcast a transaction without waiting for confirmation - will attempt to sign server-side and set sequence numbers
 // if no signatures are provided
 func (trans *Transactor) BroadcastTxAsync(ctx context.Context, txEnv *txs.Envelope) (*txs.Receipt, error) {
