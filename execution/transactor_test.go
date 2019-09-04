@@ -128,8 +128,8 @@ func TestTransactor_BroadcastTxStreamTimeoutBeforeSuccess(t *testing.T) {
 			return nil
 		}, txCodec, logger)
 	err = trans.BroadcastTxStream(context.Background(), ctx, txEnv, func(receipt *txs.Receipt, txe *exec.TxExecution) error {
-		assert.Nil(t, txe)
 		assert.Equal(t, receipt.TxHash, txEnv.Tx.Hash())
+		assert.Nil(t, txe)
 		timeoutFunc()
 		return nil
 	})

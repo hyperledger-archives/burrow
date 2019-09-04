@@ -15,7 +15,7 @@ import (
 type Accounts struct {
 	burrow_sync.RingMutex
 	acmstate.Reader
-	keyClient keys.KeyClient
+	keyClient crypto.KeyClient
 }
 
 type SigningAccount struct {
@@ -29,13 +29,14 @@ type SequentialSigningAccount struct {
 	getter        func() (*SigningAccount, error)
 }
 
-func NewAccounts(reader acmstate.Reader, keyClient keys.KeyClient, mutexCount int) *Accounts {
+func NewAccounts(reader acmstate.Reader, keyClient crypto.KeyClient, mutexCount int) *Accounts {
 	return &Accounts{
 		RingMutex: *burrow_sync.NewRingMutexNoHash(mutexCount),
 		Reader:    reader,
 		keyClient: keyClient,
 	}
 }
+
 func (accs *Accounts) SigningAccount(address crypto.Address) (*SigningAccount, error) {
 	signer, err := keys.AddressableSigner(accs.keyClient, address)
 	if err != nil {

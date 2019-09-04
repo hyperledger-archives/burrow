@@ -24,25 +24,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-type KeyClient interface {
-	// Sign returns the signature bytes for given message signed with the key associated with signAddress
-	Sign(signAddress crypto.Address, message []byte) (*crypto.Signature, error)
-
-	// PublicKey returns the public key associated with a given address
-	PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error)
-
-	// Generate requests that a key be generate within the keys instance and returns the address
-	Generate(keyName string, keyType crypto.CurveType) (keyAddress crypto.Address, err error)
-
-	// Get the address for a keyname or the adress itself
-	GetAddressForKeyName(keyName string) (keyAddress crypto.Address, err error)
-
-	// Returns nil if the keys instance is healthy, error otherwise
-	HealthCheck() error
-}
-
-var _ KeyClient = (*localKeyClient)(nil)
-var _ KeyClient = (*remoteKeyClient)(nil)
+var _ crypto.KeyClient = (*localKeyClient)(nil)
+var _ crypto.KeyClient = (*remoteKeyClient)(nil)
 
 type localKeyClient struct {
 	ks     *KeyStore
@@ -182,7 +165,7 @@ func (l *remoteKeyClient) HealthCheck() error {
 }
 
 // NewRemoteKeyClient returns a new keys client for provided rpc location
-func NewRemoteKeyClient(rpcAddress string, logger *logging.Logger) (KeyClient, error) {
+func NewRemoteKeyClient(rpcAddress string, logger *logging.Logger) (crypto.KeyClient, error) {
 	logger = logger.WithScope("RemoteKeyClient")
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
@@ -196,19 +179,19 @@ func NewRemoteKeyClient(rpcAddress string, logger *logging.Logger) (KeyClient, e
 }
 
 // NewLocalKeyClient returns a new keys client, backed by the local filesystem
-func NewLocalKeyClient(ks *KeyStore, logger *logging.Logger) KeyClient {
+func NewLocalKeyClient(ks *KeyStore, logger *logging.Logger) crypto.KeyClient {
 	logger = logger.WithScope("LocalKeyClient")
 	return &localKeyClient{ks: ks, logger: logger}
 }
 
 type Signer struct {
-	keyClient KeyClient
+	keyClient crypto.KeyClient
 	address   crypto.Address
 	publicKey crypto.PublicKey
 }
 
 // AddressableSigner creates a signer that assumes the address holds an Ed25519 key
-func AddressableSigner(keyClient KeyClient, address crypto.Address) (*Signer, error) {
+func AddressableSigner(keyClient crypto.KeyClient, address crypto.Address) (*Signer, error) {
 	publicKey, err := keyClient.PublicKey(address)
 	if err != nil {
 		return nil, err

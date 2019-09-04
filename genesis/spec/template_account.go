@@ -6,11 +6,10 @@ import (
 	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/genesis"
-	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/permission"
 )
 
-func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int) (*genesis.Validator, error) {
+func (ta TemplateAccount) Validator(keyClient crypto.KeyClient, index int) (*genesis.Validator, error) {
 	var err error
 	gv := new(genesis.Validator)
 	gv.PublicKey, gv.Address, err = ta.RealisePublicKeyAndAddress(keyClient)
@@ -43,7 +42,7 @@ func (ta TemplateAccount) AccountPermissions() (permission.AccountPermissions, e
 	}, nil
 }
 
-func (ta TemplateAccount) GenesisAccount(keyClient keys.KeyClient, index int) (*genesis.Account, error) {
+func (ta TemplateAccount) GenesisAccount(keyClient crypto.KeyClient, index int) (*genesis.Account, error) {
 	var err error
 	ga := new(genesis.Account)
 	ga.PublicKey, ga.Address, err = ta.RealisePublicKeyAndAddress(keyClient)
@@ -69,7 +68,7 @@ func (ta TemplateAccount) GenesisAccount(keyClient keys.KeyClient, index int) (*
 
 // Adds a public key and address to the template. If PublicKey will try to fetch it by Address.
 // If both PublicKey and Address are not set will use the keyClient to generate a new keypair
-func (ta TemplateAccount) RealisePublicKeyAndAddress(keyClient keys.KeyClient) (pubKey crypto.PublicKey, address crypto.Address, err error) {
+func (ta TemplateAccount) RealisePublicKeyAndAddress(keyClient crypto.KeyClient) (pubKey crypto.PublicKey, address crypto.Address, err error) {
 	if ta.PublicKey == nil {
 		if ta.Address == nil {
 			// If neither PublicKey or Address set then generate a new one

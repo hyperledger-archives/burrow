@@ -73,7 +73,7 @@ type Kernel struct {
 	exeOptions     []execution.ExecutionOption
 	checker        execution.BatchExecutor
 	committer      execution.BatchCommitter
-	keyClient      keys.KeyClient
+	keyClient      crypto.KeyClient
 	keyStore       *keys.KeyStore
 	info           string
 	processes      map[string]process.Process
@@ -219,7 +219,7 @@ func (kern *Kernel) AddProcesses(pl ...process.Launcher) {
 }
 
 // SetKeyClient explicitly sets the key client
-func (kern *Kernel) SetKeyClient(client keys.KeyClient) {
+func (kern *Kernel) SetKeyClient(client crypto.KeyClient) {
 	kern.keyClient = client
 }
 

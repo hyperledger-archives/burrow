@@ -5,12 +5,13 @@ import (
 	"io/ioutil"
 	"time"
 
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 )
 
 type LocalKeyClient struct {
-	keys.KeyClient
+	crypto.KeyClient
 }
 
 var keysTimeout = 5 * time.Second

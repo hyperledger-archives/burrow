@@ -41,7 +41,7 @@ type Client struct {
 	transactClient        rpctransact.TransactClient
 	queryClient           rpcquery.QueryClient
 	executionEventsClient rpcevents.ExecutionEventsClient
-	keyClient             keys.KeyClient
+	keyClient             crypto.KeyClient
 	AllSpecs              *abi.Spec
 }
 

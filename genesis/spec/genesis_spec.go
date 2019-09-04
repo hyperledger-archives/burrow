@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/acm/balance"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/genesis"
-	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/permission"
 )
 
@@ -35,7 +35,7 @@ type params struct {
 	ProposalThreshold uint64 `json:",omitempty" toml:",omitempty"`
 }
 
-func (gs *GenesisSpec) RealiseKeys(keyClient keys.KeyClient) error {
+func (gs *GenesisSpec) RealiseKeys(keyClient crypto.KeyClient) error {
 	for _, templateAccount := range gs.Accounts {
 		_, _, err := templateAccount.RealisePublicKeyAndAddress(keyClient)
 		if err != nil {
@@ -46,7 +46,7 @@ func (gs *GenesisSpec) RealiseKeys(keyClient keys.KeyClient) error {
 }
 
 // Produce a fully realised GenesisDoc from a template GenesisDoc that may omit values
-func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient) (*genesis.GenesisDoc, error) {
+func (gs *GenesisSpec) GenesisDoc(keyClient crypto.KeyClient) (*genesis.GenesisDoc, error) {
 	genesisDoc := new(genesis.GenesisDoc)
 	if gs.GenesisTime == nil {
 		genesisDoc.GenesisTime = time.Now()

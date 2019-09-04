@@ -19,14 +19,13 @@ import (
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/keys"
 )
 
 //---------------------------------------------------------------------
 // Mock client for replacing signing done by monax-keys
 
 // Implementation assertion
-var _ keys.KeyClient = (*KeyClient)(nil)
+var _ crypto.KeyClient = (*KeyClient)(nil)
 
 type KeyClient struct {
 	knownKeys map[crypto.Address]*Key

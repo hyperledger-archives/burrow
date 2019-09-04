@@ -232,6 +232,10 @@ func (k *KeyStore) Import(ctx context.Context, in *ImportRequest) (*ImportRespon
 	return &ImportResponse{Address: hex.EncodeUpperToString(key.Address[:])}, nil
 }
 
+func (k *KeyStore) BroadcastTxStream(param *TxEnvelopeParam, stream Keys_BroadcastTxStreamServer) error {
+	return nil
+}
+
 func (k *KeyStore) List(ctx context.Context, in *ListRequest) (*ListResponse, error) {
 	byname, err := coreNameList(k.keysDirPath)
 	if err != nil {
