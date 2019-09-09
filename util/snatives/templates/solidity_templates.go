@@ -33,7 +33,7 @@ const contractTemplateText = `pragma solidity [[.SolidityPragmaVersion]];
 * @dev To instantiate the contract use:
 * @dev [[.Name]] [[.InstanceName]] = [[.Name]](address(uint256(keccak256("[[.Name]]"))));
 */
-contract [[.Name]] {[[range .Functions]]
+interface [[.Name]] {[[range .Functions]]
 [[.SolidityIndent 1]]
 [[end]]}
 `
@@ -135,8 +135,9 @@ func NewSolidityFunction(function *evm.SNativeFunctionDescription) *solidityFunc
 }
 
 func (function *solidityFunction) ArgList() string {
-	argList := make([]string, len(function.Abi.Inputs))
-	for i, arg := range function.Abi.Inputs {
+	abi := function.Abi()
+	argList := make([]string, len(abi.Inputs))
+	for i, arg := range abi.Inputs {
 		storage := ""
 		if arg.EVM.Dynamic() {
 			storage = " memory"
@@ -147,8 +148,9 @@ func (function *solidityFunction) ArgList() string {
 }
 
 func (function *solidityFunction) RetList() string {
-	argList := make([]string, len(function.Abi.Outputs))
-	for i, arg := range function.Abi.Outputs {
+	abi := function.Abi()
+	argList := make([]string, len(abi.Outputs))
+	for i, arg := range abi.Outputs {
 		argList[i] = fmt.Sprintf("%s %s", arg.EVM.GetSignature(), param(arg.Name))
 	}
 	return strings.Join(argList, ", ")

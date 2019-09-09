@@ -82,7 +82,7 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not get function: %s", err)
 	}
-	funcID := function.Abi.FunctionID
+	funcID := function.Abi().FunctionID
 	gas := uint64(1000)
 
 	// Should fail since we have no permissions
