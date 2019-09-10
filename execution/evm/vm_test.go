@@ -136,7 +136,7 @@ func TestSHL(t *testing.T) {
 	assert.Equal(t, expected, output)
 
 	t.Logf("Result: %v == %v\n", output, expected)
-
+	fmt.Printf("out: %v\n, exp: %v\n", output, expected)
 	if err != nil {
 		t.Fatal(err)
 	}
