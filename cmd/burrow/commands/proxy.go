@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/proxy"
 	cli "github.com/jawher/mow.cli"
 	"google.golang.org/grpc"
@@ -20,7 +19,7 @@ func Proxy(output Output) func(cmd *cli.Cmd) {
 		listenPortOpt := cmd.IntOpt("p listen-port", 10998, "The port to listen on")
 
 		cmd.Action = func() {
-			server := keys.StandAloneServer(*keysDir, *badPerm)
+			server := grpc.NewServer()
 			address := fmt.Sprintf("%s:%d", *listenHostOpt, *listenPortOpt)
 			listener, err := net.Listen("tcp", address)
 			if err != nil {
@@ -32,7 +31,7 @@ func Proxy(output Output) func(cmd *cli.Cmd) {
 			}
 			defer client.Close()
 
-			proxy.New(client, server)
+			proxy.New(client, server, *keysDir, *badPerm)
 
 			err = server.Serve(listener)
 			if err != nil {

@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -27,6 +28,44 @@ const (
 	HashEd25519   = "go-crypto-0.5.0"
 	HashSecp256k1 = "btc"
 )
+
+const (
+	DefaultHost     = "localhost"
+	DefaultPort     = "10997"
+	DefaultHashType = "sha256"
+	DefaultKeysDir  = ".keys"
+	TestPort        = "0"
+)
+
+func returnDataDir(dir string) (string, error) {
+	dir = path.Join(dir, "data")
+	dir, err := filepath.Abs(dir)
+	if err != nil {
+		return "", err
+	}
+	return dir, checkMakeDataDir(dir)
+}
+
+func returnNamesDir(dir string) (string, error) {
+	dir = path.Join(dir, "names")
+	dir, err := filepath.Abs(dir)
+	if err != nil {
+		return "", err
+	}
+	return dir, checkMakeDataDir(dir)
+}
+
+//----------------------------------------------------------------
+// manage names for keys
+func checkMakeDataDir(dir string) error {
+	if _, err := os.Stat(dir); err != nil {
+		err = os.MkdirAll(dir, 0700)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 //-----------------------------------------------------------------------------
 // json encodings
@@ -92,16 +131,6 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 }
 
 // returns the address if valid, nil otherwise
-func IsValidKeyJson(j []byte) []byte {
-	j1 := new(keyJSON)
-	e1 := json.Unmarshal(j, &j1)
-	if e1 == nil {
-		addr, _ := hex.DecodeString(j1.Address)
-		return addr
-	}
-	return nil
-}
-
 func NewKeyStore(dir string, AllowBadFilePermissions bool) *KeyStore {
 	return &KeyStore{
 		keysDirPath:             dir,
@@ -248,6 +277,15 @@ func (ks *KeyStore) StoreKey(passphrase string, key *Key) error {
 	}
 }
 
+func (ks *KeyStore) StoreKeyRaw(addr crypto.Address, keyJson []byte) error {
+	dataDirPath, err := returnDataDir(ks.keysDirPath)
+	if err != nil {
+		return err
+	}
+
+	return WriteKeyFile(addr.Bytes(), dataDirPath, keyJson)
+}
+
 func (ks *KeyStore) StoreKeyPlain(key *Key) (err error) {
 	keyJSON, err := json.Marshal(key)
 	if err != nil {
@@ -259,6 +297,57 @@ func (ks *KeyStore) StoreKeyPlain(key *Key) (err error) {
 	}
 	err = WriteKeyFile(key.Address[:], dataDirPath, keyJSON)
 	return err
+}
+
+func (ks *KeyStore) GetName(name string) (crypto.Address, error) {
+	dir, err := returnNamesDir(ks.keysDirPath)
+	if err != nil {
+		return crypto.Address{}, err
+	}
+
+	b, err := ioutil.ReadFile(path.Join(dir, name))
+	if err != nil {
+		return crypto.Address{}, err
+	}
+
+	return crypto.AddressFromHexString(string(b))
+}
+
+func (ks *KeyStore) GetNameAddr(name, address string) (crypto.Address, error) {
+	dir, err := returnNamesDir(ks.keysDirPath)
+	if err != nil {
+		return crypto.AddressFromHexString(address)
+	}
+
+	b, err := ioutil.ReadFile(path.Join(dir, name))
+	if err != nil {
+		return crypto.AddressFromHexString(address)
+	}
+
+	return crypto.AddressFromHexString(string(b))
+}
+
+func (ks *KeyStore) AddName(name string, addr crypto.Address) error {
+	namesDir, err := returnNamesDir(ks.keysDirPath)
+	if err != nil {
+		return err
+	}
+	dataDir, err := returnDataDir(ks.keysDirPath)
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(path.Join(dataDir, addr.String()+".json")); err != nil {
+		return fmt.Errorf("unknown key %s", addr.String())
+	}
+	return ioutil.WriteFile(path.Join(namesDir, name), addr.Bytes(), 0600)
+}
+
+func (ks *KeyStore) RmName(name string) error {
+	dir, err := returnNamesDir(ks.keysDirPath)
+	if err != nil {
+		return err
+	}
+	return os.Remove(path.Join(dir, name))
 }
 
 func (ks *KeyStore) StoreKeyEncrypted(passphrase string, key *Key) error {
@@ -352,7 +441,23 @@ func WriteKeyFile(addr []byte, dataDirPath string, content []byte) (err error) {
 }
 
 func (ks *KeyStore) GetAllNames() (map[string]string, error) {
-	return coreNameList(ks.keysDirPath)
+	dir, err := returnNamesDir(ks.keysDirPath)
+	if err != nil {
+		return nil, err
+	}
+	names := make(map[string]string)
+	fs, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range fs {
+		b, err := ioutil.ReadFile(path.Join(dir, f.Name()))
+		if err != nil {
+			return nil, err
+		}
+		names[f.Name()] = string(b)
+	}
+	return names, nil
 }
 
 func GetAllAddresses(dataDirPath string) (addresses []string, err error) {
@@ -421,4 +526,14 @@ func NewKeyFromPriv(curveType crypto.CurveType, PrivKeyBytes []byte) (*Key, erro
 		PublicKey:  pubKey,
 		PrivateKey: privKey,
 	}, nil
+}
+
+func IsValidKeyJson(j []byte) []byte {
+	j1 := new(keyJSON)
+	e1 := json.Unmarshal(j, &j1)
+	if e1 == nil {
+		addr, _ := hex.DecodeString(j1.Address)
+		return addr
+	}
+	return nil
 }

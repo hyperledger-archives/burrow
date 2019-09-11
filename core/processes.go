@@ -297,18 +297,7 @@ func GRPCLauncher(kern *Kernel, conf *rpc.ServerConfig, keyConfig *keys.KeysConf
 			}
 
 			grpcServer := rpc.NewGRPCServer(kern.Logger)
-			var ks *keys.KeyStore
-			if kern.keyStore != nil {
-				ks = kern.keyStore
-			}
 			grpcServer.GetServiceInfo()
-
-			if keyConfig.GRPCServiceEnabled {
-				if kern.keyStore == nil {
-					ks = keys.NewKeyStore(keyConfig.KeysDirectory, keyConfig.AllowBadFilePermissions)
-				}
-				keys.RegisterKeysServer(grpcServer, ks)
-			}
 
 			nameRegState := kern.State
 			nodeRegState := kern.State

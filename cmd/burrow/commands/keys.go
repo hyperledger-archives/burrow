@@ -6,12 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
 	"time"
 
 	"github.com/howeyc/gopass"
-	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/config/deployment"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys"
@@ -45,41 +43,6 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 			}
 			return keys.NewKeysClient(conn)
 		}
-
-		cmd.Command("server", "run keys server", func(cmd *cli.Cmd) {
-			keysDir := cmd.StringOpt("dir", "", "specify the location of the directory containing key files")
-			badPerm := cmd.BoolOpt("allow-bad-perm", false, "Allow unix key file permissions to be readable other than user")
-			configOpt := cmd.StringOpt("c config", "", "Use the specified burrow config file")
-
-			var conf *config.BurrowConfig
-
-			cmd.Before = func() {
-				var err error
-				conf, err = obtainDefaultConfig(*configOpt, "")
-				if err != nil {
-					output.Fatalf("Could not obtain config: %v", err)
-				}
-			}
-
-			cmd.Action = func() {
-				conf.Keys.AllowBadFilePermissions = *badPerm
-
-				if *keysDir != "" {
-					conf.Keys.KeysDirectory = *keysDir
-				}
-
-				server := keys.StandAloneServer(conf.Keys.KeysDirectory, conf.Keys.AllowBadFilePermissions)
-				address := fmt.Sprintf("%s:%s", *keysHost, *keysPort)
-				listener, err := net.Listen("tcp", address)
-				if err != nil {
-					output.Fatalf("Could not listen on %s: %v", address, err)
-				}
-				err = server.Serve(listener)
-				if err != nil {
-					output.Fatalf("Keys server terminated with error: %v", err)
-				}
-			}
-		})
 
 		cmd.Command("gen", "Generates a key using (insert crypto pkgs used)", func(cmd *cli.Cmd) {
 			noPassword := cmd.BoolOpt("n no-password", false, "don't use a password for this key")
