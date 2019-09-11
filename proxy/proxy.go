@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	"github.com/hyperledger/burrow/rpc/rpctransact"
@@ -18,6 +19,7 @@ type Proxy struct {
 	query             rpcquery.QueryClient
 	events            rpcevents.ExecutionEventsClient
 	transact          rpctransact.TransactClient
+	keys              *keys.KeyStore
 	cachePeriod       time.Duration
 	sequenceCacheLock sync.Mutex
 	sequenceCache     map[crypto.Address]sequence
@@ -28,16 +30,20 @@ type sequence struct {
 	lastUpdate time.Time
 }
 
-func New(grpcconnection *grpc.ClientConn, server *grpc.Server) {
+func New(grpcconnection *grpc.ClientConn, server *grpc.Server, keysDir string, AllowBadFilePermissions bool) {
+	ks := keys.NewKeyStore(keysDir, AllowBadFilePermissions)
+
 	p := Proxy{
 		events:   rpcevents.NewExecutionEventsClient(grpcconnection),
 		query:    rpcquery.NewQueryClient(grpcconnection),
 		transact: rpctransact.NewTransactClient(grpcconnection),
+		keys:     ks,
 	}
 
 	rpcquery.RegisterQueryServer(server, &p)
 	rpcevents.RegisterExecutionEventsServer(server, &p)
 	rpctransact.RegisterTransactServer(server, &p)
+	keys.RegisterKeysServer(server, ks)
 }
 
 func (p *Proxy) BroadcastTxStream(param *rpctransact.TxEnvelopeParam, stream rpctransact.Transact_BroadcastTxStreamServer) error {

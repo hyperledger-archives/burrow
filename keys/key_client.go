@@ -45,32 +45,35 @@ type remoteKeyClient struct {
 }
 
 func (l *localKeyClient) Sign(signAddress crypto.Address, message []byte) (*crypto.Signature, error) {
-	resp, err := l.ks.Sign(context.Background(), &SignRequest{Address: signAddress.String(), Message: message})
+	key, err := l.ks.GetKey("", signAddress.Bytes())
 	if err != nil {
 		return nil, err
 	}
-	return resp.GetSignature(), nil
+
+	return key.PrivateKey.Sign(message)
 }
 
 func (l *localKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
-	resp, err := l.ks.PublicKey(context.Background(), &PubRequest{Address: address.String()})
+	key, err := l.ks.GetKey("", address.Bytes())
 	if err != nil {
 		return crypto.PublicKey{}, err
 	}
-	curveType, err := crypto.CurveTypeFromString(resp.GetCurveType())
-	if err != nil {
-		return crypto.PublicKey{}, err
-	}
-	return crypto.PublicKeyFromBytes(resp.GetPublicKey(), curveType)
+	return key.PublicKey, nil
 }
 
 // Generate requests that a key be generate within the keys instance and returns the address
 func (l *localKeyClient) Generate(keyName string, curveType crypto.CurveType) (keyAddress crypto.Address, err error) {
-	resp, err := l.ks.GenerateKey(context.Background(), &GenRequest{KeyName: keyName, CurveType: curveType.String()})
+	key, err := l.ks.Gen("", curveType)
 	if err != nil {
 		return crypto.Address{}, err
 	}
-	return crypto.AddressFromHexString(resp.GetAddress())
+	if keyName != "" {
+		err = l.ks.SetName(keyName, key.Address)
+		if err != nil {
+			return crypto.Address{}, err
+		}
+	}
+	return key.Address, nil
 }
 
 func (l *localKeyClient) GetAddressForKeyName(keyName string) (keyAddress crypto.Address, err error) {
