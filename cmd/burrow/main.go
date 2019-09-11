@@ -84,6 +84,9 @@ func burrow(output commands.Output) *cli.Cli {
 	app.Command("abi", "List, decode and encode using ABI",
 		commands.Abi(output))
 
+	app.Command("proxy", "Run a burrow proxy node",
+		commands.Proxy(output))
+
 	return app
 }
 
