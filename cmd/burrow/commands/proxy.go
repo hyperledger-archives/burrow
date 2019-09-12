@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/hyperledger/burrow/keys"
+
 	"github.com/hyperledger/burrow/proxy"
 	cli "github.com/jawher/mow.cli"
 	"google.golang.org/grpc"
@@ -13,7 +15,7 @@ import (
 func Proxy(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 		chainURLOpt := cmd.StringOpt("c chain", "127.0.0.1:10997", "chain to be used in IP:PORT format")
-		keysDir := cmd.StringOpt("dir", ".keys", "specify the location of the directory containing key files")
+		keysDir := cmd.StringOpt("dir", keys.DefaultKeysDir, "specify the location of the directory containing key files")
 		badPerm := cmd.BoolOpt("allow-bad-perm", false, "Allow unix key file permissions to be readable other than user")
 		listenHostOpt := cmd.StringOpt("h listen-host", "localhost", "The host to listen on")
 		listenPortOpt := cmd.IntOpt("p listen-port", 10998, "The port to listen on")

@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/crypto"
-
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/proxy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -21,10 +21,11 @@ type hashInfo struct {
 }
 
 func TestKeysServer(t *testing.T) {
-	testDir, cleanup := integration.EnterTestDirectory()
+	_, cleanup := integration.EnterTestDirectory()
 	defer cleanup()
 	failedCh := make(chan error)
-	server := keys.StandAloneServer(testDir, false)
+	server := grpc.NewServer()
+	proxy.RegisterKeysService(server, keys.NewKeyStore(keys.DefaultKeysDir, true))
 	listener, err := net.Listen("tcp", "localhost:0")
 	require.NoError(t, err)
 	address := listener.Addr().String()
@@ -50,10 +51,7 @@ func TestKeysServer(t *testing.T) {
 				require.NoError(t, err)
 
 				addr := genresp.Address
-				resp, err := cli.PublicKey(ctx, &keys.PubRequest{Address: addr})
-				require.NoError(t, err)
-
-				addrB, err := crypto.AddressFromHexString(addr)
+				resp, err := cli.PublicKey(ctx, &keys.PubRequest{Address: &addr})
 				require.NoError(t, err)
 
 				curveType, err := crypto.CurveTypeFromString(typ)
@@ -61,32 +59,7 @@ func TestKeysServer(t *testing.T) {
 
 				publicKey, err := crypto.PublicKeyFromBytes(resp.GetPublicKey(), curveType)
 				require.NoError(t, err)
-				assert.Equal(t, addrB, publicKey.GetAddress())
-			})
-
-			t.Run("SignAndVerify", func(t *testing.T) {
-				t.Parallel()
-				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-				defer cancel()
-				genresp, err := cli.GenerateKey(ctx, &keys.GenRequest{CurveType: typ})
-				require.NoError(t, err)
-
-				addr := genresp.Address
-				resp, err := cli.PublicKey(ctx, &keys.PubRequest{Address: addr})
-				require.NoError(t, err)
-
-				msg := []byte("the hash of something!")
-				hash := crypto.Keccak256(msg)
-
-				sig, err := cli.Sign(ctx, &keys.SignRequest{Address: addr, Message: hash})
-				require.NoError(t, err)
-
-				_, err = cli.Verify(ctx, &keys.VerifyRequest{
-					Signature: sig.GetSignature(),
-					PublicKey: resp.GetPublicKey(),
-					Message:   hash,
-				})
-				require.NoError(t, err)
+				assert.Equal(t, addr, publicKey.GetAddress())
 			})
 
 		}

@@ -17,7 +17,7 @@ func TestSqliteConsumer(t *testing.T) {
 	kern, shutdown := integration.RunNode(t, rpctest.GenesisDoc, rpctest.PrivateAccounts)
 	defer shutdown()
 	inputAddress := privateAccounts[0].GetAddress()
-	grpcAddress := kern.GRPCListenAddress().String()
+	grpcAddress := kern.InternalProxyListenAddress().String()
 	tcli := test.NewTransactClient(t, grpcAddress)
 
 	t.Parallel()

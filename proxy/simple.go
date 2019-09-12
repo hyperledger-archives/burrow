@@ -162,6 +162,10 @@ func (p *Proxy) ListNames(param *rpcquery.ListNamesParam, stream rpcquery.Query_
 	}
 }
 
+func (p *Proxy) GetNetworkRegistry(ctx context.Context, param *rpcquery.GetNetworkRegistryParam) (*rpcquery.NetworkRegistry, error) {
+	return p.query.GetNetworkRegistry(ctx, param)
+}
+
 func (p *Proxy) GetValidatorSet(ctx context.Context, param *rpcquery.GetValidatorSetParam) (*rpcquery.ValidatorSet, error) {
 	return p.query.GetValidatorSet(ctx, param)
 }

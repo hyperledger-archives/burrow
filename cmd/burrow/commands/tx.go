@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/jobs"
 	"github.com/hyperledger/burrow/deploy/util"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs/payload"
 	cli "github.com/jawher/mow.cli"
@@ -21,6 +22,7 @@ func Tx(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 		configOpts := addConfigOptions(cmd)
 		chainOpt := cmd.StringOpt("chain", "", "chain to be used in IP:PORT format")
+		keysDirOpt := cmd.StringOpt("keys-dir", keys.DefaultKeysDir, "Directory with key store")
 		timeoutOpt := cmd.IntOpt("t timeout", 5, "Timeout in seconds")
 		cmd.Spec += "[--chain=<ip>] [--timeout=<seconds>]"
 		// we don't want config sourcing logs
@@ -37,7 +39,7 @@ func Tx(output Output) func(cmd *cli.Cmd) {
 			}
 
 			chainHost := jobs.FirstOf(*chainOpt, conf.RPC.GRPC.ListenAddress())
-			client := def.NewClient(chainHost, conf.Keys.RemoteAddress, true, time.Duration(*timeoutOpt)*time.Second)
+			client := def.NewClient(chainHost, *keysDirOpt, true, time.Duration(*timeoutOpt)*time.Second)
 			logger := logging.NewNoopLogger()
 			address := conf.Address.String()
 
@@ -172,7 +174,7 @@ func Tx(output Output) func(cmd *cli.Cmd) {
 				}
 
 				chainHost := jobs.FirstOf(*chainOpt, conf.RPC.GRPC.ListenAddress())
-				client := def.NewClient(chainHost, conf.Keys.RemoteAddress, true, time.Duration(*timeoutOpt)*time.Second)
+				client := def.NewClient(chainHost, *keysDirOpt, true, time.Duration(*timeoutOpt)*time.Second)
 
 				var rawTx payload.Any
 				var hash string

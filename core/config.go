@@ -19,16 +19,8 @@ import (
 )
 
 // LoadKeysFromConfig sets the keyClient & keyStore based on the given config
-func (kern *Kernel) LoadKeysFromConfig(conf *keys.KeysConfig) (err error) {
-	kern.keyStore = keys.NewKeyStore(conf.KeysDirectory, conf.AllowBadFilePermissions)
-	if conf.RemoteAddress != "" {
-		kern.keyClient, err = keys.NewRemoteKeyClient(conf.RemoteAddress, kern.Logger)
-		if err != nil {
-			return err
-		}
-	} else {
-		kern.keyClient = keys.NewLocalKeyClient(kern.keyStore, kern.Logger)
-	}
+func (kern *Kernel) LoadKeysFromConfig(keysdir string) (err error) {
+	kern.keyStore = keys.NewKeyStore(keysdir, true)
 	return nil
 }
 
@@ -102,7 +94,7 @@ func LoadKernelFromConfig(conf *config.BurrowConfig) (*Kernel, error) {
 		return nil, fmt.Errorf("could not configure logger: %v", err)
 	}
 
-	err = kern.LoadKeysFromConfig(conf.Keys)
+	err = kern.LoadKeysFromConfig(conf.ValidatorKeys)
 	if err != nil {
 		return nil, fmt.Errorf("could not configure keys: %v", err)
 	}
@@ -131,6 +123,6 @@ func LoadKernelFromConfig(conf *config.BurrowConfig) (*Kernel, error) {
 		return nil, fmt.Errorf("could not configure Tendermint: %v", err)
 	}
 
-	kern.AddProcesses(DefaultProcessLaunchers(kern, conf.RPC, conf.Keys)...)
+	kern.AddProcesses(DefaultProcessLaunchers(kern, conf.RPC, conf.Proxy)...)
 	return kern, nil
 }

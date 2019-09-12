@@ -26,7 +26,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/exec"
-	"github.com/hyperledger/burrow/keys/mock"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -54,7 +54,9 @@ func TestTransactor_BroadcastTxSync(t *testing.T) {
 	err := txEnv.Sign(privAccount)
 	require.NoError(t, err)
 	height := uint64(35)
-	trans := NewTransactor(bc, evc, NewAccounts(acmstate.NewMemoryState(), mock.NewKeyClient(privAccount), 100),
+	ks, clean := keys.EnterTestKeyStore(privAccount)
+	defer clean()
+	trans := NewTransactor(bc, evc, NewAccounts(acmstate.NewMemoryState(), ks, 100),
 		func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error {
 			txe := exec.NewTxExecution(txEnv)
 			txe.Height = height
@@ -108,7 +110,9 @@ func TestTransactor_BroadcastTxStreamTimeoutBeforeSuccess(t *testing.T) {
 	require.NoError(t, err)
 	height := uint64(102)
 	ctx, timeoutFunc := context.WithTimeout(context.Background(), time.Second)
-	trans := NewTransactor(bc, evc, NewAccounts(acmstate.NewMemoryState(), mock.NewKeyClient(privAccount), 100),
+	ks, clean := keys.EnterTestKeyStore(privAccount)
+	defer clean()
+	trans := NewTransactor(bc, evc, NewAccounts(acmstate.NewMemoryState(), ks, 100),
 		func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error {
 			txe := exec.NewTxExecution(txEnv)
 			txe.Height = height

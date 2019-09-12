@@ -32,25 +32,25 @@ import (
 )
 
 type Client struct {
-	MempoolSigning    bool
-	ChainAddress      string
-	KeysClientAddress string
+	MempoolSigning bool
+	ChainAddress   string
 	// Memoised clients and info
 	chainID               string
 	timeout               time.Duration
 	transactClient        rpctransact.TransactClient
 	queryClient           rpcquery.QueryClient
 	executionEventsClient rpcevents.ExecutionEventsClient
-	keyClient             keys.KeyClient
+	keysClient            keys.KeysClient
+	KeyStore              *keys.KeyStore
 	AllSpecs              *abi.Spec
 }
 
-func NewClient(chain, keysClientAddress string, mempoolSigning bool, timeout time.Duration) *Client {
+func NewClient(chain, keysDir string, mempoolSigning bool, timeout time.Duration) *Client {
 	client := Client{
-		ChainAddress:      chain,
-		MempoolSigning:    mempoolSigning,
-		KeysClientAddress: keysClientAddress,
-		timeout:           timeout,
+		ChainAddress:   chain,
+		MempoolSigning: mempoolSigning,
+		KeyStore:       keys.NewKeyStore(keysDir, true),
+		timeout:        timeout,
 	}
 	return &client
 }
@@ -65,14 +65,7 @@ func (c *Client) dial(logger *logging.Logger) error {
 		c.transactClient = rpctransact.NewTransactClient(conn)
 		c.queryClient = rpcquery.NewQueryClient(conn)
 		c.executionEventsClient = rpcevents.NewExecutionEventsClient(conn)
-		if c.KeysClientAddress == "" {
-			logger.InfoMsg("Using mempool signing since no keyClient set, pass --keys to sign locally or elsewhere")
-			c.MempoolSigning = true
-			c.keyClient, err = keys.NewRemoteKeyClient(c.ChainAddress, logger)
-		} else {
-			logger.InfoMsg("Using keys server", "server", c.KeysClientAddress)
-			c.keyClient, err = keys.NewRemoteKeyClient(c.KeysClientAddress, logger)
-		}
+		c.keysClient = keys.NewKeysClient(conn)
 
 		if err != nil {
 			return err
@@ -128,11 +121,25 @@ func (c *Client) ParseAddress(key string, logger *logging.Logger) (crypto.Addres
 	if err == nil {
 		return address, nil
 	}
+	address, err = c.KeyStore.GetName(key)
+	if err == nil {
+		return address, nil
+	}
+	// Ask the Proxy
 	err = c.dial(logger)
 	if err != nil {
 		return crypto.Address{}, err
 	}
-	return c.keyClient.GetAddressForKeyName(key)
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	resp, err := c.keysClient.List(ctx, &keys.ListRequest{KeyName: key})
+	if err != nil {
+		return crypto.Address{}, err
+	}
+	if len(resp.Key) != 1 {
+		return crypto.Address{}, fmt.Errorf("key %s not found", key)
+	}
+	return resp.Key[0].Address, nil
 }
 
 func (c *Client) GetAccount(address crypto.Address) (*acm.Account, error) {
@@ -240,15 +247,16 @@ func (c *Client) SignTx(tx payload.Payload, logger *logging.Logger) (*txs.Envelo
 	}
 	txEnv := txs.Enclose(c.chainID, tx)
 	if c.MempoolSigning {
-		logger.InfoMsg("Using mempool signing")
+		logger.InfoMsg("Using proxy signing")
 		return txEnv, nil
 	}
 	inputs := tx.GetInputs()
 	signers := make([]acm.AddressableSigner, len(inputs))
 	for i, input := range inputs {
-		signers[i], err = keys.AddressableSigner(c.keyClient, input.Address)
+		signers[i], err = c.KeyStore.GetKey("", input.Address)
 		if err != nil {
-			return nil, err
+			logger.InfoMsg("Key not available, trying proxying signing", "address", input.Address, "error", err)
+			return txEnv, nil
 		}
 	}
 	err = txEnv.Sign(signers...)
@@ -264,10 +272,7 @@ func (c *Client) CreateKey(keyName, curveTypeString string, logger *logging.Logg
 	if err != nil {
 		return crypto.PublicKey{}, err
 	}
-	if c.keyClient == nil {
-		return crypto.PublicKey{}, fmt.Errorf("could not create key pair since no keys service is attached, " +
-			"pass --keys flag")
-	}
+
 	curveType := crypto.CurveTypeEd25519
 	if curveTypeString != "" {
 		curveType, err = crypto.CurveTypeFromString(curveTypeString)
@@ -275,11 +280,36 @@ func (c *Client) CreateKey(keyName, curveTypeString string, logger *logging.Logg
 			return crypto.PublicKey{}, err
 		}
 	}
-	address, err := c.keyClient.Generate(keyName, curveType)
+
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+
+	resp, err := c.keysClient.GenerateKey(ctx, &keys.GenRequest{
+		KeyName:   keyName,
+		CurveType: curveType.String(),
+	})
+	if err == nil {
+		resp, err := c.keysClient.PublicKey(ctx, &keys.PubRequest{
+			Address: &resp.Address,
+		})
+		if err != nil {
+			return crypto.PublicKey{}, err
+		}
+
+		return crypto.PublicKeyFromBytes(resp.PublicKey, curveType)
+	}
+
+	// generate locally
+	key, err := c.KeyStore.Gen("", curveType)
 	if err != nil {
 		return crypto.PublicKey{}, err
 	}
-	return c.keyClient.PublicKey(address)
+
+	if keyName != "" {
+		err = c.KeyStore.AddName(keyName, key.GetAddress())
+	}
+
+	return key.GetPublicKey(), err
 }
 
 // Broadcast payload for remote signing
@@ -382,7 +412,7 @@ func (c *Client) UpdateAccount(arg *GovArg, logger *logging.Logger) (*payload.Go
 			if err != nil {
 				logger.InfoMsg("did not get public key", "address", *update.Address)
 			} else {
-				update.PublicKey = pubKey
+				update.PublicKey = &pubKey
 			}
 			// We can still proceed with just address set
 		} else {
@@ -416,15 +446,27 @@ func (c *Client) UpdateAccount(arg *GovArg, logger *logging.Logger) (*payload.Go
 	return tx, nil
 }
 
-func (c *Client) PublicKeyFromAddress(address *crypto.Address) (*crypto.PublicKey, error) {
-	if c.keyClient != nil {
-		return nil, fmt.Errorf("key client is not set")
+func (c *Client) PublicKeyFromAddress(address *crypto.Address) (crypto.PublicKey, error) {
+	key, err := c.KeyStore.GetKey("", *address)
+	if key != nil && err == nil {
+		return key.PublicKey, nil
 	}
-	pubKey, err := c.keyClient.PublicKey(*address)
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+
+	resp, err := c.keysClient.PublicKey(ctx, &keys.PubRequest{
+		Address: address,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve public key from keys server: %v", err)
+		return crypto.PublicKey{}, err
 	}
-	return &pubKey, nil
+
+	curveType, err := crypto.CurveTypeFromString(resp.CurveType)
+	if err != nil {
+		return crypto.PublicKey{}, err
+	}
+
+	return crypto.PublicKeyFromBytes(resp.PublicKey, curveType)
 }
 
 func publicKeyFromString(publicKey string) (crypto.PublicKey, error) {
@@ -695,7 +737,7 @@ func (c *Client) Identify(arg *IdentifyArg, logger *logging.Logger) (*payload.Id
 		return nil, err
 	}
 
-	signer, err := keys.AddressableSigner(c.keyClient, address)
+	signer, err := c.KeyStore.GetKey("", address)
 	if err != nil {
 		return nil, err
 	}

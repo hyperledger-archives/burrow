@@ -25,7 +25,7 @@ func TestPostgresConsumer(t *testing.T) {
 	kern, shutdown := integration.RunNode(t, rpctest.GenesisDoc, privateAccounts)
 	defer shutdown()
 	inputAddress := privateAccounts[0].GetAddress()
-	grpcAddress := kern.GRPCListenAddress().String()
+	grpcAddress := kern.InternalProxyListenAddress().String()
 	tcli := test.NewTransactClient(t, grpcAddress)
 
 	t.Parallel()
@@ -49,7 +49,7 @@ func TestPostgresConsumer(t *testing.T) {
 		})
 
 		t.Run("PostgresTriggers", func(t *testing.T) {
-			tCli := test.NewTransactClient(t, kern.GRPCListenAddress().String())
+			tCli := test.NewTransactClient(t, kern.InternalProxyListenAddress().String())
 			create := test.CreateContract(t, tCli, inputAddress)
 
 			// generate events

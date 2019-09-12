@@ -9,9 +9,9 @@ set -e
 
 burrow_bin=${burrow_bin:-burrow}
 
-test_dir="./tests/keys_server/test_scratch"
-keys_dir="$test_dir/.keys"
-tmp_dir="$test_dir/tmp"
+BURROW_KEYS_DIR="./tests/keys_server/test_scratch"
+export BURROW_KEYS_DIR
+tmp_dir="$BURROW_KEYS_DIR/tmp"
 mkdir -p "$tmp_dir"
 
 echo "-----------------------------"
@@ -28,22 +28,11 @@ if [[ ! -z ${missing_utility} ]]; then
     exit 1
 fi
 
-echo "starting the server"
-$burrow_bin keys server --dir $keys_dir &
-keys_pid=$!
-function kill_burrow_keys {
-    kill -TERM $keys_pid
-}
-
-trap kill_burrow_keys EXIT
-sleep 1
 echo "-----------------------------"
-echo "testing the cli"
+echo "testing the burrow keys cli"
 
 # we test keys, hashes, names, and import
 # this file should be run with and without the daemon running
-
-echo "testing keys"
 
 CURVETYPES=( "ed25519" "secp256k1" )
 for CURVETYPE in ${CURVETYPES[*]}
@@ -55,7 +44,7 @@ do
     HASH=`$burrow_bin keys hash --type sha256 ok`
     #echo "HASH: $HASH"
     NAME=testkey1
-    ADDR=`$burrow_bin keys gen --curvetype $CURVETYPE --name $NAME --no-password`
+    ADDR=`$burrow_bin keys gen --curvetype $CURVETYPE --name $NAME`
     #echo "my addr: $ADDR"
     PUB1=`$burrow_bin keys pub --name $NAME`
     PUB2=`$burrow_bin keys pub --addr $ADDR`
@@ -120,8 +109,8 @@ for CURVETYPE in ${CURVETYPES[*]}
 do
     echo "... $CURVETYPE"
     # create a key, get its address and priv, backup the json, delete the key
-    ADDR=`$burrow_bin keys gen --curvetype $CURVETYPE --no-password`
-    DIR=$keys_dir/data
+    ADDR=`$burrow_bin keys gen --curvetype $CURVETYPE`
+    DIR=$BURROW_KEYS_DIR/data
     FILE=$DIR/$ADDR.json
     HEXPRIV=`cat $FILE | jq -r .PrivateKey.Plain`
     EXPORTJSON=`$burrow_bin keys export --addr $ADDR`
@@ -170,7 +159,7 @@ done
 echo "testing names"
 
 NAME=mykey
-ADDR=`$burrow_bin keys gen --name $NAME --no-password`
+ADDR=`$burrow_bin keys gen --name $NAME`
 ADDR2=`$burrow_bin keys list --name $NAME | jq -r '.[0].Address'`
 if [ "$ADDR" != "$ADDR2" ]; then
     echo "FAILED name: got $ADDR2 expected $ADDR"
@@ -178,7 +167,7 @@ if [ "$ADDR" != "$ADDR2" ]; then
 fi
 
 NAME2=mykey2
-$burrow_bin keys name $NAME2 $ADDR
+$burrow_bin keys addname $NAME2 $ADDR
 ADDR2=`$burrow_bin keys list --name $NAME2 | jq -r '.[0].Address'`
 if [ "$ADDR" != "$ADDR2" ]; then
     echo "FAILED rename: got $ADDR2 expected $ADDR"

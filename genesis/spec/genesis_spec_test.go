@@ -5,14 +5,14 @@ import (
 
 	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/keys/mock"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGenesisSpec_GenesisDoc(t *testing.T) {
-	keyClient := mock.NewKeyClient()
+	keyStore := keys.NewKeyStore(keys.DefaultKeysDir, true)
 
 	// Try a spec with a single account/validator
 	amtBonded := uint64(100)
@@ -22,7 +22,7 @@ func TestGenesisSpec_GenesisDoc(t *testing.T) {
 		}},
 	}
 
-	genesisDoc, err := genesisSpec.GenesisDoc(keyClient, crypto.CurveTypeEd25519)
+	genesisDoc, err := genesisSpec.GenesisDoc(keyStore, crypto.CurveTypeEd25519)
 	require.NoError(t, err)
 	require.Len(t, genesisDoc.Accounts, 1)
 	// Should create validator
@@ -34,9 +34,10 @@ func TestGenesisSpec_GenesisDoc(t *testing.T) {
 	assert.Equal(t, amtBonded, genesisDoc.Validators[0].Amount)
 	assert.NotEmpty(t, genesisDoc.ChainName, "Chain name should not be empty")
 
-	address, err := keyClient.Generate("test-lookup-of-key", crypto.CurveTypeEd25519)
+	key, err := keyStore.Gen("", crypto.CurveTypeEd25519)
 	require.NoError(t, err)
-	pubKey, err := keyClient.PublicKey(address)
+	address := key.GetAddress()
+	pubKey := key.GetPublicKey()
 	require.NoError(t, err)
 
 	// Try a spec with two accounts and no validators
@@ -52,7 +53,7 @@ func TestGenesisSpec_GenesisDoc(t *testing.T) {
 			}},
 	}
 
-	genesisDoc, err = genesisSpec.GenesisDoc(keyClient, crypto.CurveTypeEd25519)
+	genesisDoc, err = genesisSpec.GenesisDoc(keyStore, crypto.CurveTypeEd25519)
 	require.NoError(t, err)
 
 	require.Len(t, genesisDoc.Accounts, 2)
@@ -67,7 +68,7 @@ func TestGenesisSpec_GenesisDoc(t *testing.T) {
 	// Try an empty spec
 	genesisSpec = GenesisSpec{}
 
-	genesisDoc, err = genesisSpec.GenesisDoc(keyClient, crypto.CurveTypeEd25519)
+	genesisDoc, err = genesisSpec.GenesisDoc(keyStore, crypto.CurveTypeEd25519)
 	require.NoError(t, err)
 
 	// Similar assersions to first case - should generate our default single identity chain

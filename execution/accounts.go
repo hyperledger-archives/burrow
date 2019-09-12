@@ -10,12 +10,12 @@ import (
 	burrow_sync "github.com/hyperledger/burrow/sync"
 )
 
-// Accounts pairs an underlying state.Reader with a KeyClient to provide a signing variant of an account
+// Accounts pairs an underlying state.Reader with a KeyStore to provide a signing variant of an account
 // it also maintains a lock over addresses to provide a linearisation of signing events using SequentialSigningAccount
 type Accounts struct {
 	burrow_sync.RingMutex
 	acmstate.Reader
-	keyClient keys.KeyClient
+	keyStore *keys.KeyStore
 }
 
 type SigningAccount struct {
@@ -29,15 +29,15 @@ type SequentialSigningAccount struct {
 	getter        func() (*SigningAccount, error)
 }
 
-func NewAccounts(reader acmstate.Reader, keyClient keys.KeyClient, mutexCount int) *Accounts {
+func NewAccounts(reader acmstate.Reader, keyStore *keys.KeyStore, mutexCount int) *Accounts {
 	return &Accounts{
 		RingMutex: *burrow_sync.NewRingMutexNoHash(mutexCount),
 		Reader:    reader,
-		keyClient: keyClient,
+		keyStore:  keyStore,
 	}
 }
 func (accs *Accounts) SigningAccount(address crypto.Address) (*SigningAccount, error) {
-	signer, err := keys.AddressableSigner(accs.keyClient, address)
+	key, err := accs.keyStore.GetKey("", address)
 	if err != nil {
 		return nil, err
 	}
@@ -51,14 +51,10 @@ func (accs *Accounts) SigningAccount(address crypto.Address) (*SigningAccount, e
 			Address: address,
 		}
 	}
-	pubKey, err := accs.keyClient.PublicKey(address)
-	if err != nil {
-		return nil, err
-	}
-	account.PublicKey = pubKey
+	account.PublicKey = key.PublicKey
 	return &SigningAccount{
 		Account: account,
-		Signer:  signer,
+		Signer:  key,
 	}, nil
 }
 

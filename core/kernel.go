@@ -74,7 +74,6 @@ type Kernel struct {
 	exeOptions     []execution.Option
 	checker        execution.BatchExecutor
 	committer      execution.BatchCommitter
-	keyClient      keys.KeyClient
 	keyStore       *keys.KeyStore
 	info           string
 	processes      map[string]process.Process
@@ -219,11 +218,6 @@ func (kern *Kernel) AddProcesses(pl ...process.Launcher) {
 	kern.Launchers = append(kern.Launchers, pl...)
 }
 
-// SetKeyClient explicitly sets the key client
-func (kern *Kernel) SetKeyClient(client keys.KeyClient) {
-	kern.keyClient = client
-}
-
 // SetKeyStore explicitly sets the key store
 func (kern *Kernel) SetKeyStore(store *keys.KeyStore) {
 	kern.keyStore = store
@@ -231,13 +225,13 @@ func (kern *Kernel) SetKeyStore(store *keys.KeyStore) {
 
 // Generates an in-memory Tendermint PrivValidator (suitable for passing to LoadTendermintFromConfig)
 func (kern *Kernel) PrivValidator(validator crypto.Address) (tmTypes.PrivValidator, error) {
-	val, err := keys.AddressableSigner(kern.keyClient, validator)
+	val, err := kern.keyStore.GetKey("", validator)
 	if err != nil {
-		return nil, fmt.Errorf("could not get validator addressable from keys client: %v", err)
+		return nil, fmt.Errorf("could not get validator addressable from key store: %v", err)
 	}
-	signer, err := keys.AddressableSigner(kern.keyClient, val.GetAddress())
+	signer, err := kern.keyStore.GetKey("", val.GetAddress())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get validator addressable from key store: %v", err)
 	}
 	return tendermint.NewPrivValidatorMemory(val, signer), nil
 }
@@ -280,6 +274,14 @@ func (kern *Kernel) registerListener(name string, listener net.Listener) error {
 
 func (kern *Kernel) GRPCListenAddress() net.Addr {
 	l, ok := kern.listeners[GRPCProcessName]
+	if !ok {
+		return nil
+	}
+	return l.Addr()
+}
+
+func (kern *Kernel) InternalProxyListenAddress() net.Addr {
+	l, ok := kern.listeners[InternalProxyName]
 	if !ok {
 		return nil
 	}

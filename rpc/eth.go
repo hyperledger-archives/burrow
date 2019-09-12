@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -45,7 +44,6 @@ type EthService struct {
 	validators validator.History
 	nodeView   *tendermint.NodeView
 	trans      *execution.Transactor
-	keyClient  keys.KeyClient
 	keyStore   *keys.KeyStore
 	config     *tmConfig.Config
 	logger     *logging.Logger
@@ -58,8 +56,6 @@ func NewEthService(accounts acmstate.IterableStatsReader,
 	trans *execution.Transactor, keyStore *keys.KeyStore,
 	logger *logging.Logger) *EthService {
 
-	keyClient := keys.NewLocalKeyClient(keyStore, logger)
-
 	return &EthService{
 		accounts,
 		events,
@@ -67,7 +63,6 @@ func NewEthService(accounts acmstate.IterableStatsReader,
 		validators,
 		nodeView,
 		trans,
-		keyClient,
 		keyStore,
 		tmConfig.DefaultConfig(),
 		logger,
@@ -884,7 +879,7 @@ func (srv *EthService) EthSendTransaction(req *web3.EthSendTransactionParams) (*
 
 	txEnv := txs.Enclose(srv.blockchain.ChainID(), tx)
 
-	signer, err := keys.AddressableSigner(srv.keyClient, tx.Input.Address)
+	signer, err := srv.keyStore.GetKey("", tx.Input.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -915,11 +910,7 @@ func (srv *EthService) EthAccounts() (*web3.EthAccountsResult, error) {
 
 	addrs := make([]string, 0, len(addresses))
 	for _, addr := range addresses {
-		data, err := hex.DecodeString(addr)
-		if err != nil {
-			return nil, fmt.Errorf("could not decode address %s", addr)
-		}
-		key, err := srv.keyStore.GetKey("", data)
+		key, err := srv.keyStore.GetKey("", addr)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve key for %s", addr)
 		} else if key.CurveType != crypto.CurveTypeSecp256k1 {
@@ -945,7 +936,7 @@ func (srv *EthService) EthSign(req *web3.EthSignParams) (*web3.EthSignResult, er
 	if err != nil {
 		return nil, err
 	}
-	signer, err := keys.AddressableSigner(srv.keyClient, to)
+	signer, err := srv.keyStore.GetKey("", to)
 	if err != nil {
 		return nil, err
 	}

@@ -155,7 +155,7 @@ func (trans *Transactor) BroadcastTxStream(ctx context.Context, streamCtx contex
 	case msg := <-out:
 		txe := msg.(*exec.TxExecution)
 		callError := txe.CallError()
-		if callError != nil && callError.ErrorCode() != errors.ErrorCodeExecutionReverted {
+		if callError != nil && callError.ErrorCode() != errors.Codes.ExecutionReverted {
 			return errors.Wrap(callError, "exception during transaction execution")
 		}
 		err = consumer(nil, txe)

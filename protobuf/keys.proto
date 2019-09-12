@@ -15,11 +15,9 @@ option (gogoproto.messagename_all) = true;
 service Keys {
     rpc GenerateKey(GenRequest) returns (GenResponse);
     rpc PublicKey(PubRequest) returns (PubResponse);
-    rpc Sign(SignRequest) returns (SignResponse);
     rpc Verify(VerifyRequest) returns (VerifyResponse);
     rpc Import(ImportRequest) returns (ImportResponse);
     rpc ImportJSON(ImportJSONRequest) returns (ImportResponse);
-    rpc Export(ExportRequest) returns (ExportResponse);
     rpc Hash(HashRequest) returns (HashResponse);
     rpc RemoveName(RemoveNameRequest) returns (RemoveNameResponse);
     rpc List(ListRequest) returns (ListResponse);
@@ -56,11 +54,11 @@ message GenRequest {
 }
 
 message GenResponse {
-    string Address = 1;
+    bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
 }
 
 message PubRequest {
-    string Address = 1;
+    bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address"];
     string Name = 2;
 }
 
@@ -75,7 +73,7 @@ message ImportJSONRequest {
 }
 
 message ImportResponse {
-    string Address = 1;
+    bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
 }
 
 message ImportRequest {
@@ -85,34 +83,21 @@ message ImportRequest {
     bytes KeyBytes = 4;
 }
 
-message ExportRequest {
-    string Passphrase = 1;
-    string Name = 2;
-    string Address = 3;
-}
-
-message ExportResponse {
-    bytes Publickey = 1;
-    bytes Privatekey = 2;
-    bytes Address = 3;
-    string CurveType = 4;
-}
-
 message SignRequest {
     string Passphrase = 1;
-    string Address = 2;
+    bytes Address = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address"];
     string Name = 3;
     bytes Message = 4;
 }
 
 message SignResponse {
-    crypto.Signature Signature = 3;
+    bytes Signature = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Signature", (gogoproto.nullable) = false];
 }
 
 message VerifyRequest {
-    bytes PublicKey = 2;
-    bytes Message = 3;
-    crypto.Signature Signature = 5;
+    bytes PublicKey = 1;
+    bytes Message = 2;
+    bytes Signature = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Signature", (gogoproto.nullable) = false];
 }
 
 message HashRequest {
@@ -125,7 +110,7 @@ message HashResponse {
 }
 
 message KeyID {
-    string Address = 1;
+    bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
     repeated string KeyName = 2;
 }
 
@@ -135,5 +120,5 @@ message ListResponse {
 
 message AddNameRequest {
     string Keyname = 1;
-    string Address = 2;
+    bytes Address = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
 }

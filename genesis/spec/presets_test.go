@@ -5,16 +5,17 @@ import (
 
 	"github.com/hyperledger/burrow/acm/balance"
 	crypto "github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/keys/mock"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMergeGenesisSpecAccounts(t *testing.T) {
-	keyClient := mock.NewKeyClient()
+	ks, cleanup := keys.EnterTestKeyStore()
+	defer cleanup()
 	gs := MergeGenesisSpecs(FullAccount("0"), ParticipantAccount("1"), ParticipantAccount("2"))
-	gd, err := gs.GenesisDoc(keyClient, crypto.CurveTypeEd25519)
+	gd, err := gs.GenesisDoc(ks, crypto.CurveTypeEd25519)
 	require.NoError(t, err)
 	assert.Len(t, gd.Validators, 1)
 	assert.Len(t, gd.Accounts, 3)

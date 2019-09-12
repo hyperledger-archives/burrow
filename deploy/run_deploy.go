@@ -29,7 +29,7 @@ type playbookResult struct {
 
 func worker(playbooks <-chan playbookWork, results chan<- playbookResult, args *def.DeployArgs, logger *logging.Logger) {
 
-	client := def.NewClient(args.Chain, args.KeysService, args.MempoolSign, time.Duration(args.Timeout)*time.Second)
+	client := def.NewClient(args.Chain, args.KeysDir, args.MempoolSign, time.Duration(args.Timeout)*time.Second)
 
 	for playbook := range playbooks {
 		doWork := func(work playbookWork) (logBuf bytes.Buffer, err error) {
@@ -91,7 +91,7 @@ func RunPlaybooks(args *def.DeployArgs, playbooks []string, logger *logging.Logg
 	}
 
 	// useful for debugging
-	logger.InfoMsg("Using chain", "Chain", args.Chain, "Signer", args.KeysService)
+	logger.InfoMsg("Using chain", "Chain", args.Chain)
 
 	workQ := make(chan playbookWork, 100)
 	resultQ := make(chan playbookResult, 100)

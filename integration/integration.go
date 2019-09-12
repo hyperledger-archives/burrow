@@ -32,7 +32,7 @@ import (
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
-	"github.com/hyperledger/burrow/keys/mock"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/permission"
@@ -89,11 +89,14 @@ func NewTestConfig(genesisDoc *genesis.GenesisDoc,
 	conf = config.DefaultBurrowConfig()
 	testDir, cleanup := EnterTestDirectory()
 	conf.BurrowDir = path.Join(testDir, fmt.Sprintf(".burrow_%s", name))
+	conf.ValidatorKeys = path.Join(testDir, ".keys")
 	conf.GenesisDoc = genesisDoc
 	conf.Tendermint.Moniker = name
 	// Make blocks for purposes of tests
 	conf.Tendermint.CreateEmptyBlocks = tendermint.AlwaysCreateEmptyBlocks
-	conf.Keys.RemoteAddress = ""
+	// Run via proxy
+	conf.Proxy.InternalProxyEnabled = true
+
 	// Assign run of ports
 	const freeport = "0"
 	conf.Tendermint.ListenHost = rpc.LocalHost
@@ -106,6 +109,8 @@ func NewTestConfig(genesisDoc *genesis.GenesisDoc,
 	conf.RPC.Info.ListenPort = freeport
 	conf.RPC.Web3.ListenHost = rpc.LocalHost
 	conf.RPC.Web3.ListenPort = freeport
+	conf.Proxy.ListenHost = rpc.LocalHost
+	conf.Proxy.ListenPort = freeport
 	conf.Execution.TimeoutFactor = 0.5
 	conf.Execution.VMOptions = []execution.VMOption{}
 	for _, opt := range options {
@@ -135,7 +140,9 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 		}
 	}
 
-	kern.SetKeyClient(mock.NewKeyClient(keysAccounts...))
+	ks := keys.NewKeyStore(testConfig.ValidatorKeys, true)
+	ks.AddPrivateAccounts(keysAccounts...)
+	kern.SetKeyStore(ks)
 
 	err = kern.LoadExecutionOptionsFromConfig(testConfig.Execution)
 	if err != nil {
@@ -154,7 +161,7 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 		return nil, err
 	}
 
-	kern.AddProcesses(core.DefaultProcessLaunchers(kern, testConfig.RPC, testConfig.Keys)...)
+	kern.AddProcesses(core.DefaultProcessLaunchers(kern, testConfig.RPC, testConfig.Proxy)...)
 	return kern, nil
 }
 
@@ -168,9 +175,10 @@ func EnterTestDirectory() (testDir string, cleanup func()) {
 	//testDir := scratchDir
 	os.RemoveAll(testDir)
 	os.MkdirAll(testDir, 0777)
-	os.Chdir(testDir)
 	os.MkdirAll("config", 0777)
-	return testDir, func() { os.RemoveAll(testDir) }
+	return testDir, func() {
+		os.RemoveAll(testDir)
+	}
 }
 
 // TestGenesisDoc creates genesis from a set of accounts

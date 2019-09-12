@@ -69,7 +69,7 @@ func addConfigOptions(cmd *cli.Cmd) *configOptions {
 
 		initPassphraseOpt: cmd.String(cli.StringOpt{
 			Name:   "p passphrase",
-			Desc:   "The passphrase of the signing key of this node (currently unimplemented but planned for future version of our KeyClient interface)",
+			Desc:   "The passphrase of the signing key of this node (currently unimplemented but planned for future version of our KeyStore)",
 			EnvVar: "BURROW_PASSPHRASE",
 		}),
 

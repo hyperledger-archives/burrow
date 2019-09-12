@@ -283,7 +283,7 @@ func (exe *executor) validateInputsAndStorePublicKeys(txEnv *txs.Envelope) error
 	for s, in := range txEnv.Tx.GetInputs() {
 		err := exe.updateSignatory(txEnv.Signatories[s])
 		if err != nil {
-			return fmt.Errorf("failed to update public key for input %X: %v", in.Address, err)
+			return fmt.Errorf("failed to update public key for input %v: %v", in.Address, err)
 		}
 		acc, err := exe.stateCache.GetAccount(in.Address)
 		if err != nil {
@@ -326,7 +326,7 @@ func (exe *executor) updateSignatory(sig txs.Signatory) error {
 	// pointer dereferences are safe since txEnv.Validate() is run by
 	// txEnv.Verify() above which checks they are non-nil
 	acc, err := exe.stateCache.GetAccount(*sig.Address)
-	if err != nil {
+	if err != nil || acc == nil {
 		return fmt.Errorf("error getting account on which to set public key: %v", *sig.Address)
 	} else if acc == nil {
 		return fmt.Errorf("account %s does not exist", sig.Address)

@@ -1,4 +1,5 @@
 BurrowDir = ".burrow"
+ValidatorKeys = "../keys"
 
 [Tendermint]
   Seeds = ""
@@ -11,12 +12,6 @@ BurrowDir = ".burrow"
 
 [Execution]
   TimeoutFactor = 0.33
-
-[Keys]
-  GRPCServiceEnabled = true
-  AllowBadFilePermissions = true
-  RemoteAddress = ""
-  KeysDirectory = "../keys"
 
 [RPC]
   [RPC.TM]

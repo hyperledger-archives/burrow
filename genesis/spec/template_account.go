@@ -10,10 +10,10 @@ import (
 	"github.com/hyperledger/burrow/permission"
 )
 
-func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int, curve crypto.CurveType) (*genesis.Validator, error) {
+func (ta TemplateAccount) Validator(keyStore *keys.KeyStore, index int, curve crypto.CurveType) (*genesis.Validator, error) {
 	var err error
 	gv := new(genesis.Validator)
-	gv.PublicKey, gv.Address, err = ta.RealisePublicKeyAndAddress(keyClient, crypto.CurveTypeEd25519)
+	gv.PublicKey, gv.Address, err = ta.RealisePublicKeyAndAddress(keyStore, crypto.CurveTypeEd25519)
 	if err != nil {
 		return nil, err
 	}
@@ -43,10 +43,10 @@ func (ta TemplateAccount) AccountPermissions() (permission.AccountPermissions, e
 	}, nil
 }
 
-func (ta TemplateAccount) GenesisAccount(keyClient keys.KeyClient, index int, curve crypto.CurveType) (*genesis.Account, error) {
+func (ta TemplateAccount) GenesisAccount(keyStore *keys.KeyStore, index int, curve crypto.CurveType) (*genesis.Account, error) {
 	var err error
 	ga := new(genesis.Account)
-	ga.PublicKey, ga.Address, err = ta.RealisePublicKeyAndAddress(keyClient, curve)
+	ga.PublicKey, ga.Address, err = ta.RealisePublicKeyAndAddress(keyStore, curve)
 	if err != nil {
 		return nil, err
 	}
@@ -69,22 +69,29 @@ func (ta TemplateAccount) GenesisAccount(keyClient keys.KeyClient, index int, cu
 
 // Adds a public key and address to the template. If PublicKey will try to fetch it by Address.
 // If both PublicKey and Address are not set will use the keyClient to generate a new keypair
-func (ta TemplateAccount) RealisePublicKeyAndAddress(keyClient keys.KeyClient, curve crypto.CurveType) (pubKey crypto.PublicKey, address crypto.Address, err error) {
+func (ta TemplateAccount) RealisePublicKeyAndAddress(keyStore *keys.KeyStore, curve crypto.CurveType) (pubKey crypto.PublicKey, address crypto.Address, err error) {
 	if ta.PublicKey == nil {
+		var key *keys.Key
 		if ta.Address == nil {
 			// If neither PublicKey or Address set then generate a new one
-			address, err = keyClient.Generate(ta.Name, curve)
+			key, err = keyStore.Gen("", curve)
 			if err != nil {
 				return
 			}
+			if ta.Name != "" {
+				err = keyStore.AddName(ta.Name, key.Address)
+				if err != nil {
+					return
+				}
+			}
 		} else {
-			address = *ta.Address
+			key, err = keyStore.GetKey("", *ta.Address)
+			if err != nil {
+				return
+			}
 		}
-		// Get the (possibly existing) key
-		pubKey, err = keyClient.PublicKey(address)
-		if err != nil {
-			return
-		}
+		address = key.GetAddress()
+		pubKey = key.GetPublicKey()
 	} else {
 		address = (*ta.PublicKey).GetAddress()
 		if ta.Address != nil && *ta.Address != address {

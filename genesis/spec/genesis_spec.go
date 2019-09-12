@@ -37,7 +37,7 @@ type params struct {
 }
 
 // Produce a fully realised GenesisDoc from a template GenesisDoc that may omit values
-func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient, curve crypto.CurveType) (*genesis.GenesisDoc, error) {
+func (gs *GenesisSpec) GenesisDoc(keyStore *keys.KeyStore, curve crypto.CurveType) (*genesis.GenesisDoc, error) {
 	genesisDoc := new(genesis.GenesisDoc)
 	if gs.GenesisTime == nil {
 		genesisDoc.GenesisTime = time.Now()
@@ -81,7 +81,7 @@ func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient, curve crypto.CurveTy
 			ct = crypto.CurveTypeEd25519
 		}
 
-		account, err := templateAccount.GenesisAccount(keyClient, i, ct)
+		account, err := templateAccount.GenesisAccount(keyStore, i, ct)
 		if err != nil {
 			return nil, fmt.Errorf("could not create Account from template: %v", err)
 		}
@@ -90,7 +90,7 @@ func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient, curve crypto.CurveTy
 		if templateAccount.Balances().HasPower() {
 			// Note this does not modify the input template
 			templateAccount.Address = &account.Address
-			validator, err := templateAccount.Validator(keyClient, i, ct)
+			validator, err := templateAccount.Validator(keyStore, i, ct)
 			if err != nil {
 				return nil, fmt.Errorf("could not create Validator from template: %v", err)
 			}

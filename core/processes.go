@@ -9,10 +9,10 @@ import (
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/abci"
 	"github.com/hyperledger/burrow/execution"
-	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/process"
 	"github.com/hyperledger/burrow/project"
+	"github.com/hyperledger/burrow/proxy"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/lib/server"
 	"github.com/hyperledger/burrow/rpc/metrics"
@@ -36,10 +36,11 @@ const (
 	Web3ProcessName        = "rpcConfig/web3"
 	InfoProcessName        = "rpcConfig/info"
 	GRPCProcessName        = "rpcConfig/GRPC"
+	InternalProxyName      = "rpcConfig/Proxy"
 	MetricsProcessName     = "rpcConfig/metrics"
 )
 
-func DefaultProcessLaunchers(kern *Kernel, rpcConfig *rpc.RPCConfig, keysConfig *keys.KeysConfig) []process.Launcher {
+func DefaultProcessLaunchers(kern *Kernel, rpcConfig *rpc.RPCConfig, proxyConfig *proxy.ProxyConfig) []process.Launcher {
 	// Run announcer after Tendermint so it can get some details
 	return []process.Launcher{
 		ProfileLauncher(kern, rpcConfig.Profiler),
@@ -50,7 +51,8 @@ func DefaultProcessLaunchers(kern *Kernel, rpcConfig *rpc.RPCConfig, keysConfig 
 		Web3Launcher(kern, rpcConfig.Web3),
 		InfoLauncher(kern, rpcConfig.Info),
 		MetricsLauncher(kern, rpcConfig.Metrics),
-		GRPCLauncher(kern, rpcConfig.GRPC, keysConfig),
+		GRPCLauncher(kern, rpcConfig.GRPC),
+		InternalProxyLauncher(kern, proxyConfig),
 	}
 }
 
@@ -103,7 +105,7 @@ func NoConsensusLauncher(kern *Kernel) process.Launcher {
 			//proc := abci.NewProcess(kern.checker, kern.committer, kern.Blockchain, kern.txCodec, blockDuration, kern.Panic)
 			proc := abci.NewProcess(kern.committer, kern.Blockchain, kern.txCodec, blockDuration, kern.Panic)
 			// Provide execution accounts against backend state since we will commit immediately
-			accounts := execution.NewAccounts(kern.committer, kern.keyClient, AccountsRingMutexCount)
+			accounts := execution.NewAccounts(kern.committer, kern.keyStore, AccountsRingMutexCount)
 			// Elide consensus and use a CheckTx function that immediately commits any valid transaction
 			kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter, accounts, proc.CheckTx, kern.txCodec,
 				kern.Logger)
@@ -125,7 +127,7 @@ func TendermintLauncher(kern *Kernel) process.Launcher {
 
 			kern.Blockchain.SetBlockStore(bcm.NewBlockStore(nodeView.BlockStore()))
 			// Provide execution accounts against checker state so that we can assign sequence numbers
-			accounts := execution.NewAccounts(kern.checker, kern.keyClient, AccountsRingMutexCount)
+			accounts := execution.NewAccounts(kern.checker, kern.keyStore, AccountsRingMutexCount)
 			// Pass transactions to Tendermint's CheckTx function for broadcast and consensus
 			checkTx := kern.Node.Mempool().CheckTx
 			kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter, accounts, checkTx, kern.txCodec,
@@ -277,7 +279,7 @@ func MetricsLauncher(kern *Kernel, conf *rpc.MetricsConfig) process.Launcher {
 	}
 }
 
-func GRPCLauncher(kern *Kernel, conf *rpc.ServerConfig, keyConfig *keys.KeysConfig) process.Launcher {
+func GRPCLauncher(kern *Kernel, conf *rpc.ServerConfig) process.Launcher {
 	return process.Launcher{
 		Name:    GRPCProcessName,
 		Enabled: conf.Enabled,
@@ -313,6 +315,57 @@ func GRPCLauncher(kern *Kernel, conf *rpc.ServerConfig, keyConfig *keys.KeysConf
 				kern.Emitter, kern.Blockchain, kern.Logger))
 
 			rpcdump.RegisterDumpServer(grpcServer, rpcdump.NewDumpServer(kern.State, kern.Blockchain, kern.Logger))
+
+			// Provides metadata about services registered
+			// reflection.Register(grpcServer)
+
+			go grpcServer.Serve(listener)
+
+			return process.ShutdownFunc(func(ctx context.Context) error {
+				grpcServer.Stop()
+				// listener is closed for us
+				return nil
+			}), nil
+		},
+	}
+}
+
+func InternalProxyLauncher(kern *Kernel, conf *proxy.ProxyConfig) process.Launcher {
+	return process.Launcher{
+		Name:    InternalProxyName,
+		Enabled: conf.InternalProxyEnabled,
+		Launch: func() (process.Process, error) {
+			nodeView, err := kern.GetNodeView()
+			if err != nil {
+				return nil, err
+			}
+
+			listener, err := process.ListenerFromAddress(fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort))
+			if err != nil {
+				return nil, err
+			}
+			err = kern.registerListener(InternalProxyName, listener)
+			if err != nil {
+				return nil, err
+			}
+
+			grpcServer := rpc.NewGRPCServer(kern.Logger)
+			grpcServer.GetServiceInfo()
+
+			nameRegState := kern.State
+			proposalRegState := kern.State
+			nodeRegState := kern.State
+			rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(kern.State, nameRegState, nodeRegState,
+				proposalRegState, kern.Blockchain, kern.State, nodeView, kern.Logger))
+
+			txCodec := txs.NewProtobufCodec()
+			rpctransact.RegisterTransactServer(grpcServer,
+				rpctransact.NewTransactServer(kern.State, kern.Blockchain, kern.Transactor, txCodec, kern.Logger))
+
+			rpcevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer(kern.State,
+				kern.Emitter, kern.Blockchain, kern.Logger))
+
+			// FIXME: start keys service
 
 			// Provides metadata about services registered
 			// reflection.Register(grpcServer)
