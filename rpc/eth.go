@@ -14,8 +14,8 @@ import (
 	bin "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/encoding"
+	"github.com/hyperledger/burrow/encoding/rlp"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/state"
@@ -89,14 +89,13 @@ func (srv *EthService) Web3Sha3(req *web3.Web3Sha3Params) (*web3.Web3Sha3Result,
 		return nil, err
 	}
 
-	hash := sha3.NewKeccak256()
-	_, err = hash.Write(data)
+	hash, err := crypto.LegacyKeccak256Hash(data)
 	if err != nil {
 		return nil, err
 	}
 
 	return &web3.Web3Sha3Result{
-		HashedData: encoding.HexEncodeBytes(hash.Sum(nil)),
+		HashedData: encoding.HexEncodeBytes(hash),
 	}, nil
 }
 
@@ -449,28 +448,105 @@ func (srv *EthService) EthPendingTransactions() (*web3.EthPendingTransactionsRes
 }
 
 type RawTx struct {
-	Nonce    uint64          `json:"nonce"`
-	GasPrice uint64          `json:"gasPrice"`
-	Gas      uint64          `json:"gas"`
-	To       *crypto.Address `json:"to"`
-	Value    uint64          `json:"value"`
-	Input    []byte          `json:"input"`
+	Nonce    uint64 `json:"nonce"`
+	GasPrice uint64 `json:"gasPrice"`
+	Gas      uint64 `json:"gas"`
+	To       []byte `json:"to"`
+	Value    uint64 `json:"value"`
+	Data     []byte `json:"data"`
 
-	V *big.Int `json:"v"`
-	R *big.Int `json:"r"`
-	S *big.Int `json:"s"`
+	V uint64 `json:"v"`
+	R []byte `json:"r"`
+	S []byte `json:"s"`
 }
 
 func (srv *EthService) EthSendRawTransaction(req *web3.EthSendRawTransactionParams) (*web3.EthSendRawTransactionResult, error) {
-	// TODO: implement
+	data, err := encoding.HexDecodeToBytes(req.SignedTransactionData)
+	if err != nil {
+		return nil, err
+	}
 
-	// 1) hex decode
+	rawTx := new(RawTx)
+	err = rlp.Decode(data, rawTx)
+	if err != nil {
+		return nil, err
+	}
 
-	// 2) rlp decode
+	toHash := []interface{}{
+		rawTx.Nonce,
+		rawTx.GasPrice,
+		rawTx.Gas,
+		rawTx.To,
+		rawTx.Value,
+		rawTx.Data,
+		big.NewInt(1).Uint64(), uint(0), uint(0),
+	}
 
-	// 3) sign and send
+	enc, err := rlp.Encode(toHash)
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, web3.ErrNotFound
+	hash, err := crypto.LegacyKeccak256Hash(enc)
+	if err != nil {
+		return nil, err
+	}
+
+	sig := crypto.CompressedSignatureFromParams(rawTx.V-1, rawTx.R, rawTx.S)
+	pub, err := crypto.PublicKeyFromSignature(sig, hash)
+	if err != nil {
+		return nil, err
+	}
+	from := pub.GetAddress()
+	unc := crypto.UncompressedSignatureFromParams(rawTx.R, rawTx.S)
+	signature, err := crypto.SignatureFromBytes(unc, crypto.CurveTypeSecp256k1)
+	if err != nil {
+		return nil, err
+	}
+
+	to, err := crypto.AddressFromBytes(rawTx.To)
+	if err != nil {
+		return nil, err
+	}
+
+	txEnv := &txs.Envelope{
+		Signatories: []txs.Signatory{
+			{
+				Address:   &from,
+				PublicKey: pub,
+				Signature: signature,
+			},
+		},
+		Enc: txs.Envelope_RLP,
+		Tx: &txs.Tx{
+			ChainID: srv.blockchain.ChainID(),
+			Payload: &payload.SendTx{
+				Inputs: []*payload.TxInput{
+					{
+						Address:  from,
+						Amount:   rawTx.Value,
+						Sequence: rawTx.Nonce,
+					},
+				},
+				Outputs: []*payload.TxOutput{
+					{
+						Address: to,
+						Amount:  rawTx.Value,
+					},
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	txe, err := srv.trans.BroadcastTxSync(ctx, txEnv)
+	if err != nil {
+		return nil, err
+	} else if txe.Exception != nil {
+		return nil, txe.Exception.AsError()
+	}
+
+	return nil, nil
 }
 
 // EthSyncing returns this nodes syncing status (i.e. whether it has caught up)

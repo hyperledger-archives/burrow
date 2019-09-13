@@ -24,6 +24,7 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/encoding"
+	"github.com/hyperledger/burrow/encoding/rlp"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/txs/payload"
 )
@@ -67,7 +68,7 @@ func (tx *Tx) Sign(signingAccounts ...acm.AddressableSigner) (*Envelope, error) 
 
 // Generate SignBytes, panicking on any failure
 func (tx *Tx) MustSignBytes() []byte {
-	bs, err := tx.SignBytes()
+	bs, err := tx.SignBytes(Envelope_JSON)
 	if err != nil {
 		panic(err)
 	}
@@ -75,12 +76,47 @@ func (tx *Tx) MustSignBytes() []byte {
 }
 
 // Produces the canonical SignBytes (the Tx message that will be signed) for a Tx
-func (tx *Tx) SignBytes() ([]byte, error) {
+func (tx *Tx) SignBytes(env Envelope_Encoding) ([]byte, error) {
 	bs, err := json.Marshal(tx)
 	if err != nil {
 		return nil, fmt.Errorf("could not generate canonical SignBytes for Payload %v: %v", tx.Payload, err)
 	}
 	return bs, nil
+}
+
+func (tx *Tx) SignBytesRLPEncoded() ([]byte, error) {
+	switch pay := tx.Payload.(type) {
+	case *payload.SendTx:
+		if len(pay.Inputs) != 1 {
+			return nil, fmt.Errorf("RLP Encoded SendTx must have exactly one TxInput")
+		} else if len(pay.Outputs) != 1 {
+			return nil, fmt.Errorf("RLP Encoded SendTx must have exactly one TxOutput")
+		}
+		input := pay.Inputs[0]
+		output := pay.Outputs[0]
+		return rlp.Encode([]interface{}{
+			input.Sequence,
+			uint64(0),
+			uint64(0),
+			output.Address.Bytes(),
+			input.Amount,
+			[]byte{},
+			uint64(1), uint(0), uint(0),
+		})
+	case *payload.CallTx:
+		input := pay.Input
+		return rlp.Encode([]interface{}{
+			input.Sequence,
+			uint64(0),
+			pay.GasLimit,
+			pay.Address.Bytes(),
+			input.Amount,
+			pay.Data.Bytes(),
+			uint64(1), uint(0), uint(0),
+		})
+	default:
+		return nil, fmt.Errorf("tx type %v not supported for rlp encoding", tx.Payload.Type())
+	}
 }
 
 // Serialisation intermediate for switching on type

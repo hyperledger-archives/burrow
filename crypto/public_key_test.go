@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	hex "github.com/tmthrgd/go-hex"
 )
 
 func TestPublicKeySerialisation(t *testing.T) {
@@ -53,4 +55,18 @@ func assertFixedWidthEncodeRoundTrip(t *testing.T, p PublicKey) {
 	pOut, err := DecodePublicKeyFixedWidth(bs)
 	require.NoError(t, err)
 	assert.Equal(t, p, pOut)
+}
+
+func TestGetAddress(t *testing.T) {
+	privBytes := hex.MustDecodeString(`35622dddb842c9191ca8c2ca2a2b35a6aac90362d095b32f29d8e8abd63d55a5`)
+	privKey, err := PrivateKeyFromRawBytes(privBytes, CurveTypeSecp256k1)
+	require.NoError(t, err)
+	require.Equal(t, "F97798DF751DEB4B6E39D4CF998EE7CD4DCB9ACC", privKey.GetPublicKey().GetAddress().String())
+
+	_, pub := btcec.PrivKeyFromBytes(btcec.S256(), privBytes)
+	pubKey, err := PublicKeyFromBytes(pub.SerializeCompressed(), CurveTypeSecp256k1)
+	require.NoError(t, err)
+
+	require.Equal(t, "F97798DF751DEB4B6E39D4CF998EE7CD4DCB9ACC", pubKey.GetAddress().String())
+
 }

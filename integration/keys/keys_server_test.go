@@ -75,7 +75,8 @@ func TestKeysServer(t *testing.T) {
 				resp, err := cli.PublicKey(ctx, &keys.PubRequest{Address: addr})
 				require.NoError(t, err)
 
-				hash := sha3.Sha3([]byte("the hash of something!"))
+				msg := []byte("the hash of something!")
+				hash := sha3.Sha3(msg)
 
 				sig, err := cli.Sign(ctx, &keys.SignRequest{Address: addr, Message: hash})
 				require.NoError(t, err)
@@ -83,7 +84,7 @@ func TestKeysServer(t *testing.T) {
 				_, err = cli.Verify(ctx, &keys.VerifyRequest{
 					Signature: sig.GetSignature(),
 					PublicKey: resp.GetPublicKey(),
-					Message:   hash,
+					Message:   msg,
 				})
 				require.NoError(t, err)
 			})

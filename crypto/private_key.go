@@ -101,7 +101,7 @@ func PrivateKeyFromRawBytes(privKeyBytes []byte, curveType CurveType) (PrivateKe
 		if !bytes.Equal(privKey.Serialize(), privKeyBytes) {
 			return PrivateKey{}, fmt.Errorf("serialisation of Secp256k1 private key bytes does not equal")
 		}
-		return PrivateKey{PrivateKey: privKeyBytes, PublicKey: pubKey.SerializeCompressed(), CurveType: CurveTypeSecp256k1}, nil
+		return PrivateKey{PrivateKey: privKey.Serialize(), PublicKey: pubKey.SerializeCompressed(), CurveType: CurveTypeSecp256k1}, nil
 	default:
 		return PrivateKey{}, ErrInvalidCurve(curveType)
 	}

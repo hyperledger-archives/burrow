@@ -316,6 +316,8 @@ func (exe *executor) updateSignatory(sig txs.Signatory) error {
 	acc, err := exe.stateCache.GetAccount(*sig.Address)
 	if err != nil {
 		return fmt.Errorf("error getting account on which to set public key: %v", *sig.Address)
+	} else if acc == nil {
+		return fmt.Errorf("account %s does not exist", sig.Address)
 	}
 	// Important that verify has been run against signatories at this point
 	if sig.PublicKey.GetAddress() != acc.Address {

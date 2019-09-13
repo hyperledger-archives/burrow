@@ -51,6 +51,7 @@ require (
 	github.com/tendermint/iavl v0.12.4
 	github.com/tendermint/tendermint v0.32.3
 	github.com/tendermint/tm-db v0.1.1
+	github.com/test-go/testify v1.1.4
 	github.com/tmthrgd/go-hex v0.0.0-20190303111820-0bdcb15db631
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect

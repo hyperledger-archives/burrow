@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/integration"
@@ -22,6 +23,7 @@ func TestWeb3RPCService(t *testing.T) {
 	ctx := context.Background()
 
 	genesisAccounts := integration.MakePrivateAccounts("accounts", 2)
+	genesisAccounts = append(genesisAccounts, integration.MakeEthereumAccounts("ethereum", 2)...)
 	genesisDoc := integration.TestGenesisDoc(genesisAccounts, 0)
 
 	config, _ := integration.NewTestConfig(genesisDoc)
@@ -96,7 +98,8 @@ func TestWeb3RPCService(t *testing.T) {
 		t.Run("EthChainId", func(t *testing.T) {
 			result, err := eth.EthChainId()
 			require.NoError(t, err)
-			require.Equal(t, "Integration_Test_Chain-281EDE", result.ChainId)
+			doc := config.GenesisDoc
+			require.Equal(t, doc.ChainID(), result.ChainId)
 		})
 	})
 
@@ -118,14 +121,25 @@ func TestWeb3RPCService(t *testing.T) {
 			require.NotEmpty(t, txHash)
 		})
 
-		// t.Run("EthSendRawTransaction", func(t *testing.T) {
-		// 	raw := `0xf866068609184e72a0008303000094fa3caabc8eefec2b5e2895e5afbf79379e7268a7808025a06d35f407f418737eec80cba738c4301e683cfcecf19bac9a1aeb2316cac19d3ba002935ee46e3b6bd69168b0b07670699d71df5b32d5f66dbca5758bce2431c9e8`
+		t.Run("EthSendRawTransaction", func(t *testing.T) {
+			addr, err := crypto.AddressFromHexString("8A2FD214EAA33FA0CDED164FE7357E6382F6EEAD")
+			require.NoError(t, err)
 
-		// 	_, err := eth.EthSendRawTransaction(&web3.EthSendRawTransactionParams{
-		// 		SignedTransactionData: raw,
-		// 	})
-		// 	require.NoError(t, err)
-		// })
+			acc, err := kern.State.GetAccount(addr)
+			require.NoError(t, err)
+			before := acc.GetBalance()
+
+			raw := `0xf860018080948a2fd214eaa33fa0cded164fe7357e6382f6eead830300008026a0602370418b098a0509b6c6eb7835d4dd214bc4e5f15ee709f29cb17b3cadede1a018c42ee04c35dfb6d10bd5fef8967918be665a701fa1c54c601b4d38feb83244`
+			_, err = eth.EthSendRawTransaction(&web3.EthSendRawTransactionParams{
+				SignedTransactionData: raw,
+			})
+			require.NoError(t, err)
+
+			acc, err = kern.State.GetAccount(addr)
+			require.NoError(t, err)
+			after := acc.GetBalance()
+			require.Equal(t, after, before+196608)
+		})
 
 		t.Run("EthGetTransactionReceipt", func(t *testing.T) {
 			require.NotEmpty(t, txHash, "need tx hash to get tx receipt")

@@ -5,9 +5,6 @@ package payload
 
 import (
 	fmt "fmt"
-	io "io"
-	math "math"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
@@ -15,6 +12,8 @@ import (
 	github_com_hyperledger_burrow_crypto "github.com/hyperledger/burrow/crypto"
 	spec "github.com/hyperledger/burrow/genesis/spec"
 	permission "github.com/hyperledger/burrow/permission"
+	io "io"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -58,6 +57,7 @@ func (Ballot_ProposalState) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_678c914f1bee6d56, []int{15, 0}
 }
 
+// Any encodes a sum type for which only one should be set
 type Any struct {
 	CallTx               *CallTx     `protobuf:"bytes,1,opt,name=CallTx,proto3" json:"CallTx,omitempty"`
 	SendTx               *SendTx     `protobuf:"bytes,2,opt,name=SendTx,proto3" json:"SendTx,omitempty"`

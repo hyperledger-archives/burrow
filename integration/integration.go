@@ -205,6 +205,14 @@ func MakePrivateAccounts(sec string, n int) []*acm.PrivateAccount {
 	return accounts
 }
 
+func MakeEthereumAccounts(sec string, n int) []*acm.PrivateAccount {
+	accounts := make([]*acm.PrivateAccount, n)
+	for i := 0; i < n; i++ {
+		accounts[i] = acm.GenerateEthereumAccountFromSecret(sec + strconv.Itoa(i))
+	}
+	return accounts
+}
+
 func Shutdown(kern *core.Kernel) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

@@ -129,6 +129,16 @@ func GeneratePrivateAccountFromSecret(secret string) *PrivateAccount {
 	}.PrivateAccount()
 }
 
+func GenerateEthereumAccountFromSecret(secret string) *PrivateAccount {
+	privateKey := crypto.PrivateKeyFromSecret(secret, crypto.CurveTypeSecp256k1)
+	publicKey := privateKey.GetPublicKey()
+	return ConcretePrivateAccount{
+		Address:    publicKey.GetAddress(),
+		PublicKey:  publicKey,
+		PrivateKey: privateKey,
+	}.PrivateAccount()
+}
+
 func PrivateAccountFromPrivateKeyBytes(privKeyBytes []byte) (*PrivateAccount, error) {
 	privateKey, err := crypto.PrivateKeyFromRawBytes(privKeyBytes, crypto.CurveTypeEd25519)
 	if err != nil {

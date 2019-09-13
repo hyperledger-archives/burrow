@@ -2,6 +2,8 @@ package crypto
 
 import (
 	"fmt"
+
+	"golang.org/x/crypto/sha3"
 )
 
 type CurveType uint32
@@ -72,4 +74,13 @@ type Signer interface {
 // It typically removes signatures before serializing.
 type Signable interface {
 	SignBytes(chainID string) ([]byte, error)
+}
+
+func LegacyKeccak256Hash(data []byte) ([]byte, error) {
+	hash := sha3.NewLegacyKeccak256()
+	_, err := hash.Write(data)
+	if err != nil {
+		return nil, err
+	}
+	return hash.Sum(nil), nil
 }
