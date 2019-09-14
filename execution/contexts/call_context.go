@@ -3,13 +3,14 @@ package contexts
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/crypto"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
+	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/execution/native"
 	"github.com/hyperledger/burrow/execution/wasm"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
@@ -20,13 +21,13 @@ import (
 const GasLimit = uint64(1000000)
 
 type CallContext struct {
-	StateWriter acmstate.ReaderWriter
-	RunCall     bool
-	Blockchain  Blockchain
-	VMOptions   []func(*evm.VM)
-	Logger      *logging.Logger
-	tx          *payload.CallTx
-	txe         *exec.TxExecution
+	EVM        *evm.EVM
+	State      acmstate.ReaderWriter
+	Blockchain engine.Blockchain
+	RunCall    bool
+	Logger     *logging.Logger
+	tx         *payload.CallTx
+	txe        *exec.TxExecution
 }
 
 func (ctx *CallContext) Execute(txe *exec.TxExecution, p payload.Payload) error {
@@ -52,7 +53,7 @@ func (ctx *CallContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 func (ctx *CallContext) Precheck() (*acm.Account, *acm.Account, error) {
 	var outAcc *acm.Account
 	// Validate input
-	inAcc, err := ctx.StateWriter.GetAccount(ctx.tx.Input.Address)
+	inAcc, err := ctx.State.GetAccount(ctx.tx.Input.Address)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -77,33 +78,25 @@ func (ctx *CallContext) Precheck() (*acm.Account, *acm.Account, error) {
 	createContract := ctx.tx.Address == nil
 
 	if createContract {
-		if !hasCreateContractPermission(ctx.StateWriter, inAcc, ctx.Logger) {
+		if !hasCreateContractPermission(ctx.State, inAcc, ctx.Logger) {
 			return nil, nil, fmt.Errorf("account %s does not have CreateContract permission", ctx.tx.Input.Address)
 		}
 	} else {
-		if !hasCallPermission(ctx.StateWriter, inAcc, ctx.Logger) {
+		if !hasCallPermission(ctx.State, inAcc, ctx.Logger) {
 			return nil, nil, fmt.Errorf("account %s does not have Call permission", ctx.tx.Input.Address)
-		}
-		// check if its a native contract
-		if evm.IsRegisteredNativeContract(*ctx.tx.Address) {
-			return nil, nil, errors.ErrorCodef(errors.ErrorCodeReservedAddress,
-				"attempt to call a native contract at %s, "+
-					"but native contracts cannot be called using CallTx. Use a "+
-					"contract that calls the native contract or the appropriate tx "+
-					"type (eg. PermsTx, NameTx)", ctx.tx.Address)
 		}
 
 		// Output account may be nil if we are still in mempool and contract was created in same block as this tx
 		// but that's fine, because the account will be created properly when the create tx runs in the block
 		// and then this won't return nil. otherwise, we take their fee
 		// Note: ctx.tx.Address == nil iff createContract so dereference is okay
-		outAcc, err = ctx.StateWriter.GetAccount(*ctx.tx.Address)
+		outAcc, err = ctx.State.GetAccount(*ctx.tx.Address)
 		if err != nil {
 			return nil, nil, err
 		}
 	}
 
-	err = ctx.StateWriter.UpdateAccount(inAcc)
+	err = ctx.State.UpdateAccount(inAcc)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -116,7 +109,7 @@ func (ctx *CallContext) Check(inAcc *acm.Account, value uint64) error {
 	if err != nil {
 		return err
 	}
-	err = ctx.StateWriter.UpdateAccount(inAcc)
+	err = ctx.State.UpdateAccount(inAcc)
 	if err != nil {
 		return err
 	}
@@ -124,22 +117,14 @@ func (ctx *CallContext) Check(inAcc *acm.Account, value uint64) error {
 }
 
 func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error {
-	createContract := ctx.tx.Address == nil
 	// VM call variables
-	var (
-		gas     uint64         = ctx.tx.GasLimit
-		caller  crypto.Address = inAcc.Address
-		callee  crypto.Address = crypto.ZeroAddress // initialized below
-		code    []byte         = nil
-		wcode   []byte         = nil
-		ret     []byte         = nil
-		txCache                = evm.NewState(ctx.StateWriter, ctx.Blockchain.BlockHash, acmstate.Named("TxCache"))
-		params                 = evm.Params{
-			BlockHeight: ctx.Blockchain.LastBlockHeight() + 1,
-			BlockTime:   ctx.Blockchain.LastBlockTime().Unix(),
-			GasLimit:    GasLimit,
-		}
-	)
+	createContract := ctx.tx.Address == nil
+	caller := inAcc.Address
+	txCache := acmstate.NewCache(ctx.State, acmstate.Named("TxCache"))
+
+	var callee crypto.Address
+	var code []byte
+	var wcode []byte
 
 	// get or create callee
 	if createContract {
@@ -147,24 +132,18 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		callee = crypto.NewContractAddress(caller, ctx.txe.TxHash)
 		code = ctx.tx.Data
 		wcode = ctx.tx.WASM
-		txCache.CreateAccount(callee)
+		err := native.CreateAccount(txCache, callee)
+		if err != nil {
+			return err
+		}
 		ctx.Logger.TraceMsg("Creating new contract",
 			"contract_address", callee,
 			"init_code", code)
 
 		// store abis
-		if len(ctx.tx.ContractMeta) > 0 {
-			metamap := make([]*acm.ContractMeta, len(ctx.tx.ContractMeta))
-			for i, abi := range ctx.tx.ContractMeta {
-				metahash := acmstate.GetMetadataHash(abi.Meta)
-				metamap[i] = &acm.ContractMeta{
-					MetadataHash: metahash[:],
-					CodeHash:     abi.CodeHash,
-				}
-				txCache.SetMetadata(metahash, abi.Meta)
-			}
-
-			txCache.UpdateMetaMap(callee, metamap)
+		err = native.UpdateContractMeta(txCache, callee, ctx.tx.ContractMeta)
+		if err != nil {
+			return err
 		}
 	} else {
 		if outAcc == nil || (len(outAcc.EVMCode) == 0 && len(outAcc.WASMCode) == 0) {
@@ -194,69 +173,90 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 			return nil
 		}
 		callee = outAcc.Address
-		code = txCache.GetEVMCode(callee)
-		wcode = txCache.GetWASMCode(callee)
+		acc, err := txCache.GetAccount(callee)
+		if err != nil {
+			return err
+		}
+		code = acc.EVMCode
+		wcode = acc.WASMCode
 		ctx.Logger.TraceMsg("Calling existing contract",
 			"contract_address", callee,
 			"input", ctx.tx.Data,
-			"contract_code", code)
+			"evm_code", code,
+			"wasm_code", wcode)
 	}
 	ctx.Logger.Trace.Log("callee", callee)
 
+	var ret []byte
+	var err error
 	txHash := ctx.txe.Envelope.Tx.Hash()
-	logger := ctx.Logger.With(structure.TxHashKey, txHash)
-	var exception errors.CodedError
+	gas := ctx.tx.GasLimit
 	if len(wcode) != 0 {
 		if createContract {
-			txCache.InitWASMCode(callee, wcode)
-		}
-		ret, exception = wasm.RunWASM(txCache, callee, createContract, wcode, ctx.tx.Data)
-		if exception != nil {
-			// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
-			ctx.Logger.InfoMsg("Error on WASM execution",
-				structure.ErrorKey, exception)
-
-			ctx.txe.PushError(errors.ErrorCodef(exception.ErrorCode(), "call error: %s\n",
-				exception.String()))
-		} else {
-			ctx.Logger.TraceMsg("Successful execution")
-			err := txCache.Sync()
+			err := native.InitWASMCode(txCache, callee, wcode)
 			if err != nil {
 				return err
 			}
 		}
-		ctx.txe.Return(ret, ctx.tx.GasLimit-gas)
+		ret, err = wasm.RunWASM(txCache, callee, createContract, wcode, ctx.tx.Data)
+		if err != nil {
+			// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
+			ctx.Logger.InfoMsg("Error on WASM execution",
+				structure.ErrorKey, err)
+
+			ctx.txe.PushError(errors.Wrap(err, "call error"))
+		} else {
+			ctx.Logger.TraceMsg("Successful execution")
+			err := txCache.Sync(ctx.State)
+			if err != nil {
+				return err
+			}
+		}
 	} else {
 		// EVM
-		vmach := evm.NewVM(params, caller, txHash, logger, ctx.VMOptions...)
-		ret, exception = vmach.Call(txCache, ctx.txe, caller, callee, code, ctx.tx.Data, value, &gas)
-		if exception != nil {
+		ctx.EVM.SetNonce(txHash)
+		ctx.EVM.SetLogger(ctx.Logger.With(structure.TxHashKey, txHash))
+
+		params := engine.CallParams{
+			Caller: caller,
+			Callee: callee,
+			Input:  ctx.tx.Data,
+			Value:  value,
+			Gas:    &gas,
+		}
+
+		ret, err = ctx.EVM.Execute(txCache, ctx.Blockchain, ctx.txe, params, code)
+
+		if err != nil {
 			// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
 			ctx.Logger.InfoMsg("Error on EVM execution",
-				structure.ErrorKey, exception)
+				structure.ErrorKey, err)
 
-			ctx.txe.PushError(errors.ErrorCodef(exception.ErrorCode(), "call error: %s\nEVM call trace: %s",
-				exception.String(), ctx.txe.CallTrace()))
+			ctx.txe.PushError(errors.Wrapf(err, "call error: %v\nEVM call trace: %s",
+				err, ctx.txe.CallTrace()))
 		} else {
 			ctx.Logger.TraceMsg("Successful execution")
 			if createContract {
-				txCache.InitCode(callee, ret)
+				err := native.InitCode(txCache, callee, ret)
+				if err != nil {
+					return err
+				}
 			}
-			err := txCache.Sync()
+			err := txCache.Sync(ctx.State)
 			if err != nil {
 				return err
 			}
 		}
-		ctx.CallEvents(exception)
-		ctx.txe.Return(ret, ctx.tx.GasLimit-gas)
+		ctx.CallEvents(err)
 	}
-
+	ctx.txe.Return(ret, ctx.tx.GasLimit-gas)
 	// Create a receipt from the ret and whether it erred.
-	ctx.Logger.TraceMsg("VM call complete",
+	ctx.Logger.TraceMsg("VM Call complete",
 		"caller", caller,
 		"callee", callee,
 		"return", ret,
-		structure.ErrorKey, exception)
+		structure.ErrorKey, err)
+
 	return nil
 }
 

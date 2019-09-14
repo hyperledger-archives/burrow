@@ -42,7 +42,7 @@ const (
 	// Moderator permissions.
 	// These permissions concern the alteration of the chain permissions listed above. Each permission relates to a
 	// particular canonical permission mutation or query function. When an account is granted a moderation permission
-	// it is permitted to call that function. See snative.go for a marked-up description of what each function does.
+	// it is permitted to call that function. See contract.go for a marked-up description of what each function does.
 	HasBase
 	SetBase
 	UnsetBase
@@ -52,6 +52,9 @@ const (
 	RemoveRole
 
 	NumPermissions uint = 17 // NOTE Adjust this too. We can support upto 64
+
+	// To allow an operation with no permission flags set at all
+	None PermFlag = 0
 
 	TopPermFlag      PermFlag = 1 << (NumPermissions - 1)
 	AllPermFlags     PermFlag = TopPermFlag | (TopPermFlag - 1)

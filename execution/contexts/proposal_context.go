@@ -21,7 +21,7 @@ import (
 type ProposalContext struct {
 	ChainID           string
 	ProposalThreshold uint64
-	StateWriter       acmstate.ReaderWriter
+	State             acmstate.ReaderWriter
 	ValidatorSet      validator.Writer
 	ProposalReg       proposal.ReaderWriter
 	Logger            *logging.Logger
@@ -36,7 +36,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 		return fmt.Errorf("payload must be ProposalTx, but is: %v", txe.Envelope.Tx.Payload)
 	}
 	// Validate input
-	inAcc, err := ctx.StateWriter.GetAccount(ctx.tx.Input.Address)
+	inAcc, err := ctx.State.GetAccount(ctx.tx.Input.Address)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 	}
 
 	// check permission
-	if !hasProposalPermission(ctx.StateWriter, inAcc, ctx.Logger) {
+	if !hasProposalPermission(ctx.State, inAcc, ctx.Logger) {
 		return fmt.Errorf("account %s does not have Proposal permission", ctx.tx.Input.Address)
 	}
 
@@ -111,12 +111,12 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 	}
 
 	for _, v := range ballot.Votes {
-		acc, err := ctx.StateWriter.GetAccount(v.Address)
+		acc, err := ctx.State.GetAccount(v.Address)
 		if err != nil {
 			return err
 		}
 		// Belt and braces, should have already been checked
-		if !hasProposalPermission(ctx.StateWriter, acc, ctx.Logger) {
+		if !hasProposalPermission(ctx.State, acc, ctx.Logger) {
 			return fmt.Errorf("account %s does not have Proposal permission", ctx.tx.Input.Address)
 		}
 		votes[v.Address] = v.VotingWeight
@@ -124,7 +124,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 
 	for _, i := range ballot.Proposal.BatchTx.GetInputs() {
 		// Validate input
-		proposeAcc, err := ctx.StateWriter.GetAccount(i.Address)
+		proposeAcc, err := ctx.State.GetAccount(i.Address)
 		if err != nil {
 			return err
 		}
@@ -135,7 +135,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 			return errors.ErrorCodeInvalidAddress
 		}
 
-		if !hasBatchPermission(ctx.StateWriter, proposeAcc, ctx.Logger) {
+		if !hasBatchPermission(ctx.State, proposeAcc, ctx.Logger) {
 			return fmt.Errorf("account %s does not have batch permission", i.Address)
 		}
 
@@ -161,7 +161,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 		}
 	}
 
-	stateCache := acmstate.NewCache(ctx.StateWriter)
+	stateCache := acmstate.NewCache(ctx.State)
 
 	for i, step := range ballot.Proposal.BatchTx.Txs {
 		txEnv := txs.EnvelopeFromAny(ctx.ChainID, step)
@@ -203,7 +203,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 			}()
 
 			for _, input := range txEnv.Tx.GetInputs() {
-				acc, err := ctx.StateWriter.GetAccount(input.Address)
+				acc, err := ctx.State.GetAccount(input.Address)
 				if err != nil {
 					return err
 				}
@@ -219,7 +219,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 					return fmt.Errorf("proposal expired, sequence number %d for account %s wrong at step %d", input.Sequence, input.Address, i+1)
 				}
 
-				ctx.StateWriter.UpdateAccount(acc)
+				ctx.State.UpdateAccount(acc)
 			}
 
 			if txExecutor, ok := ctx.Contexts[txEnv.Tx.Type()]; ok {

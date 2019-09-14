@@ -453,6 +453,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
 			revertReason, err := abi.UnpackRevert(txe.Result.Return)
 			require.NoError(t, err)
+			require.NotNil(t, revertReason)
 			assert.Equal(t, *revertReason, "I have reverted")
 			return
 		})

@@ -34,28 +34,32 @@ func DefaultExecutionConfig() *ExecutionConfig {
 	}
 }
 
-type ExecutionOption func(*executor)
+type Option func(*executor)
 
-func VMOptions(vmOptions ...func(*evm.VM)) func(*executor) {
+func VMOptions(vmOptions *evm.Options) func(*executor) {
 	return func(exe *executor) {
 		exe.vmOptions = vmOptions
 	}
 }
 
-func (ec *ExecutionConfig) ExecutionOptions() ([]ExecutionOption, error) {
-	var exeOptions []ExecutionOption
-	var vmOptions []func(*evm.VM)
+func (ec *ExecutionConfig) ExecutionOptions() ([]Option, error) {
+	var exeOptions []Option
+	vmOptions := &evm.Options{
+		MemoryProvider:           evm.DefaultDynamicMemoryProvider,
+		CallStackMaxDepth:        ec.CallStackMaxDepth,
+		DataStackInitialCapacity: ec.DataStackInitialCapacity,
+		DataStackMaxDepth:        ec.DataStackMaxDepth,
+	}
 	for _, option := range ec.VMOptions {
 		switch option {
 		case DebugOpcodes:
-			vmOptions = append(vmOptions, evm.DebugOpcodes)
+			vmOptions.DebugOpcodes = true
 		case DumpTokens:
-			vmOptions = append(vmOptions, evm.DumpTokens)
+			vmOptions.DumpTokens = true
 		default:
 			return nil, fmt.Errorf("VM option '%s' not recognised", option)
 		}
 	}
-	vmOptions = append(vmOptions, evm.StackOptions(ec.CallStackMaxDepth, ec.DataStackInitialCapacity, ec.DataStackMaxDepth))
-	exeOptions = append(exeOptions, VMOptions(vmOptions...))
+	exeOptions = append(exeOptions, VMOptions(vmOptions))
 	return exeOptions, nil
 }

@@ -20,15 +20,25 @@ message Account {
     option (gogoproto.goproto_stringer) = false;
     bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
     crypto.PublicKey PublicKey = 2 [(gogoproto.nullable) = false];
+    // Sequence counts the number of transactions that have been accepted from this account
     uint64 Sequence = 3;
+    // The account's current native token balance
     uint64 Balance = 4;
+    // We expect exactly one of EVMCode, WASMCode, and NativeName to be non-empty
+    // EVM bytecode
     bytes EVMCode = 5 [(gogoproto.customtype) = "Bytecode", (gogoproto.nullable) = false];
     permission.AccountPermissions Permissions = 6 [(gogoproto.nullable) = false];
+    // WASM bytecode
     bytes WASMCode = 7 [(gogoproto.customtype) = "Bytecode", (gogoproto.jsontag) = ",omitempty", (gogoproto.nullable) = false];
+    // Fully qualified name of native contract for which this Account is a sentinel
+    string NativeName = 11 [(gogoproto.jsontag) = ",omitempty"];
+    // The sha3 hash of the code associated with thie account
     bytes CodeHash = 8 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false, (gogoproto.jsontag) = "-"];
+    // Pointer to the Metadata associated with this account
     repeated ContractMeta ContractMeta = 9;
-    // The metadata is stored in the deployed account. When the deployed account creates new account (from Solidity/EVM), they point to the original deployed
-    // account where the metadata is stored. This original account is called the forebear.
+    // The metadata is stored in the deployed account. When the deployed account creates new account
+    // (from Solidity/EVM), they point to the original deployed account where the metadata is stored.
+    // This original account is called the forebear.
     bytes Forebear = 10 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address"];
 }
 

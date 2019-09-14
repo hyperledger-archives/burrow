@@ -17,7 +17,7 @@ import (
 )
 
 type GovernanceContext struct {
-	StateWriter  acmstate.ReaderWriter
+	State        acmstate.ReaderWriter
 	ValidatorSet validator.ReaderWriter
 	Logger       *logging.Logger
 	tx           *payload.GovTx
@@ -34,13 +34,13 @@ func (ctx *GovernanceContext) Execute(txe *exec.TxExecution, p payload.Payload) 
 		return fmt.Errorf("payload must be NameTx, but is: %v", txe.Envelope.Tx.Payload)
 	}
 	// Nothing down with any incoming funds at this point
-	accounts, _, err := getInputs(ctx.StateWriter, ctx.tx.Inputs)
+	accounts, _, err := getInputs(ctx.State, ctx.tx.Inputs)
 	if err != nil {
 		return err
 	}
 
 	// ensure all inputs have root permissions
-	err = allHavePermission(ctx.StateWriter, permission.Root, accounts, ctx.Logger)
+	err = allHavePermission(ctx.State, permission.Root, accounts, ctx.Logger)
 	if err != nil {
 		return errors.Wrap(err, "at least one input lacks permission for GovTx")
 	}
@@ -50,11 +50,11 @@ func (ctx *GovernanceContext) Execute(txe *exec.TxExecution, p payload.Payload) 
 	}
 
 	for _, update := range ctx.tx.AccountUpdates {
-		err := VerifyIdentity(ctx.StateWriter, update)
+		err := VerifyIdentity(ctx.State, update)
 		if err != nil {
 			return fmt.Errorf("GovTx: %v", err)
 		}
-		account, err := getOrMakeOutput(ctx.StateWriter, accounts, *update.Address, ctx.Logger)
+		account, err := getOrMakeOutput(ctx.State, accounts, *update.Address, ctx.Logger)
 		if err != nil {
 			return err
 		}
@@ -107,7 +107,7 @@ func (ctx *GovernanceContext) UpdateAccount(account *acm.Account, update *spec.T
 	if err != nil {
 		return
 	}
-	err = ctx.StateWriter.UpdateAccount(account)
+	err = ctx.State.UpdateAccount(account)
 	return
 }
 

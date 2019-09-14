@@ -20,7 +20,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/hyperledger/burrow/execution/evm"
+	"github.com/hyperledger/burrow/execution/native"
 	"github.com/iancoleman/strcase"
 )
 
@@ -67,11 +67,11 @@ func init() {
 
 type solidityContract struct {
 	SolidityPragmaVersion string
-	*evm.SNativeContractDescription
+	*native.Contract
 }
 
 type solidityFunction struct {
-	*evm.SNativeFunctionDescription
+	*native.Function
 }
 
 //
@@ -79,15 +79,15 @@ type solidityFunction struct {
 //
 
 // Create a templated solidityContract from an SNative contract description
-func NewSolidityContract(contract *evm.SNativeContractDescription) *solidityContract {
+func NewSolidityContract(contract *native.Contract) *solidityContract {
 	return &solidityContract{
-		SolidityPragmaVersion:      ">=0.4.24",
-		SNativeContractDescription: contract,
+		SolidityPragmaVersion: ">=0.4.24",
+		Contract:              contract,
 	}
 }
 
 func (contract *solidityContract) Comment() string {
-	return comment(contract.SNativeContractDescription.Comment)
+	return comment(contract.Contract.Comment)
 }
 
 // Get a version of the contract name to be used for an instance of the contract
@@ -103,7 +103,7 @@ func (contract *solidityContract) InstanceName() string {
 
 func (contract *solidityContract) Address() string {
 	return fmt.Sprintf("0x%s",
-		contract.SNativeContractDescription.Address())
+		contract.Contract.Address())
 }
 
 // Generate Solidity code for this SNative contract
@@ -117,7 +117,7 @@ func (contract *solidityContract) Solidity() (string, error) {
 }
 
 func (contract *solidityContract) Functions() []*solidityFunction {
-	functions := contract.SNativeContractDescription.Functions()
+	functions := contract.Contract.Functions()
 	solidityFunctions := make([]*solidityFunction, len(functions))
 	for i, function := range functions {
 		solidityFunctions[i] = NewSolidityFunction(function)
@@ -130,7 +130,7 @@ func (contract *solidityContract) Functions() []*solidityFunction {
 //
 
 // Create a templated solidityFunction from an SNative function description
-func NewSolidityFunction(function *evm.SNativeFunctionDescription) *solidityFunction {
+func NewSolidityFunction(function *native.Function) *solidityFunction {
 	return &solidityFunction{function}
 }
 
@@ -157,7 +157,7 @@ func (function *solidityFunction) RetList() string {
 }
 
 func (function *solidityFunction) Comment() string {
-	return comment(function.SNativeFunctionDescription.Comment)
+	return comment(function.Function.Comment)
 }
 
 func (function *solidityFunction) SolidityIndent(indentLevel uint) (string, error) {

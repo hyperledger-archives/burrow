@@ -17,9 +17,9 @@ package commands
 import (
 	"fmt"
 
+	"github.com/hyperledger/burrow/execution/native"
 	cli "github.com/jawher/mow.cli"
 
-	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/util/snatives/templates"
 )
 
@@ -28,10 +28,16 @@ func Snatives(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
 		contractsOpt := cmd.StringsOpt("c contracts", nil, "Contracts to generate")
 		cmd.Action = func() {
-			contracts := evm.SNativeContracts()
+			callables := native.MustDefaultNatives().Callables()
 			// Index of next contract
 			i := 1
-			for _, contract := range contracts {
+			for _, callable := range callables {
+				contract, ok := callable.(*native.Contract)
+				if !ok {
+					// For now we will omit loose functions (i.e. precompiles)
+					// They can't be called via Solidity interface contract anyway.
+					continue
+				}
 				if len(*contractsOpt) > 0 {
 					found := false
 					for _, c := range *contractsOpt {
@@ -50,7 +56,7 @@ func Snatives(output Output) func(cmd *cli.Cmd) {
 						contract.Name, err)
 				}
 				fmt.Println(solidity)
-				if i < len(contracts) {
+				if i < len(callables) {
 					// Two new lines between contracts as per Solidity style guide
 					// (the template gives us 1 trailing new line)
 					fmt.Println()

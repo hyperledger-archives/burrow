@@ -64,47 +64,57 @@ func (qs *queryServer) GetAccount(ctx context.Context, param *GetAccountParam) (
 // GetMetadata returns empty metadata string if not found. Metadata can be retrieved by account, or
 // by metadata hash
 func (qs *queryServer) GetMetadata(ctx context.Context, param *GetMetadataParam) (*MetadataResult, error) {
-	metadata := MetadataResult{}
-	var metahash acmstate.MetadataHash
+	metadata := &MetadataResult{}
+	var contractMeta *acm.ContractMeta
 	var err error
 	if param.Address != nil {
 		acc, err := qs.accounts.GetAccount(*param.Address)
 		if err != nil {
-			return &metadata, err
+			return metadata, err
 		}
 		if acc != nil && acc.CodeHash != nil {
 			codehash := acc.CodeHash
 			if acc.Forebear != nil {
 				acc, err = qs.accounts.GetAccount(*acc.Forebear)
 				if err != nil {
-					return &metadata, err
+					return metadata, err
 				}
 			}
 
-			found := false
 			for _, m := range acc.ContractMeta {
 				if bytes.Equal(m.CodeHash, codehash) {
-					copy(metahash[:], m.MetadataHash)
-					found = true
+					contractMeta = m
 					break
 				}
 			}
 
-			if !found {
+			if contractMeta == nil {
 				deployCodehash := compile.GetDeployCodeHash(acc.EVMCode, *param.Address)
 				for _, m := range acc.ContractMeta {
 					if bytes.Equal(m.CodeHash, deployCodehash) {
-						copy(metahash[:], m.MetadataHash)
+						contractMeta = m
 						break
 					}
 				}
 			}
 		}
 	} else if param.MetadataHash != nil {
-		copy(metahash[:], *param.MetadataHash)
+		contractMeta = &acm.ContractMeta{
+			MetadataHash: *param.MetadataHash,
+		}
 	}
-	metadata.Metadata, err = qs.accounts.GetMetadata(metahash)
-	return &metadata, err
+	if contractMeta == nil {
+		return metadata, nil
+	}
+	if contractMeta.Metadata != "" {
+		// Looks like the metadata is already memoised - (e.g. by native.State)
+		metadata.Metadata = contractMeta.Metadata
+	} else {
+		var metadataHash acmstate.MetadataHash
+		copy(metadataHash[:], contractMeta.MetadataHash)
+		metadata.Metadata, err = qs.accounts.GetMetadata(metadataHash)
+	}
+	return metadata, err
 }
 
 func (qs *queryServer) GetStorage(ctx context.Context, param *GetStorageParam) (*StorageValue, error) {

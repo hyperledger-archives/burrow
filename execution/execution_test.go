@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/execution/native"
 	"github.com/tendermint/tendermint/abci/types"
 
 	"github.com/hyperledger/burrow/execution/state"
@@ -40,7 +41,6 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/errors"
-	"github.com/hyperledger/burrow/execution/evm"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -52,13 +52,13 @@ import (
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/require"
 	dbm "github.com/tendermint/tm-db"
-	hex "github.com/tmthrgd/go-hex"
+	"github.com/tmthrgd/go-hex"
 )
 
 var (
+	permissionsContract = native.Permissions.GetByName("Permissions").(*native.Contract)
 	dbBackend           = dbm.MemDBBackend
 	dbDir               = ""
-	permissionsContract = evm.SNativeContracts()["Permissions"]
 )
 
 /*
@@ -454,7 +454,8 @@ func TestCreatePermission(t *testing.T) {
 	require.NoError(t, err)
 
 	// ensure the contract is there
-	contractAddr := crypto.NewContractAddress(tx.Input.Address, txHash(tx))
+	hash := getTxHash(tx)
+	contractAddr := crypto.NewContractAddress(tx.Input.Address, hash)
 	contractAcc := getAccount(exe.stateCache, contractAddr)
 	if contractAcc == nil {
 		t.Fatalf("failed to create contract %s", contractAddr)
@@ -478,7 +479,8 @@ func TestCreatePermission(t *testing.T) {
 	require.NoError(t, err)
 
 	// ensure the contract is there
-	contractAddr = crypto.NewContractAddress(tx.Input.Address, txHash(tx))
+	hash = getTxHash(tx)
+	contractAddr = crypto.NewContractAddress(tx.Input.Address, hash)
 	contractAcc = getAccount(exe.stateCache, contractAddr)
 	if contractAcc == nil {
 		t.Fatalf("failed to create contract %s", contractAddr)
@@ -677,7 +679,7 @@ func TestCreateAccountPermission(t *testing.T) {
 var DougAddress crypto.Address
 
 func init() {
-	copy(DougAddress[:], ([]byte)("THISISDOUG"))
+	copy(DougAddress[:], "THISISDOUG")
 }
 
 func TestSNativeCALL(t *testing.T) {
@@ -727,9 +729,11 @@ func TestSNativeCALL(t *testing.T) {
 	fmt.Printf("Doug: %s\n", exe.permString(t, users[3].GetAddress()))
 	fmt.Println("\n#### SetBase")
 	// SetBase
+
 	snativeAddress, pF, data = snativePermTestInputCALL("setBase", users[3], permission.Bond, false)
 	testSNativeCALLExpectFail(t, exe, doug, snativeAddress, data)
 	testSNativeCALLExpectPass(t, exe, doug, pF, snativeAddress, data, func(ret []byte) error { return nil })
+
 	snativeAddress, pF, data = snativePermTestInputCALL("hasBase", users[3], permission.Bond, false)
 	testSNativeCALLExpectPass(t, exe, doug, pF, snativeAddress, data, func(ret []byte) error {
 		// return value should be true or false as a 32 byte array...
@@ -1204,7 +1208,7 @@ func TestContractSend(t *testing.T) {
 		}
 	*/
 	callerCode := hex.MustDecodeString("60606040526000357c0100000000000000000000000000000000000000000000000000000000900480633e58c58c146037576035565b005b604b6004808035906020019091905050604d565b005b8073ffffffffffffffffffffffffffffffffffffffff16600034604051809050600060405180830381858888f19350505050505b5056")
-	sendData := hex.MustDecodeString(hex.EncodeToString(abi.GetFunctionID("send(address)").Bytes()))
+	sendData := abi.GetFunctionID("send(address)").Bytes()
 
 	acc0 := getAccount(st, privAccounts[0].GetAddress())
 	acc1 := getAccount(st, privAccounts[1].GetAddress())
@@ -1233,11 +1237,14 @@ func TestContractSend(t *testing.T) {
 	}
 
 	exe := makeExecutor(st)
+	fmt.Println("acc0", acc0.Address)
+	fmt.Println("acc1", acc1.Address)
+	fmt.Println("acc2", acc2.Address, acc2.Balance)
 	err = exe.signExecuteCommit(tx, privAccounts[0])
 	require.NoError(t, err)
 
 	acc2 = getAccount(st, acc2.Address)
-	assert.Equal(t, sendAmt+acc2Balance, acc2.Balance, "value should be transferred")
+	require.Equal(t, sendAmt+acc2Balance, acc2.Balance, "value should be transferred")
 
 	addressNonExistent := newAddress("nobody")
 
@@ -1630,8 +1637,9 @@ func (te *testExecutor) updateAccounts(t *testing.T, accounts ...*acm.Account) {
 	}
 }
 
-func txHash(tx payload.Payload) []byte {
-	return txs.Enclose(testChainID, tx).Tx.Hash()
+func getTxHash(tx payload.Payload) []byte {
+	txEnv := txs.Enclose(testChainID, tx)
+	return txEnv.Tx.Hash()
 }
 
 func (te *testExecutor) signExecuteCommit(tx payload.Payload, signers ...acm.AddressableSigner) error {
@@ -1755,9 +1763,9 @@ func boolToWord256(v bool) Word256 {
 }
 
 func permNameToFuncID(name string) []byte {
-	function, err := permissionsContract.FunctionByName(name)
-	if err != nil {
-		panic("didn't find snative function signature!")
+	function := permissionsContract.FunctionByName(name)
+	if function == nil {
+		panic(fmt.Errorf("could not find permission function %s", name))
 	}
 	id := function.Abi().FunctionID
 	return id[:]
@@ -1765,7 +1773,7 @@ func permNameToFuncID(name string) []byte {
 
 func snativePermTestInputCALL(name string, user acm.AddressableSigner, perm permission.PermFlag,
 	val bool) (addr crypto.Address, pF permission.PermFlag, data []byte) {
-	addr = permissionsContract.Address()
+	addr = native.Permissions.GetByName("Permissions").Address()
 	switch name {
 	case "hasBase", "unsetBase":
 		data = user.GetAddress().Word256().Bytes()
@@ -1834,7 +1842,7 @@ func snativeRoleTestInputTx(name string, user acm.AddressableSigner, role string
 func callContractCode(contractAddr crypto.Address) []byte {
 	// calldatacopy into mem and use as input to call
 	memOff, inputOff := byte(0x0), byte(0x0)
-	value := byte(0x1)
+	value := byte(0x0)
 	inOff := byte(0x0)
 	retOff, retSize := byte(0x0), byte(0x20)
 

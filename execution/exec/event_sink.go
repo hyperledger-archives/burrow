@@ -1,13 +1,12 @@
-package evm
+package exec
 
 import (
 	"github.com/hyperledger/burrow/execution/errors"
-	"github.com/hyperledger/burrow/execution/exec"
 )
 
 type EventSink interface {
-	Call(call *exec.CallEvent, exception *errors.Exception) error
-	Log(log *exec.LogEvent) error
+	Call(call *CallEvent, exception *errors.Exception) error
+	Log(log *LogEvent) error
 }
 
 type noopEventSink struct {
@@ -17,11 +16,11 @@ func NewNoopEventSink() *noopEventSink {
 	return &noopEventSink{}
 }
 
-func (es *noopEventSink) Call(call *exec.CallEvent, exception *errors.Exception) error {
+func (es *noopEventSink) Call(call *CallEvent, exception *errors.Exception) error {
 	return nil
 }
 
-func (es *noopEventSink) Log(log *exec.LogEvent) error {
+func (es *noopEventSink) Log(log *LogEvent) error {
 	return nil
 }
 
@@ -35,7 +34,7 @@ func NewLogFreeEventSink(eventSink EventSink) *logFreeEventSink {
 	}
 }
 
-func (esc *logFreeEventSink) Log(log *exec.LogEvent) error {
+func (esc *logFreeEventSink) Log(log *LogEvent) error {
 	return errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
 		"Log emitted from contract %v, but current call should be log-free", log.Address)
 }

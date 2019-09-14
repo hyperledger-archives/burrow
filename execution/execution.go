@@ -20,22 +20,21 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/hyperledger/burrow/acm/validator"
-	"github.com/hyperledger/burrow/genesis"
-
-	"github.com/hyperledger/burrow/execution/state"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
+	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/contexts"
+	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/execution/proposal"
+	"github.com/hyperledger/burrow/execution/state"
+	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/permission"
@@ -92,7 +91,7 @@ type executor struct {
 	emitter          *event.Emitter
 	block            *exec.BlockExecution
 	logger           *logging.Logger
-	vmOptions        []func(*evm.VM)
+	vmOptions        *evm.Options
 	contexts         map[payload.Type]contexts.Context
 }
 
@@ -111,23 +110,23 @@ func ParamsFromGenesis(genesisDoc *genesis.GenesisDoc) Params {
 var _ BatchExecutor = (*executor)(nil)
 
 // Wraps a cache of what is variously known as the 'check cache' and 'mempool'
-func NewBatchChecker(backend ExecutorState, params Params, blockchain contexts.Blockchain, logger *logging.Logger,
-	options ...ExecutionOption) BatchExecutor {
+func NewBatchChecker(backend ExecutorState, params Params, blockchain engine.Blockchain, logger *logging.Logger,
+	options ...Option) BatchExecutor {
 
 	return newExecutor("CheckCache", false, params, backend, blockchain, nil,
 		logger.WithScope("NewBatchExecutor"), options...)
 }
 
-func NewBatchCommitter(backend ExecutorState, params Params, blockchain contexts.Blockchain, emitter *event.Emitter,
-	logger *logging.Logger, options ...ExecutionOption) BatchCommitter {
+func NewBatchCommitter(backend ExecutorState, params Params, blockchain engine.Blockchain, emitter *event.Emitter,
+	logger *logging.Logger, options ...Option) BatchCommitter {
 
 	return newExecutor("CommitCache", true, params, backend, blockchain, emitter,
 		logger.WithScope("NewBatchCommitter"), options...)
 
 }
 
-func newExecutor(name string, runCall bool, params Params, backend ExecutorState, blockchain contexts.Blockchain,
-	emitter *event.Emitter, logger *logging.Logger, options ...ExecutionOption) *executor {
+func newExecutor(name string, runCall bool, params Params, backend ExecutorState, blockchain engine.Blockchain,
+	emitter *event.Emitter, logger *logging.Logger, options ...Option) *executor {
 	exe := &executor{
 		runCall:          runCall,
 		params:           params,
@@ -147,40 +146,40 @@ func newExecutor(name string, runCall bool, params Params, backend ExecutorState
 	}
 
 	baseContexts := map[payload.Type]contexts.Context{
-		payload.TypeSend: &contexts.SendContext{
-			StateWriter: exe.stateCache,
-			Logger:      exe.logger,
-		},
 		payload.TypeCall: &contexts.CallContext{
-			Blockchain:  blockchain,
-			StateWriter: exe.stateCache,
-			RunCall:     runCall,
-			VMOptions:   exe.vmOptions,
-			Logger:      exe.logger,
+			EVM:        evm.Default(),
+			Blockchain: blockchain,
+			State:      exe.stateCache,
+			RunCall:    runCall,
+			Logger:     exe.logger,
+		},
+		payload.TypeSend: &contexts.SendContext{
+			State:  exe.stateCache,
+			Logger: exe.logger,
 		},
 		payload.TypeName: &contexts.NameContext{
-			Blockchain:  blockchain,
-			StateWriter: exe.stateCache,
-			NameReg:     exe.nameRegCache,
-			Logger:      exe.logger,
+			Blockchain: blockchain,
+			State:      exe.stateCache,
+			NameReg:    exe.nameRegCache,
+			Logger:     exe.logger,
 		},
 		payload.TypePermissions: &contexts.PermissionsContext{
-			StateWriter: exe.stateCache,
-			Logger:      exe.logger,
+			State:  exe.stateCache,
+			Logger: exe.logger,
 		},
 		payload.TypeGovernance: &contexts.GovernanceContext{
 			ValidatorSet: exe.validatorCache,
-			StateWriter:  exe.stateCache,
+			State:        exe.stateCache,
 			Logger:       exe.logger,
 		},
 		payload.TypeBond: &contexts.BondContext{
 			ValidatorSet: exe.validatorCache,
-			StateWriter:  exe.stateCache,
+			State:        exe.stateCache,
 			Logger:       exe.logger,
 		},
 		payload.TypeUnbond: &contexts.UnbondContext{
 			ValidatorSet: exe.validatorCache,
-			StateWriter:  exe.stateCache,
+			State:        exe.stateCache,
 			Logger:       exe.logger,
 		},
 	}
@@ -189,7 +188,7 @@ func newExecutor(name string, runCall bool, params Params, backend ExecutorState
 		payload.TypeProposal: &contexts.ProposalContext{
 			ChainID:           params.ChainID,
 			ProposalThreshold: params.ProposalThreshold,
-			StateWriter:       exe.stateCache,
+			State:             exe.stateCache,
 			ProposalReg:       exe.proposalRegCache,
 			Logger:            exe.logger,
 			Contexts:          baseContexts,
@@ -299,7 +298,11 @@ func (exe *executor) validateInputsAndStorePublicKeys(txEnv *txs.Envelope) error
 			return errors.ErrorCodeInsufficientFunds
 		}
 		// Check for Input permission
-		v, err := acc.Permissions.Base.Compose(acmstate.GlobalAccountPermissions(exe.stateCache).Base).Get(permission.Input)
+		globalPerms, err := acmstate.GlobalAccountPermissions(exe.stateCache)
+		if err != nil {
+			return err
+		}
+		v, err := acc.Permissions.Base.Compose(globalPerms.Base).Get(permission.Input)
 		if err != nil {
 			return err
 		}
