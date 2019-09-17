@@ -19,7 +19,6 @@ service Keys {
     rpc Verify(VerifyRequest) returns (VerifyResponse);
     rpc Import(ImportRequest) returns (ImportResponse);
     rpc ImportJSON(ImportJSONRequest) returns (ImportResponse);
-    rpc Export(ExportRequest) returns (ExportResponse);
     rpc Hash(HashRequest) returns (HashResponse);
     rpc RemoveName(RemoveNameRequest) returns (RemoveNameResponse);
     rpc List(ListRequest) returns (ListResponse);
@@ -83,19 +82,6 @@ message ImportRequest {
     string Name = 2;
     string CurveType = 3;
     bytes KeyBytes = 4;
-}
-
-message ExportRequest {
-    string Passphrase = 1;
-    string Name = 2;
-    string Address = 3;
-}
-
-message ExportResponse {
-    bytes Publickey = 1;
-    bytes Privatekey = 2;
-    bytes Address = 3;
-    string CurveType = 4;
 }
 
 message SignRequest {

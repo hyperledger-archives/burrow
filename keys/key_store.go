@@ -350,6 +350,106 @@ func (ks *KeyStore) RmName(name string) error {
 	return os.Remove(path.Join(dir, name))
 }
 
+func (ks *KeyStore) List(name string) ([]*KeyID, error) {
+	byname, err := ks.GetAllNames()
+	if err != nil {
+		return nil, err
+	}
+
+	var list []*KeyID
+
+	if name != "" {
+		if addr, ok := byname[name]; ok {
+			list = append(list, &KeyID{
+				KeyName: getAddressNames(addr, byname),
+				Address: addr,
+			})
+		} else {
+			if addr, err := crypto.AddressFromHexString(name); err == nil {
+				_, err := ks.GetKey("", addr)
+				if err == nil {
+					list = append(list, &KeyID{
+						Address: addr,
+						KeyName: getAddressNames(addr, byname)},
+					)
+				}
+			}
+		}
+	} else {
+		// list all address
+		addrs, err := ks.GetAllAddresses()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, addr := range addrs {
+			list = append(list, &KeyID{
+				KeyName: getAddressNames(addr, byname),
+				Address: addr,
+			})
+		}
+	}
+
+	return list, nil
+}
+
+func (ks *KeyStore) ImportJSON(passphrase, jsonImport string) (*crypto.Address, error) {
+	keyJSON := []byte(jsonImport)
+	var addr crypto.Address
+	var err error
+	addrB := IsValidKeyJson(keyJSON)
+	if addrB != nil {
+		addr, err = crypto.AddressFromBytes(addrB)
+		if err != nil {
+			return nil, err
+		}
+		err = ks.StoreKeyRaw(addr, keyJSON)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		j1 := new(struct {
+			CurveType   string
+			Address     string
+			PublicKey   string
+			AddressHash string
+			PrivateKey  string
+		})
+
+		err := json.Unmarshal(keyJSON, &j1)
+		if err != nil {
+			return nil, err
+		}
+
+		addr, err = crypto.AddressFromHexString(j1.Address)
+		if err != nil {
+			return nil, err
+		}
+
+		curveT, err := crypto.CurveTypeFromString(j1.CurveType)
+		if err != nil {
+			return nil, err
+		}
+
+		privKey, err := hex.DecodeString(j1.PrivateKey)
+		if err != nil {
+			return nil, err
+		}
+
+		key, err := NewKeyFromPriv(curveT, privKey)
+		if err != nil {
+			return nil, err
+		}
+
+		// store the new key
+		if err = ks.StoreKey(passphrase, key); err != nil {
+			return nil, err
+		}
+	}
+
+	return &addr, nil
+}
+
 func (ks *KeyStore) StoreKeyEncrypted(passphrase string, key *Key) error {
 	authArray := []byte(passphrase)
 	salt := make([]byte, 32)
