@@ -203,3 +203,5 @@ func (p *Proxy) GetStats(ctx context.Context, param *rpcquery.GetStatsParam) (*r
 func (p *Proxy) GetBlockHeader(ctx context.Context, param *rpcquery.GetBlockParam) (*types.Header, error) {
 	return p.query.GetBlockHeader(ctx, param)
 }
+
+//

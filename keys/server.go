@@ -40,37 +40,24 @@ func (p *KeyStore) GenerateKey(ctx context.Context, in *GenRequest) (*GenRespons
 		}
 	}
 
-	return &GenResponse{Address: key.Address.String()}, nil
-}
-
-func (p *KeyStore) Export(ctx context.Context, in *ExportRequest) (*ExportResponse, error) {
-	addr, err := p.GetNameAddr(in.GetName(), in.GetAddress())
-	if err != nil {
-		return nil, err
-	}
-
-	// No phrase needed for public key. I hope.
-	key, err := p.GetKey(in.GetPassphrase(), addr.Bytes())
-	if err != nil {
-		return nil, err
-	}
-
-	return &ExportResponse{
-		Address:    addr.Bytes(),
-		CurveType:  key.CurveType.String(),
-		Publickey:  key.PublicKey.PublicKey[:],
-		Privatekey: key.PrivateKey.PrivateKey[:],
-	}, nil
+	return &GenResponse{Address: key.Address}, nil
 }
 
 func (p *KeyStore) PublicKey(ctx context.Context, in *PubRequest) (*PubResponse, error) {
-	addr, err := p.GetNameAddr(in.GetName(), in.GetAddress())
-	if err != nil {
-		return nil, err
+	var addr crypto.Address
+	var err error
+
+	if in.Address != nil {
+		addr = *in.Address
+	} else {
+		addr, err = p.GetName(in.GetName())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// No phrase needed for public key. I hope.
-	key, err := p.GetKey("", addr.Bytes())
+	key, err := p.GetKey("", addr)
 	if key == nil {
 		return nil, err
 	}
@@ -79,12 +66,19 @@ func (p *KeyStore) PublicKey(ctx context.Context, in *PubRequest) (*PubResponse,
 }
 
 func (p *KeyStore) Sign(ctx context.Context, in *SignRequest) (*SignResponse, error) {
-	addr, err := p.GetNameAddr(in.GetName(), in.GetAddress())
-	if err != nil {
-		return nil, err
+	var addr crypto.Address
+	var err error
+
+	if in.Address != nil {
+		addr = *in.Address
+	} else {
+		addr, err = p.GetName(in.GetName())
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	key, err := p.GetKey(in.GetPassphrase(), addr.Bytes())
+	key, err := p.GetKey(in.GetPassphrase(), addr)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +87,7 @@ func (p *KeyStore) Sign(ctx context.Context, in *SignRequest) (*SignResponse, er
 	if err != nil {
 		return nil, err
 	}
-	return &SignResponse{Signature: sig}, err
+	return &SignResponse{Signature: *sig}, err
 }
 
 func (p *KeyStore) Verify(ctx context.Context, in *VerifyRequest) (*VerifyResponse, error) {
@@ -103,16 +97,13 @@ func (p *KeyStore) Verify(ctx context.Context, in *VerifyRequest) (*VerifyRespon
 	if in.GetMessage() == nil {
 		return nil, fmt.Errorf("must provide a message")
 	}
-	if in.GetSignature() == nil {
-		return nil, fmt.Errorf("must provide a signature")
-	}
 
-	sig := in.GetSignature()
+	sig := in.Signature
 	pubkey, err := crypto.PublicKeyFromBytes(in.GetPublicKey(), sig.GetCurveType())
 	if err != nil {
 		return nil, err
 	}
-	err = pubkey.Verify(in.GetMessage(), sig)
+	err = pubkey.Verify(in.GetMessage(), &sig)
 	if err != nil {
 		return nil, err
 	}
@@ -139,12 +130,8 @@ func (p *KeyStore) Hash(ctx context.Context, in *HashRequest) (*HashResponse, er
 
 func (p *KeyStore) ImportJSON(ctx context.Context, in *ImportJSONRequest) (*ImportResponse, error) {
 	keyJSON := []byte(in.GetJSON())
-	addr := IsValidKeyJson(keyJSON)
-	if addr != nil {
-		addr, err := crypto.AddressFromBytes(addr)
-		if err != nil {
-			return nil, err
-		}
+	addr, err := IsValidKeyJson(keyJSON)
+	if err == nil {
 		err = p.StoreKeyRaw(addr, keyJSON)
 		if err != nil {
 			return nil, err
@@ -163,7 +150,7 @@ func (p *KeyStore) ImportJSON(ctx context.Context, in *ImportJSONRequest) (*Impo
 			return nil, err
 		}
 
-		addr, err = hex.DecodeString(j1.Address)
+		addr, err = crypto.AddressFromHexString(j1.Address)
 		if err != nil {
 			return nil, err
 		}
@@ -188,7 +175,7 @@ func (p *KeyStore) ImportJSON(ctx context.Context, in *ImportJSONRequest) (*Impo
 			return nil, err
 		}
 	}
-	return &ImportResponse{Address: hex.EncodeUpperToString(addr)}, nil
+	return &ImportResponse{Address: addr}, nil
 }
 
 func (p *KeyStore) Import(ctx context.Context, in *ImportRequest) (*ImportResponse, error) {
@@ -212,7 +199,7 @@ func (p *KeyStore) Import(ctx context.Context, in *ImportRequest) (*ImportRespon
 			return nil, err
 		}
 	}
-	return &ImportResponse{Address: key.Address.String()}, nil
+	return &ImportResponse{Address: key.Address}, nil
 }
 
 func (p *KeyStore) List(ctx context.Context, in *ListRequest) (*ListResponse, error) {
@@ -228,10 +215,9 @@ func (p *KeyStore) List(ctx context.Context, in *ListRequest) (*ListResponse, er
 			list = append(list, &KeyID{KeyName: getAddressNames(addr, byname), Address: addr})
 		} else {
 			if addr, err := crypto.AddressFromHexString(in.KeyName); err == nil {
-				_, err := p.GetKey("", addr.Bytes())
+				_, err := p.GetKey("", addr)
 				if err == nil {
-					address := addr.String()
-					list = append(list, &KeyID{Address: address, KeyName: getAddressNames(address, byname)})
+					list = append(list, &KeyID{Address: addr, KeyName: getAddressNames(addr, byname)})
 				}
 			}
 		}
@@ -250,7 +236,7 @@ func (p *KeyStore) List(ctx context.Context, in *ListRequest) (*ListResponse, er
 	return &ListResponse{Key: list}, nil
 }
 
-func getAddressNames(address string, byname map[string]string) []string {
+func getAddressNames(address crypto.Address, byname map[string]crypto.Address) []string {
 	names := make([]string, 0)
 
 	for name, addr := range byname {
@@ -275,10 +261,5 @@ func (p *KeyStore) AddName(ctx context.Context, in *AddNameRequest) (*AddNameRes
 		return nil, fmt.Errorf("please specify a name")
 	}
 
-	addr, err := crypto.AddressFromHexString(in.GetAddress())
-	if err != nil {
-		return nil, err
-	}
-
-	return &AddNameResponse{}, p.SetName(in.GetKeyname(), addr)
+	return &AddNameResponse{}, p.SetName(in.GetKeyname(), in.Address)
 }

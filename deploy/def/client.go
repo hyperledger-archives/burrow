@@ -132,7 +132,16 @@ func (c *Client) ParseAddress(key string, logger *logging.Logger) (crypto.Addres
 	if err != nil {
 		return crypto.Address{}, err
 	}
-	return c.keyClient.GetAddressForKeyName(key)
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+	resp, err := c.keysClient.List(ctx, &keys.ListRequest{KeyName: key})
+	if err != nil {
+		return crypto.Address{}, err
+	}
+	if len(resp.Key) != 1 {
+		return crypto.Address{}, fmt.Errorf("key %s not found", key)
+	}
+	return resp.Key[0].Address, nil
 }
 
 func (c *Client) GetAccount(address crypto.Address) (*acm.Account, error) {
@@ -275,7 +284,27 @@ func (c *Client) CreateKey(keyName, curveTypeString string, logger *logging.Logg
 			return crypto.PublicKey{}, err
 		}
 	}
-	address, err := c.keyClient.Generate(keyName, curveType)
+
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+
+	resp, err := c.keysClient.GenerateKey(ctx, &keys.GenRequest{
+		KeyName:   keyName,
+		CurveType: curveType.String(),
+	})
+	if err == nil {
+		resp, err := c.keysClient.PublicKey(ctx, &keys.PubRequest{
+			Address: &resp.Address,
+		})
+		if err != nil {
+			return crypto.PublicKey{}, err
+		}
+
+		return crypto.PublicKeyFromBytes(resp.PublicKey, curveType)
+	}
+
+	// generate locally
+	key, err := c.KeyStore.Gen("", curveType)
 	if err != nil {
 		return crypto.PublicKey{}, err
 	}
@@ -420,7 +449,12 @@ func (c *Client) PublicKeyFromAddress(address *crypto.Address) (*crypto.PublicKe
 	if c.keyClient != nil {
 		return nil, fmt.Errorf("key client is not set")
 	}
-	pubKey, err := c.keyClient.PublicKey(*address)
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
+	defer cancel()
+
+	resp, err := c.keysClient.PublicKey(ctx, &keys.PubRequest{
+		Address: address,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve public key from keys server: %v", err)
 	}

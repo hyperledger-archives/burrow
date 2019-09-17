@@ -11,7 +11,8 @@ import (
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
-	crypto "github.com/hyperledger/burrow/crypto"
+	_ "github.com/hyperledger/burrow/crypto"
+	github_com_hyperledger_burrow_crypto "github.com/hyperledger/burrow/crypto"
 	grpc "google.golang.org/grpc"
 )
 
@@ -272,10 +273,10 @@ func (*GenRequest) XXX_MessageName() string {
 }
 
 type GenResponse struct {
-	Address              string   `protobuf:"bytes,1,opt,name=Address,proto3" json:"Address,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Address              github_com_hyperledger_burrow_crypto.Address `protobuf:"bytes,1,opt,name=Address,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Address"`
+	XXX_NoUnkeyedLiteral struct{}                                     `json:"-"`
+	XXX_unrecognized     []byte                                       `json:"-"`
+	XXX_sizecache        int32                                        `json:"-"`
 }
 
 func (m *GenResponse) Reset()         { *m = GenResponse{} }
@@ -302,23 +303,16 @@ func (m *GenResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GenResponse proto.InternalMessageInfo
 
-func (m *GenResponse) GetAddress() string {
-	if m != nil {
-		return m.Address
-	}
-	return ""
-}
-
 func (*GenResponse) XXX_MessageName() string {
 	return "keys.GenResponse"
 }
 
 type PubRequest struct {
-	Address              string   `protobuf:"bytes,1,opt,name=Address,proto3" json:"Address,omitempty"`
-	Name                 string   `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Address              *github_com_hyperledger_burrow_crypto.Address `protobuf:"bytes,1,opt,name=Address,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Address,omitempty"`
+	Name                 string                                        `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                                      `json:"-"`
+	XXX_unrecognized     []byte                                        `json:"-"`
+	XXX_sizecache        int32                                         `json:"-"`
 }
 
 func (m *PubRequest) Reset()         { *m = PubRequest{} }
@@ -344,13 +338,6 @@ func (m *PubRequest) XXX_DiscardUnknown() {
 }
 
 var xxx_messageInfo_PubRequest proto.InternalMessageInfo
-
-func (m *PubRequest) GetAddress() string {
-	if m != nil {
-		return m.Address
-	}
-	return ""
-}
 
 func (m *PubRequest) GetName() string {
 	if m != nil {
@@ -464,10 +451,10 @@ func (*ImportJSONRequest) XXX_MessageName() string {
 }
 
 type ImportResponse struct {
-	Address              string   `protobuf:"bytes,1,opt,name=Address,proto3" json:"Address,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Address              github_com_hyperledger_burrow_crypto.Address `protobuf:"bytes,1,opt,name=Address,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Address"`
+	XXX_NoUnkeyedLiteral struct{}                                     `json:"-"`
+	XXX_unrecognized     []byte                                       `json:"-"`
+	XXX_sizecache        int32                                        `json:"-"`
 }
 
 func (m *ImportResponse) Reset()         { *m = ImportResponse{} }
@@ -493,13 +480,6 @@ func (m *ImportResponse) XXX_DiscardUnknown() {
 }
 
 var xxx_messageInfo_ImportResponse proto.InternalMessageInfo
-
-func (m *ImportResponse) GetAddress() string {
-	if m != nil {
-		return m.Address
-	}
-	return ""
-}
 
 func (*ImportResponse) XXX_MessageName() string {
 	return "keys.ImportResponse"
@@ -571,21 +551,131 @@ func (*ImportRequest) XXX_MessageName() string {
 	return "keys.ImportRequest"
 }
 
+type ExportRequest struct {
+	Passphrase           string                                        `protobuf:"bytes,1,opt,name=Passphrase,proto3" json:"Passphrase,omitempty"`
+	Name                 string                                        `protobuf:"bytes,2,opt,name=Name,proto3" json:"Name,omitempty"`
+	Address              *github_com_hyperledger_burrow_crypto.Address `protobuf:"bytes,3,opt,name=Address,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Address,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                                      `json:"-"`
+	XXX_unrecognized     []byte                                        `json:"-"`
+	XXX_sizecache        int32                                         `json:"-"`
+}
+
+func (m *ExportRequest) Reset()         { *m = ExportRequest{} }
+func (m *ExportRequest) String() string { return proto.CompactTextString(m) }
+func (*ExportRequest) ProtoMessage()    {}
+func (*ExportRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_9084e97af2346a26, []int{12}
+}
+func (m *ExportRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExportRequest.Unmarshal(m, b)
+}
+func (m *ExportRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExportRequest.Marshal(b, m, deterministic)
+}
+func (m *ExportRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExportRequest.Merge(m, src)
+}
+func (m *ExportRequest) XXX_Size() int {
+	return xxx_messageInfo_ExportRequest.Size(m)
+}
+func (m *ExportRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExportRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExportRequest proto.InternalMessageInfo
+
+func (m *ExportRequest) GetPassphrase() string {
+	if m != nil {
+		return m.Passphrase
+	}
+	return ""
+}
+
+func (m *ExportRequest) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (*ExportRequest) XXX_MessageName() string {
+	return "keys.ExportRequest"
+}
+
+type ExportResponse struct {
+	Publickey            []byte                                       `protobuf:"bytes,1,opt,name=Publickey,proto3" json:"Publickey,omitempty"`
+	Privatekey           []byte                                       `protobuf:"bytes,2,opt,name=Privatekey,proto3" json:"Privatekey,omitempty"`
+	Address              github_com_hyperledger_burrow_crypto.Address `protobuf:"bytes,3,opt,name=Address,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Address"`
+	CurveType            string                                       `protobuf:"bytes,4,opt,name=CurveType,proto3" json:"CurveType,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                                     `json:"-"`
+	XXX_unrecognized     []byte                                       `json:"-"`
+	XXX_sizecache        int32                                        `json:"-"`
+}
+
+func (m *ExportResponse) Reset()         { *m = ExportResponse{} }
+func (m *ExportResponse) String() string { return proto.CompactTextString(m) }
+func (*ExportResponse) ProtoMessage()    {}
+func (*ExportResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_9084e97af2346a26, []int{13}
+}
+func (m *ExportResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExportResponse.Unmarshal(m, b)
+}
+func (m *ExportResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExportResponse.Marshal(b, m, deterministic)
+}
+func (m *ExportResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExportResponse.Merge(m, src)
+}
+func (m *ExportResponse) XXX_Size() int {
+	return xxx_messageInfo_ExportResponse.Size(m)
+}
+func (m *ExportResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExportResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExportResponse proto.InternalMessageInfo
+
+func (m *ExportResponse) GetPublickey() []byte {
+	if m != nil {
+		return m.Publickey
+	}
+	return nil
+}
+
+func (m *ExportResponse) GetPrivatekey() []byte {
+	if m != nil {
+		return m.Privatekey
+	}
+	return nil
+}
+
+func (m *ExportResponse) GetCurveType() string {
+	if m != nil {
+		return m.CurveType
+	}
+	return ""
+}
+
+func (*ExportResponse) XXX_MessageName() string {
+	return "keys.ExportResponse"
+}
+
 type SignRequest struct {
-	Passphrase           string   `protobuf:"bytes,1,opt,name=Passphrase,proto3" json:"Passphrase,omitempty"`
-	Address              string   `protobuf:"bytes,2,opt,name=Address,proto3" json:"Address,omitempty"`
-	Name                 string   `protobuf:"bytes,3,opt,name=Name,proto3" json:"Name,omitempty"`
-	Message              []byte   `protobuf:"bytes,4,opt,name=Message,proto3" json:"Message,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Passphrase           string                                        `protobuf:"bytes,1,opt,name=Passphrase,proto3" json:"Passphrase,omitempty"`
+	Address              *github_com_hyperledger_burrow_crypto.Address `protobuf:"bytes,2,opt,name=Address,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Address,omitempty"`
+	Name                 string                                        `protobuf:"bytes,3,opt,name=Name,proto3" json:"Name,omitempty"`
+	Message              []byte                                        `protobuf:"bytes,4,opt,name=Message,proto3" json:"Message,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                                      `json:"-"`
+	XXX_unrecognized     []byte                                        `json:"-"`
+	XXX_sizecache        int32                                         `json:"-"`
 }
 
 func (m *SignRequest) Reset()         { *m = SignRequest{} }
 func (m *SignRequest) String() string { return proto.CompactTextString(m) }
 func (*SignRequest) ProtoMessage()    {}
 func (*SignRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_9084e97af2346a26, []int{12}
+	return fileDescriptor_9084e97af2346a26, []int{14}
 }
 func (m *SignRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SignRequest.Unmarshal(m, b)
@@ -612,13 +702,6 @@ func (m *SignRequest) GetPassphrase() string {
 	return ""
 }
 
-func (m *SignRequest) GetAddress() string {
-	if m != nil {
-		return m.Address
-	}
-	return ""
-}
-
 func (m *SignRequest) GetName() string {
 	if m != nil {
 		return m.Name
@@ -638,17 +721,17 @@ func (*SignRequest) XXX_MessageName() string {
 }
 
 type SignResponse struct {
-	Signature            *crypto.Signature `protobuf:"bytes,3,opt,name=Signature,proto3" json:"Signature,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
-	XXX_unrecognized     []byte            `json:"-"`
-	XXX_sizecache        int32             `json:"-"`
+	Signature            github_com_hyperledger_burrow_crypto.Signature `protobuf:"bytes,1,opt,name=Signature,proto3,customtype=github.com/hyperledger/burrow/crypto.Signature" json:"Signature"`
+	XXX_NoUnkeyedLiteral struct{}                                       `json:"-"`
+	XXX_unrecognized     []byte                                         `json:"-"`
+	XXX_sizecache        int32                                          `json:"-"`
 }
 
 func (m *SignResponse) Reset()         { *m = SignResponse{} }
 func (m *SignResponse) String() string { return proto.CompactTextString(m) }
 func (*SignResponse) ProtoMessage()    {}
 func (*SignResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_9084e97af2346a26, []int{13}
+	return fileDescriptor_9084e97af2346a26, []int{15}
 }
 func (m *SignResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SignResponse.Unmarshal(m, b)
@@ -668,31 +751,24 @@ func (m *SignResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_SignResponse proto.InternalMessageInfo
 
-func (m *SignResponse) GetSignature() *crypto.Signature {
-	if m != nil {
-		return m.Signature
-	}
-	return nil
-}
-
 func (*SignResponse) XXX_MessageName() string {
 	return "keys.SignResponse"
 }
 
 type VerifyRequest struct {
-	PublicKey            []byte            `protobuf:"bytes,2,opt,name=PublicKey,proto3" json:"PublicKey,omitempty"`
-	Message              []byte            `protobuf:"bytes,3,opt,name=Message,proto3" json:"Message,omitempty"`
-	Signature            *crypto.Signature `protobuf:"bytes,5,opt,name=Signature,proto3" json:"Signature,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
-	XXX_unrecognized     []byte            `json:"-"`
-	XXX_sizecache        int32             `json:"-"`
+	PublicKey            []byte                                         `protobuf:"bytes,1,opt,name=PublicKey,proto3" json:"PublicKey,omitempty"`
+	Message              []byte                                         `protobuf:"bytes,2,opt,name=Message,proto3" json:"Message,omitempty"`
+	Signature            github_com_hyperledger_burrow_crypto.Signature `protobuf:"bytes,3,opt,name=Signature,proto3,customtype=github.com/hyperledger/burrow/crypto.Signature" json:"Signature"`
+	XXX_NoUnkeyedLiteral struct{}                                       `json:"-"`
+	XXX_unrecognized     []byte                                         `json:"-"`
+	XXX_sizecache        int32                                          `json:"-"`
 }
 
 func (m *VerifyRequest) Reset()         { *m = VerifyRequest{} }
 func (m *VerifyRequest) String() string { return proto.CompactTextString(m) }
 func (*VerifyRequest) ProtoMessage()    {}
 func (*VerifyRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_9084e97af2346a26, []int{14}
+	return fileDescriptor_9084e97af2346a26, []int{16}
 }
 func (m *VerifyRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_VerifyRequest.Unmarshal(m, b)
@@ -726,13 +802,6 @@ func (m *VerifyRequest) GetMessage() []byte {
 	return nil
 }
 
-func (m *VerifyRequest) GetSignature() *crypto.Signature {
-	if m != nil {
-		return m.Signature
-	}
-	return nil
-}
-
 func (*VerifyRequest) XXX_MessageName() string {
 	return "keys.VerifyRequest"
 }
@@ -749,7 +818,7 @@ func (m *HashRequest) Reset()         { *m = HashRequest{} }
 func (m *HashRequest) String() string { return proto.CompactTextString(m) }
 func (*HashRequest) ProtoMessage()    {}
 func (*HashRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_9084e97af2346a26, []int{15}
+	return fileDescriptor_9084e97af2346a26, []int{17}
 }
 func (m *HashRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HashRequest.Unmarshal(m, b)
@@ -798,7 +867,7 @@ func (m *HashResponse) Reset()         { *m = HashResponse{} }
 func (m *HashResponse) String() string { return proto.CompactTextString(m) }
 func (*HashResponse) ProtoMessage()    {}
 func (*HashResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_9084e97af2346a26, []int{16}
+	return fileDescriptor_9084e97af2346a26, []int{18}
 }
 func (m *HashResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_HashResponse.Unmarshal(m, b)
@@ -830,18 +899,18 @@ func (*HashResponse) XXX_MessageName() string {
 }
 
 type KeyID struct {
-	Address              string   `protobuf:"bytes,1,opt,name=Address,proto3" json:"Address,omitempty"`
-	KeyName              []string `protobuf:"bytes,2,rep,name=KeyName,proto3" json:"KeyName,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Address              github_com_hyperledger_burrow_crypto.Address `protobuf:"bytes,1,opt,name=Address,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Address"`
+	KeyName              []string                                     `protobuf:"bytes,2,rep,name=KeyName,proto3" json:"KeyName,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                                     `json:"-"`
+	XXX_unrecognized     []byte                                       `json:"-"`
+	XXX_sizecache        int32                                        `json:"-"`
 }
 
 func (m *KeyID) Reset()         { *m = KeyID{} }
 func (m *KeyID) String() string { return proto.CompactTextString(m) }
 func (*KeyID) ProtoMessage()    {}
 func (*KeyID) Descriptor() ([]byte, []int) {
-	return fileDescriptor_9084e97af2346a26, []int{17}
+	return fileDescriptor_9084e97af2346a26, []int{19}
 }
 func (m *KeyID) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_KeyID.Unmarshal(m, b)
@@ -860,13 +929,6 @@ func (m *KeyID) XXX_DiscardUnknown() {
 }
 
 var xxx_messageInfo_KeyID proto.InternalMessageInfo
-
-func (m *KeyID) GetAddress() string {
-	if m != nil {
-		return m.Address
-	}
-	return ""
-}
 
 func (m *KeyID) GetKeyName() []string {
 	if m != nil {
@@ -890,7 +952,7 @@ func (m *ListResponse) Reset()         { *m = ListResponse{} }
 func (m *ListResponse) String() string { return proto.CompactTextString(m) }
 func (*ListResponse) ProtoMessage()    {}
 func (*ListResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_9084e97af2346a26, []int{18}
+	return fileDescriptor_9084e97af2346a26, []int{20}
 }
 func (m *ListResponse) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ListResponse.Unmarshal(m, b)
@@ -922,18 +984,18 @@ func (*ListResponse) XXX_MessageName() string {
 }
 
 type AddNameRequest struct {
-	Keyname              string   `protobuf:"bytes,1,opt,name=Keyname,proto3" json:"Keyname,omitempty"`
-	Address              string   `protobuf:"bytes,2,opt,name=Address,proto3" json:"Address,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Keyname              string                                       `protobuf:"bytes,1,opt,name=Keyname,proto3" json:"Keyname,omitempty"`
+	Address              github_com_hyperledger_burrow_crypto.Address `protobuf:"bytes,2,opt,name=Address,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Address"`
+	XXX_NoUnkeyedLiteral struct{}                                     `json:"-"`
+	XXX_unrecognized     []byte                                       `json:"-"`
+	XXX_sizecache        int32                                        `json:"-"`
 }
 
 func (m *AddNameRequest) Reset()         { *m = AddNameRequest{} }
 func (m *AddNameRequest) String() string { return proto.CompactTextString(m) }
 func (*AddNameRequest) ProtoMessage()    {}
 func (*AddNameRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_9084e97af2346a26, []int{19}
+	return fileDescriptor_9084e97af2346a26, []int{21}
 }
 func (m *AddNameRequest) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AddNameRequest.Unmarshal(m, b)
@@ -956,13 +1018,6 @@ var xxx_messageInfo_AddNameRequest proto.InternalMessageInfo
 func (m *AddNameRequest) GetKeyname() string {
 	if m != nil {
 		return m.Keyname
-	}
-	return ""
-}
-
-func (m *AddNameRequest) GetAddress() string {
-	if m != nil {
-		return m.Address
 	}
 	return ""
 }
@@ -995,6 +1050,10 @@ func init() {
 	golang_proto.RegisterType((*ImportResponse)(nil), "keys.ImportResponse")
 	proto.RegisterType((*ImportRequest)(nil), "keys.ImportRequest")
 	golang_proto.RegisterType((*ImportRequest)(nil), "keys.ImportRequest")
+	proto.RegisterType((*ExportRequest)(nil), "keys.ExportRequest")
+	golang_proto.RegisterType((*ExportRequest)(nil), "keys.ExportRequest")
+	proto.RegisterType((*ExportResponse)(nil), "keys.ExportResponse")
+	golang_proto.RegisterType((*ExportResponse)(nil), "keys.ExportResponse")
 	proto.RegisterType((*SignRequest)(nil), "keys.SignRequest")
 	golang_proto.RegisterType((*SignRequest)(nil), "keys.SignRequest")
 	proto.RegisterType((*SignResponse)(nil), "keys.SignResponse")
@@ -1017,51 +1076,58 @@ func init() { proto.RegisterFile("keys.proto", fileDescriptor_9084e97af2346a26) 
 func init() { golang_proto.RegisterFile("keys.proto", fileDescriptor_9084e97af2346a26) }
 
 var fileDescriptor_9084e97af2346a26 = []byte{
-	// 701 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x55, 0xcb, 0x4e, 0xdb, 0x4a,
-	0x18, 0x56, 0x62, 0x73, 0xc9, 0xef, 0xc0, 0x21, 0x3e, 0x1c, 0x9d, 0xc8, 0xa2, 0x11, 0x9a, 0x0d,
-	0xa8, 0x52, 0x92, 0x2a, 0x54, 0x5d, 0x94, 0x05, 0xe2, 0x22, 0x51, 0x9a, 0x96, 0x22, 0x53, 0x75,
-	0xd1, 0x9d, 0x43, 0x7e, 0x92, 0x08, 0x12, 0xbb, 0x33, 0x36, 0xad, 0x17, 0x7d, 0x90, 0xbe, 0x4d,
-	0x97, 0x7d, 0x84, 0x2e, 0x2b, 0x78, 0x91, 0x6a, 0x6e, 0xf1, 0x4c, 0xa0, 0x34, 0xbb, 0xf9, 0xaf,
-	0xdf, 0x7f, 0x1f, 0x80, 0x2b, 0xcc, 0x59, 0x2b, 0xa1, 0x71, 0x1a, 0xfb, 0x2e, 0x7f, 0x07, 0xcd,
-	0xc1, 0x28, 0x1d, 0x66, 0xbd, 0xd6, 0x45, 0x3c, 0x6e, 0x0f, 0xe2, 0x41, 0xdc, 0x16, 0xc2, 0x5e,
-	0x76, 0x29, 0x28, 0x41, 0x88, 0x97, 0x34, 0x0a, 0xaa, 0x17, 0x34, 0x4f, 0x52, 0x45, 0x91, 0x2d,
-	0xf0, 0xde, 0x8c, 0x58, 0x1a, 0xe2, 0xa7, 0x0c, 0x59, 0xea, 0xd7, 0x61, 0xa9, 0x8b, 0xf9, 0x69,
-	0x34, 0xc6, 0x7a, 0x69, 0xb3, 0xb4, 0x5d, 0x09, 0x35, 0x49, 0xd6, 0x60, 0xf5, 0x03, 0xd2, 0xd1,
-	0x65, 0x1e, 0x22, 0x4b, 0xe2, 0x09, 0x43, 0xb2, 0x0e, 0x7e, 0x88, 0xe3, 0xf8, 0x06, 0xb9, 0x7c,
-	0xca, 0xad, 0xc1, 0x3f, 0xfb, 0xfd, 0xbe, 0xc5, 0x6a, 0x42, 0xcd, 0x54, 0xfc, 0x1b, 0x52, 0x1f,
-	0xe0, 0x18, 0x27, 0x5a, 0xaf, 0x01, 0x70, 0x16, 0x31, 0x96, 0x0c, 0x69, 0xc4, 0xb4, 0xaa, 0xc1,
-	0xf1, 0x37, 0xa0, 0x72, 0x98, 0xd1, 0x1b, 0x7c, 0x9f, 0x27, 0x58, 0x2f, 0x0b, 0x71, 0xc1, 0x30,
-	0x51, 0x1c, 0x1b, 0x65, 0x0b, 0x3c, 0x81, 0x22, 0x63, 0xe4, 0x8a, 0xfb, 0xfd, 0x3e, 0x45, 0xc6,
-	0x74, 0x38, 0x8a, 0x24, 0x2f, 0x01, 0xce, 0xb2, 0x9e, 0x11, 0xf6, 0xc3, 0x7a, 0xbe, 0x0f, 0xae,
-	0xc0, 0x91, 0x31, 0x88, 0x37, 0x39, 0x01, 0x4f, 0xd8, 0x2a, 0x90, 0x0d, 0xa8, 0x9c, 0x65, 0xbd,
-	0xeb, 0xd1, 0x45, 0x17, 0x73, 0x61, 0x5e, 0x0d, 0x0b, 0xc6, 0xe3, 0x99, 0x90, 0x63, 0xa8, 0x9d,
-	0x8c, 0x93, 0x98, 0xa6, 0xaf, 0xcf, 0xdf, 0x9d, 0xce, 0x5b, 0x1c, 0x1f, 0x5c, 0xae, 0xae, 0x63,
-	0xe2, 0x6f, 0xf2, 0x14, 0x56, 0xa5, 0xa3, 0x39, 0x72, 0xff, 0x0a, 0x2b, 0x5a, 0x77, 0x6e, 0xc0,
-	0xd9, 0x22, 0xd8, 0x79, 0x39, 0xb3, 0x1d, 0x0a, 0x60, 0xb9, 0x8b, 0xf9, 0x41, 0x9e, 0x22, 0xab,
-	0xbb, 0xa2, 0x24, 0x53, 0x9a, 0x64, 0xe0, 0x9d, 0x8f, 0x06, 0x73, 0x8f, 0x82, 0x91, 0x47, 0xf9,
-	0xe1, 0xde, 0x38, 0x46, 0x58, 0x75, 0x58, 0x7a, 0x8b, 0x8c, 0x45, 0x03, 0x54, 0xb8, 0x9a, 0x24,
-	0x7b, 0x50, 0x95, 0xb0, 0xaa, 0x3e, 0x6d, 0xa8, 0x70, 0x3a, 0x4a, 0x33, 0x2a, 0x5d, 0x78, 0x9d,
-	0x5a, 0x4b, 0x6d, 0xd1, 0x54, 0x10, 0x16, 0x3a, 0xe4, 0x0b, 0xac, 0xe8, 0x5d, 0x91, 0x91, 0x5b,
-	0x8d, 0x2f, 0xcf, 0x36, 0xde, 0x88, 0xc4, 0xb1, 0x22, 0xb1, 0x91, 0x17, 0xe6, 0x40, 0x3e, 0x04,
-	0xef, 0x55, 0xc4, 0x86, 0x1a, 0x37, 0x80, 0x65, 0x4e, 0xa6, 0xbc, 0xf2, 0xb2, 0x5e, 0x53, 0xda,
-	0x44, 0x2d, 0xdb, 0xf9, 0x13, 0xa8, 0x4a, 0x27, 0x2a, 0x7f, 0x1f, 0x5c, 0x4e, 0x2b, 0x0f, 0xe2,
-	0x4d, 0x76, 0x61, 0xa1, 0x8b, 0xf9, 0xc9, 0xd1, 0x23, 0x0b, 0x61, 0xec, 0x5e, 0x79, 0xd3, 0x31,
-	0x77, 0xaf, 0x09, 0x55, 0x79, 0x74, 0x14, 0xc0, 0x13, 0x70, 0xae, 0xc4, 0x46, 0x38, 0xdb, 0x5e,
-	0xc7, 0x6b, 0x89, 0x0b, 0x27, 0xbc, 0x87, 0x9c, 0x4f, 0x8e, 0x60, 0x75, 0x7a, 0x52, 0xcc, 0xe3,
-	0x31, 0xb1, 0x8f, 0xc7, 0x44, 0x75, 0xf5, 0xe1, 0x19, 0xe8, 0x7c, 0x73, 0xc1, 0xed, 0x62, 0xce,
-	0xfc, 0x8e, 0xd8, 0x7c, 0xa4, 0x51, 0x8a, 0xbc, 0xfa, 0x6b, 0x12, 0xaf, 0x38, 0x39, 0x41, 0xcd,
-	0xe0, 0xa8, 0x08, 0x9f, 0x19, 0x0d, 0xd4, 0x16, 0xc5, 0x55, 0xd0, 0x16, 0xe6, 0xae, 0x37, 0xc1,
-	0xe5, 0x6d, 0xf1, 0x95, 0xc8, 0x98, 0xe3, 0xc0, 0x37, 0x59, 0x4a, 0x7d, 0x07, 0x16, 0xe5, 0xc8,
-	0xf8, 0xff, 0x4a, 0xa9, 0x35, 0x40, 0xc1, 0xba, 0xcd, 0x2c, 0x8c, 0xe4, 0x7a, 0x6a, 0x23, 0x6b,
-	0x59, 0xb5, 0xd1, 0xcc, 0xb6, 0xef, 0x02, 0x14, 0x87, 0xc4, 0xff, 0xdf, 0xd4, 0x31, 0x4e, 0xcb,
-	0x1f, 0x8c, 0x9b, 0x72, 0x14, 0x74, 0x56, 0xc6, 0xac, 0xe9, 0xac, 0xac, 0xc9, 0xd9, 0x03, 0x28,
-	0x2e, 0xbf, 0xc6, 0xba, 0xf7, 0x17, 0x04, 0xf5, 0xfb, 0x82, 0x02, 0x8f, 0x4f, 0x8a, 0xc6, 0x33,
-	0xbe, 0x2a, 0x8d, 0x67, 0x0d, 0xd2, 0x0b, 0xd1, 0x7d, 0x01, 0xa6, 0xe2, 0xb7, 0x07, 0x27, 0xf8,
-	0x6f, 0x86, 0x2b, 0xed, 0x0e, 0x9e, 0xff, 0xbc, 0x6d, 0x94, 0x7e, 0xdd, 0x36, 0x4a, 0xdf, 0xef,
-	0x1a, 0xa5, 0x1f, 0x77, 0x8d, 0xd2, 0x47, 0x62, 0x7c, 0xaa, 0xc3, 0x3c, 0x41, 0x7a, 0x8d, 0xfd,
-	0x01, 0xd2, 0x76, 0x2f, 0xa3, 0x34, 0xfe, 0xdc, 0xe6, 0x5e, 0x7a, 0x8b, 0xe2, 0x0b, 0xdd, 0xf9,
-	0x1d, 0x00, 0x00, 0xff, 0xff, 0x9c, 0x9b, 0x3a, 0x1d, 0x93, 0x07, 0x00, 0x00,
+	// 801 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x56, 0xcd, 0x4e, 0x1b, 0x49,
+	0x10, 0xde, 0xf1, 0xcc, 0x02, 0x2e, 0x1b, 0x2f, 0x9e, 0x65, 0xb5, 0xd6, 0x88, 0x35, 0xa8, 0x2f,
+	0xcb, 0x61, 0x6d, 0x23, 0x40, 0x5c, 0xf6, 0xb0, 0x02, 0x36, 0x22, 0xe0, 0x84, 0xa0, 0x01, 0xe5,
+	0x10, 0x29, 0x52, 0xc6, 0xb8, 0xb0, 0x2d, 0x30, 0x63, 0xa6, 0x67, 0x48, 0x26, 0x52, 0x9e, 0x21,
+	0xe7, 0x1c, 0x72, 0xce, 0x4b, 0xe4, 0x90, 0x23, 0x8f, 0x10, 0xe5, 0x80, 0x22, 0x78, 0x91, 0xa8,
+	0xff, 0x3c, 0x3d, 0x83, 0x20, 0x56, 0x70, 0x6e, 0x5d, 0x55, 0x5d, 0x55, 0x5f, 0x55, 0x7f, 0xdd,
+	0xd5, 0x00, 0xc7, 0x18, 0xd3, 0xfa, 0x20, 0xf0, 0x43, 0xdf, 0xb6, 0xd8, 0xda, 0xa9, 0x75, 0x7a,
+	0x61, 0x37, 0x6a, 0xd5, 0x0f, 0xfd, 0x7e, 0xa3, 0xe3, 0x77, 0xfc, 0x06, 0x37, 0xb6, 0xa2, 0x23,
+	0x2e, 0x71, 0x81, 0xaf, 0x84, 0x93, 0x53, 0x3c, 0x0c, 0xe2, 0x41, 0x28, 0x25, 0xf2, 0x37, 0x14,
+	0x1e, 0xf5, 0x68, 0xe8, 0xe2, 0x59, 0x84, 0x34, 0xb4, 0x2b, 0x30, 0xd9, 0xc4, 0x78, 0xd7, 0xeb,
+	0x63, 0xc5, 0x58, 0x30, 0x16, 0xf3, 0xae, 0x12, 0xc9, 0x0c, 0x94, 0x9e, 0x62, 0xd0, 0x3b, 0x8a,
+	0x5d, 0xa4, 0x03, 0xff, 0x94, 0x22, 0x99, 0x05, 0xdb, 0xc5, 0xbe, 0x7f, 0x8e, 0xcc, 0x3e, 0xd4,
+	0x96, 0xe1, 0xb7, 0xf5, 0x76, 0x3b, 0xa5, 0xaa, 0x41, 0x59, 0xdf, 0xf8, 0xbd, 0x4c, 0x6d, 0x80,
+	0x2d, 0x3c, 0x55, 0xfb, 0xaa, 0x00, 0x7b, 0x1e, 0xa5, 0x83, 0x6e, 0xe0, 0x51, 0xb5, 0x55, 0xd3,
+	0xd8, 0x73, 0x90, 0xdf, 0x8c, 0x82, 0x73, 0x3c, 0x88, 0x07, 0x58, 0xc9, 0x71, 0x73, 0xa2, 0xd0,
+	0xb3, 0x98, 0xe9, 0x2c, 0xcf, 0xa1, 0xc0, 0xb3, 0x08, 0x8c, 0xf6, 0x2e, 0x4c, 0xae, 0xb7, 0xdb,
+	0x01, 0x52, 0xca, 0x73, 0x14, 0x37, 0x56, 0x2f, 0x2e, 0xe7, 0x7f, 0xf9, 0x72, 0x39, 0xff, 0x8f,
+	0xd6, 0xdd, 0x6e, 0x3c, 0xc0, 0xe0, 0x04, 0xdb, 0x1d, 0x0c, 0x1a, 0xad, 0x28, 0x08, 0xfc, 0x97,
+	0x0d, 0xd9, 0x4c, 0xe9, 0xeb, 0xaa, 0x20, 0xe4, 0x04, 0x60, 0x2f, 0x6a, 0xa9, 0x22, 0x76, 0xb2,
+	0xd1, 0x97, 0x7e, 0x38, 0xb2, 0x6d, 0x83, 0xc5, 0xeb, 0x11, 0xb5, 0xf2, 0x35, 0xd9, 0x86, 0x02,
+	0xcf, 0x26, 0x8b, 0x99, 0x83, 0xfc, 0x5e, 0xd4, 0x3a, 0xe9, 0x1d, 0x36, 0x31, 0x16, 0x09, 0xdd,
+	0x44, 0x71, 0x77, 0xc7, 0xc8, 0x16, 0x94, 0xb7, 0xfb, 0x03, 0x3f, 0x08, 0x77, 0xf6, 0x9f, 0xec,
+	0x8e, 0x7a, 0x08, 0x36, 0x58, 0x6c, 0xbb, 0xc2, 0xc4, 0xd6, 0xe4, 0x05, 0x94, 0x44, 0xa0, 0x9f,
+	0xd6, 0xe3, 0x37, 0x30, 0xad, 0x32, 0x8c, 0x0c, 0x33, 0xdb, 0xba, 0x74, 0x37, 0xcc, 0x2c, 0x7f,
+	0x1c, 0x98, 0x6a, 0x62, 0xbc, 0x11, 0x87, 0x48, 0x2b, 0x16, 0x6f, 0xe4, 0x50, 0x26, 0x6f, 0x0d,
+	0x98, 0x7e, 0xf0, 0xea, 0xbe, 0xf9, 0x35, 0x6a, 0x98, 0xf7, 0xa4, 0x06, 0xf9, 0x68, 0x40, 0x49,
+	0x21, 0xca, 0x52, 0xe1, 0x38, 0x4b, 0x85, 0x63, 0x8c, 0x39, 0xe0, 0xa0, 0x77, 0xee, 0x85, 0xc8,
+	0xcc, 0x39, 0x6e, 0xd6, 0x34, 0xfa, 0x89, 0x99, 0x63, 0x38, 0xb1, 0x74, 0xb3, 0xad, 0x2c, 0xf5,
+	0x3e, 0x18, 0x50, 0xd8, 0xef, 0x75, 0x46, 0xbe, 0xfa, 0x5a, 0xeb, 0x72, 0xe3, 0xba, 0x55, 0xa6,
+	0x76, 0x34, 0x15, 0x98, 0x7c, 0x8c, 0x94, 0x7a, 0x1d, 0x94, 0x67, 0xaf, 0x44, 0xd2, 0x86, 0xa2,
+	0x00, 0x2a, 0xbb, 0x7c, 0x00, 0x79, 0x26, 0x7b, 0x61, 0x14, 0xa0, 0xe4, 0xf6, 0x9a, 0xec, 0x54,
+	0x7d, 0x24, 0x3c, 0x43, 0x6f, 0x37, 0x09, 0x44, 0xde, 0x1b, 0x30, 0xad, 0xde, 0x5c, 0xd1, 0x91,
+	0xbb, 0x2f, 0xb6, 0x86, 0x37, 0x97, 0xc2, 0x9b, 0xc6, 0x67, 0x8e, 0x0b, 0xdf, 0x26, 0x14, 0x1e,
+	0x7a, 0xb4, 0xab, 0xc0, 0x39, 0x30, 0xc5, 0xc4, 0x90, 0x9d, 0xad, 0x38, 0xac, 0xa1, 0x7c, 0x3b,
+	0x34, 0x42, 0xa0, 0x28, 0x82, 0xc8, 0x56, 0xda, 0x60, 0x31, 0x59, 0x46, 0xe0, 0x6b, 0x72, 0x06,
+	0xbf, 0x36, 0x31, 0xde, 0xfe, 0x7f, 0xdc, 0x2f, 0x88, 0x3e, 0x1e, 0x72, 0x0b, 0xa6, 0x3e, 0x1e,
+	0x6a, 0x50, 0x14, 0x73, 0x51, 0xc2, 0xfa, 0x0b, 0x4c, 0x71, 0x83, 0xcc, 0xc5, 0xc2, 0x72, 0xa1,
+	0xce, 0x87, 0x30, 0xc7, 0xe4, 0x32, 0x3d, 0x79, 0x0d, 0xa5, 0xe1, 0xd4, 0xd3, 0xe7, 0xdb, 0x69,
+	0x7a, 0xbe, 0x31, 0x51, 0x2f, 0x22, 0x37, 0x86, 0x22, 0x96, 0xdf, 0x59, 0x60, 0x35, 0x31, 0xa6,
+	0xf6, 0x32, 0x1f, 0x69, 0x18, 0x78, 0x21, 0x32, 0x3a, 0xcc, 0x08, 0x94, 0xc9, 0x2c, 0x75, 0xca,
+	0x9a, 0x46, 0xd6, 0xb5, 0xa4, 0x31, 0x4a, 0x79, 0x24, 0x83, 0x4b, 0x79, 0xe8, 0xc3, 0xa5, 0x06,
+	0x16, 0xa3, 0x80, 0x2d, 0x4d, 0xda, 0x85, 0x75, 0x6c, 0x5d, 0x25, 0xb7, 0xaf, 0xc0, 0x84, 0xe0,
+	0xb0, 0xfd, 0xbb, 0xb0, 0xa6, 0x18, 0xed, 0xcc, 0xa6, 0x95, 0x89, 0x93, 0x78, 0xd9, 0x95, 0x53,
+	0xea, 0x9d, 0x57, 0x4e, 0x99, 0xf1, 0xf2, 0x2f, 0x40, 0x32, 0xb9, 0xec, 0x3f, 0xf5, 0x3d, 0xda,
+	0x2c, 0xbb, 0xc5, 0xb9, 0x26, 0x68, 0xa7, 0xaa, 0xd2, 0x78, 0xad, 0xaa, 0x4a, 0xb1, 0xf4, 0x3f,
+	0x80, 0xe4, 0x4b, 0xa3, 0x72, 0xdd, 0xf8, 0xe4, 0x38, 0x95, 0x9b, 0x86, 0x24, 0x1f, 0xe3, 0x97,
+	0xca, 0xa7, 0xfd, 0xc1, 0x54, 0xbe, 0x14, 0xfd, 0xd6, 0x38, 0x67, 0x78, 0x32, 0x89, 0x3f, 0x4d,
+	0x37, 0xe7, 0x8f, 0x8c, 0x56, 0xf8, 0x6d, 0xac, 0x7e, 0xbe, 0xaa, 0x1a, 0x5f, 0xaf, 0xaa, 0xc6,
+	0xa7, 0xeb, 0xaa, 0x71, 0x71, 0x5d, 0x35, 0x9e, 0x91, 0xbb, 0x49, 0xc6, 0xa2, 0xb4, 0x26, 0xf8,
+	0xdf, 0x70, 0xe5, 0x5b, 0x00, 0x00, 0x00, 0xff, 0xff, 0x70, 0xcb, 0x6c, 0xd2, 0x6c, 0x0a, 0x00,
+	0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1531,10 +1597,8 @@ func (m *GenResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Address)
-	if l > 0 {
-		n += 1 + l + sovKeys(uint64(l))
-	}
+	l = m.Address.Size()
+	n += 1 + l + sovKeys(uint64(l))
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -1547,8 +1611,8 @@ func (m *PubRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Address)
-	if l > 0 {
+	if m.Address != nil {
+		l = m.Address.Size()
 		n += 1 + l + sovKeys(uint64(l))
 	}
 	l = len(m.Name)
@@ -1607,10 +1671,8 @@ func (m *ImportResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Address)
-	if l > 0 {
-		n += 1 + l + sovKeys(uint64(l))
-	}
+	l = m.Address.Size()
+	n += 1 + l + sovKeys(uint64(l))
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -1645,6 +1707,56 @@ func (m *ImportRequest) Size() (n int) {
 	return n
 }
 
+func (m *ExportRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Passphrase)
+	if l > 0 {
+		n += 1 + l + sovKeys(uint64(l))
+	}
+	l = len(m.Name)
+	if l > 0 {
+		n += 1 + l + sovKeys(uint64(l))
+	}
+	if m.Address != nil {
+		l = m.Address.Size()
+		n += 1 + l + sovKeys(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *ExportResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Publickey)
+	if l > 0 {
+		n += 1 + l + sovKeys(uint64(l))
+	}
+	l = len(m.Privatekey)
+	if l > 0 {
+		n += 1 + l + sovKeys(uint64(l))
+	}
+	l = m.Address.Size()
+	n += 1 + l + sovKeys(uint64(l))
+	l = len(m.CurveType)
+	if l > 0 {
+		n += 1 + l + sovKeys(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
 func (m *SignRequest) Size() (n int) {
 	if m == nil {
 		return 0
@@ -1655,8 +1767,8 @@ func (m *SignRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovKeys(uint64(l))
 	}
-	l = len(m.Address)
-	if l > 0 {
+	if m.Address != nil {
+		l = m.Address.Size()
 		n += 1 + l + sovKeys(uint64(l))
 	}
 	l = len(m.Name)
@@ -1679,10 +1791,8 @@ func (m *SignResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.Signature != nil {
-		l = m.Signature.Size()
-		n += 1 + l + sovKeys(uint64(l))
-	}
+	l = m.Signature.Size()
+	n += 1 + l + sovKeys(uint64(l))
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -1703,10 +1813,8 @@ func (m *VerifyRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovKeys(uint64(l))
 	}
-	if m.Signature != nil {
-		l = m.Signature.Size()
-		n += 1 + l + sovKeys(uint64(l))
-	}
+	l = m.Signature.Size()
+	n += 1 + l + sovKeys(uint64(l))
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -1755,10 +1863,8 @@ func (m *KeyID) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Address)
-	if l > 0 {
-		n += 1 + l + sovKeys(uint64(l))
-	}
+	l = m.Address.Size()
+	n += 1 + l + sovKeys(uint64(l))
 	if len(m.KeyName) > 0 {
 		for _, s := range m.KeyName {
 			l = len(s)
@@ -1799,10 +1905,8 @@ func (m *AddNameRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovKeys(uint64(l))
 	}
-	l = len(m.Address)
-	if l > 0 {
-		n += 1 + l + sovKeys(uint64(l))
-	}
+	l = m.Address.Size()
+	n += 1 + l + sovKeys(uint64(l))
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}

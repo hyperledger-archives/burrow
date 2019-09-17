@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -915,11 +914,7 @@ func (srv *EthService) EthAccounts() (*web3.EthAccountsResult, error) {
 
 	addrs := make([]string, 0, len(addresses))
 	for _, addr := range addresses {
-		data, err := hex.DecodeString(addr)
-		if err != nil {
-			return nil, fmt.Errorf("could not decode address %s", addr)
-		}
-		key, err := srv.keyStore.GetKey("", data)
+		key, err := srv.keyStore.GetKey("", addr)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve key for %s", addr)
 		} else if key.CurveType != crypto.CurveTypeSecp256k1 {

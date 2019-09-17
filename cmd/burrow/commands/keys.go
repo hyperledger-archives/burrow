@@ -162,11 +162,6 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("unable to get key by address %s: %v", addr, err)
 				}
 
-				addr, err := crypto.AddressFromBytes(resp.GetAddress())
-				if err != nil {
-					output.Fatalf("failed to convert address: %v", err)
-				}
-
 				key := deployment.Key{
 					Name:       *keyName,
 					CurveType:  k.CurveType.String(),
@@ -233,7 +228,7 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 				} else {
 					ks := keys.NewKeyStore(*keysDir, true)
 					if (*key)[:1] == "{" {
-						addr, err := ks.ImportJSON(password, *key)
+						addr, err := ks.LocalImportJSON(password, *key)
 						if err != nil {
 							output.Fatalf("failed to import json key: %v", err)
 						}
@@ -268,7 +263,7 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 
 		cmd.Command("pub", "public key", func(cmd *cli.Cmd) {
 			name := cmd.StringOpt("name", "", "name of key to use")
-			addr := cmd.StringOpt("addr", "", "address of key to use")
+			keyAddr := cmd.StringOpt("addr", "", "address of key to use")
 
 			cmd.Action = func() {
 				var addr *crypto.Address
@@ -318,7 +313,7 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 
 		cmd.Command("sign", "sign <some data>", func(cmd *cli.Cmd) {
 			name := cmd.StringOpt("name", "", "name of key to use")
-			addr := cmd.StringOpt("addr", "", "address of key to use")
+			keyAddr := cmd.StringOpt("addr", "", "address of key to use")
 			msg := cmd.StringArg("MSG", "", "message to sign")
 			passphrase := cmd.StringOpt("passphrase", "", "passphrase for encrypted key")
 
@@ -404,7 +399,7 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 
 		cmd.Command("addname", "add key name to existing address", func(cmd *cli.Cmd) {
 			keyname := cmd.StringArg("NAME", "", "name of key to use")
-			addr := cmd.StringArg("ADDR", "", "address of key to use")
+			keyaddr := cmd.StringArg("ADDR", "", "address of key to use")
 
 			cmd.Action = func() {
 				addr, err := crypto.AddressFromHexString(*keyaddr)

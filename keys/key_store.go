@@ -158,14 +158,26 @@ func (ks *KeyStore) Gen(passphrase string, curveType crypto.CurveType) (key *Key
 	return key, err
 }
 
-func (ks *KeyStore) GetKey(passphrase string, keyAddr []byte) (*Key, error) {
+func (ks *KeyStore) GetKey(passphrase string, addr crypto.Address) (*Key, error) {
 	ks.Lock()
 	defer ks.Unlock()
 	dataDirPath, err := returnDataDir(ks.keysDirPath)
 	if err != nil {
 		return nil, err
 	}
-	fileContent, err := ks.GetKeyFile(dataDirPath, keyAddr)
+
+	filename := path.Join(dataDirPath, addr.String()+".json")
+	fileInfo, err := os.Stat(filename)
+	if err != nil {
+		return nil, err
+	}
+	if (uint32(fileInfo.Mode()) & 0077) != 0 {
+		if !ks.AllowBadFilePermissions {
+			return nil, fmt.Errorf("file %s should be accessible by user only", filename)
+		}
+	}
+
+	fileContent, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -181,34 +193,6 @@ func (ks *KeyStore) GetKey(passphrase string, keyAddr []byte) (*Key, error) {
 		err = key.UnmarshalJSON(fileContent)
 		return key, err
 	}
-}
-
-func (ks *KeyStore) AllKeys() ([]*Key, error) {
-
-	dataDirPath, err := returnDataDir(ks.keysDirPath)
-	if err != nil {
-		return nil, err
-	}
-	addrs, err := GetAllAddresses(dataDirPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var list []*Key
-
-	for _, addr := range addrs {
-		addrB, err := crypto.AddressFromHexString(addr)
-		if err != nil {
-			return nil, err
-		}
-		k, err := ks.GetKey("", addrB[:])
-		if err != nil {
-			return nil, err
-		}
-		list = append(list, k)
-	}
-
-	return list, nil
 }
 
 func DecryptKey(passphrase string, keyProtected *keyJSON) (*Key, error) {
@@ -256,15 +240,28 @@ func DecryptKey(passphrase string, keyProtected *keyJSON) (*Key, error) {
 	return k, nil
 }
 
-func (ks *KeyStore) GetAllAddresses() (addresses []string, err error) {
+func (ks *KeyStore) GetAllAddresses() (addresses []crypto.Address, err error) {
 	ks.Lock()
-	defer ks.Unlock()
-
-	dir, err := returnDataDir(ks.keysDirPath)
+	dataDirPath, err := returnDataDir(ks.keysDirPath)
 	if err != nil {
 		return nil, err
 	}
-	return GetAllAddresses(dir)
+	defer ks.Unlock()
+
+	fileInfos, err := ioutil.ReadDir(dataDirPath)
+	if err != nil {
+		return nil, err
+	}
+	addresses = make([]crypto.Address, len(fileInfos))
+	for i, fileInfo := range fileInfos {
+		basename := strings.TrimSuffix(fileInfo.Name(), ".json")
+		addr, err := crypto.AddressFromHexString(basename)
+		if err != nil {
+			return nil, err
+		}
+		addresses[i] = addr
+	}
+	return addresses, err
 }
 
 func (ks *KeyStore) StoreKey(passphrase string, key *Key) error {
@@ -350,7 +347,7 @@ func (ks *KeyStore) RmName(name string) error {
 	return os.Remove(path.Join(dir, name))
 }
 
-func (ks *KeyStore) List(name string) ([]*KeyID, error) {
+func (ks *KeyStore) LocalList(name string) ([]*KeyID, error) {
 	byname, err := ks.GetAllNames()
 	if err != nil {
 		return nil, err
@@ -393,16 +390,11 @@ func (ks *KeyStore) List(name string) ([]*KeyID, error) {
 	return list, nil
 }
 
-func (ks *KeyStore) ImportJSON(passphrase, jsonImport string) (*crypto.Address, error) {
+func (ks *KeyStore) LocalImportJSON(passphrase, jsonImport string) (*crypto.Address, error) {
 	keyJSON := []byte(jsonImport)
 	var addr crypto.Address
-	var err error
-	addrB := IsValidKeyJson(keyJSON)
-	if addrB != nil {
-		addr, err = crypto.AddressFromBytes(addrB)
-		if err != nil {
-			return nil, err
-		}
+	addr, err := IsValidKeyJson(keyJSON)
+	if err == nil {
 		err = ks.StoreKeyRaw(addr, keyJSON)
 		if err != nil {
 			return nil, err
@@ -540,12 +532,12 @@ func WriteKeyFile(addr []byte, dataDirPath string, content []byte) (err error) {
 	return ioutil.WriteFile(keyFilePath, content, 0600) // read, write for user
 }
 
-func (ks *KeyStore) GetAllNames() (map[string]string, error) {
+func (ks *KeyStore) GetAllNames() (map[string]crypto.Address, error) {
 	dir, err := returnNamesDir(ks.keysDirPath)
 	if err != nil {
 		return nil, err
 	}
-	names := make(map[string]string)
+	names := make(map[string]crypto.Address)
 	fs, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -555,7 +547,12 @@ func (ks *KeyStore) GetAllNames() (map[string]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		names[f.Name()] = string(b)
+
+		addr, err := crypto.AddressFromHexString(string(b))
+		if err != nil {
+			return nil, err
+		}
+		names[f.Name()] = addr
 	}
 	return names, nil
 }
@@ -628,12 +625,11 @@ func NewKeyFromPriv(curveType crypto.CurveType, PrivKeyBytes []byte) (*Key, erro
 	}, nil
 }
 
-func IsValidKeyJson(j []byte) []byte {
-	j1 := new(keyJSON)
-	e1 := json.Unmarshal(j, &j1)
-	if e1 == nil {
-		addr, _ := hex.DecodeString(j1.Address)
-		return addr
+func IsValidKeyJson(bs []byte) (crypto.Address, error) {
+	j := new(keyJSON)
+	err := json.Unmarshal(bs, &j)
+	if err != nil {
+		return crypto.ZeroAddress, err
 	}
-	return nil
+	return crypto.AddressFromHexString(j.Address)
 }
