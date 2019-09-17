@@ -33,8 +33,7 @@ func (sig *Signature) String() string {
 func CompressedSignatureFromParams(v uint64, r, s []byte) []byte {
 	bitlen := (btcec.S256().BitSize + 7) / 8
 	sig := make([]byte, 1+bitlen*2)
-	chainID := uint64(1)
-	sig[0] = byte(v - chainID - 8)
+	sig[0] = byte(v)
 	copy(sig[1:bitlen+1], r)
 	copy(sig[bitlen+1:], s)
 	return sig

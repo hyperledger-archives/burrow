@@ -105,8 +105,8 @@ func SigningAccounts(concretePrivateAccounts []*PrivateAccount) []AddressableSig
 }
 
 // Generates a new account with private key.
-func GeneratePrivateAccount() (*PrivateAccount, error) {
-	privateKey, err := crypto.GeneratePrivateKey(nil, crypto.CurveTypeEd25519)
+func GeneratePrivateAccount(ct crypto.CurveType) (*PrivateAccount, error) {
+	privateKey, err := crypto.GeneratePrivateKey(nil, ct)
 	if err != nil {
 		return nil, err
 	}
@@ -116,38 +116,23 @@ func GeneratePrivateAccount() (*PrivateAccount, error) {
 		PublicKey:  publicKey,
 		PrivateKey: privateKey,
 	}.PrivateAccount(), nil
+}
+
+func privateAccount(privateKey crypto.PrivateKey) *PrivateAccount {
+	publicKey := privateKey.GetPublicKey()
+	return ConcretePrivateAccount{
+		Address:    publicKey.GetAddress(),
+		PublicKey:  publicKey,
+		PrivateKey: privateKey,
+	}.PrivateAccount()
 }
 
 // Generates a new account with private key from SHA256 hash of a secret
 func GeneratePrivateAccountFromSecret(secret string) *PrivateAccount {
-	privateKey := crypto.PrivateKeyFromSecret(secret, crypto.CurveTypeEd25519)
-	publicKey := privateKey.GetPublicKey()
-	return ConcretePrivateAccount{
-		Address:    publicKey.GetAddress(),
-		PublicKey:  publicKey,
-		PrivateKey: privateKey,
-	}.PrivateAccount()
+	return privateAccount(crypto.PrivateKeyFromSecret(secret, crypto.CurveTypeEd25519))
+
 }
 
 func GenerateEthereumAccountFromSecret(secret string) *PrivateAccount {
-	privateKey := crypto.PrivateKeyFromSecret(secret, crypto.CurveTypeSecp256k1)
-	publicKey := privateKey.GetPublicKey()
-	return ConcretePrivateAccount{
-		Address:    publicKey.GetAddress(),
-		PublicKey:  publicKey,
-		PrivateKey: privateKey,
-	}.PrivateAccount()
-}
-
-func PrivateAccountFromPrivateKeyBytes(privKeyBytes []byte) (*PrivateAccount, error) {
-	privateKey, err := crypto.PrivateKeyFromRawBytes(privKeyBytes, crypto.CurveTypeEd25519)
-	if err != nil {
-		return nil, err
-	}
-	publicKey := privateKey.GetPublicKey()
-	return ConcretePrivateAccount{
-		Address:    publicKey.GetAddress(),
-		PublicKey:  publicKey,
-		PrivateKey: privateKey,
-	}.PrivateAccount(), nil
+	return privateAccount(crypto.PrivateKeyFromSecret(secret, crypto.CurveTypeSecp256k1))
 }

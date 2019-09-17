@@ -48,11 +48,11 @@ func TestKVCache_Iterator2(t *testing.T) {
 }
 
 func BenchmarkKVCache_Iterator_1E6_Inserts(b *testing.B) {
-	benchmarkKVCache_Iterator(b, 1E6)
+	benchmarkKVCache_Iterator(b, 1e6)
 }
 
 func BenchmarkKVCache_Iterator_1E7_Inserts(b *testing.B) {
-	benchmarkKVCache_Iterator(b, 1E7)
+	benchmarkKVCache_Iterator(b, 1e7)
 }
 
 func benchmarkKVCache_Iterator(b *testing.B, inserts int) {

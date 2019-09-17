@@ -79,9 +79,10 @@ func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc, appHash []byte) *tmT
 	validators := make([]tmTypes.GenesisValidator, len(burrowGenesisDoc.Validators))
 	for i, validator := range burrowGenesisDoc.Validators {
 		validators[i] = tmTypes.GenesisValidator{
-			PubKey: validator.PublicKey.TendermintPubKey(),
-			Name:   validator.Name,
-			Power:  int64(validator.Amount),
+			Address: validator.PublicKey.TendermintAddress(),
+			PubKey:  validator.PublicKey.TendermintPubKey(),
+			Name:    validator.Name,
+			Power:   int64(validator.Amount),
 		}
 	}
 	consensusParams := tmTypes.DefaultConsensusParams()

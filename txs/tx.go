@@ -21,6 +21,7 @@ import (
 	"reflect"
 
 	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/encoding"
@@ -84,36 +85,32 @@ func (tx *Tx) SignBytes(env Envelope_Encoding) ([]byte, error) {
 	return bs, nil
 }
 
+func RLPEncode(seq, gasPrice, gasLimit uint64, address, amount, data []byte) ([]byte, error) {
+	return rlp.Encode([]interface{}{
+		seq,       // nonce
+		gasPrice,  // gasPrice
+		gasLimit,  // gasLimit
+		address,   // to
+		amount,    // value
+		data,      // data
+		uint64(1), // chainID
+		uint(0), uint(0),
+	})
+}
+
 func (tx *Tx) SignBytesRLPEncoded() ([]byte, error) {
 	switch pay := tx.Payload.(type) {
-	case *payload.SendTx:
-		if len(pay.Inputs) != 1 {
-			return nil, fmt.Errorf("RLP Encoded SendTx must have exactly one TxInput")
-		} else if len(pay.Outputs) != 1 {
-			return nil, fmt.Errorf("RLP Encoded SendTx must have exactly one TxOutput")
-		}
-		input := pay.Inputs[0]
-		output := pay.Outputs[0]
-		return rlp.Encode([]interface{}{
-			input.Sequence,
-			uint64(0),
-			uint64(0),
-			output.Address.Bytes(),
-			input.Amount,
-			[]byte{},
-			uint64(1), uint(0), uint(0),
-		})
 	case *payload.CallTx:
 		input := pay.Input
-		return rlp.Encode([]interface{}{
-			input.Sequence,
-			uint64(0),
+		return RLPEncode(
+			input.Sequence-1,
+			pay.GasPrice,
 			pay.GasLimit,
 			pay.Address.Bytes(),
-			input.Amount,
+			balance.NativeToWei(input.Amount).Bytes(),
 			pay.Data.Bytes(),
-			uint64(1), uint(0), uint(0),
-		})
+		)
+
 	default:
 		return nil, fmt.Errorf("tx type %v not supported for rlp encoding", tx.Payload.Type())
 	}

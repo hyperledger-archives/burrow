@@ -38,10 +38,11 @@ func (v *Validator) GetAddress() crypto.Address {
 }
 
 func FromAccount(acc *acm.Account, power uint64) *Validator {
-	address := acc.GetAddress()
+	pubKey := acc.GetPublicKey()
+	address, _ := crypto.AddressFromBytes(pubKey.TendermintAddress().Bytes())
 	return &Validator{
 		Address:   &address,
-		PublicKey: acc.GetPublicKey(),
+		PublicKey: pubKey,
 		Power:     power,
 	}
 }

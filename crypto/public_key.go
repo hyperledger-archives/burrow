@@ -97,11 +97,7 @@ func (p PublicKey) Verify(msg []byte, signature *Signature) error {
 		if err != nil {
 			return fmt.Errorf("could not parse DER signature for secp256k1 key: %v", err)
 		}
-		hash, err := LegacyKeccak256Hash(msg)
-		if err != nil {
-			return err
-		}
-		if sig.Verify(hash, pub) {
+		if sig.Verify(Keccak256(msg), pub) {
 			return nil
 		}
 		return fmt.Errorf("signature '%X' is not a valid secp256k1 signature for message: %s",
@@ -117,8 +113,11 @@ func (p PublicKey) GetAddress() Address {
 		addr, _ := AddressFromBytes(tmhash.Sum(p.PublicKey))
 		return addr
 	case CurveTypeSecp256k1:
-		pub, _ := btcec.ParsePubKey(p.PublicKey.Bytes(), btcec.S256())
-		hash, _ := LegacyKeccak256Hash(pub.SerializeUncompressed()[1:])
+		pub, err := btcec.ParsePubKey(p.PublicKey.Bytes(), btcec.S256())
+		if err != nil {
+			return Address{}
+		}
+		hash := Keccak256(pub.SerializeUncompressed()[1:])
 		addr, _ := AddressFromBytes(hash[len(hash)-20:])
 		return addr
 	default:

@@ -76,21 +76,21 @@ type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
 	Method  string          `json:"method"`
 	Params  json.RawMessage `json:"params"`
-	ID      int             `json:"id"`
+	ID      interface{}     `json:"id"`
 }
 
 // https://www.jsonrpc.org/specification#response_object
 type RPCResultResponse struct {
 	JSONRPC string      `json:"jsonrpc"`
 	Result  interface{} `json:"result"`
-	ID      int         `json:"id"`
+	ID      interface{} `json:"id"`
 }
 
 // https://www.jsonrpc.org/specification#response_object
 type RPCErrorResponse struct {
-	JSONRPC string    `json:"jsonrpc"`
-	Error   *RPCError `json:"error"`
-	ID      int       `json:"id"`
+	JSONRPC string      `json:"jsonrpc"`
+	Error   *RPCError   `json:"error"`
+	ID      interface{} `json:"id"`
 }
 
 // https://www.jsonrpc.org/specification#error_object
@@ -192,14 +192,22 @@ func StructToResult(in interface{}) interface{} {
 }
 
 func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		WriteError(w, 0, ErrInternal.RPCError())
+	if r.Method == http.MethodOptions {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET")
+		w.Header().Set("Access-Control-Allow-Headers", "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range")
+		w.Header().Set("Accept-Range", "bytes")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte{})
+		return
+	} else if r.Method != http.MethodPost {
+		WriteError(w, "", ErrInternal.RPCError())
 		return
 	}
 
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		WriteError(w, 0, ErrInvalidRequest.RPCError())
+		WriteError(w, nil, ErrInvalidRequest.RPCError())
 		return
 	}
 	r.Body.Close()
@@ -207,12 +215,12 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	in := new(RPCRequest)
 	err = json.Unmarshal(data, in)
 	if err != nil {
-		WriteError(w, 0, ErrCouldNotParse.RPCError())
+		WriteError(w, nil, ErrCouldNotParse.RPCError())
 		return
 	}
 
-	if in.JSONRPC != JSONRPC || in.Method == "" || in.ID == 0 {
-		WriteError(w, 0, ErrInvalidParams.RPCError())
+	if in.JSONRPC != JSONRPC || in.Method == "" || in.ID == nil {
+		WriteError(w, nil, ErrInvalidParams.RPCError())
 		return
 	}
 
@@ -461,7 +469,7 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	WriteData(w, in.ID, out)
 }
 
-func WriteError(w http.ResponseWriter, id int, resp *RPCError) {
+func WriteError(w http.ResponseWriter, id interface{}, resp *RPCError) {
 	data, err := json.Marshal(&RPCErrorResponse{
 		JSONRPC: JSONRPC,
 		Error:   resp,
@@ -474,7 +482,7 @@ func WriteError(w http.ResponseWriter, id int, resp *RPCError) {
 	w.Write(data)
 }
 
-func WriteData(w http.ResponseWriter, id int, result interface{}) {
+func WriteData(w http.ResponseWriter, id interface{}, result interface{}) {
 	resp := &RPCResultResponse{
 		JSONRPC: JSONRPC,
 		ID:      id,

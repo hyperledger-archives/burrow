@@ -84,7 +84,7 @@ func TestKeysServer(t *testing.T) {
 				_, err = cli.Verify(ctx, &keys.VerifyRequest{
 					Signature: sig.GetSignature(),
 					PublicKey: resp.GetPublicKey(),
-					Message:   msg,
+					Message:   hash,
 				})
 				require.NoError(t, err)
 			})

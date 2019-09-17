@@ -73,6 +73,8 @@ message CallTx {
     bytes WASM = 6 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false, (gogoproto.jsontag)="tags,omitempty"];
     // Set of contracts this code will deploy
     repeated ContractMeta ContractMeta = 7;
+    // The upper bound on the price per unit of gas
+    uint64 GasPrice = 8;
 }
 
 message ContractMeta {

@@ -19,11 +19,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestWeb3RPCService(t *testing.T) {
+func TestWeb3Service(t *testing.T) {
 	ctx := context.Background()
-
-	genesisAccounts := integration.MakePrivateAccounts("accounts", 2)
-	genesisAccounts = append(genesisAccounts, integration.MakeEthereumAccounts("ethereum", 2)...)
+	genesisAccounts := integration.MakePrivateAccounts("burrow", 1)
+	genesisAccounts = append(genesisAccounts, integration.MakeEthereumAccounts("ethereum", 3)...)
 	genesisDoc := integration.TestGenesisDoc(genesisAccounts, 0)
 
 	config, _ := integration.NewTestConfig(genesisDoc)
@@ -85,8 +84,7 @@ func TestWeb3RPCService(t *testing.T) {
 		t.Run("NetVersion", func(t *testing.T) {
 			result, err := eth.NetVersion()
 			require.NoError(t, err)
-			doc := config.GenesisDoc
-			require.Equal(t, encoding.HexEncodeBytes(doc.ShortHash()), result.ChainID)
+			require.Equal(t, encoding.HexEncodeNumber(uint64(rpc.ChainID)), result.ChainID)
 		})
 
 		t.Run("EthProtocolVersion", func(t *testing.T) {
@@ -104,14 +102,31 @@ func TestWeb3RPCService(t *testing.T) {
 	})
 
 	t.Run("EthCreateContract", func(t *testing.T) {
-		account := genesisAccounts[1]
 		var txHash, contractAddress string
+
+		t.Run("EthSendRawTransaction", func(t *testing.T) {
+			to := genesisAccounts[2].GetPublicKey().GetAddress()
+			acc, err := kern.State.GetAccount(to)
+			require.NoError(t, err)
+			before := acc.GetBalance()
+
+			raw := `0xf867808082520894f97798df751deb4b6e39d4cf998ee7cd4dcb9acc880de0b6b3a76400008025a0f0d2396973296cd6a71141c974d4a851f5eae8f08a8fba2dc36a0fef9bd6440ca0171995aa750d3f9f8e4d0eac93ff67634274f3c5acf422723f49ff09a6885422`
+			_, err = eth.EthSendRawTransaction(&web3.EthSendRawTransactionParams{
+				SignedTransactionData: raw,
+			})
+			require.NoError(t, err)
+
+			acc, err = kern.State.GetAccount(to)
+			require.NoError(t, err)
+			after := acc.GetBalance()
+			require.Equal(t, after, before+1)
+		})
 
 		// create contract on chain
 		t.Run("EthSendTransaction", func(t *testing.T) {
 			result, err := eth.EthSendTransaction(&web3.EthSendTransactionParams{
 				Transaction: web3.Transaction{
-					From: encoding.HexEncodeBytes(account.GetAddress().Bytes()),
+					From: encoding.HexEncodeBytes(genesisAccounts[3].GetAddress().Bytes()),
 					Gas:  encoding.HexEncodeNumber(40),
 					Data: encoding.HexEncodeBytes(rpc.Bytecode_HelloWorld),
 				},
@@ -119,26 +134,6 @@ func TestWeb3RPCService(t *testing.T) {
 			require.NoError(t, err)
 			txHash = result.TransactionHash
 			require.NotEmpty(t, txHash)
-		})
-
-		t.Run("EthSendRawTransaction", func(t *testing.T) {
-			addr, err := crypto.AddressFromHexString("8A2FD214EAA33FA0CDED164FE7357E6382F6EEAD")
-			require.NoError(t, err)
-
-			acc, err := kern.State.GetAccount(addr)
-			require.NoError(t, err)
-			before := acc.GetBalance()
-
-			raw := `0xf860018080948a2fd214eaa33fa0cded164fe7357e6382f6eead830300008026a0602370418b098a0509b6c6eb7835d4dd214bc4e5f15ee709f29cb17b3cadede1a018c42ee04c35dfb6d10bd5fef8967918be665a701fa1c54c601b4d38feb83244`
-			_, err = eth.EthSendRawTransaction(&web3.EthSendRawTransactionParams{
-				SignedTransactionData: raw,
-			})
-			require.NoError(t, err)
-
-			acc, err = kern.State.GetAccount(addr)
-			require.NoError(t, err)
-			after := acc.GetBalance()
-			require.Equal(t, after, before+196608)
 		})
 
 		t.Run("EthGetTransactionReceipt", func(t *testing.T) {
@@ -159,7 +154,7 @@ func TestWeb3RPCService(t *testing.T) {
 
 			result, err := eth.EthCall(&web3.EthCallParams{
 				Transaction: web3.Transaction{
-					From: encoding.HexEncodeBytes(account.GetAddress().Bytes()),
+					From: encoding.HexEncodeBytes(genesisAccounts[1].GetAddress().Bytes()),
 					To:   contractAddress,
 					Data: encoding.HexAddPrefix(string(packed)),
 				},
@@ -192,9 +187,21 @@ func TestWeb3RPCService(t *testing.T) {
 	t.Run("EthAccounts", func(t *testing.T) {
 		result, err := eth.EthAccounts()
 		require.NoError(t, err)
-		require.Len(t, result.Addresses, len(genesisAccounts))
+		require.Len(t, result.Addresses, len(genesisAccounts)-1)
 		for _, acc := range genesisAccounts {
-			require.Contains(t, result.Addresses, encoding.HexEncodeBytes(acc.GetAddress().Bytes()))
+			if acc.PrivateKey().CurveType == crypto.CurveTypeSecp256k1 {
+				require.Contains(t, result.Addresses, encoding.HexEncodeBytes(acc.GetAddress().Bytes()))
+			}
 		}
 	})
+
+	t.Run("EthSign", func(t *testing.T) {
+		result, err := eth.EthSign(&web3.EthSignParams{
+			Address: "0x2c2d14a9a3f0d078ac8b38e3043d78ca8bc11029",
+			Bytes:   "0xdeadbeaf",
+		})
+		require.NoError(t, err)
+		require.Equal(t, `0x30440220345d17225ac03a575f467cea3a8d5cc2dea42fc89030c42ea175fd5140c542eb02200307004fc21ea592ce5ca013705959292c2de85b71d0fa0c84ebd8b541f505d5`, result.Signature)
+	})
+
 }

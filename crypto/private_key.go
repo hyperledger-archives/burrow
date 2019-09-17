@@ -56,7 +56,7 @@ func (p PrivateKey) Sign(msg []byte) (*Signature, error) {
 				len(p.PrivateKey), btcec.PrivKeyBytesLen)
 		}
 		privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), p.PrivateKey)
-		sig, err := privKey.Sign(msg)
+		sig, err := privKey.Sign(Keccak256(msg))
 		if err != nil {
 			return nil, err
 		}
@@ -101,7 +101,7 @@ func PrivateKeyFromRawBytes(privKeyBytes []byte, curveType CurveType) (PrivateKe
 		if !bytes.Equal(privKey.Serialize(), privKeyBytes) {
 			return PrivateKey{}, fmt.Errorf("serialisation of Secp256k1 private key bytes does not equal")
 		}
-		return PrivateKey{PrivateKey: privKey.Serialize(), PublicKey: pubKey.SerializeCompressed(), CurveType: CurveTypeSecp256k1}, nil
+		return PrivateKey{PrivateKey: privKeyBytes, PublicKey: pubKey.SerializeCompressed(), CurveType: CurveTypeSecp256k1}, nil
 	default:
 		return PrivateKey{}, ErrInvalidCurve(curveType)
 	}

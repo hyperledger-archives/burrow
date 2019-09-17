@@ -263,8 +263,6 @@ func decodeLength(input []byte) (uint8, uint8, reflect.Kind, error) {
 		}
 	}
 
-	fmt.Println(hex.EncodeToString([]byte{prefix}))
-
 	return 0, 0, reflect.Invalid, ErrInvalid
 }
 

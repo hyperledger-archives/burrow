@@ -167,7 +167,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 			txCache.UpdateMetaMap(callee, metamap)
 		}
 	} else {
-		if outAcc == nil || (len(outAcc.EVMCode) == 0 && len(outAcc.WASMCode) == 0) {
+		if outAcc == nil {
 			// if you call an account that doesn't exist
 			// or an account with no code then we take fees (sorry pal)
 			// NOTE: it's fine to create a contract and call it within one
@@ -175,20 +175,11 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 			// but to create with one contract and call with another
 			// you have to wait a block to avoid a re-ordering attack
 			// that will take your fees
-			var exception *errors.Exception
-			if outAcc == nil {
-				exception = errors.ErrorCodef(errors.ErrorCodeInvalidAddress,
-					"CallTx to an address (%v) that does not exist", ctx.tx.Address)
-				ctx.Logger.Info.Log(structure.ErrorKey, exception,
-					"caller_address", inAcc.GetAddress(),
-					"callee_address", ctx.tx.Address)
-			} else {
-				exception = errors.ErrorCodef(errors.ErrorCodeInvalidAddress,
-					"CallTx to an address (%v) that holds no code", ctx.tx.Address)
-				ctx.Logger.Info.Log(exception,
-					"caller_address", inAcc.GetAddress(),
-					"callee_address", ctx.tx.Address)
-			}
+			exception := errors.ErrorCodef(errors.ErrorCodeInvalidAddress,
+				"CallTx to an address (%v) that does not exist", ctx.tx.Address)
+			ctx.Logger.Info.Log(structure.ErrorKey, exception,
+				"caller_address", inAcc.GetAddress(),
+				"callee_address", ctx.tx.Address)
 			ctx.txe.PushError(exception)
 			ctx.CallEvents(exception)
 			return nil

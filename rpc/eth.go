@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/hyperledger/burrow/acm/acmstate"
+	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/acm/validator"
 	bcm "github.com/hyperledger/burrow/bcm"
 	bin "github.com/hyperledger/burrow/binary"
@@ -27,6 +28,10 @@ import (
 	"github.com/hyperledger/burrow/txs/payload"
 	tmConfig "github.com/tendermint/tendermint/config"
 	"github.com/tendermint/tendermint/types"
+)
+
+const (
+	ChainID = 1
 )
 
 // EthService is a web3 provider
@@ -89,13 +94,8 @@ func (srv *EthService) Web3Sha3(req *web3.Web3Sha3Params) (*web3.Web3Sha3Result,
 		return nil, err
 	}
 
-	hash, err := crypto.LegacyKeccak256Hash(data)
-	if err != nil {
-		return nil, err
-	}
-
 	return &web3.Web3Sha3Result{
-		HashedData: encoding.HexEncodeBytes(hash),
+		HashedData: encoding.HexEncodeBytes(crypto.Keccak256(data)),
 	}, nil
 }
 
@@ -116,9 +116,8 @@ func (srv *EthService) NetPeerCount() (*web3.NetPeerCountResult, error) {
 // NetVersion returns the hex encoding of the genesis hash,
 // this is typically a small int (where 1 == Ethereum mainnet)
 func (srv *EthService) NetVersion() (*web3.NetVersionResult, error) {
-	doc := srv.blockchain.GenesisDoc()
 	return &web3.NetVersionResult{
-		ChainID: encoding.HexEncodeBytes(doc.ShortHash()),
+		ChainID: encoding.HexEncodeNumber(uint64(ChainID)),
 	}, nil
 }
 
@@ -168,6 +167,8 @@ func (srv *EthService) EthCall(req *web3.EthCallParams) (*web3.EthCallResult, er
 	txe, err := execution.CallSim(srv.accounts, srv.blockchain, from, to, data, srv.logger)
 	if err != nil {
 		return nil, err
+	} else if err = txe.GetException(); err != nil {
+		return nil, err
 	}
 
 	var result string
@@ -195,7 +196,7 @@ func (srv *EthService) EthGetBalance(req *web3.EthGetBalanceParams) (*web3.EthGe
 	}
 
 	return &web3.EthGetBalanceResult{
-		GetBalanceResult: encoding.HexEncodeNumber(acc.Balance),
+		GetBalanceResult: encoding.HexEncodeBytes(balance.NativeToWei(acc.Balance).Bytes()),
 	}, nil
 }
 
@@ -212,9 +213,7 @@ func (srv *EthService) EthGetBlockByHash(req *web3.EthGetBlockByHashParams) (*we
 	}
 
 	return &web3.EthGetBlockByHashResult{
-		GetBlockByHashResult: web3.GetBlockByHashResult{
-			Block: *block,
-		},
+		GetBlockByHashResult: block,
 	}, web3.ErrNotFound
 }
 
@@ -231,9 +230,7 @@ func (srv *EthService) EthGetBlockByNumber(req *web3.EthGetBlockByNumberParams) 
 	}
 
 	return &web3.EthGetBlockByNumberResult{
-		GetBlockByNumberResult: web3.GetBlockByNumberResult{
-			Block: *block,
-		},
+		GetBlockByNumberResult: block,
 	}, nil
 }
 
@@ -291,21 +288,6 @@ func (srv *EthService) EthGetCode(req *web3.EthGetCodeParams) (*web3.EthGetCodeR
 }
 
 // TODO
-func (srv *EthService) EthGetRawTransactionByHash(req *web3.EthGetRawTransactionByHashParams) (*web3.EthGetRawTransactionByHashResult, error) {
-	return nil, web3.ErrNotFound
-}
-
-// TODO
-func (srv *EthService) EthGetRawTransactionByBlockHashAndIndex(req *web3.EthGetRawTransactionByBlockHashAndIndexParams) (*web3.EthGetRawTransactionByBlockHashAndIndexResult, error) {
-	return nil, web3.ErrNotFound
-}
-
-// TODO
-func (srv *EthService) EthGetRawTransactionByBlockNumberAndIndex(req *web3.EthGetRawTransactionByBlockNumberAndIndexParams) (*web3.EthGetRawTransactionByBlockNumberAndIndexResult, error) {
-	return nil, web3.ErrNotFound
-}
-
-// TODO
 func (srv *EthService) EthGetStorageAt(req *web3.EthGetStorageAtParams) (*web3.EthGetStorageAtResult, error) {
 	// addr, err := crypto.AddressFromHexString(req.Address)
 	// if err != nil {
@@ -359,7 +341,9 @@ func (srv *EthService) EthGetTransactionByHash(req *web3.EthGetTransactionByHash
 // EthGetTransactionCount returns the number of transactions sent from an address
 func (srv *EthService) EthGetTransactionCount(req *web3.EthGetTransactionCountParams) (*web3.EthGetTransactionCountResult, error) {
 	// TODO: implement
-	return nil, web3.ErrNotFound
+	return &web3.EthGetTransactionCountResult{
+		NonceOrNull: encoding.HexEncodeNumber(0),
+	}, nil
 }
 
 // EthGetTransactionReceipt returns the receipt of a previously committed tx
@@ -447,17 +431,44 @@ func (srv *EthService) EthPendingTransactions() (*web3.EthPendingTransactionsRes
 	}, nil
 }
 
+func (srv *EthService) EthEstimateGas(req *web3.EthEstimateGasParams) (*web3.EthEstimateGasResult, error) {
+	return &web3.EthEstimateGasResult{
+		GasUsed: encoding.HexEncodeNumber(0),
+	}, nil
+}
+
+func (srv *EthService) EthGasPrice() (*web3.EthGasPriceResult, error) {
+	return &web3.EthGasPriceResult{
+		GasPrice: encoding.HexEncodeNumber(0),
+	}, nil
+}
+
 type RawTx struct {
 	Nonce    uint64 `json:"nonce"`
 	GasPrice uint64 `json:"gasPrice"`
-	Gas      uint64 `json:"gas"`
+	GasLimit uint64 `json:"gasLimit"`
 	To       []byte `json:"to"`
-	Value    uint64 `json:"value"`
+	Value    []byte `json:"value"`
 	Data     []byte `json:"data"`
 
 	V uint64 `json:"v"`
 	R []byte `json:"r"`
 	S []byte `json:"s"`
+}
+
+// TODO
+func (srv *EthService) EthGetRawTransactionByHash(req *web3.EthGetRawTransactionByHashParams) (*web3.EthGetRawTransactionByHashResult, error) {
+	return nil, web3.ErrNotFound
+}
+
+// TODO
+func (srv *EthService) EthGetRawTransactionByBlockHashAndIndex(req *web3.EthGetRawTransactionByBlockHashAndIndexParams) (*web3.EthGetRawTransactionByBlockHashAndIndexResult, error) {
+	return nil, web3.ErrNotFound
+}
+
+// TODO
+func (srv *EthService) EthGetRawTransactionByBlockNumberAndIndex(req *web3.EthGetRawTransactionByBlockNumberAndIndexParams) (*web3.EthGetRawTransactionByBlockNumberAndIndexResult, error) {
+	return nil, web3.ErrNotFound
 }
 
 func (srv *EthService) EthSendRawTransaction(req *web3.EthSendRawTransactionParams) (*web3.EthSendRawTransactionResult, error) {
@@ -472,28 +483,14 @@ func (srv *EthService) EthSendRawTransaction(req *web3.EthSendRawTransactionPara
 		return nil, err
 	}
 
-	toHash := []interface{}{
-		rawTx.Nonce,
-		rawTx.GasPrice,
-		rawTx.Gas,
-		rawTx.To,
-		rawTx.Value,
-		rawTx.Data,
-		big.NewInt(1).Uint64(), uint(0), uint(0),
-	}
-
-	enc, err := rlp.Encode(toHash)
+	net := uint64(ChainID)
+	enc, err := txs.RLPEncode(rawTx.Nonce, rawTx.GasPrice, rawTx.GasLimit, rawTx.To, rawTx.Value, rawTx.Data)
 	if err != nil {
 		return nil, err
 	}
 
-	hash, err := crypto.LegacyKeccak256Hash(enc)
-	if err != nil {
-		return nil, err
-	}
-
-	sig := crypto.CompressedSignatureFromParams(rawTx.V-1, rawTx.R, rawTx.S)
-	pub, err := crypto.PublicKeyFromSignature(sig, hash)
+	sig := crypto.CompressedSignatureFromParams(rawTx.V-net-8-1, rawTx.R, rawTx.S)
+	pub, err := crypto.PublicKeyFromSignature(sig, crypto.Keccak256(enc))
 	if err != nil {
 		return nil, err
 	}
@@ -509,6 +506,8 @@ func (srv *EthService) EthSendRawTransaction(req *web3.EthSendRawTransactionPara
 		return nil, err
 	}
 
+	amount := balance.WeiToNative(rawTx.Value).Uint64()
+
 	txEnv := &txs.Envelope{
 		Signatories: []txs.Signatory{
 			{
@@ -520,20 +519,18 @@ func (srv *EthService) EthSendRawTransaction(req *web3.EthSendRawTransactionPara
 		Enc: txs.Envelope_RLP,
 		Tx: &txs.Tx{
 			ChainID: srv.blockchain.ChainID(),
-			Payload: &payload.SendTx{
-				Inputs: []*payload.TxInput{
-					{
-						Address:  from,
-						Amount:   rawTx.Value,
-						Sequence: rawTx.Nonce,
-					},
+			Payload: &payload.CallTx{
+				Input: &payload.TxInput{
+					Address: from,
+					Amount:  amount,
+					// first tx sequence should be 1,
+					// but metamask starts at 0
+					Sequence: rawTx.Nonce + 1,
 				},
-				Outputs: []*payload.TxOutput{
-					{
-						Address: to,
-						Amount:  rawTx.Value,
-					},
-				},
+				Address:  &to,
+				GasLimit: rawTx.GasLimit,
+				GasPrice: rawTx.GasPrice,
+				Data:     rawTx.Data,
 			},
 		},
 	}
@@ -546,14 +543,16 @@ func (srv *EthService) EthSendRawTransaction(req *web3.EthSendRawTransactionPara
 		return nil, txe.Exception.AsError()
 	}
 
-	return nil, nil
+	return &web3.EthSendRawTransactionResult{
+		TransactionHash: encoding.HexEncodeBytes(txe.GetTxHash().Bytes()),
+	}, nil
 }
 
 // EthSyncing returns this nodes syncing status (i.e. whether it has caught up)
 func (srv *EthService) EthSyncing() (*web3.EthSyncingResult, error) {
 	// TODO: remaining sync fields
 	return &web3.EthSyncingResult{
-		SyncStatus: web3.SyncStatus{
+		Syncing: web3.SyncStatus{
 			CurrentBlock: encoding.HexEncodeNumber(srv.blockchain.LastBlockHeight()),
 		},
 	}, nil
@@ -575,15 +574,31 @@ func (srv *EthService) getBlockHeaderAtHeight(height uint64) (*types.Header, err
 	return srv.blockchain.GetBlockHeader(height)
 }
 
-func (srv *EthService) getBlockInfoAtHeight(height uint64) (*web3.Block, error) {
+func (srv *EthService) getBlockInfoAtHeight(height uint64) (web3.Block, error) {
 	block, err := srv.getBlockHeaderAtHeight(height)
 	if err != nil {
-		return nil, err
+		return web3.Block{}, err
 	} else if block == nil {
-		return nil, fmt.Errorf("block at height %d does not exist", height)
+		return web3.Block{}, fmt.Errorf("block at height %d does not exist", height)
 	}
 
-	return &web3.Block{
+	return web3.Block{
+		Hash:             encoding.HexEncodeBytes(block.Hash().Bytes()),
+		Nonce:            "0x0",
+		Sha3Uncles:       "0x0000000000000000000000000000000000000000000000000000000000000000",
+		Size:             "0x0",
+		Number:           encoding.HexEncodeNumber(uint64(block.Height)),
+		LogsBloom:        "0x0",
+		StateRoot:        encoding.HexEncodeBytes(block.AppHash.Bytes()),
+		ReceiptsRoot:     encoding.HexEncodeBytes(block.AppHash.Bytes()),
+		Miner:            encoding.HexEncodeBytes(block.ProposerAddress),
+		TotalDifficulty:  "0x0",
+		ExtraData:        "0x0",
+		Difficulty:       "0x0",
+		GasLimit:         "0x0",
+		GasUsed:          "0x0",
+		Timestamp:        encoding.HexEncodeNumber(uint64(block.Time.Unix())),
+		ParentHash:       encoding.HexEncodeBytes(block.AppHash.Bytes()),
 		TransactionsRoot: encoding.HexEncodeBytes(block.AppHash.Bytes()),
 	}, nil
 }
@@ -662,21 +677,17 @@ func payloadToTx(in payload.Payload) web3.Transaction {
 	}
 }
 
-// TODO: deprecate? > https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1767.md#rationale
-
-type SendOrCall struct {
-	input payload.TxInput
-	to    *crypto.Address
-	gas   uint64
-}
+// Note: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1767.md#rationale
 
 // EthSendTransaction constructs, signs and broadcasts a tx from the local node
 func (srv *EthService) EthSendTransaction(req *web3.EthSendTransactionParams) (*web3.EthSendTransactionResult, error) {
-	tx := SendOrCall{}
+	tx := &payload.CallTx{
+		Input: new(payload.TxInput),
+	}
 
 	var err error
 	if from := req.Transaction.From; from != "" {
-		tx.input.Address, err = encoding.HexDecodeToAddress(from)
+		tx.Input.Address, err = encoding.HexDecodeToAddress(from)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse from address: %v", err)
 		}
@@ -685,62 +696,55 @@ func (srv *EthService) EthSendTransaction(req *web3.EthSendTransactionParams) (*
 	}
 
 	if value := req.Transaction.Value; value != "" {
-		tx.input.Amount, err = strconv.ParseUint(value, 0, 64)
+		tx.Input.Amount, err = strconv.ParseUint(value, 0, 64)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse amount: %v", err)
 		}
 	}
 
-	acc, err := srv.accounts.GetAccount(tx.input.Address)
+	acc, err := srv.accounts.GetAccount(tx.Input.Address)
 	if err != nil {
 		return nil, err
+	} else if acc == nil {
+		return nil, fmt.Errorf("account %s does not exist", tx.Input.Address.String())
 	}
 
-	tx.input.Sequence = acc.Sequence + 1
+	tx.Input.Sequence = acc.Sequence + 1
 
 	if to := req.Transaction.To; to != "" {
 		addr, err := encoding.HexDecodeToAddress(to)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse to address: %v", err)
 		}
-		tx.to = &addr
+		tx.Address = &addr
 	}
 
 	// gas provided for the transaction execution
-	if gas := req.Transaction.Gas; gas != "" {
-		tx.gas, err = strconv.ParseUint(gas, 0, 64)
+	if gasLimit := req.Transaction.Gas; gasLimit != "" {
+		tx.GasLimit, err = strconv.ParseUint(gasLimit, 0, 64)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse gas: %v", err)
+			return nil, fmt.Errorf("failed to parse gasLimit: %v", err)
 		}
 	}
 
-	var input payload.Payload
+	if gasPrice := req.Transaction.GasPrice; gasPrice != "" {
+		tx.GasPrice, err = strconv.ParseUint(gasPrice, 0, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse gasPrice: %v", err)
+		}
+	}
+
 	if data := req.Transaction.Data; data != "" {
 		bs, err := encoding.HexDecodeToBytes(data)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse data: %v", err)
 		}
-		// if request contains data then do a callTx
-		input = &payload.CallTx{
-			Input:    &tx.input,
-			Address:  tx.to,
-			GasLimit: tx.gas,
-			Data:     bin.HexBytes(bs),
-		}
-	} else {
-		input = &payload.SendTx{
-			Inputs: []*payload.TxInput{&tx.input},
-			Outputs: []*payload.TxOutput{
-				&payload.TxOutput{
-					Amount: tx.input.Amount,
-				},
-			},
-		}
+		tx.Data = bin.HexBytes(bs)
 	}
 
-	txEnv := txs.Enclose(srv.blockchain.ChainID(), input)
+	txEnv := txs.Enclose(srv.blockchain.ChainID(), tx)
 
-	signer, err := keys.AddressableSigner(srv.keyClient, tx.input.Address)
+	signer, err := keys.AddressableSigner(srv.keyClient, tx.Input.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -778,6 +782,8 @@ func (srv *EthService) EthAccounts() (*web3.EthAccountsResult, error) {
 		key, err := srv.keyStore.GetKey("", data)
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve key for %s", addr)
+		} else if key.CurveType != crypto.CurveTypeSecp256k1 {
+			continue
 		}
 		addrs = append(addrs, encoding.HexEncodeBytes(key.Address.Bytes()))
 	}
@@ -787,8 +793,38 @@ func (srv *EthService) EthAccounts() (*web3.EthAccountsResult, error) {
 	}, nil
 }
 
+// EthSign: https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_sign
 func (srv *EthService) EthSign(req *web3.EthSignParams) (*web3.EthSignResult, error) {
-	return nil, web3.ErrNotFound
+	addr, err := encoding.HexDecodeToBytes(req.Address)
+	if err != nil {
+		return nil, err
+	}
+	to, err := crypto.AddressFromBytes(addr)
+	if err != nil {
+		return nil, err
+	}
+	signer, err := keys.AddressableSigner(srv.keyClient, to)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := encoding.HexDecodeToBytes(req.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	msg := append([]byte{0x19}, []byte("Ethereum Signed Message:\n")...)
+	msg = append(msg, byte(len(data)))
+	msg = append(msg, data...)
+
+	sig, err := signer.Sign(crypto.Keccak256(msg))
+	if err != nil {
+		return nil, err
+	}
+
+	return &web3.EthSignResult{
+		Signature: encoding.HexEncodeBytes(sig.RawBytes()),
+	}, nil
 }
 
 // N / A
@@ -854,13 +890,5 @@ func (srv *EthService) EthCoinbase() (*web3.EthCoinbaseResult, error) {
 }
 
 func (srv *EthService) EthGetLogs(req *web3.EthGetLogsParams) (*web3.EthGetLogsResult, error) {
-	return nil, web3.ErrNotFound
-}
-
-func (srv *EthService) EthEstimateGas(req *web3.EthEstimateGasParams) (*web3.EthEstimateGasResult, error) {
-	return nil, web3.ErrNotFound
-}
-
-func (srv *EthService) EthGasPrice() (*web3.EthGasPriceResult, error) {
 	return nil, web3.ErrNotFound
 }
