@@ -159,6 +159,7 @@ func TestWeb3Service(t *testing.T) {
 					Data: encoding.HexAddPrefix(string(packed)),
 				},
 			})
+			require.NoError(t, err)
 
 			value, err := encoding.HexDecodeToBytes(result.ReturnValue)
 			require.NoError(t, err)

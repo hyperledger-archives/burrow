@@ -24,6 +24,7 @@
 - Reference
     - [Participants](reference/participants.md)
     - [Genesis](reference/genesis.md)
+    - [Logging](reference/logging.md)
     - [Permissions](reference/permissions.md)
     - [Transactions](reference/transactions.md)
     - [State](reference/state.md)
@@ -31,5 +32,4 @@
     - [Bonding](reference/bonding.md)
     - [Vent](reference/vent.md)
     - [WASM](reference/wasm.md)
-    - [Logging](reference/logging.md)
- 
+    - [Web3](reference/web3.md)

@@ -127,55 +127,55 @@ type NetVersionResult struct {
 	// chain ID associated with the current network
 	ChainID string `json:"chainID"`
 }
-type EthBlockNumberResult struct {
-	BlockNumber string `json:"blockNumber"`
-}
 type BlockNumber struct {
 	// The hex representation of the block's height
 	BlockNumber string `json:"blockNumber"`
 }
-type EthCallParams struct {
-	Transaction
-
+type EthBlockNumberResult struct {
 	BlockNumber string `json:"blockNumber"`
 }
+type TransactionIndex struct {
+	// Hex representation of the integer
+	Integer string `json:"integer"`
+}
 type Transaction struct {
-	// Hash of the block where this transaction was in. null when its pending
-	BlockHash string `json:"blockHash"`
-	// The data field sent with the transaction
-	Data string `json:"data"`
-	// address of the receiver. null when its a contract creation transaction
-	To string `json:"to"`
-	// ECDSA signature r
-	R string `json:"r"`
-	// ECDSA signature s
-	S string `json:"s"`
-	// Address of the sender
-	From string `json:"from"`
-	// The gas limit provided by the sender in Wei
-	Gas string `json:"gas"`
-	// A number only to be used once
-	Nonce string `json:"nonce"`
-	// ECDSA recovery id
-	V string `json:"v"`
-	// Block number where this transaction was in. null when its pending
-	BlockNumber string `json:"blockNumber"`
-	// Hex representation of a Keccak 256 hash
-	Hash string `json:"hash"`
 	// Integer of the transaction's index position in the block. null when its pending
 	TransactionIndex string `json:"transactionIndex"`
-	// The gas price willing to be paid by the sender in Wei
-	GasPrice string `json:"gasPrice"`
+	// Hash of the block where this transaction was in. null when its pending
+	BlockHash string `json:"blockHash"`
+	// Address of the sender
+	From string `json:"from"`
+	// Hex representation of a Keccak 256 hash
+	Hash string `json:"hash"`
+	// The data field sent with the transaction
+	Data string `json:"data"`
+	// A number only to be used once
+	Nonce string `json:"nonce"`
+	// The gas limit provided by the sender in Wei
+	Gas string `json:"gas"`
 	// Hex representation of a Keccak 256 hash
 	Value string `json:"value"`
+	// ECDSA recovery id
+	V string `json:"v"`
+	// ECDSA signature s
+	S string `json:"s"`
+	// The gas price willing to be paid by the sender in Wei
+	GasPrice string `json:"gasPrice"`
+	// address of the receiver. null when its a contract creation transaction
+	To string `json:"to"`
+	// Block number where this transaction was in. null when its pending
+	BlockNumber string `json:"blockNumber"`
+	// ECDSA signature r
+	R string `json:"r"`
 }
 type BlockHash struct {
 	// Hex representation of a Keccak 256 hash
 	Keccak string `json:"keccak"`
 }
-type TransactionIndex struct {
-	// Hex representation of the integer
-	Integer string `json:"integer"`
+type EthCallParams struct {
+	Transaction
+
+	BlockNumber string `json:"blockNumber"`
 }
 type EthCallResult struct {
 	// Hex representation of a variable length byte array
@@ -206,12 +206,12 @@ type EthGetBalanceParams struct {
 	// The hex representation of the block's height
 	BlockNumber string `json:"blockNumber"`
 }
-type EthGetBalanceResult struct {
-	GetBalanceResult string `json:"getBalanceResult"`
-}
 type GetBalanceResult struct {
 	// Hex representation of the integer
 	Integer string `json:"integer"`
+}
+type EthGetBalanceResult struct {
+	GetBalanceResult string `json:"getBalanceResult"`
 }
 type EthGetBlockByHashParams struct {
 	// The hex representation of the Keccak 256 of the RLP encoded block
@@ -219,100 +219,100 @@ type EthGetBlockByHashParams struct {
 	// If `true` it returns the full transaction objects, if `false` only the hashes of the transactions.
 	IsTransactionsIncluded bool `json:"isTransactionsIncluded"`
 }
-type EthGetBlockByHashResult struct {
-	GetBlockByHashResult Block `json:"getBlockByHashResult"`
-}
-type GetBlockByHashResult struct {
-	Block
-}
 type Block struct {
-	// Array of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter
-	Transactions []Transactions `json:"transactions"`
-	// Array of uncle hashes
-	Uncles []string `json:"uncles"`
-	// Hex representation of a Keccak 256 hash
-	StateRoot string `json:"stateRoot"`
-	// The block hash or null when its the pending block
-	Hash string `json:"hash"`
-	// Randomly selected number to satisfy the proof-of-work or null when its the pending block
-	Nonce string `json:"nonce"`
 	// Hex representation of a Keccak 256 hash
 	Sha3Uncles string `json:"sha3Uncles"`
 	// Hex representation of a Keccak 256 hash
 	TransactionsRoot string `json:"transactionsRoot"`
-	// The 'extra data' field of this block
-	ExtraData string `json:"extraData"`
-	// The maximum gas allowed in this block
-	GasLimit string `json:"gasLimit"`
-	// The unix timestamp for when the block was collated
-	Timestamp string `json:"timestamp"`
-	// The block number or null when its the pending block
-	Number string `json:"number"`
 	// Hex representation of a Keccak 256 hash
-	ReceiptsRoot string `json:"receiptsRoot"`
+	ParentHash string `json:"parentHash"`
 	// The address of the beneficiary to whom the mining rewards were given or null when its the pending block
 	Miner string `json:"miner"`
+	// Integer of the difficulty for this block
+	Difficulty string `json:"difficulty"`
+	// The total used gas by all transactions in this block
+	GasUsed string `json:"gasUsed"`
+	// The unix timestamp for when the block was collated
+	Timestamp string `json:"timestamp"`
+	// Array of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter
+	Transactions []Transactions `json:"transactions"`
+	// The block number or null when its the pending block
+	Number string `json:"number"`
+	// The block hash or null when its the pending block
+	Hash string `json:"hash"`
+	// Array of uncle hashes
+	Uncles []string `json:"uncles"`
+	// Hex representation of a Keccak 256 hash
+	ReceiptsRoot string `json:"receiptsRoot"`
+	// The 'extra data' field of this block
+	ExtraData string `json:"extraData"`
+	// Hex representation of a Keccak 256 hash
+	StateRoot string `json:"stateRoot"`
 	// Integer of the total difficulty of the chain until this block
 	TotalDifficulty string `json:"totalDifficulty"`
 	// Integer the size of this block in bytes
 	Size string `json:"size"`
-	// The total used gas by all transactions in this block
-	GasUsed string `json:"gasUsed"`
-	// Hex representation of a Keccak 256 hash
-	ParentHash string `json:"parentHash"`
-	// Integer of the difficulty for this block
-	Difficulty string `json:"difficulty"`
+	// The maximum gas allowed in this block
+	GasLimit string `json:"gasLimit"`
+	// Randomly selected number to satisfy the proof-of-work or null when its the pending block
+	Nonce string `json:"nonce"`
 	// The bloom filter for the logs of the block or null when its the pending block
 	LogsBloom string `json:"logsBloom"`
 }
+type Miner struct {
+	Address string `json:"address"`
+}
 type Transactions struct {
 	Transaction
-}
-type Uncles struct {
-	// Hex representation of a Keccak 256 hash
-	Keccak string `json:"keccak"`
-}
-type Hash struct {
-	// Hex representation of a Keccak 256 hash
-	Keccak string `json:"keccak"`
-}
-type Nonce struct {
-	// Hex representation of the integer
-	Integer string `json:"integer"`
 }
 type Number struct {
 	// Hex representation of the integer
 	Integer string `json:"integer"`
 }
-type Miner struct {
-	Address string `json:"address"`
+type Hash struct {
+	// Hex representation of a Keccak 256 hash
+	Keccak string `json:"keccak"`
+}
+type Uncles struct {
+	// Hex representation of a Keccak 256 hash
+	Keccak string `json:"keccak"`
 }
 type TotalDifficulty struct {
 	// Hex representation of the integer
 	Integer string `json:"integer"`
+}
+type Nonce struct {
+	// Hex representation of the integer
+	Integer string `json:"integer"`
+}
+type GetBlockByHashResult struct {
+	Block
+}
+type EthGetBlockByHashResult struct {
+	GetBlockByHashResult Block `json:"getBlockByHashResult"`
 }
 type EthGetBlockByNumberParams struct {
 	BlockNumber string `json:"blockNumber"`
 	// If `true` it returns the full transaction objects, if `false` only the hashes of the transactions.
 	IsTransactionsIncluded bool `json:"isTransactionsIncluded"`
 }
-type EthGetBlockByNumberResult struct {
-	GetBlockByNumberResult Block `json:"getBlockByNumberResult"`
-}
 type GetBlockByNumberResult struct {
 	Block
+}
+type EthGetBlockByNumberResult struct {
+	GetBlockByNumberResult Block `json:"getBlockByNumberResult"`
 }
 type EthGetBlockTransactionCountByHashParams struct {
 	// The hex representation of the Keccak 256 of the RLP encoded block
 	BlockHash string `json:"blockHash"`
 }
-type EthGetBlockTransactionCountByHashResult struct {
-	// The Number of total transactions in the given block
-	BlockTransactionCountByHash string `json:"blockTransactionCountByHash"`
-}
 type BlockTransactionCountByHash struct {
 	// Hex representation of the integer
 	Integer string `json:"integer"`
+}
+type EthGetBlockTransactionCountByHashResult struct {
+	// The Number of total transactions in the given block
+	BlockTransactionCountByHash string `json:"blockTransactionCountByHash"`
 }
 type EthGetBlockTransactionCountByNumberParams struct {
 	BlockNumber string `json:"blockNumber"`
@@ -335,43 +335,42 @@ type EthGetFilterChangesParams struct {
 	// An identifier used to reference the filter.
 	FilterId string `json:"filterId"`
 }
+type Log struct {
+	Topics []Topics `json:"topics"`
+	// Hex representation of a Keccak 256 hash
+	TransactionHash string `json:"transactionHash"`
+	// Sender of the transaction
+	Address string `json:"address"`
+	// The hex representation of the Keccak 256 of the RLP encoded block
+	BlockHash string `json:"blockHash"`
+	// The hex representation of the block's height
+	BlockNumber string `json:"blockNumber"`
+	// Hex representation of a variable length byte array
+	Data string `json:"data"`
+	// Hex representation of the integer
+	LogIndex string `json:"logIndex"`
+	// Hex representation of the integer
+	TransactionIndex string `json:"transactionIndex"`
+}
 type LogResult struct {
 	// An indexed event generated during a transaction
 	Log
-	// Hex representation of the integer
-	LogIndex string `json:"logIndex"`
-	// The hex representation of the Keccak 256 of the RLP encoded block
-	BlockHash string `json:"blockHash"`
-	// Hex representation of a variable length byte array
-	Data string `json:"data"`
 
 	Topics []Topics `json:"topics"`
 	// Hex representation of a Keccak 256 hash
 	TransactionHash string `json:"transactionHash"`
-	// Hex representation of the integer
-	TransactionIndex string `json:"transactionIndex"`
 	// Sender of the transaction
 	Address string `json:"address"`
-	// The hex representation of the block's height
-	BlockNumber string `json:"blockNumber"`
-}
-type Log struct {
-	// Sender of the transaction
-	Address string `json:"address"`
-	// The hex representation of the block's height
-	BlockNumber string `json:"blockNumber"`
-
-	Topics []Topics `json:"topics"`
-	// Hex representation of a Keccak 256 hash
-	TransactionHash string `json:"transactionHash"`
-	// Hex representation of the integer
-	TransactionIndex string `json:"transactionIndex"`
 	// The hex representation of the Keccak 256 of the RLP encoded block
 	BlockHash string `json:"blockHash"`
+	// The hex representation of the block's height
+	BlockNumber string `json:"blockNumber"`
 	// Hex representation of a variable length byte array
 	Data string `json:"data"`
 	// Hex representation of the integer
 	LogIndex string `json:"logIndex"`
+	// Hex representation of the integer
+	TransactionIndex string `json:"transactionIndex"`
 }
 type EthGetFilterChangesResult struct {
 	LogResult []LogResult `json:"logResult"`
@@ -383,22 +382,22 @@ type EthGetFilterLogsParams struct {
 type Logs struct {
 	// An indexed event generated during a transaction
 	Log
-	// Hex representation of a variable length byte array
-	Data string `json:"data"`
 	// Hex representation of the integer
 	LogIndex string `json:"logIndex"`
+	// Hex representation of the integer
+	TransactionIndex string `json:"transactionIndex"`
+	// Hex representation of a Keccak 256 hash
+	TransactionHash string `json:"transactionHash"`
+	// Sender of the transaction
+	Address string `json:"address"`
 	// The hex representation of the Keccak 256 of the RLP encoded block
 	BlockHash string `json:"blockHash"`
 	// The hex representation of the block's height
 	BlockNumber string `json:"blockNumber"`
+	// Hex representation of a variable length byte array
+	Data string `json:"data"`
 
 	Topics []Topics `json:"topics"`
-	// Hex representation of a Keccak 256 hash
-	TransactionHash string `json:"transactionHash"`
-	// Hex representation of the integer
-	TransactionIndex string `json:"transactionIndex"`
-	// Sender of the transaction
-	Address string `json:"address"`
 }
 type EthGetFilterLogsResult struct {
 	Logs []Logs `json:"logs"`
@@ -430,10 +429,6 @@ type EthGetRawTransactionByBlockNumberAndIndexResult struct {
 	// Hex representation of a variable length byte array
 	RawTransaction string `json:"rawTransaction"`
 }
-type EthGetLogsParams struct {
-	// A filter used to monitor the blockchain for log/events
-	Filter
-}
 type Filter struct {
 	// The hex representation of the block's height
 	FromBlock string `json:"fromBlock"`
@@ -451,6 +446,10 @@ type Address struct {
 type Topics struct {
 	// Hex representation of a 256 bit unit of data
 	DataWord string `json:"dataWord"`
+}
+type EthGetLogsParams struct {
+	// A filter used to monitor the blockchain for log/events
+	Filter
 }
 type EthGetLogsResult struct {
 	Logs []Logs `json:"logs"`
@@ -472,11 +471,11 @@ type EthGetTransactionByBlockHashAndIndexParams struct {
 	// Hex representation of the integer
 	Index string `json:"index"`
 }
-type EthGetTransactionByBlockHashAndIndexResult struct {
-	TransactionResult Transaction `json:"transactionResult"`
-}
 type TransactionResult struct {
 	Transaction
+}
+type EthGetTransactionByBlockHashAndIndexResult struct {
+	TransactionResult Transaction `json:"transactionResult"`
 }
 type EthGetTransactionByBlockNumberAndIndexParams struct {
 	BlockNumber string `json:"blockNumber"`
@@ -498,14 +497,40 @@ type EthGetTransactionCountParams struct {
 
 	BlockNumber string `json:"blockNumber"`
 }
-type EthGetTransactionCountResult struct {
-	NonceOrNull string `json:"nonceOrNull"`
-}
 type NonceOrNull struct {
 	// A number only to be used once
 	Nonce string `json:"nonce"`
 }
+type EthGetTransactionCountResult struct {
+	NonceOrNull string `json:"nonceOrNull"`
+}
 type EthGetTransactionReceiptParams struct {
+	// Hex representation of a Keccak 256 hash
+	TransactionHash string `json:"transactionHash"`
+}
+type Receipt struct {
+	// The hex representation of the block's height
+	BlockNumber string `json:"blockNumber"`
+	// Hex representation of the integer
+	CumulativeGasUsed string `json:"cumulativeGasUsed"`
+	// Hex representation of the integer
+	GasUsed string `json:"gasUsed"`
+	// An array of all the logs triggered during the transaction
+	Logs []Logs `json:"logs"`
+	// A 2048 bit bloom filter from the logs of the transaction. Each log sets 3 bits though taking the low-order 11 bits of each of the first three pairs of bytes in a Keccak 256 hash of the log's byte series
+	TransactionIndex string `json:"transactionIndex"`
+	// Whether or not the transaction threw an error.
+	Status string `json:"status"`
+	// The hex representation of the Keccak 256 of the RLP encoded block
+	BlockHash string `json:"blockHash"`
+	// The contract address created, if the transaction was a contract creation, otherwise null
+	ContractAddress string `json:"contractAddress"`
+	// The sender of the transaction
+	From string `json:"from"`
+	// A 2048 bit bloom filter from the logs of the transaction. Each log sets 3 bits though taking the low-order 11 bits of each of the first three pairs of bytes in a Keccak 256 hash of the log's byte series
+	LogsBloom string `json:"logsBloom"`
+	// Destination address of the transaction
+	To string `json:"to"`
 	// Hex representation of a Keccak 256 hash
 	TransactionHash string `json:"transactionHash"`
 }
@@ -513,84 +538,56 @@ type EthGetTransactionReceiptResult struct {
 	// returns either a receipt or null
 	Receipt
 }
-type Receipt struct {
-	// The sender of the transaction
-	From string `json:"from"`
-	// Hex representation of the integer
-	GasUsed string `json:"gasUsed"`
-	// A 2048 bit bloom filter from the logs of the transaction. Each log sets 3 bits though taking the low-order 11 bits of each of the first three pairs of bytes in a Keccak 256 hash of the log's byte series
-	TransactionIndex string `json:"transactionIndex"`
-	// Whether or not the transaction threw an error.
-	Status string `json:"status"`
-	// The hex representation of the Keccak 256 of the RLP encoded block
-	BlockHash string `json:"blockHash"`
-	// The hex representation of the block's height
-	BlockNumber string `json:"blockNumber"`
-	// An array of all the logs triggered during the transaction
-	Logs []Logs `json:"logs"`
-	// A 2048 bit bloom filter from the logs of the transaction. Each log sets 3 bits though taking the low-order 11 bits of each of the first three pairs of bytes in a Keccak 256 hash of the log's byte series
-	LogsBloom string `json:"logsBloom"`
-	// Destination address of the transaction
-	To string `json:"to"`
-	// Hex representation of a Keccak 256 hash
-	TransactionHash string `json:"transactionHash"`
-	// Hex representation of a Keccak 256 hash
-	PostTransactionState string `json:"postTransactionState"`
-	// The contract address created, if the transaction was a contract creation, otherwise null
-	ContractAddress string `json:"contractAddress"`
-	// Hex representation of the integer
-	CumulativeGasUsed string `json:"cumulativeGasUsed"`
-}
 type EthGetUncleByBlockHashAndIndexParams struct {
 	// The hex representation of the Keccak 256 of the RLP encoded block
 	BlockHash string `json:"blockHash"`
 	// Hex representation of the integer
 	Index string `json:"index"`
 }
-type EthGetUncleByBlockHashAndIndexResult struct {
-	UncleOrNull Uncle `json:"uncleOrNull"`
+type Uncle struct {
+	// Randomly selected number to satisfy the proof-of-work or null when its the pending block
+	Nonce string `json:"nonce"`
+	// Hex representation of a Keccak 256 hash
+	TransactionsRoot string `json:"transactionsRoot"`
+	// Integer of the total difficulty of the chain until this block
+	TotalDifficulty string `json:"totalDifficulty"`
+	// Integer the size of this block in bytes
+	Size string `json:"size"`
+	// The total used gas by all transactions in this block
+	GasUsed string `json:"gasUsed"`
+	// Array of uncle hashes
+	Uncles []string `json:"uncles"`
+	// The block number or null when its the pending block
+	Number string `json:"number"`
+	// The block hash or null when its the pending block
+	Hash string `json:"hash"`
+	// Hex representation of a Keccak 256 hash
+	Sha3Uncles string `json:"sha3Uncles"`
+	// Hex representation of a Keccak 256 hash
+	StateRoot string `json:"stateRoot"`
+	// The 'extra data' field of this block
+	ExtraData string `json:"extraData"`
+	// The unix timestamp for when the block was collated
+	Timestamp string `json:"timestamp"`
+	// Hex representation of a Keccak 256 hash
+	ReceiptsRoot string `json:"receiptsRoot"`
+	// The address of the beneficiary to whom the mining rewards were given or null when its the pending block
+	Miner string `json:"miner"`
+	// The maximum gas allowed in this block
+	GasLimit string `json:"gasLimit"`
+	// Hex representation of a Keccak 256 hash
+	ParentHash string `json:"parentHash"`
+	// The bloom filter for the logs of the block or null when its the pending block
+	LogsBloom string `json:"logsBloom"`
+	// Integer of the difficulty for this block
+	Difficulty string `json:"difficulty"`
 }
 type UncleOrNull struct {
 	// Orphaned blocks that can be included in the chain but at a lower block reward. NOTE: An uncle doesn’t contain individual transactions.
 	Uncle
 }
-type Uncle struct {
-	// The block hash or null when its the pending block
-	Hash string `json:"hash"`
-	// Randomly selected number to satisfy the proof-of-work or null when its the pending block
-	Nonce string `json:"nonce"`
-	// The bloom filter for the logs of the block or null when its the pending block
-	LogsBloom string `json:"logsBloom"`
-	// The unix timestamp for when the block was collated
-	Timestamp string `json:"timestamp"`
-	// Array of uncle hashes
-	Uncles []string `json:"uncles"`
-	// Hex representation of a Keccak 256 hash
-	ReceiptsRoot string `json:"receiptsRoot"`
-	// The address of the beneficiary to whom the mining rewards were given or null when its the pending block
-	Miner string `json:"miner"`
-	// Integer of the difficulty for this block
-	Difficulty string `json:"difficulty"`
-	// Integer of the total difficulty of the chain until this block
-	TotalDifficulty string `json:"totalDifficulty"`
-	// The maximum gas allowed in this block
-	GasLimit string `json:"gasLimit"`
-	// The total used gas by all transactions in this block
-	GasUsed string `json:"gasUsed"`
-	// The block number or null when its the pending block
-	Number string `json:"number"`
-	// Hex representation of a Keccak 256 hash
-	ParentHash string `json:"parentHash"`
-	// Hex representation of a Keccak 256 hash
-	StateRoot string `json:"stateRoot"`
-	// The 'extra data' field of this block
-	ExtraData string `json:"extraData"`
-	// Integer the size of this block in bytes
-	Size string `json:"size"`
-	// Hex representation of a Keccak 256 hash
-	Sha3Uncles string `json:"sha3Uncles"`
-	// Hex representation of a Keccak 256 hash
-	TransactionsRoot string `json:"transactionsRoot"`
+type EthGetUncleByBlockHashAndIndexResult struct {
+	UncleOrNull Uncle `json:"uncleOrNull"`
 }
 type EthGetUncleByBlockNumberAndIndexParams struct {
 	// The hex representation of the block's height
@@ -598,24 +595,24 @@ type EthGetUncleByBlockNumberAndIndexParams struct {
 	// Hex representation of the integer
 	Index string `json:"index"`
 }
-type EthGetUncleByBlockNumberAndIndexResult struct {
-	// returns an uncle or null
-	UncleResult Uncle `json:"uncleResult"`
-}
 type UncleResult struct {
 	// Orphaned blocks that can be included in the chain but at a lower block reward. NOTE: An uncle doesn’t contain individual transactions.
 	Uncle
+}
+type EthGetUncleByBlockNumberAndIndexResult struct {
+	// returns an uncle or null
+	UncleResult Uncle `json:"uncleResult"`
 }
 type EthGetUncleCountByBlockHashParams struct {
 	// The hex representation of the Keccak 256 of the RLP encoded block
 	BlockHash string `json:"blockHash"`
 }
-type EthGetUncleCountByBlockHashResult struct {
-	UncleCountOrNull string `json:"uncleCountOrNull"`
-}
 type UncleCountOrNull struct {
 	// Hex representation of the integer
 	Integer string `json:"integer"`
+}
+type EthGetUncleCountByBlockHashResult struct {
+	UncleCountOrNull string `json:"uncleCountOrNull"`
 }
 type EthGetUncleCountByBlockNumberParams struct {
 	BlockNumber string `json:"blockNumber"`
@@ -634,13 +631,6 @@ type EthGetProofParams struct {
 type StorageKeys struct {
 	// Hex representation of the integer
 	Integer string `json:"integer"`
-}
-type EthGetProofResult struct {
-	ProofAccountOrNull ProofAccount `json:"proofAccountOrNull"`
-}
-type ProofAccountOrNull struct {
-	// The merkle proofs of the specified account connecting them to the blockhash of the block specified
-	ProofAccount
 }
 type ProofAccount struct {
 	// Hex representation of the integer
@@ -663,16 +653,23 @@ type Proof struct {
 	ProofNode string `json:"proofNode"`
 }
 type StorageProof struct {
+	// The set of node values needed to traverse a patricia merkle tree (from root to leaf) to retrieve a value
+	Proof []string `json:"proof"`
 	// Hex representation of the integer
 	Key string `json:"key"`
 	// Hex representation of the integer
 	Value string `json:"value"`
-	// The set of node values needed to traverse a patricia merkle tree (from root to leaf) to retrieve a value
-	Proof []string `json:"proof"`
 }
 type AccountProof struct {
 	// Hex representation of a variable length byte array
 	ProofNode string `json:"proofNode"`
+}
+type ProofAccountOrNull struct {
+	// The merkle proofs of the specified account connecting them to the blockhash of the block specified
+	ProofAccount
+}
+type EthGetProofResult struct {
+	ProofAccountOrNull ProofAccount `json:"proofAccountOrNull"`
 }
 type EthGetWorkResult struct {
 	Work []string `json:"work"`
@@ -703,34 +700,34 @@ type EthNewPendingTransactionFilterResult struct {
 }
 type PendingTransactions struct {
 	Transaction
-	// Block number where this transaction was in. null when its pending
-	BlockNumber string `json:"blockNumber"`
-	// Hex representation of a Keccak 256 hash
-	Hash string `json:"hash"`
 	// Integer of the transaction's index position in the block. null when its pending
 	TransactionIndex string `json:"transactionIndex"`
-	// The gas price willing to be paid by the sender in Wei
-	GasPrice string `json:"gasPrice"`
-	// Hex representation of a Keccak 256 hash
-	Value string `json:"value"`
 	// Hash of the block where this transaction was in. null when its pending
 	BlockHash string `json:"blockHash"`
-	// The data field sent with the transaction
-	Data string `json:"data"`
-	// address of the receiver. null when its a contract creation transaction
-	To string `json:"to"`
-	// ECDSA signature r
-	R string `json:"r"`
 	// Address of the sender
 	From string `json:"from"`
-	// The gas limit provided by the sender in Wei
-	Gas string `json:"gas"`
+	// Hex representation of a Keccak 256 hash
+	Hash string `json:"hash"`
+	// The data field sent with the transaction
+	Data string `json:"data"`
 	// A number only to be used once
 	Nonce string `json:"nonce"`
+	// The gas limit provided by the sender in Wei
+	Gas string `json:"gas"`
+	// Hex representation of a Keccak 256 hash
+	Value string `json:"value"`
 	// ECDSA recovery id
 	V string `json:"v"`
 	// ECDSA signature s
 	S string `json:"s"`
+	// The gas price willing to be paid by the sender in Wei
+	GasPrice string `json:"gasPrice"`
+	// address of the receiver. null when its a contract creation transaction
+	To string `json:"to"`
+	// Block number where this transaction was in. null when its pending
+	BlockNumber string `json:"blockNumber"`
+	// ECDSA signature r
+	R string `json:"r"`
 }
 type EthPendingTransactionsResult struct {
 	PendingTransactions []PendingTransactions `json:"pendingTransactions"`
@@ -792,13 +789,6 @@ type EthSubmitWorkResult struct {
 	// Whether or not the provided solution is valid
 	SolutionValid bool `json:"solutionValid"`
 }
-type EthSyncingResult struct {
-	Syncing SyncStatus `json:"syncing"`
-}
-type Syncing struct {
-	// An object with sync status data
-	SyncStatus
-}
 type SyncStatus struct {
 	// Hex representation of the integer
 	StartingBlock string `json:"startingBlock"`
@@ -810,6 +800,13 @@ type SyncStatus struct {
 	KnownStates string `json:"knownStates"`
 	// Hex representation of the integer
 	PulledStates string `json:"pulledStates"`
+}
+type Syncing struct {
+	// An object with sync status data
+	SyncStatus
+}
+type EthSyncingResult struct {
+	Syncing SyncStatus `json:"syncing"`
 }
 type EthUninstallFilterParams struct {
 	// An identifier used to reference the filter.

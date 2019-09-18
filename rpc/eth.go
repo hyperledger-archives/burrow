@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
-	"strings"
 
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/acm/balance"
@@ -113,7 +112,7 @@ func (srv *EthService) NetPeerCount() (*web3.NetPeerCountResult, error) {
 	}, nil
 }
 
-// NetVersion returns the hex encoding of the genesis hash,
+// NetVersion returns the hex encoding of the network id,
 // this is typically a small int (where 1 == Ethereum mainnet)
 func (srv *EthService) NetVersion() (*web3.NetVersionResult, error) {
 	return &web3.NetVersionResult{
@@ -167,8 +166,8 @@ func (srv *EthService) EthCall(req *web3.EthCallParams) (*web3.EthCallResult, er
 	txe, err := execution.CallSim(srv.accounts, srv.blockchain, from, to, data, srv.logger)
 	if err != nil {
 		return nil, err
-	} else if err = txe.GetException(); err != nil {
-		return nil, err
+	} else if txe.Exception != nil {
+		return nil, txe.Exception.AsError()
 	}
 
 	var result string
@@ -207,7 +206,7 @@ func (srv *EthService) EthGetBlockByHash(req *web3.EthGetBlockByHashParams) (*we
 		return nil, err
 	}
 
-	block, err := srv.getBlockInfoAtHeight(height)
+	block, err := srv.getBlockInfoAtHeight(height, req.IsTransactionsIncluded)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +223,7 @@ func (srv *EthService) EthGetBlockByNumber(req *web3.EthGetBlockByNumberParams) 
 		return nil, err
 	}
 
-	block, err := srv.getBlockInfoAtHeight(height)
+	block, err := srv.getBlockInfoAtHeight(height, req.IsTransactionsIncluded)
 	if err != nil {
 		return nil, err
 	}
@@ -287,8 +286,8 @@ func (srv *EthService) EthGetCode(req *web3.EthGetCodeParams) (*web3.EthGetCodeR
 	}, nil
 }
 
-// TODO
 func (srv *EthService) EthGetStorageAt(req *web3.EthGetStorageAtParams) (*web3.EthGetStorageAtResult, error) {
+	// TODO
 	// addr, err := crypto.AddressFromHexString(req.Address)
 	// if err != nil {
 	// 	return nil, err
@@ -297,13 +296,13 @@ func (srv *EthService) EthGetStorageAt(req *web3.EthGetStorageAtParams) (*web3.E
 	return nil, web3.ErrNotFound
 }
 
-// TODO
 func (srv *EthService) EthGetTransactionByBlockHashAndIndex(req *web3.EthGetTransactionByBlockHashAndIndexParams) (*web3.EthGetTransactionByBlockHashAndIndexResult, error) {
+	// TODO
 	return nil, web3.ErrNotFound
 }
 
-// TODO
 func (srv *EthService) EthGetTransactionByBlockNumberAndIndex(req *web3.EthGetTransactionByBlockNumberAndIndexParams) (*web3.EthGetTransactionByBlockNumberAndIndexResult, error) {
+	// TODO
 	return nil, web3.ErrNotFound
 }
 
@@ -328,13 +327,13 @@ func (srv *EthService) EthGetTransactionByHash(req *web3.EthGetTransactionByHash
 		return nil, err
 	}
 
-	tx := payloadToTx(txe.Envelope.Tx.Payload)
-	tx.Hash = encoding.HexEncodeBytes(txe.GetTxHash())
-	tx.BlockNumber = encoding.HexEncodeBytes([]byte(strconv.FormatUint(txe.Height, 10)))
-	tx.BlockHash = encoding.HexEncodeBytes(head.Hash())
+	hash, tx, err := getHashAndCallTxFromExecution(txe)
+	if err != nil {
+		return nil, err
+	}
 
 	return &web3.EthGetTransactionByHashResult{
-		Transaction: tx,
+		Transaction: getTransaction(head, hash, tx),
 	}, nil
 }
 
@@ -344,6 +343,22 @@ func (srv *EthService) EthGetTransactionCount(req *web3.EthGetTransactionCountPa
 	return &web3.EthGetTransactionCountResult{
 		NonceOrNull: encoding.HexEncodeNumber(0),
 	}, nil
+}
+
+func getHashAndCallTxFromEnvelope(env *txs.Envelope) ([]byte, *payload.CallTx, error) {
+	if env.Tx == nil {
+		return nil, nil, fmt.Errorf("tx not found for %s", env.String())
+	} else if tx, ok := env.Tx.Payload.(*payload.CallTx); ok {
+		return env.Tx.Hash().Bytes(), tx, nil
+	}
+	return nil, nil, fmt.Errorf("tx not valid")
+}
+
+func getHashAndCallTxFromExecution(txe *exec.TxExecution) ([]byte, *payload.CallTx, error) {
+	if txe.Envelope == nil {
+		return nil, nil, fmt.Errorf("envelope not found for %s", txe.GetTxHash().String())
+	}
+	return getHashAndCallTxFromEnvelope(txe.Envelope)
 }
 
 // EthGetTransactionReceipt returns the receipt of a previously committed tx
@@ -360,6 +375,11 @@ func (srv *EthService) EthGetTransactionReceipt(req *web3.EthGetTransactionRecei
 		return nil, fmt.Errorf("tx with hash %s does not exist", req.TransactionHash)
 	}
 
+	hash, tx, err := getHashAndCallTxFromExecution(txe)
+	if err != nil {
+		return nil, err
+	}
+
 	block, err := srv.blockchain.GetBlockHeader(txe.Height)
 	if err != nil {
 		return nil, err
@@ -367,14 +387,16 @@ func (srv *EthService) EthGetTransactionReceipt(req *web3.EthGetTransactionRecei
 
 	result := &web3.EthGetTransactionReceiptResult{
 		Receipt: web3.Receipt{
-			Status:      "0x1",
-			BlockNumber: encoding.HexEncodeNumber(uint64(block.Height)),
-			BlockHash:   encoding.HexEncodeBytes(block.Hash()),
-			From:        combineInputs(txe.Envelope.Tx.GetInputs()...),
-			// CumulativeGasUsed
-			GasUsed:         encoding.HexEncodeNumber(txe.Result.GetGasUsed()),
-			TransactionHash: encoding.HexEncodeBytes(txe.GetTxHash()),
-			// TransactionIndex: strconv.FormatUint(txe.GetIndex(), 10),
+			Status:            "0x1",
+			TransactionIndex:  "0x0",
+			CumulativeGasUsed: "0x0",
+			LogsBloom:         "0x0",
+			BlockNumber:       encoding.HexEncodeNumber(uint64(block.Height)),
+			BlockHash:         encoding.HexEncodeBytes(block.Hash()),
+			From:              encoding.HexEncodeBytes(tx.GetInput().Address.Bytes()),
+			GasUsed:           encoding.HexEncodeNumber(txe.Result.GetGasUsed()),
+			TransactionHash:   encoding.HexEncodeBytes(hash),
+			Logs:              []web3.Logs{},
 		},
 	}
 
@@ -421,8 +443,12 @@ func (srv *EthService) EthPendingTransactions() (*web3.EthPendingTransactionsRes
 	}
 
 	for _, env := range envelopes {
+		hash, tx, err := getHashAndCallTxFromEnvelope(env)
+		if err != nil {
+			continue
+		}
 		pending = append(pending, web3.PendingTransactions{
-			Transaction: payloadToTx(env.Tx.Payload),
+			Transaction: getTransaction(nil, hash, tx),
 		})
 	}
 
@@ -432,12 +458,14 @@ func (srv *EthService) EthPendingTransactions() (*web3.EthPendingTransactionsRes
 }
 
 func (srv *EthService) EthEstimateGas(req *web3.EthEstimateGasParams) (*web3.EthEstimateGasResult, error) {
+	// TODO
 	return &web3.EthEstimateGasResult{
 		GasUsed: encoding.HexEncodeNumber(0),
 	}, nil
 }
 
 func (srv *EthService) EthGasPrice() (*web3.EthGasPriceResult, error) {
+	// TODO
 	return &web3.EthGasPriceResult{
 		GasPrice: encoding.HexEncodeNumber(0),
 	}, nil
@@ -456,18 +484,18 @@ type RawTx struct {
 	S []byte `json:"s"`
 }
 
-// TODO
 func (srv *EthService) EthGetRawTransactionByHash(req *web3.EthGetRawTransactionByHashParams) (*web3.EthGetRawTransactionByHashResult, error) {
+	// TODO
 	return nil, web3.ErrNotFound
 }
 
-// TODO
 func (srv *EthService) EthGetRawTransactionByBlockHashAndIndex(req *web3.EthGetRawTransactionByBlockHashAndIndexParams) (*web3.EthGetRawTransactionByBlockHashAndIndexResult, error) {
+	// TODO
 	return nil, web3.ErrNotFound
 }
 
-// TODO
 func (srv *EthService) EthGetRawTransactionByBlockNumberAndIndex(req *web3.EthGetRawTransactionByBlockNumberAndIndexParams) (*web3.EthGetRawTransactionByBlockNumberAndIndexResult, error) {
+	// TODO
 	return nil, web3.ErrNotFound
 }
 
@@ -574,7 +602,38 @@ func (srv *EthService) getBlockHeaderAtHeight(height uint64) (*types.Header, err
 	return srv.blockchain.GetBlockHeader(height)
 }
 
-func (srv *EthService) getBlockInfoAtHeight(height uint64) (web3.Block, error) {
+func hexKeccak(data []byte) string {
+	return encoding.HexEncodeBytes(crypto.Keccak256(data))
+}
+
+func hexKeccakAddress(data []byte) string {
+	addr := crypto.Keccak256(data)
+	return encoding.HexEncodeBytes(addr[len(addr)-20:])
+}
+
+func (srv *EthService) getBlockInfoAtHeight(height uint64, includeTxs bool) (web3.Block, error) {
+	doc := srv.blockchain.GenesisDoc()
+	if height == 0 {
+		// genesis
+		return web3.Block{
+			Transactions:    make([]web3.Transactions, 0),
+			Uncles:          make([]string, 0),
+			Number:          "0x0",
+			Nonce:           "0x0000000000000000",
+			Hash:            hexKeccak(doc.AppHash.Bytes()),
+			ParentHash:      hexKeccak(doc.AppHash.Bytes()),
+			ReceiptsRoot:    hexKeccak(doc.AppHash.Bytes()),
+			StateRoot:       hexKeccak(doc.AppHash.Bytes()),
+			Miner:           encoding.HexEncodeBytes(doc.Validators[0].Address.Bytes()),
+			Timestamp:       encoding.HexEncodeNumber(uint64(doc.GenesisTime.Unix())),
+			Size:            "0x0",
+			ExtraData:       "0x0",
+			Difficulty:      "0x0",
+			TotalDifficulty: "0x0",
+			GasLimit:        "0x0",
+			GasUsed:         "0x0",
+		}, nil
+	}
 	block, err := srv.getBlockHeaderAtHeight(height)
 	if err != nil {
 		return web3.Block{}, err
@@ -582,25 +641,74 @@ func (srv *EthService) getBlockInfoAtHeight(height uint64) (web3.Block, error) {
 		return web3.Block{}, fmt.Errorf("block at height %d does not exist", height)
 	}
 
+	transactions := make([]web3.Transactions, 0)
+	if includeTxs {
+		txes, err := srv.events.TxsAtHeight(height)
+		if err != nil {
+			return web3.Block{}, err
+		}
+		for _, txe := range txes {
+			hash, tx, err := getHashAndCallTxFromExecution(txe)
+			if err != nil {
+				continue
+			}
+			transactions = append(transactions, web3.Transactions{
+				getTransaction(block, hash, tx),
+			})
+		}
+	}
+
 	return web3.Block{
-		Hash:             encoding.HexEncodeBytes(block.Hash().Bytes()),
-		Nonce:            "0x0",
-		Sha3Uncles:       "0x0000000000000000000000000000000000000000000000000000000000000000",
-		Size:             "0x0",
+		Hash:             hexKeccak(block.Hash().Bytes()),
+		ParentHash:       hexKeccak(block.Hash().Bytes()),
+		TransactionsRoot: hexKeccakAddress(block.Hash().Bytes()),
+		StateRoot:        hexKeccakAddress(block.Hash().Bytes()),
+		ReceiptsRoot:     hexKeccakAddress(block.Hash().Bytes()),
+		Nonce:            "0x0000000000000000",
+		Size:             encoding.HexEncodeNumber(uint64(block.TotalTxs)),
 		Number:           encoding.HexEncodeNumber(uint64(block.Height)),
+		Miner:            encoding.HexEncodeBytes(block.ProposerAddress.Bytes()),
 		LogsBloom:        "0x0",
-		StateRoot:        encoding.HexEncodeBytes(block.AppHash.Bytes()),
-		ReceiptsRoot:     encoding.HexEncodeBytes(block.AppHash.Bytes()),
-		Miner:            encoding.HexEncodeBytes(block.ProposerAddress),
-		TotalDifficulty:  "0x0",
 		ExtraData:        "0x0",
 		Difficulty:       "0x0",
+		TotalDifficulty:  "0x0",
 		GasLimit:         "0x0",
 		GasUsed:          "0x0",
+		Sha3Uncles:       "0x0",
 		Timestamp:        encoding.HexEncodeNumber(uint64(block.Time.Unix())),
-		ParentHash:       encoding.HexEncodeBytes(block.AppHash.Bytes()),
-		TransactionsRoot: encoding.HexEncodeBytes(block.AppHash.Bytes()),
+		Transactions:     transactions,
+		Uncles:           []string{},
 	}, nil
+}
+
+func getTransaction(block *types.Header, hash []byte, tx *payload.CallTx) web3.Transaction {
+	transaction := web3.Transaction{
+		V:        "0x0",
+		R:        "0x0",
+		S:        "0x0",
+		From:     encoding.HexEncodeBytes(tx.Input.Address.Bytes()),
+		Value:    encoding.HexEncodeNumber(tx.Input.Amount),
+		Nonce:    encoding.HexEncodeNumber(tx.Input.Sequence),
+		Gas:      encoding.HexEncodeNumber(tx.GasLimit),
+		GasPrice: encoding.HexEncodeNumber(tx.GasPrice),
+		Data:     encoding.HexEncodeBytes(tx.Data),
+	}
+
+	if block != nil {
+		// may be pending
+		transaction.BlockHash = hexKeccak(block.Hash().Bytes())
+		transaction.Hash = encoding.HexEncodeBytes(hash)
+		transaction.BlockNumber = encoding.HexEncodeNumber(uint64(block.Height))
+		transaction.TransactionIndex = encoding.HexEncodeNumber(0)
+	}
+
+	if tx.Address != nil {
+		transaction.To = encoding.HexEncodeBytes(tx.Address.Bytes())
+	} else {
+		transaction.To = "null"
+	}
+
+	return transaction
 }
 
 func (srv *EthService) getHeightByWord(height string) (uint64, bool) {
@@ -631,55 +739,8 @@ func (srv *EthService) getHeightByWordOrNumber(i string) (uint64, error) {
 	return height, nil
 }
 
-func combineInputs(ins ...*payload.TxInput) string {
-	addrs := make([]string, 0, len(ins))
-	for _, i := range ins {
-		addrs = append(addrs, encoding.HexEncodeBytes(i.Address.Bytes()))
-	}
-	return strings.Join(addrs, ",")
-}
-
-func combineOutputs(outs ...*payload.TxOutput) string {
-	addrs := make([]string, 0, len(outs))
-	for _, o := range outs {
-		addrs = append(addrs, encoding.HexEncodeBytes(o.Address.Bytes()))
-	}
-	return strings.Join(addrs, ",")
-}
-
-func payloadToTx(in payload.Payload) web3.Transaction {
-	switch tx := in.(type) {
-	case *payload.CallTx:
-		transaction := web3.Transaction{
-			From:  encoding.HexEncodeBytes(tx.Input.Address.Bytes()),
-			Value: encoding.HexEncodeNumber(tx.Input.Amount),
-			Nonce: encoding.HexEncodeNumber(tx.Input.Sequence),
-			Gas:   encoding.HexEncodeNumber(tx.GasLimit),
-			Data:  encoding.HexEncodeBytes(tx.Data),
-		}
-
-		if tx.Address != nil {
-			transaction.To = encoding.HexEncodeBytes(tx.Address.Bytes())
-		} else {
-			transaction.To = "null"
-		}
-
-		return transaction
-	case *payload.SendTx:
-		return web3.Transaction{
-			From: combineInputs(tx.Inputs...),
-			To:   combineOutputs(tx.Outputs...),
-		}
-	default:
-		return web3.Transaction{
-			From: combineInputs(tx.GetInputs()...),
-		}
-	}
-}
-
-// Note: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1767.md#rationale
-
 // EthSendTransaction constructs, signs and broadcasts a tx from the local node
+// Note: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1767.md#rationale
 func (srv *EthService) EthSendTransaction(req *web3.EthSendTransactionParams) (*web3.EthSendTransactionResult, error) {
 	tx := &payload.CallTx{
 		Input: new(payload.TxInput),
@@ -783,6 +844,7 @@ func (srv *EthService) EthAccounts() (*web3.EthAccountsResult, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve key for %s", addr)
 		} else if key.CurveType != crypto.CurveTypeSecp256k1 {
+			// we only want ethereum keys
 			continue
 		}
 		addrs = append(addrs, encoding.HexEncodeBytes(key.Address.Bytes()))

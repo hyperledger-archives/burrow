@@ -74,23 +74,23 @@ func (c Code) RPCErrorWithMessage(msg string) *RPCError {
 // https://www.jsonrpc.org/specification#request_object
 type RPCRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
+	ID      interface{}     `json:"id"`
 	Method  string          `json:"method"`
 	Params  json.RawMessage `json:"params"`
-	ID      interface{}     `json:"id"`
 }
 
 // https://www.jsonrpc.org/specification#response_object
 type RPCResultResponse struct {
 	JSONRPC string      `json:"jsonrpc"`
-	Result  interface{} `json:"result"`
 	ID      interface{} `json:"id"`
+	Result  interface{} `json:"result"`
 }
 
 // https://www.jsonrpc.org/specification#response_object
 type RPCErrorResponse struct {
 	JSONRPC string      `json:"jsonrpc"`
-	Error   *RPCError   `json:"error"`
 	ID      interface{} `json:"id"`
+	Error   *RPCError   `json:"error"`
 }
 
 // https://www.jsonrpc.org/specification#error_object
@@ -102,6 +102,14 @@ type RPCError struct {
 
 func NewRPCError(code int, msg string) *RPCError {
 	return &RPCError{Code: code, Message: msg}
+}
+
+func (r *RPCError) AsRPCErrorResponse(id interface{}) RPCErrorResponse {
+	return RPCErrorResponse{
+		JSONRPC: JSONRPC,
+		ID:      id,
+		Error:   r,
+	}
 }
 
 type Server struct {
@@ -194,36 +202,54 @@ func StructToResult(in interface{}) interface{} {
 func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range")
 		w.Header().Set("Accept-Range", "bytes")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte{})
 		return
 	} else if r.Method != http.MethodPost {
-		WriteError(w, "", ErrInternal.RPCError())
+		WriteData(w, ErrInternal.RPCError().AsRPCErrorResponse(nil))
 		return
 	}
 
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		WriteError(w, nil, ErrInvalidRequest.RPCError())
+		WriteData(w, ErrInvalidRequest.RPCError().AsRPCErrorResponse(nil))
 		return
 	}
 	r.Body.Close()
 
-	in := new(RPCRequest)
-	err = json.Unmarshal(data, in)
+	requests := make([]RPCRequest, 0)
+	err = json.Unmarshal(data, &requests)
 	if err != nil {
-		WriteError(w, nil, ErrCouldNotParse.RPCError())
-		return
+		request := new(RPCRequest)
+		err = json.Unmarshal(data, request)
+		if err != nil {
+			WriteData(w, ErrCouldNotParse.RPCError().AsRPCErrorResponse(nil))
+			return
+		}
+		requests = []RPCRequest{*request}
 	}
 
+	responses := make([]interface{}, 0)
+	for _, req := range requests {
+		responses = append(responses, srv.Do(req))
+	}
+
+	if len(responses) == 1 {
+		WriteData(w, responses[0])
+	} else {
+		WriteData(w, responses)
+	}
+}
+
+func (srv *Server) Do(in RPCRequest) interface{} {
 	if in.JSONRPC != JSONRPC || in.Method == "" || in.ID == nil {
-		WriteError(w, nil, ErrInvalidParams.RPCError())
-		return
+		return ErrInvalidParams.RPCError().AsRPCErrorResponse(nil)
 	}
 
+	var err error
 	var out interface{}
 
 	switch in.Method {
@@ -462,38 +488,21 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		WriteError(w, in.ID, ErrInternal.RPCErrorWithMessage(err.Error()))
-		return
+		return ErrInternal.RPCErrorWithMessage(err.Error()).AsRPCErrorResponse(in.ID)
 	}
 
-	WriteData(w, in.ID, out)
+	return RPCResultResponse{
+		JSONRPC: JSONRPC,
+		ID:      in.ID,
+		Result:  StructToResult(out),
+	}
 }
 
-func WriteError(w http.ResponseWriter, id interface{}, resp *RPCError) {
-	data, err := json.Marshal(&RPCErrorResponse{
-		JSONRPC: JSONRPC,
-		Error:   resp,
-		ID:      id,
-	})
+func WriteData(w http.ResponseWriter, resp interface{}) {
+	data, err := json.Marshal(resp)
 	if err != nil {
 		panic(err)
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
-}
-
-func WriteData(w http.ResponseWriter, id interface{}, result interface{}) {
-	resp := &RPCResultResponse{
-		JSONRPC: JSONRPC,
-		ID:      id,
-		Result:  StructToResult(result),
-	}
-	data, err := json.Marshal(resp)
-	if err != nil {
-		WriteError(w, id, ErrInternal.RPCError())
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 	w.Write(data)
 }
