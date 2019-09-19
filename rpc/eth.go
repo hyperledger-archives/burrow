@@ -290,22 +290,79 @@ func (srv *EthService) EthGetCode(req *web3.EthGetCodeParams) (*web3.EthGetCodeR
 
 func (srv *EthService) EthGetStorageAt(req *web3.EthGetStorageAtParams) (*web3.EthGetStorageAtResult, error) {
 	// TODO
-	// addr, err := crypto.AddressFromHexString(req.Address)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	return nil, web3.ErrNotFound
 }
 
 func (srv *EthService) EthGetTransactionByBlockHashAndIndex(req *web3.EthGetTransactionByBlockHashAndIndexParams) (*web3.EthGetTransactionByBlockHashAndIndexResult, error) {
-	// TODO
-	return nil, web3.ErrNotFound
+	height, err := srv.getBlockHeightByHash(req.BlockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	head, err := srv.blockchain.GetBlockHeader(height)
+	if err != nil {
+		return nil, err
+	}
+
+	txes, err := srv.events.TxsAtHeight(height)
+	if err != nil {
+		return nil, err
+	}
+
+	index, err := encoding.HexDecodeToNumber(req.Index)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, txe := range txes {
+		if txe.GetIndex() == index {
+			hash, tx, err := getHashAndCallTxFromExecution(txe)
+			if err != nil {
+				return nil, err
+			}
+			return &web3.EthGetTransactionByBlockHashAndIndexResult{
+				TransactionResult: getTransaction(head, hash, tx),
+			}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("tx not found at hash %s, index %d", req.BlockHash, index)
 }
 
 func (srv *EthService) EthGetTransactionByBlockNumberAndIndex(req *web3.EthGetTransactionByBlockNumberAndIndexParams) (*web3.EthGetTransactionByBlockNumberAndIndexResult, error) {
-	// TODO
-	return nil, web3.ErrNotFound
+	height, err := srv.getHeightByWordOrNumber(req.BlockNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	head, err := srv.blockchain.GetBlockHeader(height)
+	if err != nil {
+		return nil, err
+	}
+
+	txes, err := srv.events.TxsAtHeight(height)
+	if err != nil {
+		return nil, err
+	}
+
+	index, err := encoding.HexDecodeToNumber(req.Index)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, txe := range txes {
+		if txe.GetIndex() == index {
+			hash, tx, err := getHashAndCallTxFromExecution(txe)
+			if err != nil {
+				return nil, err
+			}
+			return &web3.EthGetTransactionByBlockNumberAndIndexResult{
+				TransactionResult: getTransaction(head, hash, tx),
+			}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("tx not found at height %d, index %d", height, index)
 }
 
 // EthGetTransactionByHash finds a tx by the given hash
@@ -318,10 +375,6 @@ func (srv *EthService) EthGetTransactionByHash(req *web3.EthGetTransactionByHash
 	txe, err := srv.events.TxByHash(hash)
 	if err != nil {
 		return nil, err
-	} else if txe.Envelope == nil {
-		return nil, fmt.Errorf("no envelope for tx %s", req.TransactionHash)
-	} else if txe.Envelope.Tx == nil {
-		return nil, fmt.Errorf("no payload for tx %s", req.TransactionHash)
 	}
 
 	head, err := srv.blockchain.GetBlockHeader(txe.Height)
