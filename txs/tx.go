@@ -77,12 +77,32 @@ func (tx *Tx) MustSignBytes() []byte {
 }
 
 // Produces the canonical SignBytes (the Tx message that will be signed) for a Tx
-func (tx *Tx) SignBytes(env Envelope_Encoding) ([]byte, error) {
-	bs, err := json.Marshal(tx)
-	if err != nil {
-		return nil, fmt.Errorf("could not generate canonical SignBytes for Payload %v: %v", tx.Payload, err)
+func (tx *Tx) SignBytes(enc Envelope_Encoding) ([]byte, error) {
+	switch enc {
+	case Envelope_JSON:
+		bs, err := json.Marshal(tx)
+		if err != nil {
+			return nil, fmt.Errorf("could not generate canonical SignBytes for Payload %v: %v", tx.Payload, err)
+		}
+		return bs, nil
+	case Envelope_RLP:
+		switch pay := tx.Payload.(type) {
+		case *payload.CallTx:
+			input := pay.Input
+			return RLPEncode(
+				input.Sequence-1,
+				pay.GasPrice,
+				pay.GasLimit,
+				pay.Address.Bytes(),
+				balance.NativeToWei(input.Amount).Bytes(),
+				pay.Data.Bytes(),
+			)
+		default:
+			return nil, fmt.Errorf("tx type %v not supported for rlp encoding", tx.Payload.Type())
+		}
+	default:
+		return nil, fmt.Errorf("encoding type %s not supported", enc.String())
 	}
-	return bs, nil
 }
 
 func RLPEncode(seq, gasPrice, gasLimit uint64, address, amount, data []byte) ([]byte, error) {
@@ -96,24 +116,6 @@ func RLPEncode(seq, gasPrice, gasLimit uint64, address, amount, data []byte) ([]
 		uint64(1), // chainID
 		uint(0), uint(0),
 	})
-}
-
-func (tx *Tx) SignBytesRLPEncoded() ([]byte, error) {
-	switch pay := tx.Payload.(type) {
-	case *payload.CallTx:
-		input := pay.Input
-		return RLPEncode(
-			input.Sequence-1,
-			pay.GasPrice,
-			pay.GasLimit,
-			pay.Address.Bytes(),
-			balance.NativeToWei(input.Amount).Bytes(),
-			pay.Data.Bytes(),
-		)
-
-	default:
-		return nil, fmt.Errorf("tx type %v not supported for rlp encoding", tx.Payload.Type())
-	}
 }
 
 // Serialisation intermediate for switching on type

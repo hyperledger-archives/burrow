@@ -160,8 +160,10 @@ func (srv *EthService) EthCall(req *web3.EthCallParams) (*web3.EthCallResult, er
 		}
 	}
 
-	// don't hex decode abi
-	data := []byte(encoding.HexRemovePrefix(req.Transaction.Data))
+	data, err := encoding.HexDecodeToBytes(req.Transaction.Data)
+	if err != nil {
+		return nil, err
+	}
 
 	txe, err := execution.CallSim(srv.accounts, srv.blockchain, from, to, data, srv.logger)
 	if err != nil {
@@ -213,7 +215,7 @@ func (srv *EthService) EthGetBlockByHash(req *web3.EthGetBlockByHashParams) (*we
 
 	return &web3.EthGetBlockByHashResult{
 		GetBlockByHashResult: block,
-	}, web3.ErrNotFound
+	}, nil
 }
 
 // EthGetBlockByNumber returns block info at the given height
@@ -247,7 +249,7 @@ func (srv *EthService) EthGetBlockTransactionCountByHash(req *web3.EthGetBlockTr
 
 	return &web3.EthGetBlockTransactionCountByHashResult{
 		BlockTransactionCountByHash: encoding.HexEncodeNumber(uint64(block.NumTxs)),
-	}, web3.ErrNotFound
+	}, nil
 }
 
 // EthGetBlockTransactionCountByNumber returns the number of transactions in a block matching a given height
@@ -339,9 +341,18 @@ func (srv *EthService) EthGetTransactionByHash(req *web3.EthGetTransactionByHash
 
 // EthGetTransactionCount returns the number of transactions sent from an address
 func (srv *EthService) EthGetTransactionCount(req *web3.EthGetTransactionCountParams) (*web3.EthGetTransactionCountResult, error) {
-	// TODO: implement
+	addr, err := encoding.HexDecodeToAddress(req.Address)
+	if err != nil {
+		return nil, err
+	}
+
+	acc, err := srv.accounts.GetAccount(addr)
+	if err != nil {
+		return nil, err
+	}
+
 	return &web3.EthGetTransactionCountResult{
-		NonceOrNull: encoding.HexEncodeNumber(0),
+		NonceOrNull: encoding.HexEncodeNumber(acc.GetSequence()),
 	}, nil
 }
 
@@ -587,11 +598,11 @@ func (srv *EthService) EthSyncing() (*web3.EthSyncingResult, error) {
 }
 
 func (srv *EthService) getBlockHeightByHash(hash string) (uint64, error) {
-	for i := uint64(0); i < srv.blockchain.LastBlockHeight(); i++ {
+	for i := uint64(1); i < srv.blockchain.LastBlockHeight(); i++ {
 		head, err := srv.blockchain.GetBlockHeader(i)
 		if err != nil {
 			return 0, err
-		} else if head.Hash().String() == hash {
+		} else if hexKeccak(head.Hash().Bytes()) == hash {
 			return i, nil
 		}
 	}
@@ -661,9 +672,9 @@ func (srv *EthService) getBlockInfoAtHeight(height uint64, includeTxs bool) (web
 	return web3.Block{
 		Hash:             hexKeccak(block.Hash().Bytes()),
 		ParentHash:       hexKeccak(block.Hash().Bytes()),
-		TransactionsRoot: hexKeccakAddress(block.Hash().Bytes()),
-		StateRoot:        hexKeccakAddress(block.Hash().Bytes()),
-		ReceiptsRoot:     hexKeccakAddress(block.Hash().Bytes()),
+		TransactionsRoot: hexKeccak(block.Hash().Bytes()),
+		StateRoot:        hexKeccak(block.Hash().Bytes()),
+		ReceiptsRoot:     hexKeccak(block.Hash().Bytes()),
 		Nonce:            "0x0000000000000000",
 		Size:             encoding.HexEncodeNumber(uint64(block.TotalTxs)),
 		Number:           encoding.HexEncodeNumber(uint64(block.Height)),
@@ -672,7 +683,7 @@ func (srv *EthService) getBlockInfoAtHeight(height uint64, includeTxs bool) (web
 		ExtraData:        "0x0",
 		Difficulty:       "0x0",
 		TotalDifficulty:  "0x0",
-		GasLimit:         "0x0",
+		GasLimit:         encoding.HexEncodeNumber(2<<52 - 1),
 		GasUsed:          "0x0",
 		Sha3Uncles:       "0x0",
 		Timestamp:        encoding.HexEncodeNumber(uint64(block.Time.Unix())),

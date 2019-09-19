@@ -156,7 +156,7 @@ func TestWeb3Service(t *testing.T) {
 				Transaction: web3.Transaction{
 					From: encoding.HexEncodeBytes(genesisAccounts[1].GetAddress().Bytes()),
 					To:   contractAddress,
-					Data: encoding.HexAddPrefix(string(packed)),
+					Data: encoding.HexEncodeBytes(packed),
 				},
 			})
 			require.NoError(t, err)
@@ -203,6 +203,14 @@ func TestWeb3Service(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, `0x30440220345d17225ac03a575f467cea3a8d5cc2dea42fc89030c42ea175fd5140c542eb02200307004fc21ea592ce5ca013705959292c2de85b71d0fa0c84ebd8b541f505d5`, result.Signature)
+	})
+
+	t.Run("EthGetBlock", func(t *testing.T) {
+		numberResult, err := eth.EthGetBlockByNumber(&web3.EthGetBlockByNumberParams{BlockNumber: encoding.HexEncodeNumber(1)})
+		require.NoError(t, err)
+		hashResult, err := eth.EthGetBlockByHash(&web3.EthGetBlockByHashParams{BlockHash: numberResult.GetBlockByNumberResult.Hash})
+		require.NoError(t, err)
+		require.Equal(t, numberResult.GetBlockByNumberResult, hashResult.GetBlockByHashResult)
 	})
 
 }

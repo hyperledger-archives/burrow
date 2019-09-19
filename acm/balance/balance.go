@@ -132,7 +132,7 @@ func (bs Balances) HasPower() bool {
 }
 
 func NativeToWei(n uint64) *big.Int {
-	// 1 unit == 1 ether
+	// 1 native unit to 1 ether (wei)
 	x := new(big.Int).SetUint64(n)
 	return new(big.Int).Mul(x, eth)
 }
