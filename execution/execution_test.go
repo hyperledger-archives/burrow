@@ -1759,7 +1759,7 @@ func permNameToFuncID(name string) []byte {
 	if err != nil {
 		panic("didn't find snative function signature!")
 	}
-	id := function.Abi.FunctionID
+	id := function.Abi().FunctionID
 	return id[:]
 }
 
