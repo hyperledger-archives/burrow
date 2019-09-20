@@ -3,6 +3,7 @@ package dump
 import (
 	"fmt"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/hyperledger/burrow/bcm"
@@ -40,7 +41,9 @@ func testLoad(t testing.TB, mock *MockSource) *state.State {
 func TestLoadAndDump(t *testing.T) {
 	st, err := state.MakeGenesisState(testDB(t), &genesis.GenesisDoc{GlobalPermissions: permission.DefaultAccountPermissions})
 	require.NoError(t, err)
-	src, err := NewFileReader(os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/dump/test_dump.json")
+	dir, err := os.Getwd()
+	require.NoError(t, err)
+	src, err := NewFileReader(path.Join(dir, "test_dump.json"))
 	require.NoError(t, err)
 	err = Load(src, st)
 	require.NoError(t, err)

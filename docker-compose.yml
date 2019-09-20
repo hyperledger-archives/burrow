@@ -6,7 +6,7 @@ services:
       - 5432
 
   burrow:
-    build: .circleci
+    build: .github
     environment:
       DB_URL: "postgres://postgres@db:5432/postgres?sslmode=disable"
       GO111MODULE: "on"

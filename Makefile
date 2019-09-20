@@ -189,13 +189,7 @@ test_js: bin/solc build_burrow
 
 .PHONY: test
 test: check bin/solc
-# on circleci we might want to limit memory usage through GO_TEST_ARGS
 	@tests/scripts/bin_wrapper.sh go test ./... ${GO_TEST_ARGS}
-
-.PHONY: test_cover
-test_cover: check bin/solc
-	@tests/scripts/bin_wrapper.sh go test -coverprofile=c.out ./... ${GO_TEST_ARGS}
-	@tests/scripts/bin_wrapper.sh go tool cover -html=c.out -o coverage.html
 
 .PHONY: test_keys
 test_keys: build_burrow
@@ -265,17 +259,8 @@ docs: CHANGELOG.md NOTES.md
 # Tag the current HEAD commit with the current release defined in
 # ./project/history.go
 .PHONY: tag_release
-tag_release: test check CHANGELOG.md NOTES.md build
+tag_release: test check docs build
 	@scripts/tag_release.sh
-
-.PHONY: release
-release: docs check test docker_build
-	@scripts/is_checkout_dirty.sh || (echo "checkout is dirty so not releasing!" && exit 1)
-	@scripts/release.sh
-
-.PHONY: release_dev
-release_dev: test docker_build
-	@scripts/release_dev.sh
 
 .PHONY: build_ci_image
 build_ci_image:
