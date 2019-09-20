@@ -3,11 +3,9 @@ package rlp
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"math/bits"
 	"reflect"
-	"strconv"
 )
 
 const (
@@ -46,27 +44,13 @@ func encodeUint8(input uint8) ([]byte, error) {
 }
 
 func encodeUint64(i uint64) ([]byte, error) {
-	size := bits.Len64(uint64(i))/8 + 1
-
-	switch size {
-	case 1:
+	size := bits.Len64(i)/8 + 1
+	if size == 1 {
 		return encodeUint8(uint8(i))
-	case 2:
-		return encodeString(PutUint16(i))
-	case 3:
-		return encodeString(PutUint24(i))
-	case 4:
-		return encodeString(PutUint32(i))
-	case 5:
-		return encodeString(PutUint40(i))
-	case 6:
-		return encodeString(PutUint48(i))
-	case 7:
-		return encodeString(PutUint56(i))
-	case 8:
-		return encodeString(PutUint64(i))
 	}
-	return nil, nil
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(i))
+	return encodeString(b[8-size:])
 }
 
 func encodeLength(n, offset int) []byte {
@@ -74,17 +58,11 @@ func encodeLength(n, offset int) []byte {
 		return []uint8{uint8(n + offset)}
 	}
 
-	length := strconv.FormatUint(uint64(n), 16)
-	if len(length)%2 == 1 {
-		length = fmt.Sprintf("0%s", length)
-	}
-
-	dec, err := hex.DecodeString(length)
-	if err != nil {
-		return nil
-	}
-
-	return append([]byte{uint8(0xb7 + len(string(n)))}, dec...)
+	i := uint64(n)
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, i)
+	size := bits.Len64(i)/8 + 1
+	return append([]byte{uint8(0xb7 + len(string(n)))}, b[8-size:]...)
 }
 
 func encodeString(input []byte) ([]byte, error) {
@@ -199,19 +177,19 @@ func decode(in []byte, out *fields) error {
 }
 
 func decodeLength(input []byte) (uint8, uint8, reflect.Kind, error) {
-	length := uint8(len(input))
+	length := len(input)
 
 	if length == 0 {
 		return 0, 0, reflect.Invalid, ErrNoInput
 	}
 
-	prefix := uint8(input[0])
+	prefix := input[0]
 
 	if prefix <= 0x7f {
 		// single byte
 		return 0, 1, reflect.String, nil
 
-	} else if length > prefix-0x80 && prefix <= 0xb7 {
+	} else if length > int(prefix-0x80) && prefix <= 0xb7 {
 		// short string
 		strLen := prefix - 0x80
 		if strLen == 1 && uint8(input[1]) <= 0x7f {
@@ -219,12 +197,12 @@ func decodeLength(input []byte) (uint8, uint8, reflect.Kind, error) {
 		}
 		return 1, strLen + 1, reflect.String, nil
 
-	} else if length > prefix-0xb7 && prefix <= 0xbf {
+	} else if length > int(prefix-0xb7) && prefix <= 0xbf {
 		// long string
 		next, err := getLength(input[1 : (prefix-0xb7)+1])
 		if err != nil {
 			return 0, 0, reflect.Invalid, err
-		} else if length > prefix-0xb7+next {
+		} else if length > int(prefix-0xb7+next) {
 			lenOfStrLen := prefix - 0xb7
 			if input[1] == 0 {
 				return 0, 0, reflect.Invalid, fmt.Errorf("multi-byte length must have no leading zero")
@@ -238,18 +216,18 @@ func decodeLength(input []byte) (uint8, uint8, reflect.Kind, error) {
 			return lenOfStrLen + 1, lenOfStrLen + strLen, reflect.String, nil
 		}
 
-	} else if length > prefix-0xc0 && prefix <= 0xf7 {
+	} else if length > int(prefix-0xc0) && prefix <= 0xf7 {
 		// short list
 		lenOfList := prefix - 0xc0
 		return 1, lenOfList + 1, reflect.Slice, nil
 
-	} else if prefix <= 0xff && length > prefix-0xf7 {
+	} else if prefix <= 0xff && length > int(prefix-0xf7) {
 		// long list
 		lenOfListLen := (prefix - 0xf7) + 1
 		next, err := getLength(input[1:lenOfListLen])
 		if err != nil {
 			return 0, 0, reflect.Invalid, err
-		} else if length > prefix-0xf7+next {
+		} else if length > int(prefix-0xf7+next) {
 			if input[1] == 0 {
 				return 0, 0, reflect.Invalid, fmt.Errorf("multi-byte length must have no leading zero")
 			}

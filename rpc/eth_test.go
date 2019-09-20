@@ -7,8 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/encoding"
+	x "github.com/hyperledger/burrow/encoding/hex"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/keys"
@@ -53,7 +54,8 @@ func TestWeb3Service(t *testing.T) {
 	accountState := kern.State
 	eventsState := kern.State
 	validatorState := kern.State
-	eth := rpc.NewEthService(accountState, eventsState, kern.Blockchain, validatorState, nodeView, kern.Transactor, store, kern.Logger)
+	eth := rpc.NewEthService(accountState, eventsState, kern.Blockchain, validatorState,
+		nodeView, kern.Transactor, store, kern.Logger)
 
 	t.Run("Web3Sha3", func(t *testing.T) {
 		result, err := eth.Web3Sha3(&web3.Web3Sha3Params{"0x68656c6c6f20776f726c64"}) // hello world
@@ -84,7 +86,7 @@ func TestWeb3Service(t *testing.T) {
 		t.Run("NetVersion", func(t *testing.T) {
 			result, err := eth.NetVersion()
 			require.NoError(t, err)
-			require.Equal(t, encoding.HexEncodeNumber(uint64(rpc.ChainID)), result.ChainID)
+			require.Equal(t, x.EncodeNumber(1), result.ChainID)
 		})
 
 		t.Run("EthProtocolVersion", func(t *testing.T) {
@@ -101,34 +103,50 @@ func TestWeb3Service(t *testing.T) {
 		})
 	})
 
-	t.Run("EthCreateContract", func(t *testing.T) {
+	t.Run("EthTransactions", func(t *testing.T) {
 		var txHash, contractAddress string
 
-		t.Run("EthSendRawTransaction", func(t *testing.T) {
-			to := genesisAccounts[2].GetPublicKey().GetAddress()
-			acc, err := kern.State.GetAccount(to)
-			require.NoError(t, err)
-			before := acc.GetBalance()
+		receivee := genesisAccounts[2].GetPublicKey().GetAddress()
+		acc, err := kern.State.GetAccount(receivee)
+		require.NoError(t, err)
+		before := acc.GetBalance()
 
+		t.Run("EthSendRawTransaction", func(t *testing.T) {
+			// see: https://github.com/ethereumjs/ethereumjs-tx/blob/master/examples/transactions.ts#L9
 			raw := `0xf867808082520894f97798df751deb4b6e39d4cf998ee7cd4dcb9acc880de0b6b3a76400008025a0f0d2396973296cd6a71141c974d4a851f5eae8f08a8fba2dc36a0fef9bd6440ca0171995aa750d3f9f8e4d0eac93ff67634274f3c5acf422723f49ff09a6885422`
 			_, err = eth.EthSendRawTransaction(&web3.EthSendRawTransactionParams{
 				SignedTransactionData: raw,
 			})
 			require.NoError(t, err)
+		})
 
-			acc, err = kern.State.GetAccount(to)
+		t.Run("EthGetBalance", func(t *testing.T) {
+			result, err := eth.EthGetBalance(&web3.EthGetBalanceParams{
+				Address:     x.EncodeBytes(receivee.Bytes()),
+				BlockNumber: "latest",
+			})
 			require.NoError(t, err)
-			after := acc.GetBalance()
-			require.Equal(t, after, before+1)
+			after, err := x.DecodeToBigInt(result.GetBalanceResult)
+			require.NoError(t, err)
+			after = balance.WeiToNative(after.Bytes())
+			require.Equal(t, after.Uint64(), before+1)
+		})
+
+		t.Run("EthGetTransactionCount", func(t *testing.T) {
+			result, err := eth.EthGetTransactionCount(&web3.EthGetTransactionCountParams{
+				Address: genesisAccounts[1].GetAddress().String(),
+			})
+			require.NoError(t, err)
+			require.Equal(t, x.EncodeNumber(1), result.NonceOrNull)
 		})
 
 		// create contract on chain
 		t.Run("EthSendTransaction", func(t *testing.T) {
 			result, err := eth.EthSendTransaction(&web3.EthSendTransactionParams{
 				Transaction: web3.Transaction{
-					From: encoding.HexEncodeBytes(genesisAccounts[3].GetAddress().Bytes()),
-					Gas:  encoding.HexEncodeNumber(40),
-					Data: encoding.HexEncodeBytes(rpc.Bytecode_HelloWorld),
+					From: x.EncodeBytes(genesisAccounts[3].GetAddress().Bytes()),
+					Gas:  x.EncodeNumber(40),
+					Data: x.EncodeBytes(rpc.Bytecode_HelloWorld),
 				},
 			})
 			require.NoError(t, err)
@@ -154,14 +172,14 @@ func TestWeb3Service(t *testing.T) {
 
 			result, err := eth.EthCall(&web3.EthCallParams{
 				Transaction: web3.Transaction{
-					From: encoding.HexEncodeBytes(genesisAccounts[1].GetAddress().Bytes()),
+					From: x.EncodeBytes(genesisAccounts[1].GetAddress().Bytes()),
 					To:   contractAddress,
-					Data: encoding.HexEncodeBytes(packed),
+					Data: x.EncodeBytes(packed),
 				},
 			})
 			require.NoError(t, err)
 
-			value, err := encoding.HexDecodeToBytes(result.ReturnValue)
+			value, err := x.DecodeToBytes(result.ReturnValue)
 			require.NoError(t, err)
 			vars, err := abi.DecodeFunctionReturn(string(rpc.Abi_HelloWorld), "Hello", value)
 			require.NoError(t, err)
@@ -175,7 +193,7 @@ func TestWeb3Service(t *testing.T) {
 				Address: contractAddress,
 			})
 			require.NoError(t, err)
-			require.Equal(t, encoding.HexEncodeBytes(rpc.DeployedBytecode_HelloWorld), strings.ToLower(result.Bytes))
+			require.Equal(t, x.EncodeBytes(rpc.DeployedBytecode_HelloWorld), strings.ToLower(result.Bytes))
 		})
 	})
 
@@ -191,7 +209,7 @@ func TestWeb3Service(t *testing.T) {
 		require.Len(t, result.Addresses, len(genesisAccounts)-1)
 		for _, acc := range genesisAccounts {
 			if acc.PrivateKey().CurveType == crypto.CurveTypeSecp256k1 {
-				require.Contains(t, result.Addresses, encoding.HexEncodeBytes(acc.GetAddress().Bytes()))
+				require.Contains(t, result.Addresses, x.EncodeBytes(acc.GetAddress().Bytes()))
 			}
 		}
 	})
@@ -206,7 +224,7 @@ func TestWeb3Service(t *testing.T) {
 	})
 
 	t.Run("EthGetBlock", func(t *testing.T) {
-		numberResult, err := eth.EthGetBlockByNumber(&web3.EthGetBlockByNumberParams{BlockNumber: encoding.HexEncodeNumber(1)})
+		numberResult, err := eth.EthGetBlockByNumber(&web3.EthGetBlockByNumberParams{BlockNumber: x.EncodeNumber(1)})
 		require.NoError(t, err)
 		hashResult, err := eth.EthGetBlockByHash(&web3.EthGetBlockByHashParams{BlockHash: numberResult.GetBlockByNumberResult.Hash})
 		require.NoError(t, err)
