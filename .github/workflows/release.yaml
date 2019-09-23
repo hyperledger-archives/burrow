@@ -1,0 +1,52 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  go:
+    name: GoReleaser
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Publish
+      uses: docker://goreleaser/goreleaser
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        args: release --release-notes "NOTES.md"
+      if: success()
+
+  js:
+    name: NPM 
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Publish
+      env:
+        NPM_EMAIL: ${{ secrets.NPM_EMAIL }}
+        NPM_USER: ${{ secrets.NPM_USER }}
+        NPM_PASS: ${{ secrets.NPM_PASS }}
+      run: |
+        git config --global user.email "${NPM_EMAIL}"
+        npm-cli-login
+        npm version from-git
+        npm publish --access public .
+      
+  docker:
+    name: Docker
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - run: make docker_build
+    - name: Publish
+      env:
+        DOCKER_REPO: "hyperledger/burrow"
+        DOCKER_USER: ${{ secrets.DOCKER_USER }}
+        DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
+      run: |
+        export tag=$(git tag --points-at HEAD)
+        echo ${DOCKER_PASS} | docker login --username ${DOCKER_USER} --password-stdin
+        docker tag ${DOCKER_REPO}:${tag#v} ${DOCKER_REPO}:latest
+        docker push ${DOCKER_REPO}
