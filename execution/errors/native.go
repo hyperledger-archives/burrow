@@ -6,15 +6,21 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 )
 
-type LacksSNativePermission struct {
-	Address crypto.Address
-	SNative string
+type LacksNativePermission struct {
+	Address    crypto.Address
+	NativeName string
 }
 
-func (e LacksSNativePermission) Error() string {
-	return fmt.Sprintf("account %s does not have SNative function call permission: %s", e.Address, e.SNative)
+var _ CodedError = &LacksNativePermission{}
+
+func (e *LacksNativePermission) ErrorMessage() string {
+	return fmt.Sprintf("account %s does not have native function call permission: %s", e.Address, e.NativeName)
 }
 
-func (e LacksSNativePermission) ErrorCode() Code {
+func (e *LacksNativePermission) Error() string {
+	return e.ErrorMessage()
+}
+
+func (e *LacksNativePermission) ErrorCode() Code {
 	return ErrorCodeNativeFunction
 }

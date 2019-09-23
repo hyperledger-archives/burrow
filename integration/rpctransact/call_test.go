@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/hyperledger/burrow/integration"
 
@@ -385,7 +386,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			err = abi.UnpackEvent(&evAbi, log.Topics, log.Data.Bytes(), data...)
 			require.NoError(t, err)
 
-			h := sha3.NewKeccak256()
+			h := sha3.NewLegacyKeccak256()
 			h.Write([]byte("hash"))
 			expectedHash := h.Sum(nil)
 			// "Downsie!", true, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", 102, 42, 'hash')
@@ -427,7 +428,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			err = abi.UnpackEvent(&evAbi, log.Topics, log.Data.Bytes(), data...)
 			require.NoError(t, err)
 
-			h := sha3.NewKeccak256()
+			h := sha3.NewLegacyKeccak256()
 			h.Write([]byte("hash"))
 			expectedHash := h.Sum(nil)
 			// "Downsie!", true, "Donaudampfschifffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft", 102, 42, 'hash')
@@ -453,6 +454,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
 			revertReason, err := abi.UnpackRevert(txe.Result.Return)
 			require.NoError(t, err)
+			require.NotNil(t, revertReason)
 			assert.Equal(t, *revertReason, "I have reverted")
 			return
 		})

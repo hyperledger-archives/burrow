@@ -63,8 +63,8 @@ func burrow(output commands.Output) *cli.Cli {
 	app.Command("deploy", "Deploy and test contracts",
 		commands.Deploy(output))
 
-	app.Command("snatives", "Dump Solidity interface contracts for SNatives",
-		commands.Snatives(output))
+	app.Command("natives", "Dump Solidity interface contracts for Burrow native contracts",
+		commands.Natives(output))
 
 	app.Command("vent", "Start the Vent EVM event and blocks consumer service to populated databases from smart contracts",
 		commands.Vent(output))

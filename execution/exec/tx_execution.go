@@ -131,7 +131,10 @@ func (txe *TxExecution) GovernAccount(governAccount *GovernAccountEvent, excepti
 // Errors pushed to TxExecutions end up in merkle state so it is essential that they are deterministic and independent
 // of the code path taken to execution (e.g. replay takes a different path to that of normal consensus reactor so stack
 // traces may differ - as they may across architectures)
-func (txe *TxExecution) PushError(err error) {
+func (txe *TxExecution) PushError(err error) bool {
+	if err == nil {
+		return false
+	}
 	if txe.Exception == nil {
 		// Don't forget the nil jig
 		ex := errors.AsException(err)
@@ -139,6 +142,7 @@ func (txe *TxExecution) PushError(err error) {
 			txe.Exception = ex
 		}
 	}
+	return true
 }
 
 func (txe *TxExecution) CallTrace() string {

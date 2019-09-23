@@ -62,6 +62,19 @@ func (acc *Account) SubtractFromBalance(amount uint64) error {
 	return nil
 }
 
+// Return bytes of any code-type value that is set. EVM, WASM, or native name
+func (acc *Account) Code() []byte {
+	switch {
+	case len(acc.EVMCode) > 0:
+		return acc.EVMCode
+	case len(acc.WASMCode) > 0:
+		return acc.WASMCode
+	case acc.NativeName != "":
+		return []byte(acc.NativeName)
+	}
+	return nil
+}
+
 // Conversions
 //
 // Using the naming convention is this package of 'As<Type>' being

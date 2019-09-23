@@ -142,11 +142,19 @@ func HasPermission(accountGetter acmstate.AccountGetter, acc *acm.Account, perm 
 		return false
 	}
 
-	v, err := acc.Permissions.Base.Compose(acmstate.GlobalAccountPermissions(accountGetter).Base).Get(perm)
+	globalPerms, err := acmstate.GlobalAccountPermissions(accountGetter)
 	if err != nil {
 		logger.TraceMsg("Error obtaining permission value (will default to false/deny)",
 			"perm_flag", perm.String(),
 			structure.ErrorKey, err)
+		return false
+	}
+	v, err := acc.Permissions.Base.Compose(globalPerms.Base).Get(perm)
+	if err != nil {
+		logger.TraceMsg("Error obtaining permission value (will default to false/deny)",
+			"perm_flag", perm.String(),
+			structure.ErrorKey, err)
+		return false
 	}
 
 	if v {

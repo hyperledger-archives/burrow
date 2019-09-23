@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"github.com/hyperledger/burrow/acm/acmstate"
+	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
@@ -19,11 +20,11 @@ var regexpAlphaNum = regexp.MustCompile("^[a-zA-Z0-9._/-@]*$")
 var regexpJSON = regexp.MustCompile(`^[a-zA-Z0-9_/ \-+"':,\n\t.{}()\[\]]*$`)
 
 type NameContext struct {
-	Blockchain  BlockchainHeight
-	StateWriter acmstate.ReaderWriter
-	NameReg     names.ReaderWriter
-	Logger      *logging.Logger
-	tx          *payload.NameTx
+	Blockchain engine.Blockchain
+	State      acmstate.ReaderWriter
+	NameReg    names.ReaderWriter
+	Logger     *logging.Logger
+	tx         *payload.NameTx
 }
 
 func (ctx *NameContext) Execute(txe *exec.TxExecution, p payload.Payload) error {
@@ -33,7 +34,7 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 		return fmt.Errorf("payload must be NameTx, but is: %v", txe.Envelope.Tx.Payload)
 	}
 	// Validate input
-	inAcc, err := ctx.StateWriter.GetAccount(ctx.tx.Input.Address)
+	inAcc, err := ctx.State.GetAccount(ctx.tx.Input.Address)
 	if err != nil {
 		return err
 	}
@@ -43,7 +44,7 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 		return errors.ErrorCodeInvalidAddress
 	}
 	// check permission
-	if !hasNamePermission(ctx.StateWriter, inAcc, ctx.Logger) {
+	if !hasNamePermission(ctx.State, inAcc, ctx.Logger) {
 		return fmt.Errorf("account %s does not have Name permission", ctx.tx.Input.Address)
 	}
 	if ctx.tx.Input.Amount < ctx.tx.Fee {
@@ -170,7 +171,7 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 		return errors.ErrorCodef(errors.ErrorCodeInsufficientFunds,
 			"Input account does not have sufficient balance to cover input amount: %v", ctx.tx.Input)
 	}
-	err = ctx.StateWriter.UpdateAccount(inAcc)
+	err = ctx.State.UpdateAccount(inAcc)
 	if err != nil {
 		return err
 	}

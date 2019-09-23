@@ -1,11 +1,11 @@
 package acmstate
 
 import (
-	"fmt"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/errors"
+	"github.com/hyperledger/burrow/permission"
 )
 
 type MemoryState struct {
@@ -19,7 +19,11 @@ var _ IterableReaderWriter = &MemoryState{}
 // Get an in-memory state IterableReader
 func NewMemoryState() *MemoryState {
 	return &MemoryState{
-		Accounts: make(map[crypto.Address]*acm.Account),
+		Accounts: map[crypto.Address]*acm.Account{
+			acm.GlobalPermissionsAddress: {
+				Permissions: permission.DefaultAccountPermissions,
+			},
+		},
 		Storage:  make(map[crypto.Address]map[binary.Word256][]byte),
 		Metadata: make(map[MetadataHash]string),
 	}
@@ -31,7 +35,7 @@ func (ms *MemoryState) GetAccount(address crypto.Address) (*acm.Account, error) 
 
 func (ms *MemoryState) UpdateAccount(updatedAccount *acm.Account) error {
 	if updatedAccount == nil {
-		return fmt.Errorf("UpdateAccount passed nil account in MemoryState")
+		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "UpdateAccount passed nil account in MemoryState")
 	}
 	ms.Accounts[updatedAccount.GetAddress()] = updatedAccount
 	return nil
@@ -52,15 +56,16 @@ func (ms *MemoryState) RemoveAccount(address crypto.Address) error {
 }
 
 func (ms *MemoryState) GetStorage(address crypto.Address, key binary.Word256) ([]byte, error) {
+	_, ok := ms.Accounts[address]
+	if !ok {
+		return nil, errors.ErrorCodef(errors.ErrorCodeNonExistentAccount,
+			"could not get storage for non-existent account: %v", address)
+	}
 	storage, ok := ms.Storage[address]
 	if !ok {
-		return []byte{}, fmt.Errorf("could not find storage for account %s", address)
+		return nil, nil
 	}
-	value, ok := storage[key]
-	if !ok {
-		return []byte{}, fmt.Errorf("could not find key %x for account %s", key, address)
-	}
-	return value, nil
+	return storage[key], nil
 }
 
 func (ms *MemoryState) SetStorage(address crypto.Address, key binary.Word256, value []byte) error {
