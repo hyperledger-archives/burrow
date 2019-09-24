@@ -21,7 +21,7 @@ func TestState_CreateAccount(t *testing.T) {
 	require.NoError(t, err)
 	err = CreateAccount(st, address)
 	require.Error(t, err)
-	require.Equal(t, errors.ErrorCodeDuplicateAddress, errors.ErrorCode(err))
+	require.Equal(t, errors.Code.DuplicateAddress, errors.GetCode(err))
 
 	st = acmstate.NewMemoryState()
 	err = CreateAccount(st, address)
@@ -78,7 +78,7 @@ func TestState_NewCache(t *testing.T) {
 		return account.AddToBalance(amt)
 	})
 	require.Error(t, err)
-	require.Equal(t, errors.ErrorCodeIllegalWrite, errors.ErrorCode(err))
+	require.Equal(t, errors.Code.IllegalWrite, errors.GetCode(err))
 }
 
 func blockHashGetter(height uint64) []byte {

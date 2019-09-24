@@ -28,14 +28,14 @@ func getInputs(accountGetter acmstate.AccountGetter, ins []*payload.TxInput) (ma
 	for _, in := range ins {
 		// Account shouldn't be duplicated
 		if _, ok := accounts[in.Address]; ok {
-			return nil, total, errors.ErrorCodeDuplicateAddress
+			return nil, total, errors.Code.DuplicateAddress
 		}
 		acc, err := accountGetter.GetAccount(in.Address)
 		if err != nil {
 			return nil, total, err
 		}
 		if acc == nil {
-			return nil, total, errors.ErrorCodeInvalidAddress
+			return nil, total, errors.Code.InvalidAddress
 		}
 		accounts[in.Address] = acc
 		total += in.Amount
@@ -64,7 +64,7 @@ func getOrMakeOutput(accountGetter acmstate.AccountGetter, accs map[crypto.Addre
 
 	// Account shouldn't be duplicated
 	if _, ok := accs[outputAddress]; ok {
-		return nil, errors.ErrorCodeDuplicateAddress
+		return nil, errors.Code.DuplicateAddress
 	}
 	acc, err := accountGetter.GetAccount(outputAddress)
 	if err != nil {

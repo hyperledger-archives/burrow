@@ -1,11 +1,10 @@
-var utils = require('../utils/utils')
-var convert = require('../utils/convert')
-// var formatters = require('./formatters');
-var sha3 = require('../utils/sha3')
-var coder = require('ethereumjs-abi')
+const utils = require('../utils/utils')
+const convert = require('../utils/convert')
+const sha3 = require('../utils/sha3')
+const coder = require('ethereumjs-abi')
 
-var config = require('../utils/config')
-var ZERO_ADDRESS = Buffer.from('0000000000000000000000000000000000000000', 'hex')
+const config = require('../utils/config')
+const ZERO_ADDRESS = Buffer.from('0000000000000000000000000000000000000000', 'hex')
 
 var functionSig = function (abi) {
   var name = utils.transformToFullName(abi)
@@ -116,8 +115,7 @@ var SolidityFunction = function (abi) {
     if (isCon) { address = null }
 
     var callback
-    if (utils.isFunction(args[args.length - 1])) { callback = args.pop() };
-
+    if (utils.isFunction(args[args.length - 1])) { callback = args.pop() }
     var self = this
 
     var P = new Promise(function (resolve, reject) {
@@ -128,7 +126,7 @@ var SolidityFunction = function (abi) {
         if (error) return reject(error)
 
         // Handle execution reversions
-        if (result.Exception && result.Exception.Code === 16) {
+        if (result.Exception && result.Exception.Code === 17) {
           // Decode error message if there is one otherwise default
           if (result.Result.Return.length === 0) {
             error = new Error('Execution Reverted')

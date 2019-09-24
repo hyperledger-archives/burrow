@@ -109,7 +109,7 @@ func NewContract(name string, comment string, logger *logging.Logger, fs ...Func
 // So it can be looked up by SNative address
 func (c *Contract) Call(state engine.State, params engine.CallParams) (output []byte, err error) {
 	if len(params.Input) < abi.FunctionIDSize {
-		return nil, errors.ErrorCodef(errors.ErrorCodeNativeFunction,
+		return nil, errors.Errorf(errors.Code.NativeFunction,
 			"SNatives dispatch requires a 4-byte function identifier but arguments are only %v bytes long",
 			len(params.Input))
 	}
@@ -147,7 +147,7 @@ func (c *Contract) FunctionByID(id abi.FunctionID) (*Function, errors.CodedError
 	f, ok := c.functionsByID[id]
 	if !ok {
 		return nil,
-			errors.ErrorCodef(errors.ErrorCodeNativeFunction, "unknown SNative function with ID %x", id)
+			errors.Errorf(errors.Code.NativeFunction, "unknown SNative function with ID %x", id)
 	}
 	return f, nil
 }

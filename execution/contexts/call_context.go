@@ -58,19 +58,19 @@ func (ctx *CallContext) Precheck() (*acm.Account, *acm.Account, error) {
 		return nil, nil, err
 	}
 	if inAcc == nil {
-		return nil, nil, errors.ErrorCodef(errors.ErrorCodeInvalidAddress,
+		return nil, nil, errors.Errorf(errors.Code.InvalidAddress,
 			"Cannot find input account: %v", ctx.tx.Input)
 	}
 
 	if ctx.tx.Input.Amount < ctx.tx.Fee {
-		return nil, nil, errors.ErrorCodef(errors.ErrorCodeInsufficientFunds,
+		return nil, nil, errors.Errorf(errors.Code.InsufficientFunds,
 			"Send did not send enough to cover the fee: %v", ctx.tx.Input)
 	}
 
 	// Fees are handle by the CallContext, values transfers (i.e. balances) are handled in the VM (or in Check())
 	err = inAcc.SubtractFromBalance(ctx.tx.Fee)
 	if err != nil {
-		return nil, nil, errors.ErrorCodef(errors.ErrorCodeInsufficientFunds,
+		return nil, nil, errors.Errorf(errors.Code.InsufficientFunds,
 			"Input account does not have sufficient balance to cover input amount: %v", ctx.tx.Input)
 	}
 
@@ -156,13 +156,13 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 			// that will take your fees
 			var exception *errors.Exception
 			if outAcc == nil {
-				exception = errors.ErrorCodef(errors.ErrorCodeInvalidAddress,
+				exception = errors.Errorf(errors.Code.InvalidAddress,
 					"CallTx to an address (%v) that does not exist", ctx.tx.Address)
 				ctx.Logger.Info.Log(structure.ErrorKey, exception,
 					"caller_address", inAcc.GetAddress(),
 					"callee_address", ctx.tx.Address)
 			} else {
-				exception = errors.ErrorCodef(errors.ErrorCodeInvalidAddress,
+				exception = errors.Errorf(errors.Code.InvalidAddress,
 					"CallTx to an address (%v) that holds no code", ctx.tx.Address)
 				ctx.Logger.Info.Log(exception,
 					"caller_address", inAcc.GetAddress(),

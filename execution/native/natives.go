@@ -61,7 +61,9 @@ func (ns *Natives) Dispatch(acc *acm.Account) engine.Callable {
 }
 
 func (ns *Natives) SetExternals(externals engine.Dispatcher) {
-	// TODO: thread these through to the underlying functions
+	for _, c := range ns.callableByAddress {
+		c.SetExternals(externals)
+	}
 }
 
 func (ns *Natives) Callables() []engine.Callable {

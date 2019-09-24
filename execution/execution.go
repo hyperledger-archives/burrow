@@ -290,12 +290,12 @@ func (exe *executor) validateInputsAndStorePublicKeys(txEnv *txs.Envelope) error
 		}
 		// Check sequences
 		if acc.Sequence+1 != uint64(in.Sequence) {
-			return errors.ErrorCodef(errors.ErrorCodeInvalidSequence, "Error invalid sequence in input %v: input has sequence %d, but account has sequence %d, "+
+			return errors.Errorf(errors.Code.InvalidSequence, "Error invalid sequence in input %v: input has sequence %d, but account has sequence %d, "+
 				"so expected input to have sequence %d", in, in.Sequence, acc.Sequence, acc.Sequence+1)
 		}
 		// Check amount
 		if acc.Balance < uint64(in.Amount) {
-			return errors.ErrorCodeInsufficientFunds
+			return errors.Code.InsufficientFunds
 		}
 		// Check for Input permission
 		globalPerms, err := acmstate.GlobalAccountPermissions(exe.stateCache)
@@ -307,7 +307,7 @@ func (exe *executor) validateInputsAndStorePublicKeys(txEnv *txs.Envelope) error
 			return err
 		}
 		if !v {
-			return errors.ErrorCodeNoInputPermission
+			return errors.Code.NoInputPermission
 		}
 	}
 	return nil

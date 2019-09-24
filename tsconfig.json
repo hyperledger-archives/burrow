@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "allowJs": true,
+    "module": "commonjs",
+    "lib": ["es6", "es7", "es2017"],
+    "composite": false,
+    "sourceMap": true,                     /* Generates corresponding '.map' file. */
+    "outDir": "js/dist",                          /* Redirect output structure to the directory. */
+    "rootDir": "js",
+    "resolveJsonModule": true                 /* Include modules imported with '.json' extension */
+  },
+  "include": [
+    "./js/**/*"
+  ],
+  "exclude": [
+    "./node_modules",
+    "./js/dist"
+  ]
+}

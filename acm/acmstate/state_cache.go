@@ -90,10 +90,10 @@ func (cache *Cache) GetAccount(address crypto.Address) (*acm.Account, error) {
 
 func (cache *Cache) UpdateAccount(account *acm.Account) error {
 	if account == nil {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "UpdateAccount called with nil account")
+		return errors.Errorf(errors.Code.IllegalWrite, "UpdateAccount called with nil account")
 	}
 	if cache.readonly {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+		return errors.Errorf(errors.Code.IllegalWrite,
 			"UpdateAccount called in a read-only context on account %v", account.GetAddress())
 	}
 	accInfo, err := cache.get(account.GetAddress())
@@ -103,7 +103,7 @@ func (cache *Cache) UpdateAccount(account *acm.Account) error {
 	accInfo.Lock()
 	defer accInfo.Unlock()
 	if accInfo.removed {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "UpdateAccount on a removed account: %s", account.GetAddress())
+		return errors.Errorf(errors.Code.IllegalWrite, "UpdateAccount on a removed account: %s", account.GetAddress())
 	}
 	accInfo.account = account.Copy()
 	accInfo.updated = true
@@ -121,7 +121,7 @@ func (cache *Cache) GetMetadata(metahash MetadataHash) (string, error) {
 
 func (cache *Cache) SetMetadata(metahash MetadataHash, metadata string) error {
 	if cache.readonly {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "SetMetadata called in read-only context on metadata hash: %v", metahash)
+		return errors.Errorf(errors.Code.IllegalWrite, "SetMetadata called in read-only context on metadata hash: %v", metahash)
 	}
 
 	cache.Lock()
@@ -134,7 +134,7 @@ func (cache *Cache) SetMetadata(metahash MetadataHash, metadata string) error {
 
 func (cache *Cache) RemoveAccount(address crypto.Address) error {
 	if cache.readonly {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "RemoveAccount called on read-only account %v", address)
+		return errors.Errorf(errors.Code.IllegalWrite, "RemoveAccount called on read-only account %v", address)
 	}
 	accInfo, err := cache.get(address)
 	if err != nil {
@@ -191,12 +191,12 @@ func (cache *Cache) GetStorage(address crypto.Address, key binary.Word256) ([]by
 // NOTE: Set value to zero to remove.
 func (cache *Cache) SetStorage(address crypto.Address, key binary.Word256, value []byte) error {
 	if cache.readonly {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+		return errors.Errorf(errors.Code.IllegalWrite,
 			"SetStorage called in a read-only context on account %v", address)
 	}
 	accInfo, err := cache.get(address)
 	if accInfo.account == nil {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+		return errors.Errorf(errors.Code.IllegalWrite,
 			"SetStorage called on an account that does not exist: %v", address)
 	}
 	accInfo.Lock()
@@ -205,7 +205,7 @@ func (cache *Cache) SetStorage(address crypto.Address, key binary.Word256, value
 		return err
 	}
 	if accInfo.removed {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "SetStorage on a removed account: %s", address)
+		return errors.Errorf(errors.Code.IllegalWrite, "SetStorage on a removed account: %s", address)
 	}
 	accInfo.storage[key] = value
 	accInfo.updated = true

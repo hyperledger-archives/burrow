@@ -185,7 +185,7 @@ func TestExecutionEventsTest(t *testing.T) {
 			contractAddress := txe.Receipt.ContractAddress
 			txe, err = rpctest.CallContract(tcli, inputAddress0, contractAddress, data)
 			require.NoError(t, err)
-			assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
+			assert.Equal(t, errors.Code.ExecutionReverted, txe.Exception.Code)
 			assert.Contains(t, txe.Exception.Error(), "I have reverted")
 
 			request := &rpcevents.BlocksRequest{

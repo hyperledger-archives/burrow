@@ -2,12 +2,12 @@ package errors
 
 import "fmt"
 
-func NewException(errorCode Code, exception string) *Exception {
+func NewException(code *Coding, exception string) *Exception {
 	if exception == "" {
 		return nil
 	}
 	return &Exception{
-		Code:      errorCode,
+		Code:      code.Number,
 		Exception: exception,
 	}
 }
@@ -23,26 +23,22 @@ func AsException(err error) *Exception {
 	case CodedError:
 		return NewException(e.ErrorCode(), e.ErrorMessage())
 	default:
-		return NewException(ErrorCodeGeneric, err.Error())
+		return NewException(Code.Generic, err.Error())
 	}
 }
 
 func Wrapf(err error, format string, a ...interface{}) *Exception {
 	ex := AsException(err)
-	return NewException(ex.Code, fmt.Sprintf(format, a...))
+	return NewException(Code.Get(ex.Code), fmt.Sprintf(format, a...))
 }
 
 func Wrap(err error, message string) *Exception {
 	ex := AsException(err)
-	return NewException(ex.Code, message+": "+ex.Exception)
+	return NewException(Code.Get(ex.Code), message+": "+ex.Exception)
 }
 
-func Errorf(format string, a ...interface{}) *Exception {
-	return ErrorCodef(ErrorCodeGeneric, format, a...)
-}
-
-func ErrorCodef(errorCode Code, format string, a ...interface{}) *Exception {
-	return NewException(errorCode, fmt.Sprintf(format, a...))
+func Errorf(code *Coding, format string, a ...interface{}) *Exception {
+	return NewException(code, fmt.Sprintf(format, a...))
 }
 
 func (e *Exception) AsError() error {
@@ -53,12 +49,12 @@ func (e *Exception) AsError() error {
 	return e
 }
 
-func (e *Exception) ErrorCode() Code {
-	return e.Code
+func (e *Exception) ErrorCode() *Coding {
+	return Code.Get(e.Code)
 }
 
 func (e *Exception) Error() string {
-	return fmt.Sprintf("error %d - %s: %s", e.Code, e.Code.ErrorMessage(), e.Exception)
+	return fmt.Sprintf("error %d - %s: %s", e.Code, Code.Get(e.Code), e.Exception)
 }
 
 func (e *Exception) String() string {

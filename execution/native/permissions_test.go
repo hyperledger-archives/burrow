@@ -103,7 +103,7 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	if !assert.Error(t, err, "Should fail due to lack of permissions") {
 		return
 	}
-	assert.Equal(t, errors.ErrorCodeNativeFunction, errors.ErrorCode(err))
+	assert.Equal(t, errors.Code.NativeFunction, errors.GetCode(err))
 
 	// Grant all permissions and dispatch should success
 	err = UpdateAccount(state, caller.Address, func(acc *acm.Account) error {

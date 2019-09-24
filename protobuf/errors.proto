@@ -20,6 +20,6 @@ option (gogoproto.messagename_all) = true;
 
 message Exception {
     option (gogoproto.goproto_stringer) = false;
-    uint32 Code = 1 [(gogoproto.casttype) = "Code"];
+    uint32 Code = 1;
     string Exception = 2;
 }

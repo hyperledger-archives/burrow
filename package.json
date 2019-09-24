@@ -1,7 +1,8 @@
 {
   "name": "@hyperledger/burrow",
   "description": "Javascript library that calls a Hyperledger Burrow server over rpc.",
-  "main": "./index.js",
+  "main": "js/dist/index.js",
+  "types": "js/dist/index.d.ts",
   "author": {
     "name": "Dennis Mckinnon"
   },
@@ -9,21 +10,34 @@
     "js",
     "protobuf"
   ],
+  "scripts": {
+    "prepublish": "tsc",
+    "build": "tsc",
+    "precommit": "standard --fix js/**/*.js",
+    "pretest": "standard --fix js/**/*.js && tsc",
+    "test": "./tests/js/js.sh"
+  },
   "bugs": {
     "url": "https://github.com/hyperledger/burrow/issues"
   },
   "dependencies": {
     "@grpc/proto-loader": "^0.4.0",
-    "crypto-js": "3.1.4",
-    "ethereumjs-abi": "^0.6.5",
-    "grpc": "^1.18.0",
+    "crypto-js": "^3.1.9-1",
+    "ethereumjs-abi": "^0.6.8",
+    "grpc": "^1.23.0",
+    "nan": "^2.14.0",
     "protobufjs": "^6.8.6"
   },
   "devDependencies": {
+    "@types/mocha": "^5.2.7",
+    "@types/node": "^12.7.5",
     "fs-extra": "^7.0.1",
-    "mocha": "6.2.0",
-    "solc": "0.4.24",
-    "standard": "13.1.0"
+    "mocha": "^6.2.0",
+    "solc": "^0.4.11",
+    "standard": "13.1.0",
+    "ts-node": "^8.4.1",
+    "tslint": "^5.20.0",
+    "typescript": "^3.6.3"
   },
   "engines": {
     "node": ">=6"
@@ -52,11 +66,6 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/hyperledger/burrow.git"
-  },
-  "scripts": {
-    "precommit": "standard --fix js/**/*.js",
-    "pretest": "standard --fix js/**/*.js",
-    "test": "./tests/js/js.sh"
   },
   "standard": {
     "globals": [

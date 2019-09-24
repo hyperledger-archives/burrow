@@ -21,6 +21,6 @@ func (e *LacksSNativePermission) Error() string {
 	return e.ErrorMessage()
 }
 
-func (e *LacksSNativePermission) ErrorCode() Code {
-	return ErrorCodeNativeFunction
+func (e *LacksSNativePermission) ErrorCode() *Coding {
+	return Code.NativeFunction
 }

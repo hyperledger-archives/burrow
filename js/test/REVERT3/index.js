@@ -40,7 +40,7 @@ describe('REVERT non-constant', function () {
         .then((str) => {
           throw new Error('Did not catch revert error')
         }).catch((err) => {
-          assert.equal(err.code, 'ERR_EXECUTION_REVERT')
+          assert.strictEqual(err.code, 'ERR_EXECUTION_REVERT')
         })
     })
   )

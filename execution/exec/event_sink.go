@@ -35,6 +35,6 @@ func NewLogFreeEventSink(eventSink EventSink) *logFreeEventSink {
 }
 
 func (esc *logFreeEventSink) Log(log *LogEvent) error {
-	return errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+	return errors.Errorf(errors.Code.IllegalWrite,
 		"Log emitted from contract %v, but current call should be log-free", log.Address)
 }

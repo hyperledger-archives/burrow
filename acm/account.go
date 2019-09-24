@@ -46,7 +46,7 @@ func (acc *Account) GetAddress() crypto.Address {
 
 func (acc *Account) AddToBalance(amount uint64) error {
 	if binary.IsUint64SumOverflow(acc.Balance, amount) {
-		return errors.ErrorCodef(errors.ErrorCodeIntegerOverflow,
+		return errors.Errorf(errors.Code.IntegerOverflow,
 			"uint64 overflow: attempt to add %v to the balance of %s", amount, acc.Address)
 	}
 	acc.Balance += amount
@@ -55,7 +55,7 @@ func (acc *Account) AddToBalance(amount uint64) error {
 
 func (acc *Account) SubtractFromBalance(amount uint64) error {
 	if amount > acc.Balance {
-		return errors.ErrorCodef(errors.ErrorCodeInsufficientBalance,
+		return errors.Errorf(errors.Code.InsufficientBalance,
 			"insufficient funds: attempt to subtract %v from the balance of %s", amount, acc.Address)
 	}
 	acc.Balance -= amount

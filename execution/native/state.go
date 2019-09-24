@@ -75,7 +75,7 @@ func (s *State) SetMetadata(metahash acmstate.MetadataHash, metadata string) err
 func (s *State) ensureNonNative(address crypto.Address, action string) error {
 	contract := s.natives.GetByAddress(address)
 	if contract != nil {
-		return errors.ErrorCodef(errors.ErrorCodeReservedAddress,
+		return errors.Errorf(errors.Code.ReservedAddress,
 			"cannot %s at %v because that address is reserved for a native contract '%s'",
 			action, address, contract.FullName())
 	}

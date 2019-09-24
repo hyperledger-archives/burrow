@@ -1,0 +1,3 @@
+package gen
+
+const library = ``

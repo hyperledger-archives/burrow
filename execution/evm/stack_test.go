@@ -56,7 +56,7 @@ func TestDynamicMemory_PushAhead(t *testing.T) {
 	}
 
 	st.Push64(math.MaxInt64)
-	assert.Equal(t, errors.ErrorCodeDataStackOverflow, errors.ErrorCode(err.Error()))
+	assert.Equal(t, errors.Code.DataStackOverflow, errors.GetCode(err.Error()))
 }
 
 func TestStack_ZeroInitialCapacity(t *testing.T) {

@@ -19,6 +19,7 @@
 export jsscript_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$jsscript_dir/../test_runner.sh"
 
+# defined in test_runner.sh TODO: rename it to test dir or generally clean this up
 export js_dir="${script_dir}/../js"
 
 
@@ -30,7 +31,7 @@ perform_js_tests(){
   test_account="{\"address\": \"$key1_addr\"}"
   echo "Using test account:"
   echo $test_account
-  account="$test_account" mocha --bail --exit --recursive ${1}
+  account="$test_account" mocha -r ts-node/register --bail --exit --recursive ${1}
   test_exit=$?
 }
 
