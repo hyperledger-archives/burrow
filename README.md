@@ -1,15 +1,11 @@
 # [Hyperledger Burrow](https://hyperledger.github.io/burrow)
 
+[![CI](https://github.com/hyperledger/burrow/workflows/master/badge.svg)](https://launch-editor.github.com/actions?workflowID=master&event=push&nwo=hyperledger%2Fburrow)
 [![version](https://img.shields.io/github/tag/hyperledger/burrow.svg)](https://github.com/hyperledger/burrow/releases/latest)
 [![GoDoc](https://godoc.org/github.com/burrow?status.png)](https://godoc.org/github.com/hyperledger/burrow)
 [![license](https://img.shields.io/github/license/hyperledger/burrow.svg)](LICENSE.md)
 [![LoC](https://tokei.rs/b1/github/hyperledger/burrow?category=lines)](https://github.com/hyperledger/burrow)
 [![codecov](https://codecov.io/gh/hyperledger/burrow/branch/develop/graph/badge.svg)](https://codecov.io/gh/hyperledger/burrow)
-
-Branch    | Linux
-----------|------
-| Master | [![Circle CI](https://circleci.com/gh/hyperledger/burrow/tree/master.svg?style=svg)](https://circleci.com/gh/hyperledger/burrow/tree/master) |
-| Develop | [![Circle CI (develop)](https://circleci.com/gh/hyperledger/burrow/tree/develop.svg?style=svg)](https://circleci.com/gh/hyperledger/burrow/tree/develop) |
 
 Hyperledger Burrow is a permissioned Ethereum smart-contract blockchain node. It executes Ethereum EVM smart contract code (usually written in [Solidity](https://solidity.readthedocs.io)) on a permissioned virtual machine. Burrow provides transaction finality and high transaction throughput on a proof-of-stake [Tendermint](https://tendermint.com) consensus engine.
 
