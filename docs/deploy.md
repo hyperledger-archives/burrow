@@ -1,6 +1,6 @@
 # Burrow deploy yaml (aka playbooks)
 
-burrow deploy is a tool which can do a number of things:
+`burrow deploy` is a tool which can do a number of things:
 
 * compile Solidity source files (using solc) and deploy to chain
 * call function on existing contract
@@ -14,7 +14,15 @@ burrow deploy needs a script to its commands. This script format bares some simi
 is in yaml format. The top level structure is an array of [jobs](https://github.com/hyperledger/burrow/blob/develop/deploy/def/job.go).
 The different job types are [defined here](https://github.com/hyperledger/burrow/blob/develop/deploy/def/jobs.go).
 
-Each job has a name. This name can be used in later jobs to refer to the result of a previous job (e.g. the address of a contract
+You can invoke burrow from the command line like:
+
+```shell
+burrow deploy -a CF8F9480252B70D59CF5B5F3CAAA75FEAF6A4B33 deploy.yaml
+```
+
+Where `deploy.yaml` is the playbook.
+
+Each job in the playbook has a name. This name can be used in later jobs to refer to the result of a previous job (e.g. the address of a contract
 which was deployed). The jobs are executed in-order.
 
 Whenever an account needs to be specified, the key name in the burrow keys server can also be used.

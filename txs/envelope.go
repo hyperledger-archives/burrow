@@ -94,7 +94,7 @@ func (sig *Signatory) Validate() error {
 
 // Verifies the validity of the Signatories' Signatures in the Envelope. The Signatories must
 // appear in the same order as the inputs as returned by Tx.GetInputs().
-func (txEnv *Envelope) Verify(getter acmstate.AccountGetter, chainID string) error {
+func (txEnv *Envelope) Verify(chainID string) error {
 	err := txEnv.Validate()
 	if err != nil {
 		return err
