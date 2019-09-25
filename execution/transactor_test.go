@@ -109,7 +109,7 @@ func TestTransactor_BroadcastTxStreamTimeoutBeforeSuccess(t *testing.T) {
 	err := txEnv.Sign(privAccount)
 	require.NoError(t, err)
 	height := uint64(102)
-	ctx, timeoutFunc := context.WithTimeout(context.Background(), time.Second)
+	ctx, timeoutFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	ks, clean := keys.EnterTestKeyStore(privAccount)
 	defer clean()
 	trans := NewTransactor(bc, evc, NewAccounts(acmstate.NewMemoryState(), ks, 100),

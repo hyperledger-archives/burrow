@@ -139,11 +139,13 @@ func (trans *Transactor) BroadcastTxStream(ctx context.Context, streamCtx contex
 		return err
 	}
 
-	// Get all the execution events for this Tx
-	select {
-	case <-streamCtx.Done():
+	if streamCtx.Err() != nil {
 		// Other endpoint is gone
 		return nil
+	}
+
+	// Get all the execution events for this Tx
+	select {
 	case <-ctx.Done():
 		syncInfo := bcm.GetSyncInfo(trans.BlockchainInfo)
 		bs, err := json.Marshal(syncInfo)
