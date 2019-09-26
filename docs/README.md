@@ -19,26 +19,34 @@ Hyperledger Burrow is a permissioned blockchain node that executes smart contrac
 
 Release binaries for different architectures can be found at https://github.com/hyperledger/burrow/releases.
 
-Alternatively you can install directly from source. To do this checkout the repository and from the root run:
+### Source
 
-```shell
-# With GNU Make installed:
-make install
+[Install Go](https://golang.org/doc/install) (Version >= 1.11) and set `$GOPATH`.
+
+```
+go get github.com/hyperledger/burrow
+cd $GOPATH/src/github.com/hyperledger/burrow
+make build
 ```
 
-This will install the `burrow` binary into `$GOPATH/bin` so you will need to have `GOPATH` set and included on you `$PATH` if you want to have the executable available on your system. See the [Go GOPATH documentation](https://golang.org/doc/code.html#GOPATH) for details.
+This will build the `burrow` binary and put it in the `bin/` directory. It can be executed from there or put wherever is convenient.
 
-## Very quick start
+You can also install `burrow` into `$BIN_PATH/bin` with `make install`, where `$BIN_PATH` defaults to `$HOME/go/bin`
+if not set in the environment.
 
-You can spin up a single node chain with:
+### Docker
 
-```shell
-mkdir burrow-chain && cd burrow-chain
-burrow spec -v1 | burrow configure -s- | burrow start -c-
+Each release is also tagged and pushed to [DockerHub](https://hub.docker.com/r/hyperledger/burrow).
+This can act as a direct replacement for the burrow binary, for example the following commands are equivalent:
+
+```bash
+burrow spec -v4
+docker run hyperledger/burrow spec -v4
 ```
 
-For a more complete (and useful) introduction see our sequence of [tutorials](/docs/tutorials).
+> Ensure to mount local volumes for secrets / configurations when running a container to prevent data loss.
 
-## Documentation
+### Kubernetes
 
-The canonical location for these docs is: https://hyperledger.github.io/burrow/
+Use our official [helm charts](https://github.com/helm/charts/tree/master/stable/burrow) to configure and run 
+a burrow chain in your cluster.

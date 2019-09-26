@@ -1,13 +1,21 @@
 # Vent - SQL mapping layer
 
-Vent reads specification files called 'projections', parses their contents, and maps EVM LOG event fields to corresponding SQL columns to create or alter database structures. It listens for a stream of block events from Burrow's GRPC service then parses, unpacks, decodes event data, and builds rows to be upserted in matching event tables, rows are upserted atomically in a single database transaction per block.
+Vent reads specification files called 'projections', parses their contents, and maps EVM LOG event fields to corresponding SQL columns to create or alter database structures. 
+It listens for a stream of block events from Burrow's GRPC service then parses, unpacks, decodes event data, and builds rows to be upserted in matching event tables, rows are 
+upserted atomically in a single database transaction per block.
 
-There are two modes of operation: view mode and log mode. In view mode a primary key is used to locate the row in a table which should be updated (if exists) or inserted (if it does not exist). If the event contains a field matching the optional `DeleteMarkerField` then the row will instead be deleted. As such in view mode Vent can map a stream of EVM LOG events to a CRUD-style table - a view over entities as defined by the choice primary key. Alternatively if no primary keys are specified for a projection Vent operates in log mode where all matched events are inserted - and so log mode operates as an append-only log. Note there is no explicit setting for mode - it depends on the presence or absence of a `"Primary": true` entry in one of the `FieldMappings` of a projection (see below for an example).
+There are two modes of operation: view mode and log mode. In view mode a primary key is used to locate the row in a table which should be updated (if exists) or inserted 
+(if it does not exist). If the event contains a field matching the optional `DeleteMarkerField` then the row will instead be deleted. As such in view mode Vent can map a 
+stream of EVM LOG events to a CRUD-style table - a view over entities as defined by the choice primary key. Alternatively if no primary keys are specified for a projection 
+Vent operates in log mode where all matched events are inserted - and so log mode operates as an append-only log. Note there is no explicit setting for mode - it depends on 
+the presence or absence of a `"Primary": true` entry in one of the `FieldMappings` of a projection (see below for an example).
 
-Vent writes each block of updates atomically and is guaranteed to be crash tolerant. If the Vent process is killed it will resume at the last written height. Burrow stores all previous events in its state so even if you delete the Vent database it can be regenerated deterministically. This feature being a core feature of Vent.
+Vent writes each block of updates atomically and is guaranteed to be crash tolerant. If the Vent process is killed it will resume at the last written height. Burrow stores all 
+previous events in its state so even if you delete the Vent database it can be regenerated deterministically. This feature being a core feature of Vent.
 
 ## Projections
-A projection is the name  given to the configuration files that Vent uses to interpret EVM events as updates or deletion from SQL tables. They provide an object relational mapping between Solidity events and SQL tables.
+A projection is the name  given to the configuration files that Vent uses to interpret EVM events as updates or deletion from SQL tables. They provide an object relational mapping 
+between Solidity events and SQL tables.
 
 Given a projection, like the following:
 
@@ -77,10 +85,13 @@ contract EventEmitter {
 
 We can maintain a view-mode table that feels like that of a ordinary CRUD app though it is backed by a stream of events coming from our Solidity contracts.
 
-Burrow can also emit a JSONSchema for the projection file format with `burrow vent schema`. You can use this to validate your projections using any of the [JSONSchema](https://json-schema.org/) tooling.
+Burrow can also emit a JSONSchema for the projection file format with `burrow vent schema`. You can use this to validate your projections using any of the 
+[JSONSchema](https://json-schema.org/) tooling.
 
 ### Projection specification
-A projection file is defined as a JSON array of `EventClass` objections. Each `EventClass` specifies a class of events that should be consumed (specified via a filter) in order to generate a SQL table. An `EventClass` holds `FieldMappings` that specify how to map the event fields of a matched EVM event to a destination column (identified by `ColumnName`) of the destination table (identified by `TableName`)
+A projection file is defined as a JSON array of `EventClass` objections. Each `EventClass` specifies a class of events that should be consumed (specified via a filter) 
+in order to generate a SQL table. An `EventClass` holds `FieldMappings` that specify how to map the event fields of a matched EVM event to a destination column 
+(identified by `ColumnName`) of the destination table (identified by `TableName`)
 
 #### EventClass
 | Field | Type | Required? | Description |
@@ -117,7 +128,9 @@ Adapters are database implementations, Vent can store data in different rdbms.
 In `sqldb/adapters` there's a list of supported adapters (there is also a README.md file in that folder that helps to understand how to implement a new one).
 
 ### <a name="triggers"></a>Notification Triggers
-Notification triggers are configured with the `Notify` array of a `FieldMapping`. In a supported database (currently only postrges) they allow you to specify a set of channels on which to notify when a column changes. By including a channel in the `Notify` the column is added to the set of columns for which that channel should receive a notification payload. For example if we have the following spec:
+Notification triggers are configured with the `Notify` array of a `FieldMapping`. In a supported database (currently only postrges) they allow you to specify a set of 
+channels on which to notify when a column changes. By including a channel in the `Notify` the column is added to the set of columns for which that channel should receive 
+a notification payload. For example if we have the following spec:
 
 ```json
 [  
@@ -132,9 +145,12 @@ Notification triggers are configured with the `Notify` array of a `FieldMapping`
  ]
 ```
 
-Then Vent will record a mapping `user -> username, address` and `address -> address` where the left hand side is the notification channel and the right hand side the columns included in the payload on that channel.
+Then Vent will record a mapping `user -> username, address` and `address -> address` where the left hand side is the notification channel and the right hand side the columns 
+included in the payload on that channel.
 
-For each of these mappings a notification trigger function is defined and attached as a trigger for the table to run after an insert, update, or delete. This function calls `pg_notify` (in the case of postgres, the only database for which we support notifications - this is non-standard and we may use a different mechanism in other databases if present). These notification can be consumed by any client connected to the postgres database with `LISTEN <channel>;`, see [Postgres NOTIFY documentation](https://www.postgresql.org/docs/11/sql-notify.html).
+For each of these mappings a notification trigger function is defined and attached as a trigger for the table to run after an insert, update, or delete. This function calls 
+`pg_notify` (in the case of postgres, the only database for which we support notifications - this is non-standard and we may use a different mechanism in other databases if present). 
+These notification can be consumed by any client connected to the postgres database with `LISTEN <channel>;`, see [Postgres NOTIFY documentation](https://www.postgresql.org/docs/11/sql-notify.html).
 
 ## Setup PostgreSQL Database with Docker:
 
