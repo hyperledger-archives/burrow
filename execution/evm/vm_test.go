@@ -30,6 +30,7 @@ import (
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	. "github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/execution/solidity"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs"
@@ -1476,6 +1477,34 @@ func TestExtCodeHash(t *testing.T) {
 	output, err = ourVm.Call(cache, NewNoopEventSink(), account1, account2, bytecode, []byte{}, 0, &gas)
 	assert.NoError(t, err)
 	assert.Equal(t, hex.MustDecodeString("010da270094b5199d3e54f89afe4c66cdd658dd8111a41998714227e14e171bd"), output)
+}
+
+func TestBigModExp(t *testing.T) {
+	// var needed for the call
+	cache := NewState(newAppState(), blockHashGetter)
+	ourVm := NewVM(newParams(), crypto.ZeroAddress, nil, logger)
+	account1 := newAccount(cache, "1")
+	account2 := newAccount(cache, "101")
+	// solidity  uint256 with value: 1
+	sucess := "0000000000000000000000000000000000000000000000000000000000000001"
+
+	var gas uint64 = 10000
+	fmt.Printf("Testing bigModExp, inputs \n")
+	// The solidity compiled contract. It calls bigmodexp with b,e,m inputs and compares the result with proof, where m is the mod, b the base, e the exp, and proof the expected result.
+	bc := hex.MustDecodeString("608060405234801561001057600080fd5b5061012a806100206000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063b4f7c68d14602d575b600080fd5b607460048036036080811015604157600080fd5b8101908080359060200190929190803590602001909291908035906020019092919080359060200190929190505050608a565b6040518082815260200191505060405180910390f35b600080600060405160208152602080820152602060408201528760608201528660808201528560a082015260208160c083600060056107d05a03f1925080519150508160d557600080fd5b8084141560e65760019250505060ed565b6000925050505b94935050505056fea265627a7a723158206604ca9dcdd8b165e037bcf20d7f160c2ff6be12a0b1cef5101768564fa1cae664736f6c634300050b0032")
+
+	bc = solidity.DeployedBytecode_BigMod
+	// the input test, this is a bigmodexp call. The base is 3, the exp is 2, the mod is 8 and the result is 1, 3^2 % 8 = 1
+	input := hex.MustDecodeString("b4f7c68d0000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000001")
+	//addr := crypto.Address{11, 101}
+	// debugging opcodes
+	out1, err := ourVm.Call(cache, NewNoopEventSink(), account1, account2, bc, input, 0, &gas)
+
+	fmt.Printf("output: %x", out1)
+
+	require.NoError(t, err)
+	// if the sol contract didn't return uint256 1 the test fails
+	require.Equal(t, sucess, fmt.Sprintf("%x", out1))
 }
 
 func BasePermissionsFromStrings(t *testing.T, perms, setBit string) permission.BasePermissions {
