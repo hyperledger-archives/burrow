@@ -477,8 +477,10 @@ func (srv *EthService) EthGetTransactionReceipt(req *web3.EthGetTransactionRecei
 	}
 
 	if txe.Receipt != nil {
-		// hex encoded
 		result.Receipt.ContractAddress = x.EncodeBytes(txe.Receipt.ContractAddress.Bytes())
+		result.Receipt.To = pending
+	} else if tx.Address != nil {
+		result.Receipt.To = x.EncodeBytes(tx.Address.Bytes())
 	}
 
 	return result, nil
@@ -758,6 +760,7 @@ func (srv *EthService) getBlockInfoAtHeight(height uint64, includeTxs bool) (web
 }
 
 func getTransaction(block *types.Header, hash []byte, tx *payload.CallTx) web3.Transaction {
+	// TODO: sensible defaults for non-call
 	transaction := web3.Transaction{
 		V:        hexZero,
 		R:        hexZero,
@@ -775,7 +778,7 @@ func getTransaction(block *types.Header, hash []byte, tx *payload.CallTx) web3.T
 		transaction.BlockHash = hexKeccak(block.Hash().Bytes())
 		transaction.Hash = x.EncodeBytes(hash)
 		transaction.BlockNumber = x.EncodeNumber(uint64(block.Height))
-		transaction.TransactionIndex = pending
+		transaction.TransactionIndex = hexZero
 	}
 
 	if tx.Address != nil {
@@ -923,6 +926,7 @@ func (srv *EthService) EthAccounts() (*web3.EthAccountsResult, error) {
 			// we only want ethereum keys
 			continue
 		}
+		// TODO: only return accounts that exist in current chain
 		addrs = append(addrs, x.EncodeBytes(key.Address.Bytes()))
 	}
 

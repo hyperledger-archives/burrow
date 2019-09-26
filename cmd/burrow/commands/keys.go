@@ -49,7 +49,7 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 		cmd.Command("server", "run keys server", func(cmd *cli.Cmd) {
 			keysDir := cmd.StringOpt("dir", "", "specify the location of the directory containing key files")
 			badPerm := cmd.BoolOpt("allow-bad-perm", false, "Allow unix key file permissions to be readable other than user")
-			configOpt := cmd.StringOpt("c config", "", "Use the a specified burrow config file")
+			configOpt := cmd.StringOpt("c config", "", "Use the specified burrow config file")
 
 			var conf *config.BurrowConfig
 

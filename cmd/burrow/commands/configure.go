@@ -40,6 +40,8 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 		keysDir := cmd.StringOpt("keys-dir", "", "Directory where keys are stored")
 
+		curveType := cmd.StringOpt("curve-type", crypto.CurveTypeEd25519.String(), "Curve type for realising keys")
+
 		configTemplateIn := cmd.StringsOpt("config-template-in", nil,
 			"Go text/template input filename to generate config file specified with --config-out")
 
@@ -69,7 +71,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 		pool := cmd.BoolOpt("pool", false, "Write config files for all the validators called burrowNNN.toml")
 
-		cmd.Spec = "[--keys-url=<keys URL> | --keys-dir=<keys directory>] " +
+		cmd.Spec = "[--keys-url=<keys URL> | --keys-dir=<keys directory>] [--curve-type=<name>]" +
 			"[ --config-template-in=<text template> --config-out=<output file>]... " +
 			"[--genesis-spec=<GenesisSpec file>] [--separate-genesis-doc=<genesis JSON file>] " +
 			"[--chain-name=<chain name>] [--restore-dump=<dump file>] [--json] [--debug] [--pool] " +
@@ -107,6 +109,11 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 
 			pkg := deployment.Config{Keys: make(map[crypto.Address]deployment.Key)}
 
+			ct, err := crypto.CurveTypeFromString(*curveType)
+			if err != nil {
+				output.Fatalf("could not realise curve type: %v", err)
+			}
+
 			// Genesis Spec
 			if *genesisSpecOpt != "" {
 				genesisSpec := new(spec.GenesisSpec)
@@ -122,7 +129,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					keyStore := keys.NewKeyStore(dir, conf.Keys.AllowBadFilePermissions)
 
 					keyClient := keys.NewLocalKeyClient(keyStore, logging.NewNoopLogger())
-					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
+					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient, ct)
 					if err != nil {
 						output.Fatalf("could not generate GenesisDoc from GenesisSpec using MockKeyClient: %v", err)
 					}
@@ -152,7 +159,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					if err != nil {
 						output.Fatalf("could not create remote key client: %v", err)
 					}
-					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient)
+					conf.GenesisDoc, err = genesisSpec.GenesisDoc(keyClient, ct)
 					if err != nil {
 						output.Fatalf("could not realise GenesisSpec: %v", err)
 					}
@@ -289,6 +296,8 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 					conf.Tendermint.ListenPort = fmt.Sprint(26656 + i)
 					conf.RPC.Info.ListenHost = rpc.LocalHost
 					conf.RPC.Info.ListenPort = fmt.Sprint(26758 + i)
+					conf.RPC.Web3.ListenHost = rpc.LocalHost
+					conf.RPC.Web3.ListenPort = fmt.Sprint(26860 + i)
 					conf.RPC.GRPC.ListenHost = rpc.LocalHost
 					conf.RPC.GRPC.ListenPort = fmt.Sprint(10997 + i)
 					conf.RPC.Metrics.ListenHost = rpc.LocalHost
