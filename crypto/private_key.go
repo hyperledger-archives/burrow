@@ -56,7 +56,7 @@ func (p PrivateKey) Sign(msg []byte) (*Signature, error) {
 				len(p.PrivateKey), btcec.PrivKeyBytesLen)
 		}
 		privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), p.PrivateKey)
-		sig, err := privKey.Sign(msg)
+		sig, err := privKey.Sign(Keccak256(msg))
 		if err != nil {
 			return nil, err
 		}

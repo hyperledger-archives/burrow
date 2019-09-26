@@ -3,6 +3,7 @@ package crypto
 import (
 	"fmt"
 
+	"github.com/btcsuite/btcd/btcec"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmCrypto "github.com/tendermint/tendermint/crypto"
 	tmEd25519 "github.com/tendermint/tendermint/crypto/ed25519"
@@ -29,7 +30,7 @@ func PublicKeyFromABCIPubKey(pubKey abci.PubKey) (PublicKey, error) {
 		}, nil
 	case CurveTypeSecp256k1.ABCIType():
 		return PublicKey{
-			CurveType: CurveTypeEd25519,
+			CurveType: CurveTypeSecp256k1,
 			PublicKey: pubKey.Data,
 		}, nil
 	}
@@ -61,8 +62,34 @@ func (p PublicKey) TendermintPubKey() tmCrypto.PubKey {
 	}
 }
 
+func (p PublicKey) TendermintAddress() tmCrypto.Address {
+	switch p.CurveType {
+	case CurveTypeEd25519:
+		return tmCrypto.Address(p.GetAddress().Bytes())
+	case CurveTypeSecp256k1:
+		// Tendermint represents addresses like Bitcoin
+		return tmCrypto.Address(RIPEMD160(SHA256(p.PublicKey[:])))
+	default:
+		panic(fmt.Sprintf("unknown CurveType %d", p.CurveType))
+	}
+}
+
 // Signature extensions
 
 func (sig Signature) TendermintSignature() []byte {
+	switch sig.CurveType {
+	case CurveTypeSecp256k1:
+		sig, err := btcec.ParseDERSignature(sig.GetSignature(), btcec.S256())
+		if err != nil {
+			return nil
+		}
+		// https://github.com/tendermint/tendermint/blob/master/crypto/secp256k1/secp256k1_nocgo.go#L62
+		r := sig.R.Bytes()
+		s := sig.S.Bytes()
+		data := make([]byte, 64)
+		copy(data[32-len(r):32], r)
+		copy(data[64-len(s):64], s)
+		return data
+	}
 	return sig.Signature
 }

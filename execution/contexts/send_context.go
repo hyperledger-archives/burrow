@@ -21,7 +21,7 @@ func (ctx *SendContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 	var ok bool
 	ctx.tx, ok = p.(*payload.SendTx)
 	if !ok {
-		return fmt.Errorf("payload must be NameTx, but is: %v", txe.Envelope.Tx.Payload)
+		return fmt.Errorf("payload must be SendTx, but is: %v", txe.Envelope.Tx.Payload)
 	}
 	accounts, inTotal, err := getInputs(ctx.StateWriter, ctx.tx.Inputs)
 	if err != nil {

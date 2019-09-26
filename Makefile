@@ -195,6 +195,10 @@ test: check bin/solc
 test_keys: build_burrow
 	burrow_bin="${REPO}/bin/burrow" tests/keys_server/test.sh
 
+.PHONY:	test_truffle
+test_truffle: build_burrow
+	burrow_bin="${REPO}/bin/burrow" tests/web3/truffle.sh
+
 .PHONY:	test_integration_vent
 test_integration_vent:
 	# Include sqlite adapter with tests - will build with CGO but that's probably fine
@@ -210,11 +214,11 @@ test_restore: build_burrow bin/solc
 
 # Go will attempt to run separate packages in parallel
 .PHONY: test_integration
-test_integration: test_keys test_deploy test_integration_vent_postgres test_restore
+test_integration: test_keys test_deploy test_integration_vent_postgres test_restore test_truffle
 	@go test -v -tags integration ./integration/...
 
 .PHONY: test_integration_no_postgres
-test_integration_no_postgres: test_keys test_deploy test_integration_vent test_restore
+test_integration_no_postgres: test_keys test_deploy test_integration_vent test_restore test_truffle
 	@go test -v -tags integration ./integration/...
 
 .PHONY: test_deploy

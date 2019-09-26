@@ -5,10 +5,6 @@ package exec
 
 import (
 	fmt "fmt"
-	io "io"
-	math "math"
-	time "time"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	github_com_gogo_protobuf_types "github.com/gogo/protobuf/types"
@@ -24,6 +20,9 @@ import (
 	txs "github.com/hyperledger/burrow/txs"
 	github_com_hyperledger_burrow_txs_payload "github.com/hyperledger/burrow/txs/payload"
 	types "github.com/tendermint/tendermint/abci/types"
+	io "io"
+	math "math"
+	time "time"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

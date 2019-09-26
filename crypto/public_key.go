@@ -1,7 +1,6 @@
 package crypto
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 
@@ -9,7 +8,6 @@ import (
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	hex "github.com/tmthrgd/go-hex"
 	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/ripemd160"
 )
 
 const (
@@ -95,11 +93,11 @@ func (p PublicKey) Verify(msg []byte, signature *Signature) error {
 		if err != nil {
 			return fmt.Errorf("could not parse secp256k1 public key: %v", err)
 		}
-		sig, err := btcec.ParseDERSignature(signature.Signature, btcec.S256())
+		sig, err := btcec.ParseSignature(signature.Signature, btcec.S256())
 		if err != nil {
 			return fmt.Errorf("could not parse DER signature for secp256k1 key: %v", err)
 		}
-		if sig.Verify(msg, pub) {
+		if sig.Verify(Keccak256(msg), pub) {
 			return nil
 		}
 		return fmt.Errorf("signature '%X' is not a valid secp256k1 signature for message: %s",
@@ -115,12 +113,12 @@ func (p PublicKey) GetAddress() Address {
 		addr, _ := AddressFromBytes(tmhash.Sum(p.PublicKey))
 		return addr
 	case CurveTypeSecp256k1:
-		sha := sha256.New()
-		sha.Write(p.PublicKey[:])
-
-		hash := ripemd160.New()
-		hash.Write(sha.Sum(nil))
-		addr, _ := AddressFromBytes(hash.Sum(nil))
+		pub, err := btcec.ParsePubKey(p.PublicKey.Bytes(), btcec.S256())
+		if err != nil {
+			return Address{}
+		}
+		hash := Keccak256(pub.SerializeUncompressed()[1:])
+		addr, _ := AddressFromBytes(hash[len(hash)-20:])
 		return addr
 	default:
 		panic(fmt.Sprintf("unknown CurveType %d", p.CurveType))

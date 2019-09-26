@@ -376,7 +376,7 @@ func (s *Service) ConsensusState() (*ResultConsensusState, error) {
 }
 
 func (s *Service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error) {
-	privateAccount, err := acm.GeneratePrivateAccount()
+	privateAccount, err := acm.GeneratePrivateAccount(crypto.CurveTypeEd25519)
 	if err != nil {
 		return nil, err
 	}

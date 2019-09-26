@@ -230,7 +230,12 @@ func DecryptKey(passphrase string, keyProtected *keyJSON) (*Key, error) {
 func (ks *KeyStore) GetAllAddresses() (addresses []string, err error) {
 	ks.Lock()
 	defer ks.Unlock()
-	return GetAllAddresses(ks.keysDirPath)
+
+	dir, err := returnDataDir(ks.keysDirPath)
+	if err != nil {
+		return nil, err
+	}
+	return GetAllAddresses(dir)
 }
 
 func (ks *KeyStore) StoreKey(passphrase string, key *Key) error {

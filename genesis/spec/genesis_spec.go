@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/acm/balance"
+	crypto "github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/permission"
@@ -35,18 +36,8 @@ type params struct {
 	ProposalThreshold uint64 `json:",omitempty" toml:",omitempty"`
 }
 
-func (gs *GenesisSpec) RealiseKeys(keyClient keys.KeyClient) error {
-	for _, templateAccount := range gs.Accounts {
-		_, _, err := templateAccount.RealisePublicKeyAndAddress(keyClient)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // Produce a fully realised GenesisDoc from a template GenesisDoc that may omit values
-func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient) (*genesis.GenesisDoc, error) {
+func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient, curve crypto.CurveType) (*genesis.GenesisDoc, error) {
 	genesisDoc := new(genesis.GenesisDoc)
 	if gs.GenesisTime == nil {
 		genesisDoc.GenesisTime = time.Now()
@@ -84,7 +75,13 @@ func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient) (*genesis.GenesisDoc
 	}
 
 	for i, templateAccount := range templateAccounts {
-		account, err := templateAccount.GenesisAccount(keyClient, i)
+		ct := curve
+		if templateAccount.Balances().HasPower() {
+			// currently only ed25519 is supported for validator keys
+			ct = crypto.CurveTypeEd25519
+		}
+
+		account, err := templateAccount.GenesisAccount(keyClient, i, ct)
 		if err != nil {
 			return nil, fmt.Errorf("could not create Account from template: %v", err)
 		}
@@ -93,7 +90,7 @@ func (gs *GenesisSpec) GenesisDoc(keyClient keys.KeyClient) (*genesis.GenesisDoc
 		if templateAccount.Balances().HasPower() {
 			// Note this does not modify the input template
 			templateAccount.Address = &account.Address
-			validator, err := templateAccount.Validator(keyClient, i)
+			validator, err := templateAccount.Validator(keyClient, i, ct)
 			if err != nil {
 				return nil, fmt.Errorf("could not create Validator from template: %v", err)
 			}

@@ -25,6 +25,12 @@ message Envelope {
     repeated Signatory Signatories = 1 [(gogoproto.nullable) = false];
     // Canonical bytes of the Tx ready to be signed
     bytes Tx = 2 [(gogoproto.customtype) = "Tx"];
+    enum Encoding {
+        JSON = 0;
+        RLP = 1;
+    }
+    Encoding Enc = 3;
+
 }
 
 // Signatory contains signature and one or both of Address and PublicKey to identify the signer

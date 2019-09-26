@@ -10,6 +10,7 @@ type RPCConfig struct {
 	Profiler *ServerConfig  `json:",omitempty" toml:",omitempty"`
 	GRPC     *ServerConfig  `json:",omitempty" toml:",omitempty"`
 	Metrics  *MetricsConfig `json:",omitempty" toml:",omitempty"`
+	Web3     *ServerConfig  `json:",omitempty" toml:",omitempty"`
 }
 
 type ServerConfig struct {
@@ -30,6 +31,7 @@ func DefaultRPCConfig() *RPCConfig {
 		Profiler: DefaultProfilerConfig(),
 		GRPC:     DefaultGRPCConfig(),
 		Metrics:  DefaultMetricsConfig(),
+		Web3:     DefaultWeb3Config(),
 	}
 }
 
@@ -66,5 +68,13 @@ func DefaultMetricsConfig() *MetricsConfig {
 		},
 		MetricsPath:     "/metrics",
 		BlockSampleSize: 100,
+	}
+}
+
+func DefaultWeb3Config() *ServerConfig {
+	return &ServerConfig{
+		Enabled:    true,
+		ListenHost: AnyLocal,
+		ListenPort: "26660",
 	}
 }

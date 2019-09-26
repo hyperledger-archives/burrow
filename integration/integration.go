@@ -104,6 +104,8 @@ func NewTestConfig(genesisDoc *genesis.GenesisDoc,
 	conf.RPC.Metrics.ListenPort = freeport
 	conf.RPC.Info.ListenHost = rpc.LocalHost
 	conf.RPC.Info.ListenPort = freeport
+	conf.RPC.Web3.ListenHost = rpc.LocalHost
+	conf.RPC.Web3.ListenPort = freeport
 	conf.Execution.TimeoutFactor = 0.5
 	conf.Execution.VMOptions = []execution.VMOption{}
 	for _, opt := range options {
@@ -189,16 +191,26 @@ func TestGenesisDoc(addressables []*acm.PrivateAccount, vals ...int) *genesis.Ge
 	for _, i := range vals {
 		name := fmt.Sprintf("user_%d", i)
 		validators[name] = validator.FromAccount(accounts[name], 1<<16)
+		// Tendermint validators use a different addressing scheme for secp256k1
+		accounts[name].Address = validators[name].GetAddress()
 	}
 
 	return genesis.MakeGenesisDocFromAccounts(ChainName, nil, genesisTime, accounts, validators)
 }
 
-// Deterministic account generation helper. Pass number of accounts to make
+// Default deterministic account generation helper, pass number of accounts to make
 func MakePrivateAccounts(sec string, n int) []*acm.PrivateAccount {
 	accounts := make([]*acm.PrivateAccount, n)
 	for i := 0; i < n; i++ {
 		accounts[i] = acm.GeneratePrivateAccountFromSecret(sec + strconv.Itoa(i))
+	}
+	return accounts
+}
+
+func MakeEthereumAccounts(sec string, n int) []*acm.PrivateAccount {
+	accounts := make([]*acm.PrivateAccount, n)
+	for i := 0; i < n; i++ {
+		accounts[i] = acm.GenerateEthereumAccountFromSecret(sec + strconv.Itoa(i))
 	}
 	return accounts
 }
