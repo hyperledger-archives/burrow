@@ -109,5 +109,10 @@ func nodeFromConf(t *testing.T, conf *config.BurrowConfig, host string, val cryp
 	require.NoError(t, err)
 	nodeKey, err := tendermint.EnsureNodeKey(tmConf.NodeKeyFile())
 	require.NoError(t, err)
-	return registry.NewNodeIdentity(string(nodeKey.ID()), conf.Tendermint.Moniker, host, val)
+	return &registry.NodeIdentity{
+		ValidatorPublicKey: val.GetPublicKey(),
+		Moniker:            conf.Tendermint.Moniker,
+		NetworkAddress:     host,
+		TendermintNodeID:   string(nodeKey.ID()),
+	}
 }
