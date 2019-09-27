@@ -18,15 +18,19 @@ option (gogoproto.goproto_registration) = true;
 // Enable generation of XXX_MessageName methods for grpc-go/status.
 option (gogoproto.messagename_all) = true;
 
+// NodeIdentity stores and establishes a binding between 4 different types of identifiers, a human readable name,
+// a advertised network address, a p2p station-to-station key, and a validator key. Updates must be signed
+// by the node key and the validator key to prove the update is consensual.
 message NodeIdentity {
     option (gogoproto.goproto_stringer) = false;
     // Peer moniker name
 	string Moniker = 1;
 	// Peer network address
 	string NetworkAddress = 2;
-	// Node key id (crypto address)
+	// The Tendermint p2p node ID
 	string TendermintNodeID = 3;
-	// Burrow validator address
+	// The public key that this node will validate with if it becomes a validator (use this to create a binding between
+    // p2p node ID and validator)
 	bytes ValidatorPublicKey = 4 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.PublicKey", (gogoproto.nullable) = false];
 }
 

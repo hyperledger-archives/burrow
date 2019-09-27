@@ -20,16 +20,6 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 )
 
-// NewSignedNodeIdentity takes a p2p info and returns a node entry
-func NewNodeIdentity(nodeKey, moniker, netAddress string, validator crypto.PrivateKey) *NodeIdentity {
-	return &NodeIdentity{
-		Moniker:            moniker,
-		NetworkAddress:     netAddress,
-		TendermintNodeID:   nodeKey,
-		ValidatorPublicKey: validator.GetPublicKey(),
-	}
-}
-
 func AuthorizedPeersProvider(state IterableReader) func() ([]string, []string) {
 	return func() ([]string, []string) {
 		var peerIDs, peerAddrs []string
