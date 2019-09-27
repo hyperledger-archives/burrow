@@ -1,4 +1,4 @@
-# Network with seed nodes
+# Seed Nodes
 
 ## What is a seed node?
 
@@ -12,8 +12,7 @@ connect to seed nodes once you have received enough addresses, so typically you
 only need them on the first start. The seed node will immediately disconnect
 from you after sending you some addresses.
 
-### Seed mode
-SeedMode can be enabled on a node.
+### Seed Mode
 
 If a node is in seed mode it will accept inbound connections, share its address book, then hang up.
 Seeds modes will do a bit of gossip but not that usefully.
@@ -23,31 +22,21 @@ These are different concepts:
 
 You do not want to have too many seeds in your network (because they just keep hanging up on other nodes once they've spread their wild oats), but they are useful for accelerating peer exchange (of addresses).
 
-### Persistent peers
+### Persistent Peers
 Persistent peers are peers that you want to connect of regardless of the heuristics and churn dynamics built into the p2p switch.
 Ordinarily you would not stay connected to a particular peer forever, and you would not indefinitely redial, but you will for a persistent peer.
 
-## Configure network
+## Configure
 
-In this quick start, we will few create validator nodes which does not know each other from network point of view.
-A seed node will crawl the network and relay everyones addresses.
+In this quick start, we will create validator nodes which do not know about each other.
+A seed node will crawl the network and relay addresses.
 
-### Configure chain
+### Seed Node
 
-```bash
-rm -rf .burrow* .keys*
-burrow spec --full-accounts=3 | burrow configure -s- > .burrow_init.toml
-```
-
-### Generate one additional key in another local store for seed node
-```bash
+```shell
 burrow spec -f1 | burrow configure --keys-dir=.keys_seed -s- > /dev/null
 ```
 
-### Make 3 validator nodes and one seed node config files
-From the generated `.burrow_init.toml `file, create new files for each node, and change the content, example:
-
-#### Seed node `.burrow_seed.toml` modified line from `.burrow_init.toml`
 ```toml
 BurrowDir = ".burrow_seed_0"
 
@@ -78,7 +67,15 @@ BurrowDir = ".burrow_seed_0"
     Enabled = false
 ```
 
-#### Validator 1 node `.burrow_val0.toml` modified line from `.burrow_init.toml`
+### Validators
+
+```shell
+burrow spec --full-accounts=3 | burrow configure -s- > .burrow_init.toml
+```
+
+From the generated `.burrow_init.toml` file, create new files for each node, and change the content.
+
+#### Validator 1
 
 ```toml
 BurrowDir = ".burrow_node0"
@@ -114,7 +111,7 @@ BurrowDir = ".burrow_node0"
     Enabled = false
 ```
 
-#### Validator 2 node `.burrow_val1.toml` modified line from `.burrow_init.toml`
+#### Validator 2
 
 ```toml
 BurrowDir = ".burrow_node1"
@@ -150,8 +147,7 @@ BurrowDir = ".burrow_node1"
     Enabled = false
 ```
 
-
-#### Validator 3 node `.burrow_val2.toml` modified line from `.burrow_init.toml`
+#### Validator 3
 
 ```toml
 BurrowDir = ".burrow_node2"
@@ -187,48 +183,55 @@ BurrowDir = ".burrow_node2"
     Enabled = false
 ```
 
-#### Start the seed node
-```bash
+## Start Network
+
+### Seed Node
+
+```shell
 burrow start --address=`basename .keys_seed/data/* .json` --config=.burrow_seed.toml  > .burrow_seed.log 2>&1 &
 ```
 
-#### Find seed node external address
+#### Validators
+
 Tendermint requires strict and routable address (not loopback, local etc), you can find the listen address with this command:
-```bash
+
+```shell
 SEED_URL=`curl -s 127.0.0.1:10001/network | jq -r '.result.ThisNode | [.ID, .ListenAddress] | join("@") | ascii_downcase'`
 echo $SEED_URL
 ```
 
-#### Configure other node to connect to seed node
-Update other nodes with that seed address:
-```bash
+Configure the validator nodes to connect to the seed node:
+
+```shell
 sed -i s%PUT_HERE_SEED_NODE_ID@LISTEN_EXTERNAL_ADDRESS%${SEED_URL}% .burrow_val0.toml
 sed -i s%PUT_HERE_SEED_NODE_ID@LISTEN_EXTERNAL_ADDRESS%${SEED_URL}% .burrow_val1.toml
 sed -i s%PUT_HERE_SEED_NODE_ID@LISTEN_EXTERNAL_ADDRESS%${SEED_URL}% .burrow_val2.toml
 ```
 
-#### Start validator nodes
-```bash
+Start the network:
+
+```shell
 burrow start -v=0 --config=.burrow_val0.toml  > .burrow_val0.log 2>&1 &
 burrow start -v=1 --config=.burrow_val1.toml  > .burrow_val1.log 2>&1 &
 burrow start -v=2 --config=.burrow_val2.toml  > .burrow_val2.log 2>&1 &
 ```
 
-Nodes will connect to seed node and request addresses, then they will connect to each other and start submitting and voting on blocks.
+The nodes should connect to our seed node and request addresses, then they will connect to each other and start submitting and voting on blocks.
 
-Check network status, validators nodes are connected to each others:
-```bash
+
+To check the network status, and that the validator nodes are connected to each other run:
+
+```shell
 curl -s 127.0.0.1:40001/network | jq -r '.result.peers[].node_info.moniker'
 val_node_0
 val_node_1
 ```
 
-You can monitor consensus and current blockchain height from the node info websockets:
-```bash
+You can monitor consensus and current blockchain height from the node info websocket:
+
+```shell
 curl -s 127.0.0.1:20001/consensus | jq -r '.result.round_state.height'
 ```
-
-At the moment, there is an [issue](https://github.com/tendermint/tendermint/issues/2092) opened in Tendermint with seedMode.
 
 Disable seed mode on the seed node and see how it affects the peers network:
 
@@ -237,14 +240,16 @@ Disable seed mode on the seed node and see how it affects the peers network:
   SeedMode = false
 ```
 
-Clear nodes folder (Note it will restart the chain from the genesis block):
-```bash
+Clear nodes folder (it will restart the chain from the genesis block):
+
+```shell
 killall burrow
 rm -rf .burrow_node0 .burrow_node1 .burrow_node2 .burrow_seed_0
 ```
 
 Restart all nodes, then check network status (Validator 3 is now connected to all peers, included seed node):
-```bash
+
+```shell
 curl -s 127.0.0.1:40001/network | jq -r '.result.peers[].node_info.moniker'
 seed_node_0
 val_node_0

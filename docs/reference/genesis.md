@@ -1,11 +1,17 @@
 # Genesis
 
-A blockchain network stores a series of deterministically agreed upon states indexed by a sequentially increasing number called the block height. Once a block is committed at a particular height we can always discover the total state at that height by querying more than 1/3 of the chain (in Burrow's case, and we may need to query more nodes if the ones we speak to disagree).
+A blockchain network stores a series of deterministically agreed upon states indexed by a sequentially increasing number called the block height. 
+Once a block is committed at a particular height we can always discover the total state at that height by querying more than 1/3 of the chain.
 
-The state at block `n+1` is the result of applying the transactions accepted at height `n` on top of the state at height `n`. Following this induction backwards we therefore require some initial state. This initial state is called the 'genesis state'. Unlike all subsequent states that are arrived at by the application of consensus amongst validators this state is defined a priori and defines the identity of the chain that will be built on top of it. Producing the genesis document is a singular big bang event performed by a single party. It cannot occur under consensus because it defines who can participate in consensus in block 1.
+The state at block `n+1` is the result of applying the transactions accepted at height `n` on top of the state at height `n`. Following this induction backwards 
+we therefore require some initial state. This initial state is called the 'genesis state'. Unlike all subsequent states that are arrived at by the application of consensus 
+amongst validators this state is defined a priori and defines the identity of the chain that will be built on top of it. Producing the genesis document is a singular big bang 
+event performed by a single party. It cannot occur under consensus because it defines who can participate in consensus at block 1.
 
 ## GenesisDoc
-In burrow we define the genesis facts in a canonical JSON document called the `GenesisDoc`. The sha256 of this document (with whitespace, as it happens) forms the `GenesisHash` which acts as if it were the hash of a virtual zeroth block.
+
+In burrow we define the genesis facts in a canonical JSON document called the `GenesisDoc`. The sha256 of this document (with whitespace, as it happens) forms the `GenesisHash` 
+which acts as if it were the hash of a virtual zeroth block.
 
 
 | Field | Purpose |
@@ -18,6 +24,7 @@ In burrow we define the genesis facts in a canonical JSON document called the `G
 | Validators | The initial validators on the chain that together will decide the value of the next state (see below for more detail) |
 
 Here is an example `genesis.json`:
+
 ```json
 {
   "GenesisTime": "2019-05-17T10:33:23.476788642Z",

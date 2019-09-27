@@ -1,6 +1,6 @@
-# Burrow deploy yaml (aka playbooks)
+# Burrow Deploy (Playbooks)
 
-`burrow deploy` is a tool which can do a number of things:
+The Burrow deploy toolkit can do a number of things:
 
 * compile Solidity source files (using solc) and deploy to chain
 * call function on existing contract
@@ -14,20 +14,18 @@ burrow deploy needs a script to its commands. This script format bares some simi
 is in yaml format. The top level structure is an array of [jobs](https://github.com/hyperledger/burrow/blob/develop/deploy/def/job.go).
 The different job types are [defined here](https://github.com/hyperledger/burrow/blob/develop/deploy/def/jobs.go).
 
-You can invoke burrow from the command line like:
+You can invoke burrow from the command line:
 
 ```shell
 burrow deploy -a CF8F9480252B70D59CF5B5F3CAAA75FEAF6A4B33 deploy.yaml
 ```
-
-Where `deploy.yaml` is the playbook.
 
 Each job in the playbook has a name. This name can be used in later jobs to refer to the result of a previous job (e.g. the address of a contract
 which was deployed). The jobs are executed in-order.
 
 Whenever an account needs to be specified, the key name in the burrow keys server can also be used.
 
-## deploy job
+## Deploy
 
 The deploy job compiles a solidity source file to a bin file which is then deployed to the chain. This type of job has the following
 parameters:
@@ -52,13 +50,13 @@ file(s) is named according to the name of the contract(s). To select which contr
 If the _contract_ is specified as a bin file, compilation will be skipped. It can be useful to separate compilation from deployment using the build job,
 which is described next.
 
-## build job
+## Build
 
 The build job is used to only compile solidity and do not do any deployment. This only has one parameter:
 
 * _contract:_ the path to the solidity source
 
-## call/query-contract job
+## Call / Query-Contract
 
 The call and query contract job is for executing contract code by way of running one of the functions. The call job will create a transaction
 and will have to wait until the next block to retrieve the result; the query-contract job is for accessing read-only functions which do not require
@@ -76,6 +74,6 @@ of previous burrow deploy job. In the latter case the name of the job must be sp
 If the contract was deployed without metadata (e.g. using the burrow js module or with an earlier version of burrow deploy) the abi must be
 specified. This must be the path to the contract bin file or abi file.
 
-## proposal job
+## Proposal
 
 This is described in the [proposal tutorial](../tutorials/8-proposals.md).
