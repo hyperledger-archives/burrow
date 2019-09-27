@@ -1,5 +1,9 @@
 package rpc
 
+import (
+	"net"
+)
+
 // 'LocalHost' gets interpreted as ipv6
 // TODO: revisit this
 const LocalHost = "127.0.0.1"
@@ -17,6 +21,10 @@ type ServerConfig struct {
 	Enabled    bool
 	ListenHost string
 	ListenPort string
+}
+
+func (sc *ServerConfig) ListenAddress() string {
+	return net.JoinHostPort(sc.ListenHost, sc.ListenPort)
 }
 
 type MetricsConfig struct {

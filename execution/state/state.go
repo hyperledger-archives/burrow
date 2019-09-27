@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/hyperledger/burrow/execution/registry"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/acm/validator"
@@ -57,6 +59,7 @@ type KeyFormatStore struct {
 	Proposal  *storage.MustKeyFormat
 	Validator *storage.MustKeyFormat
 	Event     *storage.MustKeyFormat
+	Registry  *storage.MustKeyFormat
 	TxHash    *storage.MustKeyFormat
 	Abi       *storage.MustKeyFormat
 }
@@ -75,6 +78,8 @@ var keys = KeyFormatStore{
 	Validator: storage.NewMustKeyFormat("v", crypto.AddressLength),
 	// Height -> StreamEvent
 	Event: storage.NewMustKeyFormat("e", uint64Length),
+	// Validator -> NodeIdentity
+	Registry: storage.NewMustKeyFormat("r", crypto.AddressLength),
 
 	// Stored on the plain
 	// TxHash -> TxHeight, TxIndex
@@ -97,6 +102,7 @@ type Updatable interface {
 	acmstate.Writer
 	names.Writer
 	proposal.Writer
+	registry.Writer
 	validator.Writer
 	AddBlock(blockExecution *exec.BlockExecution) error
 }
@@ -106,6 +112,7 @@ type writeState struct {
 	forest       *storage.MutableForest
 	plain        *storage.PrefixDB
 	accountStats acmstate.AccountStats
+	nodeList     registry.NodeList
 	ring         *validator.Ring
 }
 
@@ -124,7 +131,7 @@ type State struct {
 	logger     *logging.Logger
 }
 
-// Create a new State object
+// NewState creates a new State object
 func NewState(db dbm.DB) *State {
 	forest, err := storage.NewMutableForest(storage.NewPrefixDB(db, forestPrefix), defaultCacheCapacity)
 	if err != nil {
@@ -141,9 +148,10 @@ func NewState(db dbm.DB) *State {
 			History: ring,
 		},
 		writeState: writeState{
-			forest: forest,
-			plain:  plain,
-			ring:   ring,
+			forest:   forest,
+			plain:    plain,
+			ring:     ring,
+			nodeList: make(registry.NodeList),
 		},
 		logger: logging.NewNoopLogger(),
 	}
@@ -200,18 +208,18 @@ func LoadState(db dbm.DB, version int64) (*State, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not load MutableForest at version %d: %v", version, err)
 	}
+
 	// Populate stats. If this starts taking too long, store the value rather than the full scan at startup
-	err = s.IterateAccounts(func(acc *acm.Account) error {
-		if len(acc.EVMCode) > 0 || len(acc.WASMCode) > 0 {
-			s.writeState.accountStats.AccountsWithCode++
-		} else {
-			s.writeState.accountStats.AccountsWithoutCode++
-		}
-		return nil
-	})
+	err = s.loadAccountStats()
 	if err != nil {
 		return nil, err
 	}
+
+	err = s.loadNodeList()
+	if err != nil {
+		return nil, err
+	}
+
 	// load the validator ring
 	ring, err := LoadValidatorRing(version, DefaultValidatorsWindowSize, s.writeState.forest.GetImmutable)
 	if err != nil {
@@ -221,6 +229,25 @@ func LoadState(db dbm.DB, version int64) (*State, error) {
 	s.ReadState.History = ring
 
 	return s, nil
+}
+
+func (s *State) loadAccountStats() error {
+	return s.IterateAccounts(func(acc *acm.Account) error {
+		if len(acc.EVMCode) > 0 || len(acc.WASMCode) > 0 {
+			s.writeState.accountStats.AccountsWithCode++
+		} else {
+			s.writeState.accountStats.AccountsWithoutCode++
+		}
+		return nil
+	})
+}
+
+func (s *State) loadNodeList() error {
+	s.writeState.nodeList = make(registry.NodeList)
+	return s.IterateNodes(func(addr crypto.Address, node *registry.NodeIdentity) error {
+		s.writeState.nodeList[addr] = node
+		return nil
+	})
 }
 
 func (s *State) Version() int64 {

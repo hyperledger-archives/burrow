@@ -1327,18 +1327,21 @@ func TestSubslice(t *testing.T) {
 
 func TestHasPermission(t *testing.T) {
 	st := newAppState()
+
+	base, err := permission.BasePermissionsFromStringList([]string{"createContract", "createAccount", "bond", "proposal", "setBase", "unsetBase", "setGlobal", "addRole", "removeRole"})
+	require.NoError(t, err)
 	acc := &acm.Account{
 		Address: newAddress("frog"),
 		Permissions: permission.AccountPermissions{
-			Base: BasePermissionsFromStrings(t,
-				"00100000001000111",
-				"11011100010111000"),
+			Base: base,
 		},
 	}
 	require.NoError(t, st.UpdateAccount(acc))
 	// Ensure we are falling through to global permissions on those bits not set
 	cache := NewState(st, blockHashGetter)
-	assert.True(t, HasPermission(cache, acc.Address, PermFlagFromString(t, "100000001000110")))
+	flag, err := permission.PermFlagFromStringList([]string{"send", "call", "name", "hasRole"})
+	require.NoError(t, err)
+	assert.True(t, HasPermission(cache, acc.Address, flag))
 	require.NoError(t, cache.Error())
 }
 

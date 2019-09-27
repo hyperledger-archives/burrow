@@ -1,10 +1,12 @@
 # Transactions
 
-Burrow implements a number of transaction types. Transactions will be ordered by our consensus mechanism (Tendermint) and applied to our application state machine - replicated across all Burrow nodes. Each transaction is applied atomically and runs deterministically. The transactions contain the arguments for an [execution context](/execution/contexts).
+Burrow implements a number of transaction types. Transactions will be ordered by our consensus mechanism (Tendermint) and applied to our application state machine - 
+replicated across all Burrow nodes. Each transaction is applied atomically and runs deterministically. The transactions contain the arguments for an 
+[execution context](https://github.com/hyperledger/burrow/tree/master/execution/contexts).
 
-Our transactions are defined in Protobuf [here](/protobuf/payload.proto).
+Our transactions are defined in Protobuf [here](https://github.com/hyperledger/burrow/blob/master/protobuf/payload.proto).
 
-Transactions can be built using our GRPC client libraries programmatically, via [burrow.js](/docs/js-api.md), or with`burrow deploy`, see our [deploying contracts guide](/docs/tutorials/3-deploy-contracts.md).
+Transactions can be built using our GRPC client libraries programmatically, via [burrow.js](js-api.md), or with `burrow deploy` - see our [deployment guide](deploy.md).
 
 ## TxInput
 
@@ -29,19 +31,20 @@ Our core transaction type that calls EVM code, possibly transferring value. It t
 
 ## SendTx
 
-Allows [native token](/docs/reference/participants.md) to be sent from multiple inputs to multiple outputs. The basic value transfer function that calls no EVM Code.
+Allows [native token](reference/participants.md) to be sent from multiple inputs to multiple outputs. The basic value transfer function that calls no EVM Code.
 
 ## NameTx
 
-Provides access to a global name registry service that associates a particular string key with a data payload and an owner. The control of the name is guaranteed for the period of the lease which is a determined by a fee.
+Provides access to a global name registry service that associates a particular string key with a data payload and an owner. The control of the name is guaranteed for 
+the period of the lease which is a determined by a fee.
 
-Note: a future revision will change the way in which leases are calculated. Currently we use a somewhat historically-rooted fixed fee, see the [`NameCostPerBlock` function](/execution/names/names.go).
+> A future revision will change the way in which leases are calculated. Currently we use a somewhat historically-rooted fixed fee, see the [`NameCostPerBlock` function](https://github.com/hyperledger/burrow/blob/master/execution/names/names.go#L83).
 
 ## BondTx
 
 This allows validators nominate themselves to the validator set by placing a bond subtracted from their balance.
 
-For more information see [bonding documentation](/docs/reference/bonding.md)
+For more information see the [bonding documentation](reference/bonding.md).
 
 ## UnbondTx
 
@@ -57,9 +60,38 @@ An all-powerful transaction for modifying existing accounts.
 
 ## ProposalTx
 
-A transaction type containing a batch of transactions on which a ballot is held to determine whether to execute, see [proposals tutorial](/docs/tutorials/8-proposals.md)
+A transaction type containing a batch of transactions on which a ballot is held to determine whether to execute, see the [proposals tutorial](tutorials/8-proposals.md).
 
 ## PermsTx
 
 A transaction to modify the permissions of accounts.
 
+## IdentifyTx
+
+When running a closed or permissioned network, it is desirable to restrict the participants.
+For example, a consortium may wish to run a shared instance over a wide-area network without
+sharing the state to unknown parties. 
+
+As Tendermint handles P2P connectivity for Burrow, it extends a concept known as the 'peer filter'.
+This means that on every connection request to a particular node, our app will receive a request to 
+check a whitelist (if enabled, otherwise allowed by default) - if the source IP address or node key is 
+unknown then the connection will be rejected. The easiest way to manage this whitelist is to hard code
+the respective participants in the config:
+
+```toml
+[Tendermint]
+  AuthorizedPeers = "DDEF3E93BBF241C737A81E6BA085D0C77C7B51C9@127.0.0.1:26656,
+                        A858F15CD7048F7D6C1B310E016A0B8BA1D44861@127.0.0.1:26657"
+```
+
+This can become difficult to manage over time, and any change would require a restart of the node. A more
+scalable solution is `IdentifyTx`, which allows select participants to be associated with a particular 
+'node identity' - network address, node key and moniker. Once enabled in the config, a node will only allow
+connection requests from entries in its registry.
+
+```toml
+[Tendermint]
+  IdentifyPeers = true
+```
+
+For more details, see the [ADR](ADRs/adr-2_identify-tx.md).

@@ -214,6 +214,40 @@ func PermissionJob(perm *def.Permission, account string, tx *payload.PermsTx, cl
 	return txe.Receipt.TxHash.String(), nil
 }
 
+func FormulateIdentifyJob(id *def.Identify, account string, client *def.Client, logger *logging.Logger) (*payload.IdentifyTx, error) {
+	// Use Default
+	id.Source = FirstOf(id.Source, account)
+
+	// Formulate tx
+	logger.InfoMsg("Identify Transaction",
+		"source", id.Source,
+		"nodeKey", id.NodeKey,
+		"netAddress", id.NetAddress)
+
+	return client.Identify(&def.IdentifyArg{
+		Input:      id.Source,
+		Moniker:    id.Moniker,
+		NodeKey:    id.NodeKey,
+		NetAddress: id.NetAddress,
+		Sequence:   id.Sequence,
+	}, logger)
+}
+
+func IdentifyJob(id *def.Identify, tx *payload.IdentifyTx, account string, client *def.Client, logger *logging.Logger) (string, error) {
+	// Sign, broadcast, display
+	txe, err := client.SignAndBroadcast(tx, logger)
+	if err != nil {
+		return "", util.ChainErrorHandler(account, err, logger)
+	}
+
+	util.ReadTxSignAndBroadcast(txe, err, logger)
+	if err != nil {
+		return "", err
+	}
+
+	return txe.Receipt.TxHash.String(), nil
+}
+
 func FirstOf(inputs ...string) string {
 	for _, in := range inputs {
 		if in != "" {

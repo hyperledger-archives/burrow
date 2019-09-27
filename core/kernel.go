@@ -314,7 +314,7 @@ func (kern *Kernel) supervise() {
 	syncCh := make(chan os.Signal, 1)
 	signal.Notify(shutdownCh, syscall.SIGINT, syscall.SIGTERM)
 	signal.Notify(reloadCh, syscall.SIGHUP)
-	signal.Notify(syncCh, syscall.SIGUSR1)
+	signal.Notify(syncCh, syscall.SIGTRAP)
 	for {
 		select {
 		case <-reloadCh:

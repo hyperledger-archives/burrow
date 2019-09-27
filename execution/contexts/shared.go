@@ -174,6 +174,18 @@ func allHavePermission(accountGetter acmstate.AccountGetter, perm permission.Per
 	return nil
 }
 
+func oneHasPermission(accountGetter acmstate.AccountGetter, perm permission.PermFlag,
+	accs map[crypto.Address]*acm.Account, logger *logging.Logger) error {
+	for _, acc := range accs {
+		if HasPermission(accountGetter, acc, perm, logger) {
+			return nil
+		}
+	}
+	return errors.PermissionDenied{
+		Perm: perm,
+	}
+}
+
 func hasProposalPermission(accountGetter acmstate.AccountGetter, acc *acm.Account,
 	logger *logging.Logger) bool {
 	return HasPermission(accountGetter, acc, permission.Proposal, logger)

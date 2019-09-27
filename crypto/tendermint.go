@@ -2,13 +2,19 @@ package crypto
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/btcsuite/btcd/btcec"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmCrypto "github.com/tendermint/tendermint/crypto"
 	tmEd25519 "github.com/tendermint/tendermint/crypto/ed25519"
 	tmSecp256k1 "github.com/tendermint/tendermint/crypto/secp256k1"
+	"github.com/tendermint/tendermint/p2p"
 )
+
+func NodeIDFromAddress(id Address) p2p.ID {
+	return p2p.ID(strings.ToLower(id.String()))
+}
 
 func PublicKeyFromTendermintPubKey(pubKey tmCrypto.PubKey) (PublicKey, error) {
 	switch pk := pubKey.(type) {

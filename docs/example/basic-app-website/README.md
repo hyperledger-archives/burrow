@@ -1,4 +1,4 @@
-# [Example basic-app (with website)](.)
+# Example App (& Website)
 
 Note that this example is the same as the the basic-app example, apart from step 3.
 

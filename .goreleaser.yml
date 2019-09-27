@@ -9,6 +9,11 @@ builds:
     - -s -w
     - -X github.com/hyperledger/burrow/project.commit={{.Commit}}
     - -X github.com/hyperledger/burrow/project.date={{.Date}}
+  goos:
+    - darwin
+    - linux
+    - freebsd
+    - windows
 archive:
   replacements:
     darwin: Darwin

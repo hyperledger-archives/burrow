@@ -50,7 +50,7 @@ service Transact {
     // Formulate and  SendTx transaction signed server-side
     rpc SendTxAsync (payload.SendTx) returns (txs.Receipt);
 
-    // Formualte a NameTx signed server-side and wait for it to be included in a block returning the registered name
+    // Formulate a NameTx signed server-side and wait for it to be included in a block returning the registered name
     rpc NameTxSync (payload.NameTx) returns (exec.TxExecution);
     // Formulate a NameTx signed server-side
     rpc NameTxAsync (payload.NameTx) returns (txs.Receipt);

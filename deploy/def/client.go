@@ -4,12 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"reflect"
 	"strconv"
 	"time"
-
-	"reflect"
-
-	hex "github.com/tmthrgd/go-hex"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
@@ -18,6 +15,7 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
+	"github.com/hyperledger/burrow/execution/registry"
 	"github.com/hyperledger/burrow/genesis/spec"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
@@ -28,6 +26,8 @@ import (
 	"github.com/hyperledger/burrow/rpc/rpctransact"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
+	"github.com/tendermint/tendermint/p2p"
+	hex "github.com/tmthrgd/go-hex"
 	"google.golang.org/grpc"
 )
 
@@ -672,6 +672,50 @@ func (c *Client) Permissions(arg *PermArg, logger *logging.Logger) (*payload.Per
 		PermArgs: permArgs,
 	}
 	return tx, nil
+}
+
+type IdentifyArg struct {
+	Input      string
+	NodeKey    string
+	Moniker    string
+	NetAddress string
+	Amount     string
+	Sequence   string
+}
+
+func (c *Client) Identify(arg *IdentifyArg, logger *logging.Logger) (*payload.IdentifyTx, error) {
+	logger.InfoMsg("IdentifyTx", "name", arg)
+	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	address, err := crypto.AddressFromHexString(arg.Input)
+	if err != nil {
+		return nil, err
+	}
+
+	signer, err := keys.AddressableSigner(c.keyClient, address)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeKey, err := p2p.LoadNodeKey(arg.NodeKey)
+	if err != nil {
+		return nil, err
+	}
+
+	node := &registry.NodeIdentity{
+		Moniker:            arg.Moniker,
+		NetworkAddress:     arg.NetAddress,
+		TendermintNodeID:   string(nodeKey.ID()),
+		ValidatorPublicKey: signer.GetPublicKey(),
+	}
+
+	return &payload.IdentifyTx{
+		Inputs: []*payload.TxInput{input},
+		Node:   node,
+	}, nil
 }
 
 func (c *Client) TxInput(inputString, amountString, sequenceString string, allowMempoolSigning bool, logger *logging.Logger) (*payload.TxInput, error) {

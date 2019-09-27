@@ -44,4 +44,10 @@ func TestDefaultBurrowTendermintConfig(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, time.Duration(0), tmConf.Consensus.CreateEmptyBlocksInterval)
 	assert.True(t, tmConf.Consensus.CreateEmptyBlocks)
+
+	btc.AuthorizedPeers = ""
+	btc.IdentifyPeers = true
+	tmConf, err = btc.Config(".burrow", 0.33)
+	require.NoError(t, err)
+	assert.Equal(t, true, tmConf.FilterPeers)
 }

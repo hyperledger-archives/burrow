@@ -1,6 +1,7 @@
 # Logging
 
-Logging is highly configurable through the `burrow.toml` `[logging]` section. Each log line is a list of key-value pairs that flows from the root sink through possible child sinks. Each sink can have an output, a transform, and sinks that it outputs to. Below is a more involved example than the one appearing in the default generated config of what you can configure:
+Logging is highly configurable through the `burrow.toml` `[logging]` section. Each log line is a list of key-value pairs that flows from the root sink through possible child sinks. 
+Each sink can have an output, a transform, and sinks that it outputs to. Below is a more involved example than the one appearing in the default generated config of what you can configure:
 
 ```toml
 # This is a top level config section within the main Burrow config
