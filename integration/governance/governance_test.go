@@ -15,11 +15,11 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/genesis/spec"
-	"github.com/hyperledger/burrow/governance"
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/integration/rpctest"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
+	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tmcore "github.com/tendermint/tendermint/rpc/core"
@@ -62,7 +62,7 @@ func TestGovernance(t *testing.T) {
 			changePower(vs, 8, 9931)
 
 			err := vs.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
-				_, err := payloadSync(tcli, governance.AlterPowerTx(inputAddress, id, power.Uint64()))
+				_, err := payloadSync(tcli, payload.AlterPowerTx(inputAddress, id, power.Uint64()))
 				return err
 			})
 			require.NoError(t, err)
@@ -73,7 +73,7 @@ func TestGovernance(t *testing.T) {
 			assertValidatorsEqual(t, vs, vsOut)
 
 			// Remove validator from chain
-			_, err = payloadSync(tcli, governance.AlterPowerTx(inputAddress, account(3), 0))
+			_, err = payloadSync(tcli, payload.AlterPowerTx(inputAddress, account(3), 0))
 			require.NoError(t, err)
 
 			// Mirror in our check set
@@ -115,7 +115,7 @@ func TestGovernance(t *testing.T) {
 			acc1 := acm.GeneratePrivateAccountFromSecret("Foo1")
 			t.Logf("Changing power of new account %v to MaxFlow = %d that should succeed", acc1.GetAddress(), maxFlow)
 
-			_, err := payloadSync(tcli, governance.AlterPowerTx(inputAddress, acc1, maxFlow))
+			_, err := payloadSync(tcli, payload.AlterPowerTx(inputAddress, acc1, maxFlow))
 			require.NoError(t, err)
 
 			maxFlow = getMaxFlow(t, qcli)
@@ -123,7 +123,7 @@ func TestGovernance(t *testing.T) {
 			acc2 := acm.GeneratePrivateAccountFromSecret("Foo2")
 			t.Logf("Changing power of new account %v to MaxFlow + 1 = %d that should fail", acc2.GetAddress(), power)
 
-			_, err = payloadSync(tcli, governance.AlterPowerTx(inputAddress, acc2, power))
+			_, err = payloadSync(tcli, payload.AlterPowerTx(inputAddress, acc2, power))
 			require.Error(t, err)
 		})
 
@@ -132,7 +132,7 @@ func TestGovernance(t *testing.T) {
 			tcli := rpctest.NewTransactClient(t, grpcAddress)
 			// Account does not have Root permission
 			inputAddress := genesisAccounts[4].GetAddress()
-			_, err := payloadSync(tcli, governance.AlterPowerTx(inputAddress, account(5), 3433))
+			_, err := payloadSync(tcli, payload.AlterPowerTx(inputAddress, account(5), 3433))
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), errors.PermissionDenied{Address: inputAddress, Perm: permission.Root}.Error())
 		})
@@ -144,7 +144,7 @@ func TestGovernance(t *testing.T) {
 			qcli := rpctest.NewQueryClient(t, grpcAddress)
 			var amount uint64 = 18889
 			acc := account(5)
-			_, err := payloadSync(tcli, governance.AlterBalanceTx(inputAddress, acc, balance.New().Native(amount)))
+			_, err := payloadSync(tcli, payload.AlterBalanceTx(inputAddress, acc, balance.New().Native(amount)))
 			require.NoError(t, err)
 			ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: acc.GetAddress()})
 			require.NoError(t, err)
@@ -159,7 +159,7 @@ func TestGovernance(t *testing.T) {
 			tcli := rpctest.NewTransactClient(t, grpcAddress)
 			qcli := rpctest.NewQueryClient(t, grpcAddress)
 			acc := account(5)
-			_, err := payloadSync(tcli, governance.AlterPermissionsTx(inputAddress, acc, permission.Send))
+			_, err := payloadSync(tcli, payload.AlterPermissionsTx(inputAddress, acc, permission.Send))
 			require.NoError(t, err)
 			ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: acc.GetAddress()})
 			require.NoError(t, err)
@@ -178,7 +178,7 @@ func TestGovernance(t *testing.T) {
 			qcli := rpctest.NewQueryClient(t, grpcAddress)
 			var amount uint64 = 18889
 			acc := acm.GeneratePrivateAccountFromSecret("we almost certainly don't exist")
-			govTx := governance.AlterBalanceTx(inputAddress, acc, balance.New().Native(amount))
+			govTx := payload.AlterBalanceTx(inputAddress, acc, balance.New().Native(amount))
 			_, err := payloadSync(tcli, govTx)
 			require.NoError(t, err)
 			ca, err := qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: acc.GetAddress()})
@@ -195,7 +195,7 @@ func TestGovernance(t *testing.T) {
 			acc := account(2)
 			address := acc.GetAddress()
 			power := uint64(2445)
-			_, err := payloadSync(tcli, governance.UpdateAccountTx(inputAddress, &spec.TemplateAccount{
+			_, err := payloadSync(tcli, payload.UpdateAccountTx(inputAddress, &spec.TemplateAccount{
 				Address: &address,
 				Amounts: balance.New().Power(power),
 			}))
@@ -213,7 +213,7 @@ func TestGovernance(t *testing.T) {
 			address := acc.GetAddress()
 			publicKey := acc.GetPublicKey()
 			power := uint64(2445)
-			tx := governance.UpdateAccountTx(inputAddress, &spec.TemplateAccount{
+			tx := payload.UpdateAccountTx(inputAddress, &spec.TemplateAccount{
 				Address:   &address,
 				PublicKey: &publicKey,
 				Amounts:   balance.New().Power(power),
