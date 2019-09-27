@@ -66,3 +66,32 @@ A transaction type containing a batch of transactions on which a ballot is held 
 
 A transaction to modify the permissions of accounts.
 
+## IdentifyTx
+
+When running a closed or permissioned network, it is desirable to restrict the participants.
+For example, a consortium may wish to run a shared instance over a wide-area network without
+sharing the state to unknown parties. 
+
+As Tendermint handles P2P connectivity for Burrow, it extends a concept known as the 'peer filter'.
+This means that on every connection request to a particular node, our app will receive a request to 
+check a whitelist (if enabled, otherwise allowed by default) - if the source IP address or node key is 
+unknown then the connection will be rejected. The easiest way to manage this whitelist is to hard code
+the respective participants in the config:
+
+```toml
+[Tendermint]
+  AuthorizedPeers = "DDEF3E93BBF241C737A81E6BA085D0C77C7B51C9@127.0.0.1:26656,
+                        A858F15CD7048F7D6C1B310E016A0B8BA1D44861@127.0.0.1:26657"
+```
+
+This can become difficult to manage over time, and any change would require a restart of the node. A more
+scalable solution is `IdentifyTx`, which allows select participants to be associated with a particular 
+'node identity' - network address, node key and moniker. Once enabled in the config, a node will only allow
+connection requests from entries in its registry.
+
+```toml
+[Tendermint]
+  IdentifyPeers = true
+```
+
+For more details, see the [ADR](ADRs/adr-2_identify-tx.md).

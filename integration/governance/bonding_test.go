@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/bcm"
+	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/integration/rpctest"
@@ -17,6 +18,7 @@ import (
 
 func TestBonding(t *testing.T) {
 	genesisAccounts := integration.MakePrivateAccounts("accounts", 6)
+	genesisConfigs := make([]*config.BurrowConfig, len(genesisAccounts))
 	genesisKernels := make([]*core.Kernel, len(genesisAccounts))
 	genesisDoc := integration.TestGenesisDoc(genesisAccounts, 0, 1, 2, 3)
 	genesisDoc.GlobalPermissions = permission.NewAccountPermissions(permission.Input)
@@ -25,7 +27,10 @@ func TestBonding(t *testing.T) {
 
 	// we need at least one validator to start
 	for i, acc := range genesisAccounts {
-		genesisKernels[i], err = createKernel(genesisDoc, acc, genesisAccounts...)
+		genesisConfigs[i], err = newConfig(genesisDoc, acc, genesisAccounts...)
+		require.NoError(t, err)
+
+		genesisKernels[i], err = newKernelAndBoot(genesisConfigs[i], acc, genesisAccounts...)
 		require.NoError(t, err)
 		defer integration.Shutdown(genesisKernels[i])
 	}

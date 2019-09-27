@@ -37,8 +37,7 @@ type nameInfo struct {
 var _ Writer = &Cache{}
 
 // Returns a Cache that wraps an underlying NameRegCacheGetter to use on a cache miss, can write to an
-// output Writer via Sync.
-// Not goroutine safe, use syncStateCache if you need concurrent access
+// output Writer via Sync. Not goroutine safe, use syncStateCache if you need concurrent access
 func NewCache(backend Reader) *Cache {
 	return &Cache{
 		backend: backend,
@@ -90,7 +89,7 @@ func (cache *Cache) RemoveName(name string) error {
 }
 
 // Writes whatever is in the cache to the output Writer state. Does not flush the cache, to do that call Reset()
-// after Sync or use Flusth if your wish to use the output state as your next backend
+// after Sync or use Flush if your wish to use the output state as your next backend
 func (cache *Cache) Sync(state Writer) error {
 	cache.Lock()
 	defer cache.Unlock()
@@ -102,7 +101,7 @@ func (cache *Cache) Sync(state Writer) error {
 	}
 	sort.Stable(names)
 
-	// Update or delete names.
+	// Update or delete names
 	for _, name := range names {
 		nameInfo := cache.names[name]
 		nameInfo.RLock()
@@ -124,7 +123,7 @@ func (cache *Cache) Sync(state Writer) error {
 	return nil
 }
 
-// Resets the cache to empty initialising the backing map to the same size as the previous iteration.
+// Resets the cache to empty initialising the backing map to the same size as the previous iteration
 func (cache *Cache) Reset(backend Reader) {
 	cache.Lock()
 	defer cache.Unlock()

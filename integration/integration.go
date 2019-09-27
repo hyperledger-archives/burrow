@@ -25,8 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/config"
@@ -37,9 +35,9 @@ import (
 	"github.com/hyperledger/burrow/keys/mock"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/logconfig"
-	lConfig "github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -63,14 +61,16 @@ func RunNode(t testing.TB, genesisDoc *genesis.GenesisDoc, privateAccounts []*ac
 	options ...func(*config.BurrowConfig)) (kern *core.Kernel, shutdown func()) {
 
 	var err error
-	var loggingConfig *logconfig.LoggingConfig
-
 	testConfig, cleanup := NewTestConfig(genesisDoc, options...)
 	// Uncomment for log output from tests
-	//loggingConfig = logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
-	//	return sink.SetOutput(logconfig.StderrOutput())
-	//})
-	kern, err = TestKernel(privateAccounts[0], privateAccounts, testConfig, loggingConfig)
+	// testConfig.Logging = logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
+	//   return sink.SetOutput(logconfig.StderrOutput())
+	// })
+	testConfig.Logging = logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
+		return sink.SetTransform(logconfig.FilterTransform(logconfig.IncludeWhenAllMatch,
+			"total_validator")).SetOutput(logconfig.StdoutOutput())
+	})
+	kern, err = TestKernel(privateAccounts[0], privateAccounts, testConfig)
 	require.NoError(t, err)
 	err = kern.Boot()
 	require.NoError(t, err)
@@ -118,7 +118,8 @@ func NewTestConfig(genesisDoc *genesis.GenesisDoc,
 
 // We use this to wrap tests
 func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.PrivateAccount,
-	testConfig *config.BurrowConfig, loggingConfig *lConfig.LoggingConfig) (*core.Kernel, error) {
+	testConfig *config.BurrowConfig) (*core.Kernel, error) {
+
 	fmt.Println("Creating integration test Kernel...")
 
 	kern, err := core.NewKernel(testConfig.BurrowDir)
@@ -127,8 +128,8 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 	}
 
 	kern.SetLogger(logging.NewNoopLogger())
-	if loggingConfig != nil {
-		err := kern.LoadLoggerFromConfig(loggingConfig)
+	if testConfig.Logging != nil {
+		err := kern.LoadLoggerFromConfig(testConfig.Logging)
 		if err != nil {
 			return nil, err
 		}

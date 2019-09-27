@@ -2,6 +2,7 @@ package abci
 
 import (
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
@@ -25,7 +26,6 @@ func (app *App) peersFilter(reqQuery *abciTypes.RequestQuery, respQuery *abciTyp
 
 	filterType := path[3]
 	peer := path[4]
-
 	authorizedPeersID, authorizedPeersAddress := app.authorizedPeersProvider()
 	var authorizedPeers []string
 	switch filterType {
@@ -39,7 +39,9 @@ func (app *App) peersFilter(reqQuery *abciTypes.RequestQuery, respQuery *abciTyp
 
 	peerAuthorized := len(authorizedPeers) == 0
 	for _, authorizedPeer := range authorizedPeers {
-		if authorizedPeer == peer {
+		host, _, err := net.SplitHostPort(peer)
+		// may have different outbound port in address, so fallback to host
+		if peer == authorizedPeer || (err == nil && host == authorizedPeer) {
 			peerAuthorized = true
 			break
 		}

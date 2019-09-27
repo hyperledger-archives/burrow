@@ -28,7 +28,7 @@ func TestWeb3Service(t *testing.T) {
 
 	config, _ := integration.NewTestConfig(genesisDoc)
 	logger := logging.NewNoopLogger()
-	kern, err := integration.TestKernel(genesisAccounts[0], genesisAccounts, config, nil)
+	kern, err := integration.TestKernel(genesisAccounts[0], genesisAccounts, config)
 	require.NoError(t, err)
 	err = kern.Boot()
 	defer kern.Shutdown(ctx)

@@ -7,5 +7,5 @@ import (
 )
 
 func TestAllPermissions(t *testing.T) {
-	assert.Equal(t, AllPermFlags, DefaultPermFlags|AddRole|RemoveRole|SetBase|UnsetBase|Root|SetGlobal|Proposal)
+	assert.Equal(t, AllPermFlags, DefaultPermFlags|AddRole|RemoveRole|SetBase|UnsetBase|Root|SetGlobal|Proposal|Identify)
 }

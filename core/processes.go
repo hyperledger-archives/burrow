@@ -60,7 +60,7 @@ func ProfileLauncher(kern *Kernel, conf *rpc.ServerConfig) process.Launcher {
 		Enabled: conf.Enabled,
 		Launch: func() (process.Process, error) {
 			debugServer := &http.Server{
-				Addr: fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort),
+				Addr: conf.ListenAddress(),
 			}
 			go func() {
 				err := debugServer.ListenAndServe()
@@ -95,7 +95,9 @@ func NoConsensusLauncher(kern *Kernel) process.Launcher {
 		Launch: func() (process.Process, error) {
 			accountState := kern.State
 			nameRegState := kern.State
-			kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, kern.State, nil, kern.Logger)
+			nodeRegState := kern.State
+			validatorSet := kern.State
+			kern.Service = rpc.NewService(accountState, nameRegState, nodeRegState, kern.Blockchain, validatorSet, nil, kern.Logger)
 			// TimeoutFactor scales in units of seconds
 			blockDuration := time.Duration(kern.timeoutFactor * float64(time.Second))
 			//proc := abci.NewProcess(kern.checker, kern.committer, kern.Blockchain, kern.txCodec, blockDuration, kern.Panic)
@@ -132,8 +134,9 @@ func TendermintLauncher(kern *Kernel) process.Launcher {
 			accountState := kern.State
 			eventsState := kern.State
 			nameRegState := kern.State
+			nodeRegState := kern.State
 			validatorState := kern.State
-			kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, validatorState, nodeView, kern.Logger)
+			kern.Service = rpc.NewService(accountState, nameRegState, nodeRegState, kern.Blockchain, validatorState, nodeView, kern.Logger)
 			kern.EthService = rpc.NewEthService(accountState, eventsState, kern.Blockchain, validatorState, nodeView, kern.Transactor, kern.keyStore, kern.Logger)
 
 			if err := kern.Node.Start(); err != nil {
@@ -210,7 +213,7 @@ func InfoLauncher(kern *Kernel, conf *rpc.ServerConfig) process.Launcher {
 		Name:    InfoProcessName,
 		Enabled: conf.Enabled,
 		Launch: func() (process.Process, error) {
-			listener, err := process.ListenerFromAddress(fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort))
+			listener, err := process.ListenerFromAddress(conf.ListenAddress())
 			if err != nil {
 				return nil, err
 			}
@@ -256,7 +259,7 @@ func MetricsLauncher(kern *Kernel, conf *rpc.MetricsConfig) process.Launcher {
 		Name:    MetricsProcessName,
 		Enabled: conf.Enabled,
 		Launch: func() (process.Process, error) {
-			listener, err := process.ListenerFromAddress(fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort))
+			listener, err := process.ListenerFromAddress(conf.ListenAddress())
 			if err != nil {
 				return nil, err
 			}
@@ -284,7 +287,7 @@ func GRPCLauncher(kern *Kernel, conf *rpc.ServerConfig, keyConfig *keys.KeysConf
 				return nil, err
 			}
 
-			listener, err := process.ListenerFromAddress(fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort))
+			listener, err := process.ListenerFromAddress(conf.ListenAddress())
 			if err != nil {
 				return nil, err
 			}
@@ -308,8 +311,9 @@ func GRPCLauncher(kern *Kernel, conf *rpc.ServerConfig, keyConfig *keys.KeysConf
 			}
 
 			nameRegState := kern.State
+			nodeRegState := kern.State
 			proposalRegState := kern.State
-			rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(kern.State, nameRegState, proposalRegState,
+			rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(kern.State, nameRegState, nodeRegState, proposalRegState,
 				kern.Blockchain, kern.State, nodeView, kern.Logger))
 
 			txCodec := txs.NewProtobufCodec()

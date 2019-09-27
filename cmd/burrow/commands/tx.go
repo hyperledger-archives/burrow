@@ -3,7 +3,6 @@ package commands
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"time"
@@ -37,7 +36,7 @@ func Tx(output Output) func(cmd *cli.Cmd) {
 				output.Fatalf("cannot continue with config: %v", err)
 			}
 
-			chainHost := jobs.FirstOf(*chainOpt, fmt.Sprintf("%s:%s", conf.RPC.GRPC.ListenHost, conf.RPC.GRPC.ListenPort))
+			chainHost := jobs.FirstOf(*chainOpt, conf.RPC.GRPC.ListenAddress())
 			client := def.NewClient(chainHost, conf.Keys.RemoteAddress, true, time.Duration(*timeoutOpt)*time.Second)
 			logger := logging.NewNoopLogger()
 			address := conf.Address.String()
@@ -121,6 +120,42 @@ func Tx(output Output) func(cmd *cli.Cmd) {
 					}))
 				}
 			})
+
+			cmd.Command("identify", "associate a validator with a node address", func(cmd *cli.Cmd) {
+				sourceOpt := cmd.StringOpt("source", "", "Address to send from, if not set config is used")
+				nodeKeyOpt := cmd.StringOpt("node-key", "", "File containing the nodeKey to use, default config")
+				networkOpt := cmd.StringOpt("network", "", "Publically reachable host IP")
+				monikerOpt := cmd.StringOpt("moniker", "", "Human readable node ID")
+				cmd.Spec += "[--source=<address>] [--node-key=<file>] [--network=<address>] [--moniker=<name>]"
+
+				cmd.Action = func() {
+
+					tmConf, err := conf.TendermintConfig()
+					if err != nil {
+						output.Fatalf("could not construct tendermint config: %v", err)
+					}
+
+					id := &def.Identify{
+						Source:     jobs.FirstOf(*sourceOpt, address),
+						NodeKey:    jobs.FirstOf(*nodeKeyOpt, tmConf.NodeKeyFile()),
+						Moniker:    *monikerOpt,
+						NetAddress: jobs.FirstOf(*networkOpt, conf.Tendermint.ListenHost),
+					}
+
+					if err := id.Validate(); err != nil {
+						output.Fatalf("could not validate IdentifyTx: %v", err)
+					}
+
+					tx, err := jobs.FormulateIdentifyJob(id, address, client, logger)
+					if err != nil {
+						output.Fatalf("could not formulate IdentifyTx: %v", err)
+					}
+
+					output.Printf("%s", source.JSONString(payload.Any{
+						IdentifyTx: tx,
+					}))
+				}
+			})
 		})
 
 		cmd.Command("commit", "read and send a tx to mempool", func(cmd *cli.Cmd) {
@@ -136,7 +171,7 @@ func Tx(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf("can't continue with config: %v", err)
 				}
 
-				chainHost := jobs.FirstOf(*chainOpt, fmt.Sprintf("%s:%s", conf.RPC.GRPC.ListenHost, conf.RPC.GRPC.ListenPort))
+				chainHost := jobs.FirstOf(*chainOpt, conf.RPC.GRPC.ListenAddress())
 				client := def.NewClient(chainHost, conf.Keys.RemoteAddress, true, time.Duration(*timeoutOpt)*time.Second)
 
 				var rawTx payload.Any
@@ -158,6 +193,8 @@ func Tx(output Output) func(cmd *cli.Cmd) {
 				case *payload.BondTx:
 					hash, err = makeTx(client, tx)
 				case *payload.UnbondTx:
+					hash, err = makeTx(client, tx)
+				case *payload.IdentifyTx:
 					hash, err = makeTx(client, tx)
 				default:
 					output.Fatalf("payload type not recognized")

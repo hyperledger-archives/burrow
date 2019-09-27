@@ -265,6 +265,30 @@ func (job *Permission) Validate() error {
 	)
 }
 
+type Identify struct {
+	// (Optional, if account job or global account set) address of the account from which to identify (the
+	// public key for the account must be available to burrow keys)
+	Source string `mapstructure:"source" json:"source" yaml:"source" toml:"source"`
+	// (Required) file containing the tendermint node to identify as
+	NodeKey string `mapstructure:"nodekey" json:"nodekey" yaml:"nodekey" toml:"nodekey"`
+	// (Required) publically available network address
+	NetAddress string `mapstructure:"netaddress" json:"netaddress" yaml:"netaddress" toml:"netaddress"`
+	// (Optional) publically available network moniker
+	Moniker string `mapstructure:"moniker" json:"moniker" yaml:"moniker" toml:"moniker"`
+
+	// (Optional, advanced only) sequence to use when burrow keys signs the transaction (do not use unless you
+	// know what you're doing)
+	Sequence string `mapstructure:"sequence" json:"sequence" yaml:"sequence" toml:"sequence"`
+}
+
+func (job *Identify) Validate() error {
+	return validation.ValidateStruct(job,
+		validation.Field(&job.NodeKey, validation.Required),
+		validation.Field(&job.NetAddress, validation.Required),
+		validation.Field(&job.Sequence, rule.Uint64OrPlaceholder),
+	)
+}
+
 // ------------------------------------------------------------------------
 // Contracts Jobs
 // ------------------------------------------------------------------------

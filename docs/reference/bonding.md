@@ -22,7 +22,6 @@ To prevent the validator pool changing too quickly over a single block whilst en
 majority of validators are non-byzantine after the transition, we allow up to `ceil((t)/3) - 1`
 to be changed where `t` is the current total validator power.
 
-
 ## Future Work
 
 Currently a validator must bond or unbond themselves directly - we enforce a strict relationship 
