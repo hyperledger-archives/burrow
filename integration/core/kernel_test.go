@@ -11,19 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger/burrow/logging/loggers"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/governance"
-
 	"github.com/hyperledger/burrow/acm/balance"
-	"github.com/hyperledger/burrow/rpc/rpctransact"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -34,7 +23,13 @@ import (
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/keys/mock"
 	"github.com/hyperledger/burrow/logging/logconfig"
+	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/rpc/rpctransact"
 	"github.com/hyperledger/burrow/txs/payload"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestKernel(t *testing.T) {
@@ -181,7 +176,7 @@ func bootWaitBlocksShutdown(t testing.TB, validator *acm.PrivateAccount, private
 
 			txe, err = tcli.BroadcastTxSync(ctx, &rpctransact.TxEnvelopeParam{
 				Payload: &payload.Any{
-					GovTx: governance.AlterBalanceTx(inputAddress, validator, balance.New().Power(pow)),
+					GovTx: payload.AlterBalanceTx(inputAddress, validator, balance.New().Power(pow)),
 				},
 			})
 			handleTxe(txe, err, errCh)
