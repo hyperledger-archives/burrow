@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/validator"
+	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -26,15 +27,16 @@ import (
 	"github.com/tendermint/tendermint/p2p"
 )
 
-func createKernel(genesisDoc *genesis.GenesisDoc, account *acm.PrivateAccount,
-	keysAccounts ...*acm.PrivateAccount) (kernel *core.Kernel, err error) {
+func newConfig(genesisDoc *genesis.GenesisDoc, account *acm.PrivateAccount,
+	keysAccounts ...*acm.PrivateAccount) (conf *config.BurrowConfig, err error) {
 
 	// FIXME: some combination of cleanup and shutdown seems to make tests fail on CI
-	//testConfig, cleanup := integration.NewTestConfig(genesisDoc)
+	// testConfig, cleanup := integration.NewTestConfig(genesisDoc)
 	testConfig, _ := integration.NewTestConfig(genesisDoc)
-	//defer cleanup()
+	// defer cleanup()
 
-	logconf := logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
+	// comment to see all logging
+	testConfig.Logging = logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
 		return sink.SetTransform(logconfig.FilterTransform(logconfig.IncludeWhenAllMatch,
 			"total_validator")).SetOutput(logconfig.StdoutOutput())
 	})
@@ -52,12 +54,18 @@ func createKernel(genesisDoc *genesis.GenesisDoc, account *acm.PrivateAccount,
 	testConfig.Tendermint.ListenHost = host
 	testConfig.Tendermint.ListenPort = port
 
-	kernel, err = integration.TestKernel(account, keysAccounts, testConfig, logconf)
+	err = l.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	err = l.Close()
+	return testConfig, nil
+}
+
+func newKernelAndBoot(conf *config.BurrowConfig, account *acm.PrivateAccount,
+	keysAccounts ...*acm.PrivateAccount) (kernel *core.Kernel, err error) {
+
+	kernel, err = integration.TestKernel(account, keysAccounts, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -115,32 +123,37 @@ func changePower(vs *validator.Set, i int, power uint64) {
 	vs.ChangePower(account(i).GetPublicKey(), new(big.Int).SetUint64(power))
 }
 
-func connectKernels(k1, k2 *core.Kernel) {
+func connectKernels(k1, k2 *core.Kernel) error {
 	k1Address, err := k1.Node.NodeInfo().NetAddress()
 	if err != nil {
-		panic(fmt.Errorf("could not get kernel address: %v", err))
+		return fmt.Errorf("could not get kernel address: %v", err)
 	}
 	k2Address, err := k2.Node.NodeInfo().NetAddress()
 	if err != nil {
-		panic(fmt.Errorf("could not get kernel address: %v", err))
+		return fmt.Errorf("could not get kernel address: %v", err)
 	}
 	fmt.Printf("Connecting %v -> %v\n", k1Address, k2Address)
 	err = k1.Node.Switch().DialPeerWithAddress(k2Address)
 	if err != nil {
 		switch e := err.(type) {
 		case p2p.ErrRejected:
-			panic(fmt.Errorf("connection between test kernels was rejected: %v", e))
+			return fmt.Errorf("connection between test kernels was rejected: %v", e)
 		default:
-			panic(fmt.Errorf("could not connect test kernels: %v", err))
+			return fmt.Errorf("could not connect test kernels: %v", err)
 		}
 	}
+	return nil
 }
 
-func connectAllKernels(ks []*core.Kernel) {
+func connectAllKernels(ks []*core.Kernel) error {
 	source := ks[0]
 	for _, dest := range ks[1:] {
-		connectKernels(source, dest)
+		err := connectKernels(source, dest)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func getMaxFlow(t testing.TB, qcli rpcquery.QueryClient) uint64 {

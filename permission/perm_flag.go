@@ -38,6 +38,8 @@ const (
 	Input // 256
 	// Permission to execute batch transactins
 	Batch // 512
+	// Allows account to associate new blockchain nodes
+	Identify // 1028
 
 	// Moderator permissions.
 	// These permissions concern the alteration of the chain permissions listed above. Each permission relates to a
@@ -51,7 +53,7 @@ const (
 	AddRole
 	RemoveRole
 
-	NumPermissions uint = 17 // NOTE Adjust this too. We can support upto 64
+	NumPermissions uint = 18 // NOTE Adjust this too. We can support upto 64
 
 	TopPermFlag      PermFlag = 1 << (NumPermissions - 1)
 	AllPermFlags     PermFlag = TopPermFlag | (TopPermFlag - 1)
@@ -64,6 +66,7 @@ const (
 	CreateContractString = "createContract"
 	CreateAccountString  = "createAccount"
 	BondString           = "bond"
+	IdentifyString       = "identify"
 	NameString           = "name"
 	ProposalString       = "proposal"
 	InputString          = "input"
@@ -108,6 +111,8 @@ func (pf PermFlag) String() string {
 		return CreateAccountString
 	case Bond:
 		return BondString
+	case Identify:
+		return IdentifyString
 	case Name:
 		return NameString
 	case Proposal:
@@ -153,6 +158,8 @@ func PermStringToFlag(perm string) (PermFlag, error) {
 		return CreateAccount, nil
 	case BondString:
 		return Bond, nil
+	case IdentifyString:
+		return Identify, nil
 	case NameString:
 		return Name, nil
 	case ProposalString:

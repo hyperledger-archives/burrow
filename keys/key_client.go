@@ -229,6 +229,6 @@ func (ms *Signer) GetPublicKey() crypto.PublicKey {
 	return ms.publicKey
 }
 
-func (ms *Signer) Sign(messsage []byte) (*crypto.Signature, error) {
-	return ms.keyClient.Sign(ms.address, messsage)
+func (ms *Signer) Sign(message []byte) (*crypto.Signature, error) {
+	return ms.keyClient.Sign(ms.address, message)
 }

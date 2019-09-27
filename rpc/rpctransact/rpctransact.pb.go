@@ -288,7 +288,7 @@ type TransactClient interface {
 	SendTxSync(ctx context.Context, in *payload.SendTx, opts ...grpc.CallOption) (*exec.TxExecution, error)
 	// Formulate and  SendTx transaction signed server-side
 	SendTxAsync(ctx context.Context, in *payload.SendTx, opts ...grpc.CallOption) (*txs.Receipt, error)
-	// Formualte a NameTx signed server-side and wait for it to be included in a block returning the registered name
+	// Formulate a NameTx signed server-side and wait for it to be included in a block returning the registered name
 	NameTxSync(ctx context.Context, in *payload.NameTx, opts ...grpc.CallOption) (*exec.TxExecution, error)
 	// Formulate a NameTx signed server-side
 	NameTxAsync(ctx context.Context, in *payload.NameTx, opts ...grpc.CallOption) (*txs.Receipt, error)
@@ -434,7 +434,7 @@ type TransactServer interface {
 	SendTxSync(context.Context, *payload.SendTx) (*exec.TxExecution, error)
 	// Formulate and  SendTx transaction signed server-side
 	SendTxAsync(context.Context, *payload.SendTx) (*txs.Receipt, error)
-	// Formualte a NameTx signed server-side and wait for it to be included in a block returning the registered name
+	// Formulate a NameTx signed server-side and wait for it to be included in a block returning the registered name
 	NameTxSync(context.Context, *payload.NameTx) (*exec.TxExecution, error)
 	// Formulate a NameTx signed server-side
 	NameTxAsync(context.Context, *payload.NameTx) (*txs.Receipt, error)

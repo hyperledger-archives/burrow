@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/names"
+	"github.com/hyperledger/burrow/execution/registry"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
 	amino "github.com/tendermint/go-amino"
@@ -112,6 +113,11 @@ type ResultUnsubscribe struct {
 type ResultNetwork struct {
 	ThisNode *tendermint.NodeInfo
 	*core_types.ResultNetInfo
+}
+
+type ResultNetworkRegistry struct {
+	Address crypto.Address
+	registry.NodeIdentity
 }
 
 type ResultValidators struct {

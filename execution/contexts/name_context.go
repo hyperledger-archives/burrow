@@ -175,7 +175,7 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 		return err
 	}
 
-	// TODO: maybe we want to take funds on error and allow txs in that don't do anythingi?
+	// TODO: maybe we want to take funds on error and allow txs in that don't do anything?
 
 	txe.Input(ctx.tx.Input.Address, nil)
 	txe.Name(entry)

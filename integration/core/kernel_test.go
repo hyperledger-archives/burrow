@@ -51,7 +51,7 @@ func testKernel(t *testing.T, opts ...func(*config.BurrowConfig)) {
 			defer cleanup()
 			require.NotNil(t, privateAccounts)
 			require.NotNil(t, privateValidators)
-			assert.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, conf, nil, nil))
+			assert.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, conf, nil))
 		})
 
 		t.Run("BootShutdownResume", func(t *testing.T) {
@@ -74,14 +74,14 @@ func testKernel(t *testing.T, opts ...func(*config.BurrowConfig)) {
 				return true
 			}
 			// First run
-			err := bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, testConfig, nil, blockChecker)
+			err := bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, testConfig, blockChecker)
 			require.NoError(t, err)
 			// Resume and check we pick up where we left off
-			err = bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, testConfig, nil, blockChecker)
+			err = bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, testConfig, blockChecker)
 			require.NoError(t, err)
 			// Resuming with mismatched genesis should fail
 			genesisDoc.Salt = []byte("foo")
-			err = bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, testConfig, nil, blockChecker)
+			err = bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, testConfig, blockChecker)
 			assert.Error(t, err)
 		})
 
@@ -91,14 +91,14 @@ func testKernel(t *testing.T, opts ...func(*config.BurrowConfig)) {
 			name := "capture"
 			buffer := 100
 			path := "foo.json"
-			logging := logconfig.New().
+			conf.Logging = logconfig.New().
 				Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
 					return sink.SetTransform(logconfig.CaptureTransform(name, buffer, false)).
 						SetOutput(logconfig.FileOutput(path).SetFormat(loggers.JSONFormat))
 				})
 			i := 0
 			gap := 1
-			assert.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, conf, logging,
+			assert.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, conf,
 				func(block *exec.BlockExecution) (cont bool) {
 					if i == gap {
 						// Send sync signal
@@ -129,10 +129,9 @@ func testKernel(t *testing.T, opts ...func(*config.BurrowConfig)) {
 }
 
 func bootWaitBlocksShutdown(t testing.TB, validator *acm.PrivateAccount, privateAccounts []*acm.PrivateAccount,
-	testConfig *config.BurrowConfig, logging *logconfig.LoggingConfig,
-	blockChecker func(block *exec.BlockExecution) (cont bool)) error {
+	testConfig *config.BurrowConfig, blockChecker func(block *exec.BlockExecution) (cont bool)) error {
 
-	kern, err := integration.TestKernel(validator, rpctest.PrivateAccounts, testConfig, logging)
+	kern, err := integration.TestKernel(validator, rpctest.PrivateAccounts, testConfig)
 	if err != nil {
 		return err
 	}

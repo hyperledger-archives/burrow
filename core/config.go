@@ -8,6 +8,7 @@ import (
 	"github.com/hyperledger/burrow/consensus/abci"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/execution"
+	"github.com/hyperledger/burrow/execution/registry"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/logging/structure"
@@ -58,6 +59,10 @@ func (kern *Kernel) LoadTendermintFromConfig(conf *config.BurrowConfig, privVal 
 	}
 
 	authorizedPeersProvider := conf.Tendermint.DefaultAuthorizedPeersProvider()
+	if conf.Tendermint.IdentifyPeers {
+		authorizedPeersProvider = registry.AuthorizedPeersProvider(kern.State)
+	}
+
 	kern.database.Stats()
 
 	kern.info = fmt.Sprintf("Burrow_%s_%s_ValidatorID:%X", project.History.CurrentVersion().String(),

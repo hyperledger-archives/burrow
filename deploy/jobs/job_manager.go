@@ -216,6 +216,16 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if err != nil {
 				return err
 			}
+		case *def.Identify:
+			announce(job.Name, "Identify", logger)
+			tx, err := FormulateIdentifyJob(job.Identify, playbook.Account, client, logger)
+			if err != nil {
+				return err
+			}
+			job.Result, err = IdentifyJob(job.Identify, tx, playbook.Account, client, logger)
+			if err != nil {
+				return err
+			}
 
 		// Contracts jobs
 		case *def.Deploy:

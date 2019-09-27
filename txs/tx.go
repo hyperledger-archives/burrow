@@ -283,5 +283,8 @@ func EnvelopeFromAny(chainID string, p *payload.Any) *Envelope {
 	if p.UnbondTx != nil {
 		return Enclose(chainID, p.UnbondTx)
 	}
+	if p.IdentifyTx != nil {
+		return Enclose(chainID, p.IdentifyTx)
+	}
 	return nil
 }
