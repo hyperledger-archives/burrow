@@ -23,7 +23,7 @@ func Restore(output Output) func(cmd *cli.Cmd) {
 				output.Fatalf("cannot continue with config: %v", err)
 			}
 
-			output.Logf("Using validator address: %s", *conf.Address)
+			output.Logf("Using validator address: %s", *conf.ValidatorAddress)
 
 			kern, err := core.NewKernel(conf.BurrowDir)
 			if err != nil {
