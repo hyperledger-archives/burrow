@@ -38,8 +38,8 @@ export GO111MODULE=on
 .PHONY: check
 check:
 	@echo "Checking code for formatting style compliance."
-	@gofmt -l -d $(shell go list -f "{{.Dir}}" ./...)
-	@gofmt -l $(shell go list -f "{{.Dir}}" ./...) | read && echo && echo "Your marmot has found a problem with the formatting style of the code." 1>&2 && exit 1 || true
+	@gofmt -l -d $(shell go list -f "{{.Dir}}" ./... | grep -v vendor)
+	@gofmt -l $(shell go list -f "{{.Dir}}" ./...  | grep -v vendor) | read && echo && echo "Your marmot has found a problem with the formatting style of the code." 1>&2 && exit 1 || true
 
 # Just fix it
 .PHONY: fix
@@ -92,6 +92,10 @@ protobuf: $(PROTO_GO_FILES)
 .PHONY: clean_protobuf
 clean_protobuf:
 	@rm -f $(PROTO_GO_FILES_REAL)
+
+.PHONY: vendor
+vendor:
+	go mod vendor
 
 ### PEG query grammar
 
@@ -152,7 +156,8 @@ build_race_db:
 
 # build docker image for burrow
 .PHONY: docker_build
-docker_build: check commit_hash
+docker_build: check commit_hash vendor
+	# vendor now to prevent pulling all deps again
 	@scripts/build_tool.sh
 
 ### Testing github.com/hyperledger/burrow
