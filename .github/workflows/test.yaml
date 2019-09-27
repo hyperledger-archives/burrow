@@ -1,0 +1,128 @@
+name: test
+on: [push, pull_request]
+jobs:
+  unit:
+    name: Unit
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-go@v1
+      with:
+        go-version: 1.12
+      id: go
+    - uses: actions/checkout@v1
+    - run: make test
+    - run: make build
+    - uses: actions/upload-artifact@master
+      with:
+        name: burrow
+        path: bin
+
+  integration:
+    name: Integration
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - run: make test_integration
+
+  vent:
+    name: Vent
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - run: docker-compose run burrow make test_integration_vent
+
+  docker:
+    name: Docker
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - run: make docker_build
+      env:
+        DOCKER_REPO: "hyperledger/burrow"
+
+  keys:
+    name: Keys
+    runs-on: ubuntu-latest
+    needs: unit
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/download-artifact@master
+      with:
+        name: burrow
+        path: bin
+    - run: chmod +x $(pwd)/bin/*
+    - name: Test
+      run: |
+        export PATH=${PATH}:$(pwd)/bin
+        make test_keys
+
+  truffle:
+    name: Truffle
+    runs-on: ubuntu-latest
+    needs: unit
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '8.x'
+    - uses: actions/download-artifact@master
+      with:
+        name: burrow
+        path: bin
+    - run: chmod +x $(pwd)/bin/*
+    - name: Test
+      run: |
+        export PATH=${PATH}:$(pwd)/bin
+        make test_truffle
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: unit
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/download-artifact@master
+      with:
+        name: burrow
+        path: bin
+    - run: chmod +x $(pwd)/bin/*
+    - name: Test
+      run: |
+        export PATH=${PATH}:$(pwd)/bin
+        make test_deploy
+
+  restore:
+    name: Dump - Restore
+    runs-on: ubuntu-latest
+    needs: unit
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/download-artifact@master
+      with:
+        name: burrow
+        path: bin
+    - run: chmod +x $(pwd)/bin/*
+    - name: Test
+      run: |
+        export PATH=${PATH}:$(pwd)/bin
+        make test_restore
+
+  test_js:
+    name: JS API
+    runs-on: ubuntu-latest
+    needs: unit
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '8.x'
+    - uses: actions/download-artifact@master
+      with:
+        name: burrow
+        path: bin
+    - run: chmod +x $(pwd)/bin/*
+    - name: Test
+      run: | 
+        export PATH=${PATH}:$(pwd)/bin
+        make npm_install
+        make test_js

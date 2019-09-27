@@ -12,8 +12,6 @@
 
 SHELL := /bin/bash
 REPO := $(shell pwd)
-GOFILES := $(shell go list -f "{{.Dir}}" ./...)
-PACKAGES := $(shell go list ./... )
 
 # Protobuf generated go files
 PROTO_FILES = $(shell find . -path ./vendor -prune -o -path ./.gopath_bos -prune -o -type f -name '*.proto' -print)
@@ -40,26 +38,26 @@ export GO111MODULE=on
 .PHONY: check
 check:
 	@echo "Checking code for formatting style compliance."
-	@gofmt -l -d ${GOFILES}
-	@gofmt -l ${GOFILES} | read && echo && echo "Your marmot has found a problem with the formatting style of the code." 1>&2 && exit 1 || true
+	@gofmt -l -d $(shell go list -f "{{.Dir}}" ./...)
+	@gofmt -l $(shell go list -f "{{.Dir}}" ./...) | read && echo && echo "Your marmot has found a problem with the formatting style of the code." 1>&2 && exit 1 || true
 
 # Just fix it
 .PHONY: fix
 fix:
-	@goimports -l -w ${GOFILES}
+	@goimports -l -w $(shell go list -f "{{.Dir}}" ./...)
 
 # fmt runs gofmt -w on the code, modifying any files that do not match
 # the style guide.
 .PHONY: fmt
 fmt:
 	@echo "Correcting any formatting style corrections."
-	@gofmt -l -w ${GOFILES}
+	@gofmt -l -w $(shell go list -f "{{.Dir}}" ./...)
 
 # lint installs golint and prints recommendations for coding style.
 lint:
 	@echo "Running lint checks."
 	go get -u github.com/golang/lint/golint
-	@for file in $(GOFILES); do \
+	@for file in $(shell go list -f "{{.Dir}}" ./...); do \
 		echo; \
 		golint --set_exit_status $${file}; \
 	done
@@ -69,13 +67,13 @@ lint:
 .PHONY: vet
 vet:
 	@echo "Running go vet."
-	@go vet ${PACKAGES}
+	@go vet $(shell go list ./... )
 
 # run the megacheck tool for code compliance
 .PHONY: megacheck
 megacheck:
 	@go get honnef.co/go/tools/cmd/megacheck
-	@for pkg in ${PACKAGES}; do megacheck "$$pkg"; done
+	@for pkg in $(shell go list ./... ); do megacheck "$$pkg"; done
 
 # Protobuffing
 .PHONY: protobuf_deps
@@ -94,7 +92,6 @@ protobuf: $(PROTO_GO_FILES)
 .PHONY: clean_protobuf
 clean_protobuf:
 	@rm -f $(PROTO_GO_FILES_REAL)
-
 
 ### PEG query grammar
 
@@ -181,22 +178,22 @@ solang: $(SOLANG_GO_FILES)
 npm_install:
 	npm install
 
-.PHONY: test_js
-test_js: bin/solc build_burrow
-	./tests/scripts/bin_wrapper.sh npm test
-
 # Test
+
+.PHONY: test_js
+test_js:
+	./tests/scripts/bin_wrapper.sh npm test
 
 .PHONY: test
 test: check bin/solc
 	@tests/scripts/bin_wrapper.sh go test ./... ${GO_TEST_ARGS}
 
 .PHONY: test_keys
-test_keys: build_burrow
+test_keys:
 	burrow_bin="${REPO}/bin/burrow" tests/keys_server/test.sh
 
 .PHONY:	test_truffle
-test_truffle: build_burrow
+test_truffle:
 	burrow_bin="${REPO}/bin/burrow" tests/web3/truffle.sh
 
 .PHONY:	test_integration_vent
@@ -209,20 +206,23 @@ test_integration_vent_postgres:
 	docker-compose run burrow make test_integration_vent
 
 .PHONY: test_restore
-test_restore: build_burrow bin/solc
+test_restore:
 	@tests/scripts/bin_wrapper.sh tests/dump/test.sh
 
 # Go will attempt to run separate packages in parallel
+
 .PHONY: test_integration
-test_integration: test_keys test_deploy test_integration_vent_postgres test_restore test_truffle
+test_integration:
 	@go test -v -tags integration ./integration/...
 
-.PHONY: test_integration_no_postgres
-test_integration_no_postgres: test_keys test_deploy test_integration_vent test_restore test_truffle
-	@go test -v -tags integration ./integration/...
+.PHONY: test_integration_all
+test_integration_all: test_keys test_deploy test_integration_vent_postgres test_restore test_truffle test_integration
+
+.PHONY: test_integration_all_no_postgres
+test_integration_all_no_postgres: test_keys test_deploy test_integration_vent test_restore test_truffle test_integration
 
 .PHONY: test_deploy
-test_deploy: bin/solc build_burrow
+test_deploy:
 	@tests/scripts/bin_wrapper.sh tests/deploy.sh
 
 bin/solc: ./tests/scripts/deps/solc.sh
@@ -233,7 +233,7 @@ bin/solc: ./tests/scripts/deps/solc.sh
 # test burrow with checks for race conditions
 .PHONY: test_race
 test_race: build_race
-	@go test -race ${PACKAGES}
+	@go test -race $(shell go list ./... )
 
 ### Clean up
 
