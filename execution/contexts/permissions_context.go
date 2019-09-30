@@ -33,7 +33,7 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution, p payload.Payload)
 	if inAcc == nil {
 		ctx.Logger.InfoMsg("Cannot find input account",
 			"tx_input", ctx.tx.Input)
-		return errors.ErrorCodeInvalidAddress
+		return errors.Codes.InvalidAddress
 	}
 
 	err = ctx.tx.PermArgs.EnsureValid()
@@ -106,7 +106,7 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution, p payload.Payload)
 	inAcc.Balance -= value
 	err = inAcc.SubtractFromBalance(value)
 	if err != nil {
-		return errors.ErrorCodef(errors.ErrorCodeInsufficientFunds,
+		return errors.Errorf(errors.Codes.InsufficientFunds,
 			"Input account does not have sufficient balance to cover input amount: %v", ctx.tx.Input)
 	}
 	err = ctx.State.UpdateAccount(inAcc)

@@ -2,13 +2,13 @@ package errors
 
 import "fmt"
 
-func NewException(errorCode Code, exception string) *Exception {
+func NewException(code *Code, exception string) *Exception {
 	if exception == "" {
 		return nil
 	}
 	return &Exception{
-		Code:      errorCode,
-		Exception: exception,
+		CodeNumber: code.Number,
+		Exception:  exception,
 	}
 }
 
@@ -23,26 +23,22 @@ func AsException(err error) *Exception {
 	case CodedError:
 		return NewException(e.ErrorCode(), e.ErrorMessage())
 	default:
-		return NewException(ErrorCodeGeneric, err.Error())
+		return NewException(Codes.Generic, err.Error())
 	}
 }
 
 func Wrapf(err error, format string, a ...interface{}) *Exception {
 	ex := AsException(err)
-	return NewException(ex.Code, fmt.Sprintf(format, a...))
+	return NewException(Codes.Get(ex.CodeNumber), fmt.Sprintf(format, a...))
 }
 
 func Wrap(err error, message string) *Exception {
 	ex := AsException(err)
-	return NewException(ex.Code, message+": "+ex.Exception)
+	return NewException(Codes.Get(ex.CodeNumber), message+": "+ex.Exception)
 }
 
-func Errorf(format string, a ...interface{}) *Exception {
-	return ErrorCodef(ErrorCodeGeneric, format, a...)
-}
-
-func ErrorCodef(errorCode Code, format string, a ...interface{}) *Exception {
-	return NewException(errorCode, fmt.Sprintf(format, a...))
+func Errorf(code *Code, format string, a ...interface{}) *Exception {
+	return NewException(code, fmt.Sprintf(format, a...))
 }
 
 func (e *Exception) AsError() error {
@@ -53,12 +49,12 @@ func (e *Exception) AsError() error {
 	return e
 }
 
-func (e *Exception) ErrorCode() Code {
-	return e.Code
+func (e *Exception) ErrorCode() *Code {
+	return Codes.Get(e.CodeNumber)
 }
 
 func (e *Exception) Error() string {
-	return fmt.Sprintf("error %d - %s: %s", e.Code, e.Code.ErrorMessage(), e.Exception)
+	return fmt.Sprintf("error %d - %s: %s", e.CodeNumber, Codes.Get(e.CodeNumber), e.Exception)
 }
 
 func (e *Exception) String() string {
@@ -77,5 +73,9 @@ func (e *Exception) Equal(ce CodedError) bool {
 	if e == nil || ex == nil {
 		return e == nil && ex == nil
 	}
-	return e.Code == ex.Code && e.Exception == ex.Exception
+	return e.CodeNumber == ex.CodeNumber && e.Exception == ex.Exception
+}
+
+func (e *Exception) GetCode() *Code {
+	return Codes.Get(e.CodeNumber)
 }

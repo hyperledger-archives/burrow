@@ -46,13 +46,13 @@ func (ctx *SendContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 		return err
 	}
 	if outTotal > inTotal {
-		return errors.ErrorCodeInsufficientFunds
+		return errors.Codes.InsufficientFunds
 	}
 	if outTotal < inTotal {
-		return errors.ErrorCodeOverpayment
+		return errors.Codes.Overpayment
 	}
 	if outTotal == 0 {
-		return errors.ErrorCodeZeroPayment
+		return errors.Codes.ZeroPayment
 	}
 
 	// Good! Adjust accounts

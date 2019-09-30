@@ -41,7 +41,7 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 	if inAcc == nil {
 		ctx.Logger.InfoMsg("Cannot find input account",
 			"tx_input", ctx.tx.Input)
-		return errors.ErrorCodeInvalidAddress
+		return errors.Codes.InvalidAddress
 	}
 	// check permission
 	if !hasNamePermission(ctx.State, inAcc, ctx.Logger) {
@@ -50,7 +50,7 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 	if ctx.tx.Input.Amount < ctx.tx.Fee {
 		ctx.Logger.InfoMsg("Sender did not send enough to cover the fee",
 			"tx_input", ctx.tx.Input)
-		return errors.ErrorCodeInsufficientFunds
+		return errors.Codes.InsufficientFunds
 	}
 
 	// validate the input strings
@@ -168,7 +168,7 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 
 	err = inAcc.SubtractFromBalance(value)
 	if err != nil {
-		return errors.ErrorCodef(errors.ErrorCodeInsufficientFunds,
+		return errors.Errorf(errors.Codes.InsufficientFunds,
 			"Input account does not have sufficient balance to cover input amount: %v", ctx.tx.Input)
 	}
 	err = ctx.State.UpdateAccount(inAcc)
@@ -185,22 +185,22 @@ func (ctx *NameContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 
 func validateStrings(tx *payload.NameTx) error {
 	if len(tx.Name) == 0 {
-		return errors.ErrorCodef(errors.ErrorCodeInvalidString, "name must not be empty")
+		return errors.Errorf(errors.Codes.InvalidString, "name must not be empty")
 	}
 	if len(tx.Name) > names.MaxNameLength {
-		return errors.ErrorCodef(errors.ErrorCodeInvalidString, "Name is too long. Max %d bytes", names.MaxNameLength)
+		return errors.Errorf(errors.Codes.InvalidString, "Name is too long. Max %d bytes", names.MaxNameLength)
 	}
 	if len(tx.Data) > names.MaxDataLength {
-		return errors.ErrorCodef(errors.ErrorCodeInvalidString, "Data is too long. Max %d bytes", names.MaxDataLength)
+		return errors.Errorf(errors.Codes.InvalidString, "Data is too long. Max %d bytes", names.MaxDataLength)
 	}
 
 	if !validateNameRegEntryName(tx.Name) {
-		return errors.ErrorCodef(errors.ErrorCodeInvalidString,
+		return errors.Errorf(errors.Codes.InvalidString,
 			"Invalid characters found in NameTx.Name (%s). Only alphanumeric, underscores, dashes, forward slashes, and @ are allowed", tx.Name)
 	}
 
 	if !validateNameRegEntryData(tx.Data) {
-		return errors.ErrorCodef(errors.ErrorCodeInvalidString,
+		return errors.Errorf(errors.Codes.InvalidString,
 			"Invalid characters found in NameTx.Data (%s). Only the kind of things found in a JSON file are allowed", tx.Data)
 	}
 

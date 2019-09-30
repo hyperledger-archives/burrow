@@ -46,7 +46,7 @@ func (st *CallFrame) WithMaxCallStackDepth(max uint64) *CallFrame {
 
 func (st *CallFrame) NewFrame(cacheOptions ...acmstate.CacheOption) (*CallFrame, error) {
 	if st.maxCallStackDepth > 0 && st.maxCallStackDepth == st.callStackDepth {
-		return nil, errors.ErrorCodeCallStackOverflow
+		return nil, errors.Codes.CallStackOverflow
 	}
 	return newCallFrame(st.Cache, st.callStackDepth+1, st.maxCallStackDepth,
 		append(st.cacheOptions, cacheOptions...)...), nil

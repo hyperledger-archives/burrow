@@ -44,7 +44,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 	if inAcc == nil {
 		ctx.Logger.InfoMsg("Cannot find input account",
 			"tx_input", ctx.tx.Input)
-		return errors.ErrorCodeInvalidAddress
+		return errors.Codes.InvalidAddress
 	}
 
 	// check permission
@@ -58,7 +58,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 	if ctx.tx.Proposal == nil {
 		// voting for existing proposal
 		if ctx.tx.ProposalHash == nil || ctx.tx.ProposalHash.Size() != sha256.Size {
-			return errors.ErrorCodeInvalidProposal
+			return errors.Codes.InvalidProposal
 		}
 
 		proposalHash = ctx.tx.ProposalHash.Bytes()
@@ -69,7 +69,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 	} else {
 		if ctx.tx.ProposalHash != nil || ctx.tx.Proposal.BatchTx == nil ||
 			len(ctx.tx.Proposal.BatchTx.Txs) == 0 || len(ctx.tx.Proposal.BatchTx.GetInputs()) == 0 {
-			return errors.ErrorCodeInvalidProposal
+			return errors.Codes.InvalidProposal
 		}
 
 		// validate the input strings
@@ -98,7 +98,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 	for _, vote := range ballot.Votes {
 		for _, i := range ctx.tx.GetInputs() {
 			if i.Address == vote.Address {
-				return errors.ErrorCodeAlreadyVoted
+				return errors.Codes.AlreadyVoted
 			}
 		}
 	}
@@ -132,7 +132,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 		if proposeAcc == nil {
 			ctx.Logger.InfoMsg("Cannot find input account",
 				"tx_input", ctx.tx.Input)
-			return errors.ErrorCodeInvalidAddress
+			return errors.Codes.InvalidAddress
 		}
 
 		if !hasBatchPermission(ctx.State, proposeAcc, ctx.Logger) {
@@ -245,16 +245,16 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 
 func validateProposalStrings(proposal *payload.Proposal) error {
 	if len(proposal.Name) == 0 {
-		return errors.ErrorCodef(errors.ErrorCodeInvalidString, "name must not be empty")
+		return errors.Errorf(errors.Codes.InvalidString, "name must not be empty")
 	}
 
 	if !validateNameRegEntryName(proposal.Name) {
-		return errors.ErrorCodef(errors.ErrorCodeInvalidString,
+		return errors.Errorf(errors.Codes.InvalidString,
 			"Invalid characters found in Proposal.Name (%s). Only alphanumeric, underscores, dashes, forward slashes, and @ are allowed", proposal.Name)
 	}
 
 	if !validateStringPrintable(proposal.Description) {
-		return errors.ErrorCodef(errors.ErrorCodeInvalidString,
+		return errors.Errorf(errors.Codes.InvalidString,
 			"Invalid characters found in Proposal.Description (%s). Only printable characters are allowed", proposal.Description)
 	}
 

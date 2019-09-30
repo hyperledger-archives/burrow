@@ -11,7 +11,7 @@ import (
 
 var Permissions = New().MustContract("Permissions",
 	`* acmstate.ReaderWriter for managing Secure Native authorizations.
-		* @dev This interface describes the functions exposed by the SNative permissions layer in burrow.
+		* @dev This interface describes the functions exposed by the native permissions layer in burrow.
 		`,
 	Function{
 		Comment: `

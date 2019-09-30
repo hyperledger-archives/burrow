@@ -55,13 +55,13 @@ func init() {
 		Delims("[[", "]]").
 		Parse(functionTemplateText)
 	if err != nil {
-		panic(fmt.Errorf("couldn't parse SNative function template: %s", err))
+		panic(fmt.Errorf("couldn't parse native function template: %s", err))
 	}
 	contractTemplate, err = template.New("SolidityContractTemplate").
 		Delims("[[", "]]").
 		Parse(contractTemplateText)
 	if err != nil {
-		panic(fmt.Errorf("couldn't parse SNative contract template: %s", err))
+		panic(fmt.Errorf("couldn't parse native contract template: %s", err))
 	}
 }
 
@@ -78,7 +78,7 @@ type solidityFunction struct {
 // Contract
 //
 
-// Create a templated solidityContract from an SNative contract description
+// Create a templated solidityContract from an native contract description
 func NewSolidityContract(contract *native.Contract) *solidityContract {
 	return &solidityContract{
 		SolidityPragmaVersion: ">=0.4.24",
@@ -106,7 +106,7 @@ func (contract *solidityContract) Address() string {
 		contract.Contract.Address())
 }
 
-// Generate Solidity code for this SNative contract
+// Generate Solidity code for this native contract
 func (contract *solidityContract) Solidity() (string, error) {
 	buf := new(bytes.Buffer)
 	err := contractTemplate.Execute(buf, contract)
@@ -129,7 +129,7 @@ func (contract *solidityContract) Functions() []*solidityFunction {
 // Function
 //
 
-// Create a templated solidityFunction from an SNative function description
+// Create a templated solidityFunction from an native function description
 func NewSolidityFunction(function *native.Function) *solidityFunction {
 	return &solidityFunction{function}
 }

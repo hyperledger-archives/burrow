@@ -104,7 +104,7 @@ func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelop
 	case msg := <-out:
 		txe := msg.(*exec.TxExecution)
 		callError := txe.CallError()
-		if callError != nil && callError.ErrorCode() != errors.ErrorCodeExecutionReverted {
+		if callError != nil && callError.ErrorCode() != errors.Codes.ExecutionReverted {
 			return nil, errors.Wrap(callError, "exception during transaction execution")
 		}
 		return txe, nil
@@ -233,8 +233,8 @@ func (trans *Transactor) CheckTxSyncRaw(ctx context.Context, txBytes []byte) (*t
 			}
 			return receipt, nil
 		default:
-			return nil, errors.ErrorCodef(errors.Code(checkTxResponse.Code),
-				"error returned by Tendermint in BroadcastTxSync ABCI log: %v", checkTxResponse.Log)
+			return nil, fmt.Errorf("error %d returned by Tendermint in BroadcastTxSync ABCI log: %v",
+				checkTxResponse.Code, checkTxResponse.Log)
 		}
 	}
 }

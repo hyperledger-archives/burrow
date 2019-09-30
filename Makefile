@@ -13,16 +13,7 @@
 SHELL := /bin/bash
 REPO := $(shell pwd)
 
-# Protobuf generated go files
-PROTO_FILES = $(shell find . -path ./node_modules -prune -o -path ./.gopath_bos -prune -o -type f -name '*.proto' -print)
-PROTO_GO_FILES = $(patsubst %.proto, %.pb.go, $(PROTO_FILES))
-PROTO_GO_FILES_REAL = $(shell find . -path ./vendor -prune -o -type f -name '*.pb.go' -print)
-
 # Our own Go files containing the compiled bytecode of solidity files as a constant
-SOLIDITY_FILES = $(shell find . -path ./docs -prune -o -path ./tests -prune -o -type f -name '*.sol' -print)
-SOLIDITY_GO_FILES = $(patsubst %.sol, %.sol.go, $(SOLIDITY_FILES))
-SOLANG_FILES = $(shell find . -path ./vendor -prune -o -path ./tests -prune -o -type f -name '*.solang' -print)
-SOLANG_GO_FILES = $(patsubst %.solang, %.solang.go, $(SOLANG_FILES))
 
 CI_IMAGE="hyperledger/burrow:ci"
 
@@ -77,18 +68,25 @@ megacheck:
 	@for pkg in $(shell go list ./... ); do megacheck "$$pkg"; done
 
 # Protobuffing
-.PHONY: protobuf_deps
-protobuf_deps:
-	@go get -u github.com/gogo/protobuf/protoc-gen-gogo
-#	@go get -u github.com/golang/protobuf/protoc-gen-go
+
+# Protobuf generated go files
+PROTO_FILES = $(shell find . -path ./node_modules -prune -o -type f -name '*.proto' -print)
+PROTO_GO_FILES = $(patsubst %.proto, %.pb.go, $(PROTO_FILES))
+PROTO_GO_FILES_REAL = $(shell find . -path ./vendor -prune -o -type f -name '*.pb.go' -print)
+
+.PHONY: protobuf
+protobuf: $(PROTO_GO_FILES) fix
 
 # Implicit compile rule for GRPC/proto files (note since pb.go files no longer generated
 # in same directory as proto file this just regenerates everything
 %.pb.go: %.proto
 	protoc -I ./protobuf $< --gogo_out=plugins=grpc:${GOPATH}/src
 
-.PHONY: protobuf
-protobuf: $(PROTO_GO_FILES)
+
+.PHONY: protobuf_deps
+protobuf_deps:
+	@go get -u github.com/gogo/protobuf/protoc-gen-gogo
+#	@go get -u github.com/golang/protobuf/protoc-gen-go
 
 .PHONY: clean_protobuf
 clean_protobuf:
@@ -159,18 +157,18 @@ docker_build: check commit_hash
 ### Testing github.com/hyperledger/burrow
 
 # Solidity fixtures
+.PHONY: solidity
+solidity: $(patsubst %.sol, %.sol.go, $(wildcard ./execution/solidity/*.sol))
+
 %.sol.go: %.sol
 	@go run ./deploy/compile/solgo/main.go $^
 
-# Solidity fixtures
+# Solang fixtures
+.PHONY: solang
+solang: $(patsubst %.solang, %.solang.go, $(wildcard ./execution/wasm/*.solang))
+
 %.solang.go: %.solang
 	@go run ./deploy/compile/solgo/main.go -wasm $^
-
-.PHONY: solidity
-solidity: $(SOLIDITY_GO_FILES)
-
-.PHONY: solang
-solang: $(SOLANG_GO_FILES)
 
 # node/js
 #

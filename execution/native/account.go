@@ -19,11 +19,11 @@ func CreateAccount(st acmstate.ReaderWriter, address crypto.Address) error {
 	}
 	if acc != nil {
 		if acc.NativeName != "" {
-			return errors.ErrorCodef(errors.ErrorCodeReservedAddress,
+			return errors.Errorf(errors.Codes.ReservedAddress,
 				"cannot create account at %v because that address is reserved for a native contract '%s'",
 				address, acc.NativeName)
 		}
-		return errors.ErrorCodef(errors.ErrorCodeDuplicateAddress,
+		return errors.Errorf(errors.Codes.DuplicateAddress,
 			"tried to create an account at an address that already exists: %v", address)
 	}
 	return st.UpdateAccount(&acm.Account{Address: address})
@@ -43,7 +43,7 @@ func initCode(st acmstate.ReaderWriter, address crypto.Address, parent *crypto.A
 		return err
 	}
 	if acc.EVMCode != nil || acc.WASMCode != nil {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+		return errors.Errorf(errors.Codes.IllegalWrite,
 			"tried to initialise code for a contract that already has code: %v", address)
 	}
 
@@ -63,7 +63,7 @@ func initCode(st acmstate.ReaderWriter, address crypto.Address, parent *crypto.A
 			return err
 		}
 		if ancestor == nil {
-			return errors.ErrorCodef(errors.ErrorCodeNonExistentAccount,
+			return errors.Errorf(errors.Codes.NonExistentAccount,
 				"parent %v of account %v does not exist", *parent, address)
 		}
 		if ancestor.Forebear != nil {
@@ -72,7 +72,7 @@ func initCode(st acmstate.ReaderWriter, address crypto.Address, parent *crypto.A
 				return err
 			}
 			if ancestor == nil {
-				return errors.ErrorCodef(errors.ErrorCodeNonExistentAccount,
+				return errors.Errorf(errors.Codes.NonExistentAccount,
 					"forebear %v of account %v does not exist", *ancestor.Forebear, *parent)
 			}
 			forebear = ancestor.Forebear
@@ -94,7 +94,7 @@ func initCode(st acmstate.ReaderWriter, address crypto.Address, parent *crypto.A
 		}
 
 		if !found {
-			return errors.ErrorCodef(errors.ErrorCodeInvalidContractCode,
+			return errors.Errorf(errors.Codes.InvalidContractCode,
 				"could not find code with code hash: %X", codehash)
 		}
 	}
@@ -121,7 +121,7 @@ func InitWASMCode(st acmstate.ReaderWriter, address crypto.Address, code []byte)
 		return err
 	}
 	if acc.EVMCode != nil || acc.WASMCode != nil {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+		return errors.Errorf(errors.Codes.IllegalWrite,
 			"tried to re-initialise code for contract %v", address)
 	}
 
@@ -142,7 +142,7 @@ func Transfer(st acmstate.ReaderWriter, from, to crypto.Address, amount uint64) 
 		return err
 	}
 	if acc.Balance < amount {
-		return errors.ErrorCodeInsufficientBalance
+		return errors.Codes.InsufficientBalance
 	}
 	err = UpdateAccount(st, from, func(account *acm.Account) error {
 		return account.SubtractFromBalance(amount)
@@ -173,7 +173,7 @@ func UpdateContractMeta(st acmstate.ReaderWriter, address crypto.Address, payloa
 		}
 		err = st.SetMetadata(metahash, abi.Meta)
 		if err != nil {
-			return errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+			return errors.Errorf(errors.Codes.IllegalWrite,
 				"cannot update metadata for %v: %v", address, err)
 		}
 	}
@@ -187,7 +187,7 @@ func RemoveAccount(st acmstate.ReaderWriter, address crypto.Address) error {
 		return err
 	}
 	if acc == nil {
-		return errors.ErrorCodef(errors.ErrorCodeDuplicateAddress,
+		return errors.Errorf(errors.Codes.DuplicateAddress,
 			"tried to remove an account at an address that does not exist: %v", address)
 	}
 	return st.RemoveAccount(address)
@@ -211,7 +211,7 @@ func mustAccount(st acmstate.Reader, address crypto.Address) (*acm.Account, erro
 		return nil, err
 	}
 	if acc == nil {
-		return nil, errors.ErrorCodef(errors.ErrorCodeNonExistentAccount,
+		return nil, errors.Errorf(errors.Codes.NonExistentAccount,
 			"account %v does not exist", address)
 	}
 	return acc, nil

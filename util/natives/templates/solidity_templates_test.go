@@ -34,7 +34,7 @@ func TestSNativeFuncTemplate(t *testing.T) {
 	fmt.Println(solidity)
 }
 
-// This test checks that we can generate the SNative contract interface and
+// This test checks that we can generate the native contract interface and
 // prints it to stdout
 func TestSNativeContractTemplate(t *testing.T) {
 	contract := native.MustDefaultNatives().GetContract("Permissions")

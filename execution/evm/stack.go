@@ -49,7 +49,7 @@ func (st *Stack) useGas(gasToUse uint64) {
 	if *st.gas > gasToUse {
 		*st.gas -= gasToUse
 	} else {
-		st.pushErr(errors.ErrorCodeInsufficientGas)
+		st.pushErr(errors.Codes.InsufficientGas)
 	}
 }
 
@@ -61,7 +61,7 @@ func (st *Stack) Push(d Word256) {
 	st.useGas(native.GasStackOp)
 	err := st.ensureCapacity(uint64(st.ptr) + 1)
 	if err != nil {
-		st.pushErr(errors.ErrorCodeDataStackOverflow)
+		st.pushErr(errors.Codes.DataStackOverflow)
 		return
 	}
 	st.slice[st.ptr] = d
@@ -100,7 +100,7 @@ func (st *Stack) PushBigInt(bigInt *big.Int) Word256 {
 func (st *Stack) Pop() Word256 {
 	st.useGas(native.GasStackOp)
 	if st.ptr == 0 {
-		st.pushErr(errors.ErrorCodeDataStackUnderflow)
+		st.pushErr(errors.Codes.DataStackUnderflow)
 		return Zero256
 	}
 	st.ptr--
@@ -118,7 +118,7 @@ func (st *Stack) PopAddress() crypto.Address {
 func (st *Stack) Pop64() int64 {
 	d := st.Pop()
 	if Is64BitOverflow(d) {
-		st.pushErr(errors.ErrorCodef(errors.ErrorCodeIntegerOverflow, "int64 overflow from word: %v", d))
+		st.pushErr(errors.Errorf(errors.Codes.IntegerOverflow, "int64 overflow from word: %v", d))
 		return 0
 	}
 	return Int64FromWord256(d)
@@ -127,7 +127,7 @@ func (st *Stack) Pop64() int64 {
 func (st *Stack) PopU64() uint64 {
 	d := st.Pop()
 	if Is64BitOverflow(d) {
-		st.pushErr(errors.ErrorCodef(errors.ErrorCodeIntegerOverflow, "uint64 overflow from word: %v", d))
+		st.pushErr(errors.Errorf(errors.Codes.IntegerOverflow, "uint64 overflow from word: %v", d))
 		return 0
 	}
 	return Uint64FromWord256(d)
@@ -149,7 +149,7 @@ func (st *Stack) Len() int {
 func (st *Stack) Swap(n int) {
 	st.useGas(native.GasStackOp)
 	if st.ptr < n {
-		st.pushErr(errors.ErrorCodeDataStackUnderflow)
+		st.pushErr(errors.Codes.DataStackUnderflow)
 		return
 	}
 	st.slice[st.ptr-n], st.slice[st.ptr-1] = st.slice[st.ptr-1], st.slice[st.ptr-n]
@@ -158,7 +158,7 @@ func (st *Stack) Swap(n int) {
 func (st *Stack) Dup(n int) {
 	st.useGas(native.GasStackOp)
 	if st.ptr < n {
-		st.pushErr(errors.ErrorCodeDataStackUnderflow)
+		st.pushErr(errors.Codes.DataStackUnderflow)
 		return
 	}
 	st.Push(st.slice[st.ptr-n])
@@ -167,7 +167,7 @@ func (st *Stack) Dup(n int) {
 // Not an opcode, costs no gas.
 func (st *Stack) Peek() Word256 {
 	if st.ptr == 0 {
-		st.pushErr(errors.ErrorCodeDataStackUnderflow)
+		st.pushErr(errors.Codes.DataStackUnderflow)
 		return Zero256
 	}
 	return st.slice[st.ptr-1]

@@ -401,7 +401,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			maybe.PushError(useGasNegative(params.Gas, native.GasGetAccount))
 			acc := mustGetAccount(st.CallFrame, maybe, address)
 			if acc == nil {
-				maybe.PushError(errors.ErrorCodeUnknownAddress)
+				maybe.PushError(errors.Codes.UnknownAddress)
 			} else {
 				code := acc.EVMCode
 				memOff := stack.PopBigInt()
@@ -421,7 +421,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			end := new(big.Int).Add(outputOff, length)
 
 			if end.BitLen() > 64 || uint64(len(returnData)) < end.Uint64() {
-				maybe.PushError(errors.ErrorCodeReturnDataOutOfBounds)
+				maybe.PushError(errors.Codes.ReturnDataOutOfBounds)
 				continue
 			}
 
@@ -452,11 +452,11 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			lastBlockHeight := st.Blockchain.LastBlockHeight()
 			if blockNumber >= lastBlockHeight {
 				c.debugf(" => attempted to get block hash of a non-existent block: %v", blockNumber)
-				maybe.PushError(errors.ErrorCodeInvalidBlockNumber)
+				maybe.PushError(errors.Codes.InvalidBlockNumber)
 			} else if lastBlockHeight-blockNumber > MaximumAllowedBlockLookBack {
 				c.debugf(" => attempted to get block hash of a block %d outside of the allowed range "+
 					"(must be within %d blocks)", blockNumber, MaximumAllowedBlockLookBack)
-				maybe.PushError(errors.ErrorCodeBlockNumberOutOfRange)
+				maybe.PushError(errors.Codes.BlockNumberOutOfRange)
 			} else {
 				hash := maybe.Bytes(st.Blockchain.BlockHash(blockNumber))
 				blockHash := LeftPadWord256(hash)
@@ -678,7 +678,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			acc := getAccount(st.CallFrame, maybe, target)
 			if acc == nil {
 				if op != CALL {
-					maybe.PushError(errors.ErrorCodeUnknownAddress)
+					maybe.PushError(errors.Codes.UnknownAddress)
 					continue
 				}
 				// We're sending funds to a new account so we must create it first
@@ -782,7 +782,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 				// So we can return nested errors.CodedError if the top level return is an errors.CodedError
 				stack.Push(Zero256)
 
-				if errors.ErrorCode(callErr) == errors.ErrorCodeExecutionReverted {
+				if errors.GetCode(callErr) == errors.Codes.ExecutionReverted {
 					memory.Write(retOffset, RightPadBytes(returnData, int(retSize)))
 				}
 			} else {
@@ -813,7 +813,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			return output, maybe.Error()
 
 		case INVALID: // 0xFE
-			maybe.PushError(errors.ErrorCodeExecutionAborted)
+			maybe.PushError(errors.Codes.ExecutionAborted)
 			return nil, maybe.Error()
 
 		case SELFDESTRUCT: // 0xFF
@@ -840,7 +840,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 
 		default:
 			c.debugf("(pc) %-3v Unknown opcode %v\n", pc, op)
-			maybe.PushError(errors.Errorf("unknown opcode %v", op))
+			maybe.PushError(errors.Errorf(errors.Codes.Generic, "unknown opcode %v", op))
 			return nil, maybe.Error()
 		}
 		pc++
@@ -852,7 +852,7 @@ func (c *Contract) jump(code []byte, to int64, pc *int64) error {
 	dest := codeGetOp(code, to)
 	if dest != JUMPDEST {
 		c.debugf(" ~> %v invalid jump dest %v\n", to, dest)
-		return errors.ErrorCodeInvalidJumpDest
+		return errors.Codes.InvalidJumpDest
 	}
 	c.debugf(" ~> %v\n", to)
 	*pc = to
@@ -881,7 +881,7 @@ func getAccount(st acmstate.Reader, m *errors.Maybe, address crypto.Address) *ac
 func mustGetAccount(st acmstate.Reader, m *errors.Maybe, address crypto.Address) *acm.Account {
 	acc := getAccount(st, m, address)
 	if acc == nil {
-		m.PushError(errors.ErrorCodef(errors.ErrorCodeNonExistentAccount, "account %v does not exist", address))
+		m.PushError(errors.Errorf(errors.Codes.NonExistentAccount, "account %v does not exist", address))
 		return &acm.Account{}
 	}
 	return acc
@@ -906,7 +906,7 @@ func useGasNegative(gasLeft *uint64, gasToUse uint64) error {
 	if *gasLeft >= gasToUse {
 		*gasLeft -= gasToUse
 	} else {
-		return errors.ErrorCodeInsufficientGas
+		return errors.Codes.InsufficientGas
 	}
 	return nil
 }
@@ -919,7 +919,7 @@ func useGasNegative(gasLeft *uint64, gasToUse uint64) error {
 func subslice(data []byte, offset, length int64) ([]byte, error) {
 	size := int64(len(data))
 	if size < offset || offset < 0 || length < 0 {
-		return nil, errors.ErrorCodef(errors.ErrorCodeInputOutOfBounds,
+		return nil, errors.Errorf(errors.Codes.InputOutOfBounds,
 			"subslice could not slice data of size %d at offset %d for length %d", size, offset, length)
 	}
 	if size < offset+length {
@@ -965,12 +965,12 @@ func dumpTokens(nonce []byte, caller, callee crypto.Address, code []byte) {
 }
 
 func newRevertException(ret []byte) errors.CodedError {
-	code := errors.ErrorCodeExecutionReverted
+	code := errors.Codes.ExecutionReverted
 	if len(ret) > 0 {
 		// Attempt decode
 		reason, err := abi.UnpackRevert(ret)
 		if err == nil {
-			return errors.ErrorCodef(code, "with reason '%s'", *reason)
+			return errors.Errorf(code, "with reason '%s'", *reason)
 		}
 	}
 	return code

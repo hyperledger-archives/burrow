@@ -654,7 +654,7 @@ func TestEVM(t *testing.T) {
 		txe := runVM(st, account1, account2, contractCode, 100000)
 		exCalls := txe.ExceptionalCalls()
 		require.Len(t, exCalls, 1)
-		require.Equal(t, errors.ErrorCodeInsufficientBalance, errors.ErrorCode(exCalls[0].Header.Exception))
+		require.Equal(t, errors.Codes.InsufficientBalance, errors.GetCode(exCalls[0].Header.Exception))
 
 		//----------------------------------------------
 		// give account2 sufficient balance, should pass
@@ -703,7 +703,7 @@ func TestEVM(t *testing.T) {
 			txe := runVM(st, caller, callee, code, 1000)
 			// the topmost caller can never *illegally* modify state
 			require.Error(t, txe.Exception)
-			require.Equal(t, errors.ErrorCodeIllegalWrite, txe.Exception.GetCode(),
+			require.Equal(t, errors.Codes.IllegalWrite, txe.Exception.ErrorCode(),
 				"should get an error from child accounts that st is read only")
 		}
 	})
@@ -729,7 +729,7 @@ func TestEVM(t *testing.T) {
 		addToBalance(t, st, callee, 100000)
 		txe := runVM(st, caller, callee, callerCode, 1000)
 		require.NotNil(t, txe.Exception)
-		require.Equal(t, errors.ErrorCodeIllegalWrite, txe.Exception.GetCode(),
+		require.Equal(t, errors.Codes.IllegalWrite, txe.Exception.ErrorCode(),
 			"expected static call violation because of call with value")
 	})
 
@@ -960,7 +960,7 @@ func TestEVM(t *testing.T) {
 			0x00, 0x00, 0x00, PUSH1, 0x00, MSTORE, PUSH1, 0x0E, PUSH1, 0x00, INVALID)
 
 		output, err := call(vm, st, account1, account2, bytecode, nil, &gas)
-		assert.Equal(t, errors.ErrorCodeExecutionAborted, errors.ErrorCode(err))
+		assert.Equal(t, errors.Codes.ExecutionAborted, errors.GetCode(err))
 		t.Logf("Output: %v Error: %v\n", output, err)
 	})
 
@@ -1048,7 +1048,7 @@ func TestEVM(t *testing.T) {
 			Gas:    &gas,
 		}
 		_, ex := vm.Execute(st, blockchain, eventSink, params, nil)
-		require.Equal(t, errors.ErrorCodeNonExistentAccount, errors.ErrorCode(ex),
+		require.Equal(t, errors.Codes.NonExistentAccount, errors.GetCode(ex),
 			"Should not be able to call account before creating it (even before initialising)")
 		acc, err := st.GetAccount(unknownAddress)
 		require.NoError(t, err)
@@ -1076,7 +1076,7 @@ func TestEVM(t *testing.T) {
 		// Non existing block
 		blockchain.blockHeight = 1
 		_, err := vm.Execute(st, blockchain, eventSink, params, bytecode)
-		require.Equal(t, errors.ErrorCodeInvalidBlockNumber, errors.ErrorCode(err),
+		require.Equal(t, errors.Codes.InvalidBlockNumber, errors.GetCode(err),
 			"attempt to get block hash of a non-existent block")
 
 		// Excessive old block
@@ -1084,7 +1084,7 @@ func TestEVM(t *testing.T) {
 		bytecode = MustSplice(PUSH1, 1, BLOCKHASH)
 
 		_, err = vm.Execute(st, blockchain, eventSink, params, bytecode)
-		require.Equal(t, errors.ErrorCodeBlockNumberOutOfRange, errors.ErrorCode(err),
+		require.Equal(t, errors.Codes.BlockNumberOutOfRange, errors.GetCode(err),
 			"attempt to get block hash of a block outside of allowed range")
 
 		// Get block hash
@@ -1100,7 +1100,7 @@ func TestEVM(t *testing.T) {
 		bytecode = MustSplice(PUSH1, 4, BLOCKHASH, return1())
 
 		_, err = vm.Execute(st, blockchain, eventSink, params, bytecode)
-		require.Equal(t, errors.ErrorCodeInvalidBlockNumber, errors.ErrorCode(err),
+		require.Equal(t, errors.Codes.InvalidBlockNumber, errors.GetCode(err),
 			"attempt to get block hash failed")
 	})
 
@@ -1230,7 +1230,7 @@ func TestEVM(t *testing.T) {
 		require.NoError(t, err)
 
 		_, ex := vm.Execute(st, blockchain, eventSink, params, code)
-		require.Equal(t, errors.ErrorCodeDataStackOverflow, errors.ErrorCode(ex), "Should be stack overflow")
+		require.Equal(t, errors.Codes.DataStackOverflow, errors.GetCode(ex), "Should be stack overflow")
 	})
 
 	t.Run("CallStackOverflow", func(t *testing.T) {
@@ -1297,11 +1297,11 @@ func TestEVM(t *testing.T) {
 		require.Error(t, err)
 		callError := txe.CallError()
 		require.Error(t, callError)
-		require.Equal(t, errors.ErrorCodeExecutionReverted, errors.ErrorCode(callError))
+		require.Equal(t, errors.Codes.ExecutionReverted, errors.GetCode(callError))
 		// Errors are post-order so first is deepest
 		require.True(t, len(callError.NestedErrors) > 0)
 		deepestErr := callError.NestedErrors[0]
-		require.Equal(t, errors.ErrorCodeCallStackOverflow, errors.ErrorCode(deepestErr))
+		require.Equal(t, errors.Codes.CallStackOverflow, errors.GetCode(deepestErr))
 		assert.Equal(t, options.CallStackMaxDepth, deepestErr.StackDepth)
 		assert.Equal(t, account2, deepestErr.Callee)
 		assert.Equal(t, account1, deepestErr.Caller)
@@ -1426,7 +1426,7 @@ func (b *blockchain) LastBlockTime() time.Time {
 
 func (b *blockchain) BlockHash(height uint64) ([]byte, error) {
 	if height > b.blockHeight {
-		return nil, errors.ErrorCodeInvalidBlockNumber
+		return nil, errors.Codes.InvalidBlockNumber
 	}
 	bs := make([]byte, 32)
 	binary.BigEndian.PutUint64(bs[24:], height)
