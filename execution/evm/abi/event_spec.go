@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/tmthrgd/go-hex"
+	"golang.org/x/crypto/sha3"
 )
 
 // Argument is a decoded function parameter, return or event field
@@ -73,7 +73,7 @@ func (e *EventSpec) unmarshalSpec(s *specJSON) error {
 type EventID [EventIDSize]byte
 
 func GetEventID(signature string) (id EventID) {
-	hash := sha3.NewKeccak256()
+	hash := sha3.NewLegacyKeccak256()
 	hash.Write([]byte(signature))
 	copy(id[:], hash.Sum(nil))
 	return

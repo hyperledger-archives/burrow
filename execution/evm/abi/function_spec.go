@@ -3,7 +3,7 @@ package abi
 import (
 	"fmt"
 
-	"github.com/hyperledger/burrow/crypto/sha3"
+	"golang.org/x/crypto/sha3"
 )
 
 // FunctionIDSize is the length of the function selector
@@ -19,7 +19,7 @@ type FunctionSpec struct {
 type FunctionID [FunctionIDSize]byte
 
 func GetFunctionID(signature string) (id FunctionID) {
-	hash := sha3.NewKeccak256()
+	hash := sha3.NewLegacyKeccak256()
 	hash.Write([]byte(signature))
 	copy(id[:], hash.Sum(nil)[:4])
 	return

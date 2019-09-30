@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger/burrow/acm/acmstate"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/crypto/sha3"
+
 	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
@@ -321,7 +321,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			maybe.PushError(useGasNegative(params.Gas, native.GasSha3))
 			offset, size := stack.PopBigInt(), stack.PopBigInt()
 			data := memory.Read(offset, size)
-			data = sha3.Sha3(data)
+			data = crypto.Keccak256(data)
 			stack.PushBytes(data)
 			c.debugf(" => (%v) %X\n", size, data)
 
@@ -441,7 +441,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 				if len(acc.CodeHash) > 0 {
 					copy(extcodehash[:], acc.CodeHash)
 				} else {
-					copy(extcodehash[:], sha3.Sha3(acc.Code()))
+					copy(extcodehash[:], crypto.Keccak256(acc.Code()))
 				}
 				stack.Push(extcodehash)
 			}

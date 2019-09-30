@@ -6,10 +6,10 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/deploy/compile"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/txs/payload"
+	"golang.org/x/crypto/sha3"
 )
 
 func CreateAccount(st acmstate.ReaderWriter, address crypto.Address) error {
@@ -50,7 +50,7 @@ func initCode(st acmstate.ReaderWriter, address crypto.Address, parent *crypto.A
 	acc.EVMCode = code
 
 	// keccak256 hash of a contract's code
-	hash := sha3.NewKeccak256()
+	hash := sha3.NewLegacyKeccak256()
 	hash.Write(code)
 	codehash := hash.Sum(nil)
 
@@ -127,7 +127,7 @@ func InitWASMCode(st acmstate.ReaderWriter, address crypto.Address, code []byte)
 
 	acc.WASMCode = code
 	// keccak256 hash of a contract's code
-	hash := sha3.NewKeccak256()
+	hash := sha3.NewLegacyKeccak256()
 	hash.Write(code)
 	acc.CodeHash = hash.Sum(nil)
 	return st.UpdateAccount(acc)

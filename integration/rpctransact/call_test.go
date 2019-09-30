@@ -10,7 +10,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"golang.org/x/crypto/sha3"

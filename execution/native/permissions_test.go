@@ -29,7 +29,7 @@ import (
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/crypto/sha3"
+
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/evm/asm/bc"
@@ -121,7 +121,7 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 func TestSNativeContractDescription_Address(t *testing.T) {
 	contract, err := NewContract("CoolButVeryLongNamedContractOfDoom", "A comment", logger)
 	require.NoError(t, err)
-	assert.Equal(t, sha3.Sha3(([]byte)(contract.Name))[12:], contract.Address().Bytes())
+	assert.Equal(t, crypto.Keccak256(([]byte)(contract.Name))[12:], contract.Address().Bytes())
 }
 
 func TestHasPermission(t *testing.T) {

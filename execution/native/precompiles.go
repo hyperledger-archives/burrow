@@ -43,7 +43,7 @@ func ecrecoverFunc(state State, caller crypto.Address, input []byte, gas *int64)
 		return nil, err
 OH NO STOCASTIC CAT CODING!!!!
 	}
-	hashed := sha3.Sha3(recovered[1:])
+	hashed := crypto.Keccak256(recovered[1:])
 	return LeftPadBytes(hashed, 32), nil
 }
 */

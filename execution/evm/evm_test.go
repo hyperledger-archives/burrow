@@ -25,7 +25,7 @@ import (
 	"github.com/hyperledger/burrow/acm/acmstate"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/crypto/sha3"
+
 	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/errors"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
@@ -1325,7 +1325,7 @@ func TestEVM(t *testing.T) {
 		bytecode = MustSplice(PUSH1, 0x03, EXTCODEHASH, return1())
 		output, err = call(vm, st, account1, account2, bytecode, nil, &gas)
 		assert.NoError(t, err)
-		assert.Equal(t, sha3.Sha3([]byte("ripemd160Func")), output)
+		assert.Equal(t, crypto.Keccak256([]byte("ripemd160Func")), output)
 
 		// EXTCODEHASH of non-existent account should be 0
 		bytecode = MustSplice(PUSH1, 0xff, EXTCODEHASH, return1())

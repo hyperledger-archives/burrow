@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger/burrow/crypto/sha3"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -38,7 +38,7 @@ func TestConsumeBlockExecution(t *testing.T) {
 	be := &BlockExecution{
 		Header: &types.Header{
 			ChainID: genesisDoc.ChainID(),
-			AppHash: sha3.Sha3([]byte("hashily")),
+			AppHash: crypto.Keccak256([]byte("hashily")),
 			NumTxs:  1,
 			Time:    time.Now(),
 			Height:  height,

@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/binary"
-	"github.com/hyperledger/burrow/crypto/sha3"
+
 	hex "github.com/tmthrgd/go-hex"
 )
 
@@ -214,7 +214,7 @@ func NewContractAddress2(caller Address, salt [binary.Word256Length]byte, initco
 	temp = append(temp, []byte{0xFF}...)
 	temp = append(temp, caller[:]...)
 	temp = append(temp, salt[:]...)
-	temp = append(temp, sha3.Sha3(initcode)...)
-	copy(newAddr[:], sha3.Sha3(temp)[12:])
+	temp = append(temp, Keccak256(initcode)...)
+	copy(newAddr[:], Keccak256(temp)[12:])
 	return
 }

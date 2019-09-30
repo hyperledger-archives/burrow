@@ -8,7 +8,7 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/crypto/sha3"
+
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/stretchr/testify/require"
 	dbm "github.com/tendermint/tm-db"
@@ -168,7 +168,7 @@ func mkEvent(height, tx, index uint64) *exec.Event {
 		Header: &exec.Header{
 			Height:  height,
 			Index:   index,
-			TxHash:  sha3.Sha3([]byte(fmt.Sprintf("txhash%v%v%v", height, tx, index))),
+			TxHash:  crypto.Keccak256([]byte(fmt.Sprintf("txhash%v%v%v", height, tx, index))),
 			EventID: fmt.Sprintf("eventID: %v%v%v", height, tx, index),
 		},
 		Log: &exec.LogEvent{

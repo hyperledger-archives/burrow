@@ -12,7 +12,8 @@ import (
 
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/crypto/sha3"
+	"golang.org/x/crypto/sha3"
+
 	"github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/logging"
 	hex "github.com/tmthrgd/go-hex"
@@ -435,7 +436,7 @@ func (contract *SolidityContract) GetMetadata(logger *logging.Logger) (map[acmst
 			return nil, err
 		}
 
-		hash := sha3.NewKeccak256()
+		hash := sha3.NewLegacyKeccak256()
 		hash.Write(runtime)
 		var codehash acmstate.CodeHash
 		copy(codehash[:], hash.Sum(nil))
@@ -461,7 +462,7 @@ func GetDeployCodeHash(code []byte, address crypto.Address) []byte {
 		code = append([]byte{byte(asm.PUSH20)}, append(make([]byte, crypto.AddressLength), code[crypto.AddressLength+1:]...)...)
 	}
 
-	hash := sha3.NewKeccak256()
+	hash := sha3.NewLegacyKeccak256()
 	hash.Write(code)
 	return hash.Sum(nil)
 }

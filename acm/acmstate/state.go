@@ -6,7 +6,8 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/crypto/sha3"
+	"golang.org/x/crypto/sha3"
+
 	"github.com/hyperledger/burrow/permission"
 	"github.com/tmthrgd/go-hex"
 )
@@ -38,7 +39,7 @@ func (ch MetadataHash) String() string {
 }
 
 func GetMetadataHash(metadata string) (metahash MetadataHash) {
-	hash := sha3.NewKeccak256()
+	hash := sha3.NewLegacyKeccak256()
 	hash.Write([]byte(metadata))
 	copy(metahash[:], hash.Sum(nil))
 	return
