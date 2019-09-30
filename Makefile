@@ -126,7 +126,7 @@ build_burrow: commit_hash
 	go build -ldflags "-extldflags '-static' \
 	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt) \
 	-X github.com/hyperledger/burrow/project.date=$(shell date '+%Y-%m-%d')" \
-	-o ${REPO}/bin/burrow ./cmd/burrow
+	-o ${REPO}/bin/burrow
 
 # With the sqlite tag - enabling Vent sqlite adapter support, but building a CGO binary
 .PHONY: build_burrow_sqlite
@@ -135,7 +135,7 @@ build_burrow_sqlite: commit_hash
 	 -ldflags "-extldflags '-static' \
 	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt) \
 	-X github.com/hyperledger/burrow/project.date=$(shell date -I)" \
-	-o ${REPO}/bin/burrow-vent-sqlite ./cmd/burrow
+	-o ${REPO}/bin/burrow-vent-sqlite
 
 .PHONY: install
 install: build_burrow
@@ -145,7 +145,7 @@ install: build_burrow
 # build burrow with checks for race conditions
 .PHONY: build_race_db
 build_race_db:
-	go build -race -o ${REPO}/bin/burrow ./cmd/burrow
+	go build -race -o ${REPO}/bin/burrow
 
 ### Build docker images for github.com/hyperledger/burrow
 
