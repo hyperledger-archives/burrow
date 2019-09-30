@@ -4,16 +4,17 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/hyperledger/burrow/acm/acmstate"
 	burrow_binary "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
-	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/perlin-network/life/exec"
 )
 
 type execContext struct {
+	errors.Maybe
 	address crypto.Address
-	state   evm.Interface
+	state   acmstate.ReaderWriter
 }
 
 // In EVM, the code for an account is created by the EVM code itself; the code in the EVM deploy transaction is run,
@@ -60,7 +61,7 @@ type execContext struct {
 // - get_storage32(uint32 key, uint8* data, uint32 len) // get contract storage (right pad with zeros)
 
 // RunWASM creates a WASM VM, and executes the given WASM contract code
-func RunWASM(state evm.Interface, address crypto.Address, createContract bool, wasm, input []byte) (output []byte, cerr errors.CodedError) {
+func RunWASM(state acmstate.ReaderWriter, address crypto.Address, createContract bool, wasm, input []byte) (output []byte, cerr error) {
 	defer func() {
 		if r := recover(); r != nil {
 			cerr = errors.ErrorCodeExecutionAborted
@@ -73,12 +74,17 @@ func RunWASM(state evm.Interface, address crypto.Address, createContract bool, w
 		DefaultMemoryPages:   2,
 	}
 
-	execContext := execContext{address, state}
+	execContext := execContext{
+		address: address,
+		state:   state,
+	}
 
 	vm, err := exec.NewVirtualMachine(wasm, config, &execContext, nil)
-
 	if err != nil {
-		return []byte{}, errors.ErrorCodeInvalidContract
+		return nil, errors.ErrorCodeInvalidContract
+	}
+	if execContext.Error() != nil {
+		return nil, execContext.Error()
 	}
 
 	// FIXME: Check length
@@ -93,13 +99,13 @@ func RunWASM(state evm.Interface, address crypto.Address, createContract bool, w
 	}
 	entryID, ok := vm.GetFunctionExport(wasmFunc)
 	if !ok {
-		return []byte{}, errors.ErrorCodeUnresolvedSymbols
+		return nil, errors.ErrorCodeUnresolvedSymbols
 	}
 
 	// The 0 argument is the offset where our calldata is stored (if any)
 	offset, err := vm.Run(entryID, 0)
 	if err != nil {
-		return []byte{}, errors.ErrorCodeExecutionAborted
+		return nil, errors.ErrorCodeExecutionAborted
 	}
 
 	if offset > 0 {
@@ -121,9 +127,9 @@ func (e *execContext) ResolveFunc(module, field string) exec.FunctionImport {
 		return func(vm *exec.VirtualMachine) int64 {
 			key := int(uint32(vm.GetCurrentFrame().Locals[0]))
 			ptr := int(uint32(vm.GetCurrentFrame().Locals[1]))
-			len := int(uint32(vm.GetCurrentFrame().Locals[2]))
+			length := int(uint32(vm.GetCurrentFrame().Locals[2]))
 			// FIXME: Check length
-			e.state.SetStorage(e.address, burrow_binary.Int64ToWord256(int64(key)), vm.Memory[ptr:ptr+len])
+			e.Void(e.state.SetStorage(e.address, burrow_binary.Int64ToWord256(int64(key)), vm.Memory[ptr:ptr+length]))
 			return 0
 		}
 
@@ -132,7 +138,7 @@ func (e *execContext) ResolveFunc(module, field string) exec.FunctionImport {
 			key := int(uint32(vm.GetCurrentFrame().Locals[0]))
 			ptr := int(uint32(vm.GetCurrentFrame().Locals[1]))
 			length := int(uint32(vm.GetCurrentFrame().Locals[2]))
-			val := e.state.GetStorage(e.address, burrow_binary.Int64ToWord256(int64(key)))
+			val := e.Bytes(e.state.GetStorage(e.address, burrow_binary.Int64ToWord256(int64(key))))
 			if len(val) < length {
 				val = append(val, make([]byte, length-len(val))...)
 			}

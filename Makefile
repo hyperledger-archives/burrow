@@ -19,14 +19,15 @@ PROTO_GO_FILES = $(patsubst %.proto, %.pb.go, $(PROTO_FILES))
 PROTO_GO_FILES_REAL = $(shell find . -path ./vendor -prune -o -type f -name '*.pb.go' -print)
 
 # Our own Go files containing the compiled bytecode of solidity files as a constant
-SOLIDITY_FILES = $(shell find . -path ./vendor -prune -o -path ./tests -prune -o -type f -name '*.sol' -print)
+SOLIDITY_FILES = $(shell find . -path ./docs -prune -o -path ./tests -prune -o -type f -name '*.sol' -print)
 SOLIDITY_GO_FILES = $(patsubst %.sol, %.sol.go, $(SOLIDITY_FILES))
 SOLANG_FILES = $(shell find . -path ./vendor -prune -o -path ./tests -prune -o -type f -name '*.solang' -print)
 SOLANG_GO_FILES = $(patsubst %.solang, %.solang.go, $(SOLANG_FILES))
 
 CI_IMAGE="hyperledger/burrow:ci"
 
-GOPATH?=${HOME}/go
+# Gets implicit default GOPATH if not set
+GOPATH?=$(shell go env GOPATH)
 BIN_PATH?=${GOPATH}/bin
 
 export GO111MODULE=on

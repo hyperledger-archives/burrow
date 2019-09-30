@@ -25,14 +25,3 @@ func TestCode_String(t *testing.T) {
 	err := ErrorCodeCodeOutOfBounds
 	fmt.Println(err.Error())
 }
-
-func TestFirstOnly(t *testing.T) {
-	err := FirstOnly()
-	// This will be a wrapped nil - it should not register as first error
-	var ex CodedError = (*Exception)(nil)
-	err.PushError(ex)
-	// This one should
-	realErr := ErrorCodef(ErrorCodeInsufficientBalance, "real error")
-	err.PushError(realErr)
-	assert.True(t, realErr.Equal(err.Error()))
-}

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/crypto/sha3"
+
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/stretchr/testify/assert"
@@ -76,7 +76,7 @@ func TestKeysServer(t *testing.T) {
 				require.NoError(t, err)
 
 				msg := []byte("the hash of something!")
-				hash := sha3.Sha3(msg)
+				hash := crypto.Keccak256(msg)
 
 				sig, err := cli.Sign(ctx, &keys.SignRequest{Address: addr, Message: hash})
 				require.NoError(t, err)

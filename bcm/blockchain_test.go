@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger/burrow/crypto/sha3"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/assert"
@@ -25,16 +25,16 @@ func TestLoadOrNewBlockchain(t *testing.T) {
 
 	// First block
 	blockTime1 := genesisDoc.GenesisTime.Add(time.Second * 10)
-	blockHash1 := sha3.Sha3([]byte("blockHash"))
-	appHash1 := sha3.Sha3([]byte("appHash"))
+	blockHash1 := crypto.Keccak256([]byte("blockHash"))
+	appHash1 := crypto.Keccak256([]byte("appHash"))
 	err = blockchain.CommitBlock(blockTime1, blockHash1, appHash1)
 	require.NoError(t, err)
 	assertState(t, blockchain, 1, blockTime1, appHash1)
 
 	// Second block
 	blockTime2a := blockTime1.Add(time.Second * 30)
-	blockHash2a := sha3.Sha3(append(blockHash1, 2))
-	appHash2a := sha3.Sha3(append(appHash1, 2))
+	blockHash2a := crypto.Keccak256(append(blockHash1, 2))
+	appHash2a := crypto.Keccak256(append(appHash1, 2))
 	err = blockchain.CommitBlock(blockTime2a, blockHash2a, appHash2a)
 	require.NoError(t, err)
 	assertState(t, blockchain, 2, blockTime2a, appHash2a)
@@ -48,16 +48,16 @@ func TestLoadOrNewBlockchain(t *testing.T) {
 
 	// Commit (overwriting previous block 2 pointer
 	blockTime2b := blockTime1.Add(time.Second * 30)
-	blockHash2b := sha3.Sha3(append(blockHash1, 2))
-	appHash2b := sha3.Sha3(append(appHash1, 2))
+	blockHash2b := crypto.Keccak256(append(blockHash1, 2))
+	appHash2b := crypto.Keccak256(append(appHash1, 2))
 	err = blockchain.CommitBlock(blockTime2b, blockHash2b, appHash2b)
 	require.NoError(t, err)
 	assertState(t, blockchain, 2, blockTime2b, appHash2b)
 
 	// Commit again to check things are okay
 	blockTime3 := blockTime2b.Add(time.Second * 30)
-	blockHash3 := sha3.Sha3(append(blockHash2b, 2))
-	appHash3 := sha3.Sha3(append(appHash2b, 2))
+	blockHash3 := crypto.Keccak256(append(blockHash2b, 2))
+	appHash3 := crypto.Keccak256(append(appHash2b, 2))
 	err = blockchain.CommitBlock(blockTime3, blockHash3, appHash3)
 	require.NoError(t, err)
 	assertState(t, blockchain, 3, blockTime3, appHash3)

@@ -17,7 +17,7 @@ const (
 // written to the backing slice at a time when it is grown. A larger number may
 // lead to fewer calls to append to achieve the desired capacity although it is
 // unlikely to make a lot of difference.
-var zeroBlock []byte = make([]byte, 32)
+var zeroBlock = make([]byte, 32)
 
 // Interface for a bounded linear memory indexed by a single *big.Int parameter
 // for each byte in the memory.

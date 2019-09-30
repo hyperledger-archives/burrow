@@ -1,10 +1,13 @@
 package acmstate
 
 import (
+	"fmt"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/crypto/sha3"
+	"golang.org/x/crypto/sha3"
+
 	"github.com/hyperledger/burrow/permission"
 	"github.com/tmthrgd/go-hex"
 )
@@ -36,7 +39,7 @@ func (ch MetadataHash) String() string {
 }
 
 func GetMetadataHash(metadata string) (metahash MetadataHash) {
-	hash := sha3.NewKeccak256()
+	hash := sha3.NewLegacyKeccak256()
 	hash.Write([]byte(metadata))
 	copy(metahash[:], hash.Sum(nil))
 	return
@@ -114,7 +117,7 @@ type MetadataGetter interface {
 
 type MetadataSetter interface {
 	// Set an Metadata according to it keccak-256 hash.
-	SetMetadata(metahash MetadataHash, Metadata string) error
+	SetMetadata(metahash MetadataHash, metadata string) error
 }
 
 type AccountStats struct {
@@ -170,20 +173,14 @@ type IterableReaderWriter interface {
 	Writer
 }
 
-func GlobalPermissionsAccount(getter AccountGetter) *acm.Account {
+// Get global permissions from the account at GlobalPermissionsAddress
+func GlobalAccountPermissions(getter AccountGetter) (permission.AccountPermissions, error) {
 	acc, err := getter.GetAccount(acm.GlobalPermissionsAddress)
 	if err != nil {
-		panic("Could not get global permission account, but this must exist")
+		return permission.AccountPermissions{}, err
 	}
-	return acc
-}
-
-// Get global permissions from the account at GlobalPermissionsAddress
-func GlobalAccountPermissions(getter AccountGetter) permission.AccountPermissions {
-	if getter == nil {
-		return permission.AccountPermissions{
-			Roles: []string{},
-		}
+	if acc == nil {
+		return permission.AccountPermissions{}, fmt.Errorf("global permissions account is not defined but must be")
 	}
-	return GlobalPermissionsAccount(getter).Permissions
+	return acc.Permissions, nil
 }

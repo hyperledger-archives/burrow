@@ -41,7 +41,7 @@ type BlockchainInfo interface {
 	LastBlockHash() []byte
 	AppHashAfterLastBlock() []byte
 	// Gets the BlockHash at a height (or nil if no BlockStore mounted or block could not be found)
-	BlockHash(height uint64) []byte
+	BlockHash(height uint64) ([]byte, error)
 	// GetBlockHash returns	hash of the specific block
 	GetBlockHeader(blockNumber uint64) (*types.Header, error)
 }
@@ -238,12 +238,12 @@ func (bc *Blockchain) SetBlockStore(bs *BlockStore) {
 	bc.blockStore = bs
 }
 
-func (bc *Blockchain) BlockHash(height uint64) []byte {
+func (bc *Blockchain) BlockHash(height uint64) ([]byte, error) {
 	header, err := bc.GetBlockHeader(height)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return header.Hash()
+	return header.Hash(), nil
 }
 
 func (bc *Blockchain) GetBlockHeader(height uint64) (*types.Header, error) {

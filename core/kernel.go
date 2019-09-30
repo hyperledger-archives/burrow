@@ -71,7 +71,7 @@ type Kernel struct {
 	Logger         *logging.Logger
 	database       dbm.DB
 	txCodec        txs.Codec
-	exeOptions     []execution.ExecutionOption
+	exeOptions     []execution.Option
 	checker        execution.BatchExecutor
 	committer      execution.BatchCommitter
 	keyClient      keys.KeyClient
@@ -210,7 +210,7 @@ func (kern *Kernel) GetNodeView() (*tendermint.NodeView, error) {
 }
 
 // AddExecutionOptions extends our execution options
-func (kern *Kernel) AddExecutionOptions(opts ...execution.ExecutionOption) {
+func (kern *Kernel) AddExecutionOptions(opts ...execution.Option) {
 	kern.exeOptions = append(kern.exeOptions, opts...)
 }
 

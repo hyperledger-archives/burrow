@@ -22,6 +22,7 @@ import (
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
+	"github.com/hyperledger/burrow/execution/native"
 )
 
 // Not goroutine safe
@@ -34,7 +35,7 @@ type Stack struct {
 	errSink errors.Sink
 }
 
-func NewStack(initialCapacity uint64, maxCapacity uint64, gas *uint64, errSink errors.Sink) *Stack {
+func NewStack(errSink errors.Sink, initialCapacity uint64, maxCapacity uint64, gas *uint64) *Stack {
 	return &Stack{
 		slice:       make([]Word256, initialCapacity),
 		ptr:         0,
@@ -57,7 +58,7 @@ func (st *Stack) pushErr(err errors.CodedError) {
 }
 
 func (st *Stack) Push(d Word256) {
-	st.useGas(GasStackOp)
+	st.useGas(native.GasStackOp)
 	err := st.ensureCapacity(uint64(st.ptr) + 1)
 	if err != nil {
 		st.pushErr(errors.ErrorCodeDataStackOverflow)
@@ -97,7 +98,7 @@ func (st *Stack) PushBigInt(bigInt *big.Int) Word256 {
 // Pops
 
 func (st *Stack) Pop() Word256 {
-	st.useGas(GasStackOp)
+	st.useGas(native.GasStackOp)
 	if st.ptr == 0 {
 		st.pushErr(errors.ErrorCodeDataStackUnderflow)
 		return Zero256
@@ -146,7 +147,7 @@ func (st *Stack) Len() int {
 }
 
 func (st *Stack) Swap(n int) {
-	st.useGas(GasStackOp)
+	st.useGas(native.GasStackOp)
 	if st.ptr < n {
 		st.pushErr(errors.ErrorCodeDataStackUnderflow)
 		return
@@ -155,7 +156,7 @@ func (st *Stack) Swap(n int) {
 }
 
 func (st *Stack) Dup(n int) {
-	st.useGas(GasStackOp)
+	st.useGas(native.GasStackOp)
 	if st.ptr < n {
 		st.pushErr(errors.ErrorCodeDataStackUnderflow)
 		return

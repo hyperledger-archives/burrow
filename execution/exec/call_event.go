@@ -7,7 +7,6 @@ const (
 	CallTypeCode     = CallType(0x01)
 	CallTypeDelegate = CallType(0x02)
 	CallTypeStatic   = CallType(0x03)
-	CallTypeSNative  = CallType(0x04)
 )
 
 var nameFromCallType = map[CallType]string{
@@ -15,7 +14,6 @@ var nameFromCallType = map[CallType]string{
 	CallTypeCode:     "CallCode",
 	CallTypeDelegate: "DelegateCall",
 	CallTypeStatic:   "StaticCall",
-	CallTypeSNative:  "SNativeCall",
 }
 
 var callTypeFromName = make(map[string]CallType)

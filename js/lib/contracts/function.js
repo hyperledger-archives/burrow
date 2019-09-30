@@ -128,7 +128,7 @@ var SolidityFunction = function (abi) {
         if (error) return reject(error)
 
         // Handle execution reversions
-        if (result.Exception && result.Exception.Code === 16) {
+        if (result.Exception && result.Exception.Code === 17) {
           // Decode error message if there is one otherwise default
           if (result.Result.Return.length === 0) {
             error = new Error('Execution Reverted')

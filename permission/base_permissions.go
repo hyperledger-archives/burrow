@@ -63,5 +63,5 @@ func (bp BasePermissions) Compose(bpFallthrough BasePermissions) BasePermissions
 }
 
 func (bp BasePermissions) String() string {
-	return fmt.Sprintf("Base: %b; Set: %b", bp.Perms, bp.SetBit)
+	return fmt.Sprintf("Base: %v; Set: %v", PermFlagToStringList(bp.Perms), PermFlagToStringList(bp.SetBit))
 }

@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hyperledger/burrow/binary"
-	"github.com/hyperledger/burrow/execution/evm"
-
 	"github.com/hyperledger/burrow/acm/acmstate"
+	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 
 	"github.com/hyperledger/burrow/crypto"
@@ -15,9 +13,8 @@ import (
 )
 
 func TestStaticCallWithValue(t *testing.T) {
-	cache := evm.NewState(acmstate.NewMemoryState(), blockHashGetter)
+	cache := acmstate.NewMemoryState()
 
-	cache.CreateAccount(crypto.ZeroAddress)
 	// run constructor
 	_, cerr := RunWASM(cache, crypto.ZeroAddress, true, Bytecode_storage_test, []byte{})
 	require.NoError(t, cerr)

@@ -12,7 +12,7 @@ import (
 )
 
 type UnbondContext struct {
-	StateWriter  acmstate.ReaderWriter
+	State        acmstate.ReaderWriter
 	ValidatorSet validator.ReaderWriter
 	Logger       *logging.Logger
 	tx           *payload.UnbondTx
@@ -31,7 +31,7 @@ func (ctx *UnbondContext) Execute(txe *exec.TxExecution, p payload.Payload) erro
 	}
 
 	power := new(big.Int).SetUint64(ctx.tx.Output.GetAmount())
-	account, err := ctx.StateWriter.GetAccount(ctx.tx.Input.Address)
+	account, err := ctx.State.GetAccount(ctx.tx.Input.Address)
 	if err != nil {
 		return err
 	}
@@ -46,5 +46,5 @@ func (ctx *UnbondContext) Execute(txe *exec.TxExecution, p payload.Payload) erro
 		return err
 	}
 
-	return ctx.StateWriter.UpdateAccount(account)
+	return ctx.State.UpdateAccount(account)
 }
