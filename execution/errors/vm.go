@@ -13,8 +13,8 @@ type PermissionDenied struct {
 	Perm    permission.PermFlag
 }
 
-func (err PermissionDenied) ErrorCode() Code {
-	return ErrorCodePermissionDenied
+func (err PermissionDenied) ErrorCode() *Code {
+	return Codes.PermissionDenied
 }
 
 func (err PermissionDenied) Error() string {

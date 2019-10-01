@@ -506,7 +506,7 @@ func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, playbook *d
 
 	if txe.Exception != nil {
 		switch txe.Exception.ErrorCode() {
-		case errors.ErrorCodeExecutionReverted:
+		case errors.Codes.ExecutionReverted:
 			message, err := abi.UnpackRevert(txe.Result.Return)
 			if err != nil {
 				return "", nil, err

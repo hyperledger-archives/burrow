@@ -20,7 +20,6 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
-
 	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
@@ -28,11 +27,11 @@ import (
 )
 
 //
-// SNative (from 'secure natives') are native (go) contracts that are dispatched
-// based on account permissions and can access and modify an account's permissions
+// Native (go) contracts are dispatched based on account permissions and can access
+// and modify an account's permissions
 //
 
-// Instructions on adding an SNative function. First declare a function like so:
+// Instructions on adding an native function. First declare a function like so:
 //
 // func unsetBase(context Context, args unsetBaseArgs) (unsetBaseRets, error) {
 // }
@@ -51,13 +50,13 @@ import (
 // with the function listed. Only the PermFlag and the function F needs to be filled
 // in for each Function. Add this to the SNativeContracts() function.
 
-// Contract is metadata for SNative contract. Acts as a call target
+// Contract is metadata for native contract. Acts as a call target
 // from the EVM. Can be used to generate bindings in a smart contract languages.
 type Contract struct {
-	// Comment describing purpose of SNative contract and reason for assembling
+	// Comment describing purpose of native contract and reason for assembling
 	// the particular functions
 	Comment string
-	// Name of the SNative contract
+	// Name of the native contract
 	Name          string
 	functionsByID map[abi.FunctionID]*Function
 	functions     []*Function
@@ -67,7 +66,7 @@ type Contract struct {
 
 var _ Native = &Contract{}
 
-// Create a new SNative contract description object by passing a comment, name
+// Create a new native contract description object by passing a comment, name
 // and a list of member functions descriptions
 func NewContract(name string, comment string, logger *logging.Logger, fs ...Function) (*Contract, error) {
 	address := AddressFromName(name)
@@ -104,12 +103,11 @@ func NewContract(name string, comment string, logger *logging.Logger, fs ...Func
 	}, nil
 }
 
-// Dispatch is designed to be called from the EVM once a SNative contract
-// has been selected. It is also placed in a registry by registerSNativeContracts
-// So it can be looked up by SNative address
+// Dispatch is designed to be called from the EVM once a native contract
+// has been selected.
 func (c *Contract) Call(state engine.State, params engine.CallParams) (output []byte, err error) {
 	if len(params.Input) < abi.FunctionIDSize {
-		return nil, errors.ErrorCodef(errors.ErrorCodeNativeFunction,
+		return nil, errors.Errorf(errors.Codes.NativeFunction,
 			"Burrow Native dispatch requires a 4-byte function identifier but arguments are only %v bytes long",
 			len(params.Input))
 	}
@@ -136,7 +134,7 @@ func (c *Contract) FullName() string {
 	return c.Name
 }
 
-// We define the address of an SNative contact as the last 20 bytes of the sha3
+// We define the address of an native contact as the last 20 bytes of the sha3
 // hash of its name
 func (c *Contract) Address() crypto.Address {
 	return c.address
@@ -147,7 +145,7 @@ func (c *Contract) FunctionByID(id abi.FunctionID) (*Function, errors.CodedError
 	f, ok := c.functionsByID[id]
 	if !ok {
 		return nil,
-			errors.ErrorCodef(errors.ErrorCodeNativeFunction, "unknown SNative function with ID %x", id)
+			errors.Errorf(errors.Codes.NativeFunction, "unknown native function with ID %x", id)
 	}
 	return f, nil
 }

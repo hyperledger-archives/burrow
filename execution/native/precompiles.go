@@ -57,7 +57,7 @@ func sha256Func(ctx Context) (output []byte, err error) {
 	// Deduct gas
 	gasRequired := uint64((len(ctx.Input)+31)/32)*GasSha256Word + GasSha256Base
 	if *ctx.Gas < gasRequired {
-		return nil, errors.ErrorCodeInsufficientGas
+		return nil, errors.Codes.InsufficientGas
 	} else {
 		*ctx.Gas -= gasRequired
 	}
@@ -72,7 +72,7 @@ func ripemd160Func(ctx Context) (output []byte, err error) {
 	// Deduct gas
 	gasRequired := uint64((len(ctx.Input)+31)/32)*GasRipemd160Word + GasRipemd160Base
 	if *ctx.Gas < gasRequired {
-		return nil, errors.ErrorCodeInsufficientGas
+		return nil, errors.Codes.InsufficientGas
 	} else {
 		*ctx.Gas -= gasRequired
 	}
@@ -87,7 +87,7 @@ func identityFunc(ctx Context) (output []byte, err error) {
 	// Deduct gas
 	gasRequired := uint64((len(ctx.Input)+31)/32)*GasIdentityWord + GasIdentityBase
 	if *ctx.Gas < gasRequired {
-		return nil, errors.ErrorCodeInsufficientGas
+		return nil, errors.Codes.InsufficientGas
 	} else {
 		*ctx.Gas -= gasRequired
 	}
@@ -104,7 +104,7 @@ const (
 func bigModExp(ctx Context) (output []byte, err error) {
 
 	if *ctx.Gas < GasRequire {
-		return nil, errors.ErrorCodeInsufficientGas
+		return nil, errors.Codes.InsufficientGas
 	}
 
 	*ctx.Gas -= GasRequire

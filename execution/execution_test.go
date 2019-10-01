@@ -1409,7 +1409,7 @@ proof-of-work chain as proof of what happened while they were gone `
 		tx.Input.Sequence += 1
 		err = exe.signExecuteCommit(tx, privAccounts[0])
 		require.Error(t, err)
-		if errors.AsException(err).ErrorCode() != errors.ErrorCodeInvalidString {
+		if errors.AsException(err).ErrorCode() != errors.Codes.InvalidString {
 			t.Errorf("Expected invalid string error. Got: %v", err)
 		}
 	}
@@ -1448,7 +1448,7 @@ func TestSelfDestruct(t *testing.T) {
 	// if we do it again the self-destruct shouldn't happen twice and the caller should lose fee
 	tx.Input.Sequence += 1
 	err = exe.signExecuteCommit(tx, privAccounts[0])
-	assertErrorCode(t, errors.ErrorCodeInvalidAddress, err)
+	assertErrorCode(t, errors.Codes.InvalidAddress, err)
 
 	// commit the block
 	_, err = exe.Commit(nil)
@@ -1848,9 +1848,9 @@ func wrapContractForCreate(contractCode []byte) []byte {
 	return code
 }
 
-func assertErrorCode(t *testing.T, expectedCode errors.Code, err error, msgAndArgs ...interface{}) {
+func assertErrorCode(t *testing.T, expectedCode *errors.Code, err error, msgAndArgs ...interface{}) {
 	if assert.Error(t, err, msgAndArgs...) {
-		actualCode := errors.AsException(err).Code
+		actualCode := errors.AsException(err).ErrorCode()
 		if !assert.Equal(t, expectedCode, actualCode, "expected error code %v", expectedCode) {
 			t.Logf("Expected '%v' but got '%v'", expectedCode, actualCode)
 		}

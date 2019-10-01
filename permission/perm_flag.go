@@ -91,7 +91,7 @@ const (
 // A particular permission
 type PermFlag uint64
 
-// Checks if a permission flag is valid (a known base chain or snative permission)
+// Checks if a permission flag is valid (a known base chain or native contract permission)
 func (pf PermFlag) IsValid() bool {
 	return pf <= AllPermFlags
 }

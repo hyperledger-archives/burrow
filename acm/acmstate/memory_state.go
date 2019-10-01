@@ -35,7 +35,7 @@ func (ms *MemoryState) GetAccount(address crypto.Address) (*acm.Account, error) 
 
 func (ms *MemoryState) UpdateAccount(updatedAccount *acm.Account) error {
 	if updatedAccount == nil {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "UpdateAccount passed nil account in MemoryState")
+		return errors.Errorf(errors.Codes.IllegalWrite, "UpdateAccount passed nil account in MemoryState")
 	}
 	ms.Accounts[updatedAccount.GetAddress()] = updatedAccount
 	return nil
@@ -58,7 +58,7 @@ func (ms *MemoryState) RemoveAccount(address crypto.Address) error {
 func (ms *MemoryState) GetStorage(address crypto.Address, key binary.Word256) ([]byte, error) {
 	_, ok := ms.Accounts[address]
 	if !ok {
-		return nil, errors.ErrorCodef(errors.ErrorCodeNonExistentAccount,
+		return nil, errors.Errorf(errors.Codes.NonExistentAccount,
 			"could not get storage for non-existent account: %v", address)
 	}
 	storage, ok := ms.Storage[address]
