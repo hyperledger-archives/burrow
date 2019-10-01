@@ -2,6 +2,7 @@ package commands
 
 import (
 	"github.com/hyperledger/burrow/core"
+	"github.com/hyperledger/burrow/crypto"
 	cli "github.com/jawher/mow.cli"
 )
 
@@ -21,8 +22,17 @@ func Start(output Output) func(cmd *cli.Cmd) {
 			}
 
 			output.Logf("Using validator address: %s", *conf.Address)
+			var nodeAddress *crypto.Address
 
-			kern, err := core.LoadKernelFromConfig(conf)
+			if *configOpts.nodeAddressOpt != "" {
+				address, err := crypto.AddressFromHexString(*configOpts.nodeAddressOpt)
+				if err != nil {
+					output.Fatalf("nodeaddress %s not a valid address", *configOpts.nodeAddressOpt)
+				}
+				nodeAddress = &address
+			}
+
+			kern, err := core.LoadKernelFromConfig(conf, nodeAddress)
 			if err != nil {
 				output.Fatalf("could not configure Burrow kernel: %v", err)
 			}

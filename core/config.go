@@ -7,6 +7,7 @@ import (
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/consensus/abci"
 	"github.com/hyperledger/burrow/consensus/tendermint"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/registry"
 	"github.com/hyperledger/burrow/keys"
@@ -18,7 +19,9 @@ import (
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
-// LoadKeysFromConfig sets the keyClient & keyStore based on the given config
+var nodeKey = []byte("NodeKey")
+
+// LoadKeysFromConfig sets the keyStore based on the given config
 func (kern *Kernel) LoadKeysFromConfig(keysdir string) (err error) {
 	kern.keyStore = keys.NewKeyStore(keysdir, true)
 	return nil
@@ -45,7 +48,7 @@ func (kern *Kernel) LoadExecutionOptionsFromConfig(conf *execution.ExecutionConf
 }
 
 // LoadTendermintFromConfig loads our consensus engine into the kernel
-func (kern *Kernel) LoadTendermintFromConfig(conf *config.BurrowConfig, privVal tmTypes.PrivValidator) (err error) {
+func (kern *Kernel) LoadTendermintFromConfig(conf *config.BurrowConfig, privVal tmTypes.PrivValidator, nodeAddressOpt *crypto.Address) (err error) {
 	if conf.Tendermint == nil || !conf.Tendermint.Enabled {
 		return nil
 	}
@@ -79,12 +82,46 @@ func (kern *Kernel) LoadTendermintFromConfig(conf *config.BurrowConfig, privVal 
 	if err != nil {
 		return fmt.Errorf("could not build Tendermint config: %v", err)
 	}
-	kern.Node, err = tendermint.NewNode(tmConf, privVal, tmGenesisDoc, app, metricsProvider, tmLogger)
+
+	// Load node key
+	var key *keys.Key
+	var nodeAddress crypto.Address
+	if nodeAddressOpt != nil {
+		nodeAddress = *nodeAddressOpt
+	} else {
+		buf := kern.database.Get(nodeKey)
+		nodeAddress, err = crypto.AddressFromBytes(buf)
+	}
+	if err == nil {
+		key, err = kern.keyStore.GetKey("", nodeAddress)
+		if err == nil && key.CurveType != crypto.CurveTypeEd25519 {
+			return fmt.Errorf("node key %s should have curve type ed25519, not %s", nodeAddress, key.CurveType)
+		}
+		if err != nil {
+			kern.Logger.InfoMsg("Failed to load node key, generating new node key", "address", nodeAddress, "error", err)
+		}
+	}
+	if nodeAddressOpt != nil && err != nil {
+		return fmt.Errorf("unable to load node key %s", nodeAddress)
+	}
+	if err != nil {
+		key, err = kern.keyStore.Gen("", crypto.CurveTypeEd25519)
+		if err != nil {
+			return err
+		}
+		err = kern.keyStore.AddName("nodekey", key.Address)
+		if err != nil {
+			return err
+		}
+		kern.database.Set(nodeKey, key.Address.Bytes())
+	}
+
+	kern.Node, err = tendermint.NewNode(tmConf, privVal, tmGenesisDoc, app, metricsProvider, key.PrivateKey, tmLogger)
 	return err
 }
 
 // LoadKernelFromConfig builds and returns a Kernel based solely on the supplied configuration
-func LoadKernelFromConfig(conf *config.BurrowConfig) (*Kernel, error) {
+func LoadKernelFromConfig(conf *config.BurrowConfig, nodeAddress *crypto.Address) (*Kernel, error) {
 	kern, err := NewKernel(conf.BurrowDir)
 	if err != nil {
 		return nil, fmt.Errorf("could not create initial kernel: %v", err)
@@ -118,7 +155,7 @@ func LoadKernelFromConfig(conf *config.BurrowConfig) (*Kernel, error) {
 		return nil, fmt.Errorf("could not form PrivValidator from Address: %v", err)
 	}
 
-	err = kern.LoadTendermintFromConfig(conf, privVal)
+	err = kern.LoadTendermintFromConfig(conf, privVal, nodeAddress)
 	if err != nil {
 		return nil, fmt.Errorf("could not configure Tendermint: %v", err)
 	}

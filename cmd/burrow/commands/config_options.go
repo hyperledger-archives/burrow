@@ -18,6 +18,7 @@ type configOptions struct {
 	initPassphraseOpt  *string
 	initMonikerOpt     *string
 	externalAddressOpt *string
+	nodeAddressOpt     *string
 }
 
 const configFileSpec = "[--config=<config file>]"
@@ -43,10 +44,17 @@ func addConfigOptions(cmd *cli.Cmd) *configOptions {
 		"|--address=<address of signing key>] " +
 		"[--passphrase=<secret passphrase to unlock key>] " +
 		"[--external-address=<hostname:port>] " +
+		"[--node-address=<address of node>] " +
 		configFileSpec + " " + genesisFileSpec
 
 	cmd.Spec = strings.Join([]string{cmd.Spec, spec}, " ")
 	return &configOptions{
+		nodeAddressOpt: cmd.String(cli.StringOpt{
+			Name:   "n node-address",
+			Desc:   "Use private key from keystore as node address",
+			EnvVar: "BURROW_NODE_ADDRESS",
+		}),
+
 		accountIndexOpt: cmd.Int(cli.IntOpt{
 			Name:   "i index",
 			Desc:   "Account index (in accounts list - GenesisSpec or GenesisDoc) from which to set Address",
