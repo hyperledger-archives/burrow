@@ -2,6 +2,7 @@ package native
 
 import (
 	"crypto/sha256"
+	"math/big"
 
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
@@ -22,7 +23,11 @@ var Precompiles = New().
 	MustFunction(`Return an output identical to the input`,
 		leftPadAddress(4),
 		permission.None,
-		identityFunc)
+		identityFunc).
+	MustFunction(`Compute the operation base**exp % mod where the values are big ints`,
+		leftPadAddress(5),
+		permission.None,
+		bigModExp)
 
 /* Removed due to C dependency
 func ecrecoverFunc(state State, caller crypto.Address, input []byte, gas *int64) (output []byte, err error) {
@@ -88,6 +93,62 @@ func identityFunc(ctx Context) (output []byte, err error) {
 	}
 	// Return identity
 	return ctx.Input, nil
+}
+
+const (
+	// gas requirement for bigModExp set to 1
+	GasRequire uint64 = 1
+)
+
+// bigModExp: function that implement the EIP 198 (https://github.com/ethereum/EIPs/blob/master/EIPS/eip-198.md with a fixed gas requirement)
+func bigModExp(ctx Context) (output []byte, err error) {
+
+	if *ctx.Gas < GasRequire {
+		return nil, errors.ErrorCodeInsufficientGas
+	}
+
+	*ctx.Gas -= GasRequire
+	// get the lengths of base, exp and mod
+	baseLen := new(big.Int).SetBytes(binary.RightPadBytes(ctx.Input[0:32], 32)).Uint64()
+	expLen := new(big.Int).SetBytes(binary.RightPadBytes(ctx.Input[32:64], 32)).Uint64()
+	modLen := new(big.Int).SetBytes(binary.RightPadBytes(ctx.Input[64:96], 32)).Uint64()
+
+	// shift input array to the actual values
+	if len(ctx.Input) > 96 {
+		ctx.Input = ctx.Input[96:]
+	} else {
+		ctx.Input = ctx.Input[:0]
+	}
+
+	// handle the case when tehre is no base nor mod
+	if baseLen+modLen == 0 {
+		return []byte{}, nil
+	}
+
+	// get the values of base, exp and mod
+	base := new(big.Int).SetBytes(getData(ctx.Input, 0, baseLen))
+	exp := new(big.Int).SetBytes(getData(ctx.Input, baseLen, expLen))
+	mod := new(big.Int).SetBytes(getData(ctx.Input, baseLen+expLen, modLen))
+	// handle mod 0
+	if mod.Sign() == 0 {
+		return binary.LeftPadBytes([]byte{}, int(modLen)), nil
+	}
+	// return base**exp % mod left padded
+	return binary.LeftPadBytes(new(big.Int).Exp(base, exp, mod).Bytes(), int(modLen)), nil
+
+}
+
+// auxiliar function to retrieve data from arrays
+func getData(data []byte, start uint64, size uint64) []byte {
+	length := uint64(len(data))
+	if start > length {
+		start = length
+	}
+	end := start + size
+	if end > length {
+		end = length
+	}
+	return binary.RightPadBytes(data[start:end], int(size))
 }
 
 func leftPadAddress(bs ...byte) crypto.Address {
