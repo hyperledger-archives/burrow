@@ -2,6 +2,7 @@ package tendermint
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -10,7 +11,10 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/tendermint/tendermint/types"
 	tmtime "github.com/tendermint/tendermint/types/time"
+	dbm "github.com/tendermint/tm-db"
 )
+
+var signInfoKey = []byte("signInfoKey")
 
 // TODO: type ?
 const (
@@ -28,25 +32,30 @@ func voteToStep(vote *types.Vote) int8 {
 		return stepPrecommit
 	default:
 		panic("Unknown vote type")
-		return 0
 	}
 }
 
 // LastSignedInfo contains information about the latest
 // data signed by a validator to help prevent double signing.
 type LastSignedInfo struct {
-	sync.Mutex
-	Height    int64           `json:"height"`
-	Round     int             `json:"round"`
-	Step      int8            `json:"step"`
-	Signature []byte          `json:"signature,omitempty"` // so we dont lose signatures
-	SignBytes binary.HexBytes `json:"signbytes,omitempty"` // so we dont lose signatures
+	sync.Mutex `json:"-"`
+	database   dbm.DB
+	Height     int64           `json:"height"`
+	Round      int             `json:"round"`
+	Step       int8            `json:"step"`
+	Signature  []byte          `json:"signature,omitempty"` // so we dont lose signatures
+	SignBytes  binary.HexBytes `json:"signbytes,omitempty"` // so we dont lose signatures
 }
 
-func NewLastSignedInfo() *LastSignedInfo {
-	return &LastSignedInfo{
-		Step: stepNone,
+func NewLastSignedInfo(database dbm.DB) *LastSignedInfo {
+	var lsi LastSignedInfo
+	bs := database.Get(signInfoKey)
+	if len(bs) >= 0 {
+		json.Unmarshal(bs, &lsi)
 	}
+	lsi.database = database
+	lsi.Step = stepNone
+	return &lsi
 }
 
 type tmCryptoSigner func(msg []byte) []byte
@@ -182,6 +191,12 @@ func (lsi *LastSignedInfo) saveSigned(height int64, round int, step int8,
 	lsi.Step = step
 	lsi.Signature = sig
 	lsi.SignBytes = signBytes
+
+	bs, err := json.Marshal(&lsi)
+	if err != nil {
+		panic(fmt.Errorf("unable save signinfo: %v", err))
+	}
+	lsi.database.Set(signInfoKey, bs)
 }
 
 // String returns a string representation of the LastSignedInfo.

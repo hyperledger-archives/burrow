@@ -4,6 +4,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	tmCrypto "github.com/tendermint/tendermint/crypto"
 	tmTypes "github.com/tendermint/tendermint/types"
+	dbm "github.com/tendermint/tm-db"
 )
 
 type privValidatorMemory struct {
@@ -16,11 +17,11 @@ var _ tmTypes.PrivValidator = &privValidatorMemory{}
 
 // Create a PrivValidator with in-memory state that takes an addressable representing the validator identity
 // and a signer providing private signing for that identity.
-func NewPrivValidatorMemory(addressable crypto.Addressable, signer crypto.Signer) *privValidatorMemory {
+func NewPrivValidatorMemory(addressable crypto.Addressable, signer crypto.Signer, database dbm.DB) *privValidatorMemory {
 	return &privValidatorMemory{
 		Addressable:    addressable,
 		signer:         asTendermintSigner(signer),
-		lastSignedInfo: NewLastSignedInfo(),
+		lastSignedInfo: NewLastSignedInfo(database),
 	}
 }
 

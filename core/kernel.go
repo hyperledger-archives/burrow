@@ -233,7 +233,7 @@ func (kern *Kernel) PrivValidator(validator crypto.Address) (tmTypes.PrivValidat
 	if err != nil {
 		return nil, fmt.Errorf("could not get validator addressable from key store: %v", err)
 	}
-	return tendermint.NewPrivValidatorMemory(val, signer), nil
+	return tendermint.NewPrivValidatorMemory(val, signer, kern.database), nil
 }
 
 // Boot the kernel starting Tendermint and RPC layers
