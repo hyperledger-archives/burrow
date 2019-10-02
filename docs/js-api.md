@@ -81,8 +81,8 @@ The conventional way to create an new account to use as an input for transaction
 First create a key - you will want to create an account for which you have access to the private key controlling that account (as defined by the address of the public key):
 
 ```shell
-# Create a new key against the key store of a locally running Burrow (or burrow keys standalone server):
-$ address=$(burrow keys gen -n --name NewKey)
+# Create a new key against the key store 
+$ address=$(burrow keys gen --name NewKey)
 
 # The address will be printed to stdout so the above captures it in $address, you can also list named keys:
 $ burrow keys list

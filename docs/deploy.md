@@ -23,7 +23,7 @@ burrow deploy -a CF8F9480252B70D59CF5B5F3CAAA75FEAF6A4B33 deploy.yaml
 Each job in the playbook has a name. This name can be used in later jobs to refer to the result of a previous job (e.g. the address of a contract
 which was deployed). The jobs are executed in-order.
 
-Whenever an account needs to be specified, the key name in the burrow keys server can also be used.
+Whenever an account needs to be specified, the key name in the key store can also be used.
 
 ## Deploy
 

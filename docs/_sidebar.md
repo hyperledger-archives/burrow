@@ -17,6 +17,7 @@
     - [Seed Nodes](tutorials/6-seeding.md)
     - [Dump / Restore](tutorials/7-dump-restore.md)
     - [Proposals](tutorials/8-proposals.md)
+    - [Proxy](tutorials/9-proxy.md)
 
 - Reference
     - [Bonding](reference/bonding.md)
