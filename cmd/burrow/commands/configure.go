@@ -68,7 +68,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 		pool := cmd.BoolOpt("pool", false, "Write config files for all the validators called burrowNNN.toml")
 
 		cmd.Spec = "[--keys-dir=<keys directory>] [--curve-type=<name>] " +
-			"[--config-template-in=<text template> --config-out=<output file>]... " +
+			"[--config-template-in=<text template>] [--config-out=<output file>]... " +
 			"[--genesis-spec=<GenesisSpec file>] [--separate-genesis-doc=<genesis JSON file>] " +
 			"[--chain-name=<chain name>] [--restore-dump=<dump file>] [--json] [--debug] [--pool] " +
 			"[--logging=<logging program>] [--describe-logging] [--empty-blocks=<'always','never',duration>]"

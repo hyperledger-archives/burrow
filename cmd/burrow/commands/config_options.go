@@ -50,7 +50,7 @@ func addConfigOptions(cmd *cli.Cmd) *configOptions {
 	cmd.Spec = strings.Join([]string{cmd.Spec, spec}, " ")
 	return &configOptions{
 		nodeAddressOpt: cmd.String(cli.StringOpt{
-			Name:   "n node-address",
+			Name:   "node-address",
 			Desc:   "Use private key from keystore as node address",
 			EnvVar: "BURROW_NODE_ADDRESS",
 		}),

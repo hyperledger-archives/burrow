@@ -38,6 +38,7 @@ import (
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/stretchr/testify/require"
+	dbm "github.com/tendermint/tm-db"
 )
 
 const (
@@ -154,9 +155,9 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 		return nil, err
 	}
 
-	privVal := tendermint.NewPrivValidatorMemory(validatorAccount, validatorAccount)
+	privVal := tendermint.NewPrivValidatorMemory(validatorAccount, validatorAccount, dbm.NewMemDB())
 
-	err = kern.LoadTendermintFromConfig(testConfig, privVal)
+	err = kern.LoadTendermintFromConfig(testConfig, privVal, nil)
 	if err != nil {
 		return nil, err
 	}
