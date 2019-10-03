@@ -21,7 +21,7 @@ import (
 	"math/big"
 	"sort"
 
-	hex "github.com/tmthrgd/go-hex"
+	"github.com/tmthrgd/go-hex"
 )
 
 var (
@@ -29,13 +29,14 @@ var (
 	One256  = LeftPadWord256([]byte{1})
 )
 
-const Word256Length = 32
+const Word256Bytes = 32
+const Word256Bits = Word256Bytes * 8
 
-var BigWord256Length = big.NewInt(Word256Length)
+var BigWord256Bytes = big.NewInt(Word256Bytes)
 
 var trimCutSet = string([]byte{0})
 
-type Word256 [Word256Length]byte
+type Word256 [Word256Bytes]byte
 
 func (w *Word256) UnmarshalText(hexBytes []byte) error {
 	bs, err := hex.DecodeString(string(hexBytes))
@@ -109,9 +110,9 @@ func (w *Word256) Unmarshal(data []byte) error {
 	if len(data) == 0 {
 		return nil
 	}
-	if len(data) != Word256Length {
+	if len(data) != Word256Bytes {
 		return fmt.Errorf("error unmarshallling Word256 '%X' from bytes: %d bytes but should have %d bytes",
-			data, len(data), Word256Length)
+			data, len(data), Word256Bytes)
 	}
 	copy(w[:], data)
 	return nil
@@ -125,7 +126,7 @@ func (w *Word256) MarshalTo(data []byte) (int, error) {
 }
 
 func (w Word256) Size() int {
-	return Word256Length
+	return Word256Bytes
 }
 
 func Uint64ToWord256(i uint64) (word Word256) {
@@ -133,9 +134,24 @@ func Uint64ToWord256(i uint64) (word Word256) {
 	return
 }
 
-func Int64ToWord256(i int64) (word Word256) {
-	binary.BigEndian.PutUint64(word[24:], uint64(i))
-	return
+func Uint64FromWord256(word Word256) uint64 {
+	return binary.BigEndian.Uint64(word.Postfix(8))
+}
+
+func Int64ToWord256(i int64) Word256 {
+	return BigIntToWord256(SignExtend(big.NewInt(i), Word256Bits))
+}
+
+func Int64FromWord256(word Word256) int64 {
+	return BigIntFromWord256(word).Int64()
+}
+
+func BigIntToWord256(x *big.Int) Word256 {
+	return LeftPadWord256(U256(x).Bytes())
+}
+
+func BigIntFromWord256(word Word256) *big.Int {
+	return S256(new(big.Int).SetBytes(word[:]))
 }
 
 func RightPadWord256(bz []byte) (word Word256) {
@@ -146,14 +162,6 @@ func RightPadWord256(bz []byte) (word Word256) {
 func LeftPadWord256(bz []byte) (word Word256) {
 	copy(word[32-len(bz):], bz)
 	return
-}
-
-func Uint64FromWord256(word Word256) uint64 {
-	return binary.BigEndian.Uint64(word.Postfix(8))
-}
-
-func Int64FromWord256(word Word256) int64 {
-	return int64(Uint64FromWord256(word))
 }
 
 //-------------------------------------

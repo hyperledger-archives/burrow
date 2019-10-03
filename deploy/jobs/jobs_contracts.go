@@ -607,7 +607,7 @@ func logEvents(txe *exec.TxExecution, client *def.Client, logger *logging.Logger
 			vals[i] = new(string)
 		}
 
-		if err := abi.UnpackEvent(&evAbi, eventLog.Topics, eventLog.Data, vals...); err == nil {
+		if err := abi.UnpackEvent(evAbi, eventLog.Topics, eventLog.Data, vals...); err == nil {
 			var fields []interface{}
 			fields = append(fields, "name")
 			fields = append(fields, evAbi.Name)
