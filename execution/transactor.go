@@ -68,6 +68,9 @@ func NewTransactor(tip bcm.BlockchainInfo, emitter *event.Emitter, mempoolAccoun
 	}
 }
 
+func (trans *Transactor) ChainID() string {
+	return trans.BlockchainInfo.ChainID()
+}
 func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelope) (*exec.TxExecution, error) {
 	// Sign unless already signed - note we must attempt signing before subscribing so we get accurate final TxHash
 	unlock, err := trans.maybeSignTxMempool(txEnv)

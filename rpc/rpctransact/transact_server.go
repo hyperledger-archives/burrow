@@ -15,18 +15,25 @@ import (
 	"golang.org/x/net/context"
 )
 
+type Transactor interface {
+	BroadcastTxSync(ctx context.Context, txEnv *txs.Envelope) (*exec.TxExecution, error)
+	BroadcastTxAsync(ctx context.Context, txEnv *txs.Envelope) (*txs.Receipt, error)
+	BroadcastTxStream(ctx context.Context, streamCtx context.Context, txEnv *txs.Envelope, consumer func(receipt *txs.Receipt, txe *exec.TxExecution) error) error
+	ChainID() string
+}
+
 // This is probably silly
 const maxBroadcastSyncTimeout = time.Hour
 
 type transactServer struct {
 	state      acmstate.Reader
 	blockchain bcm.BlockchainInfo
-	transactor *execution.Transactor
+	transactor Transactor
 	txCodec    txs.Codec
 	logger     *logging.Logger
 }
 
-func NewTransactServer(state acmstate.Reader, blockchain bcm.BlockchainInfo, transactor *execution.Transactor,
+func NewTransactServer(state acmstate.Reader, blockchain bcm.BlockchainInfo, transactor Transactor,
 	txCodec txs.Codec, logger *logging.Logger) TransactServer {
 	return &transactServer{
 		state:      state,
@@ -44,7 +51,7 @@ func (ts *transactServer) BroadcastTxSync(ctx context.Context, param *TxEnvelope
 	}
 	ctx, cancel := context.WithTimeout(ctx, param.Timeout)
 	defer cancel()
-	txEnv := param.GetEnvelope(ts.transactor.BlockchainInfo.ChainID())
+	txEnv := param.GetEnvelope(ts.transactor.ChainID())
 	if txEnv == nil {
 		return nil, fmt.Errorf("%s no transaction envelope or payload provided", errHeader)
 	}
@@ -58,7 +65,7 @@ func (ts *transactServer) BroadcastTxStream(param *TxEnvelopeParam, stream Trans
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), param.Timeout)
 	defer cancel()
-	txEnv := param.GetEnvelope(ts.transactor.BlockchainInfo.ChainID())
+	txEnv := param.GetEnvelope(ts.transactor.ChainID())
 	if txEnv == nil {
 		return fmt.Errorf("%s no transaction envelope or payload provided", errHeader)
 	}
@@ -72,7 +79,7 @@ func (ts *transactServer) BroadcastTxAsync(ctx context.Context, param *TxEnvelop
 	if param.Timeout == 0 {
 		param.Timeout = maxBroadcastSyncTimeout
 	}
-	txEnv := param.GetEnvelope(ts.transactor.BlockchainInfo.ChainID())
+	txEnv := param.GetEnvelope(ts.transactor.ChainID())
 	if txEnv == nil {
 		return nil, fmt.Errorf("%s no transaction envelope or payload provided", errHeader)
 	}
@@ -80,7 +87,7 @@ func (ts *transactServer) BroadcastTxAsync(ctx context.Context, param *TxEnvelop
 }
 
 func (ts *transactServer) FormulateTx(ctx context.Context, param *payload.Any) (*TxEnvelope, error) {
-	txEnv := txs.EnvelopeFromAny(ts.transactor.BlockchainInfo.ChainID(), param)
+	txEnv := txs.EnvelopeFromAny(ts.transactor.ChainID(), param)
 	if txEnv == nil {
 		return nil, fmt.Errorf("no payload provided to FormulateTx")
 	}
