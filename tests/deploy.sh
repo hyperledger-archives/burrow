@@ -32,9 +32,9 @@ perform_tests(){
   goto_base
   apps=$1*/deploy.yaml
 
-  # Run all jobs in parallel with mempool signing
+  # Run all jobs in parallel with proxy signing
   deploy_cmd="${burrow_bin} deploy --jobs=100 --chain=$BURROW_HOST:$BURROW_GRPC_PORT --keys-dir="${script_dir}/keys" \
-   --address $key1 --mempool-signing --set key2_addr=$key2_addr --set addr2_pub=$key2_pub --set key1=$key1 --set key2=$key2 --proposal-create $apps"
+   --address $key1 --proxy-signing --set key2_addr=$key2_addr --set addr2_pub=$key2_pub --set key1=$key1 --set key2=$key2 --proposal-create $apps"
   [[ "$debug" == true ]] && deploy_cmd="$deploy_cmd --debug"
   echo "executing deploy with command line:"
   echo "$deploy_cmd"

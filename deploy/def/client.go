@@ -32,8 +32,8 @@ import (
 )
 
 type Client struct {
-	MempoolSigning bool
-	ChainAddress   string
+	ProxySigning bool
+	ChainAddress string
 	// Memoised clients and info
 	chainID               string
 	timeout               time.Duration
@@ -45,12 +45,12 @@ type Client struct {
 	AllSpecs              *abi.Spec
 }
 
-func NewClient(chain, keysDir string, mempoolSigning bool, timeout time.Duration) *Client {
+func NewClient(chain, keysDir string, proxySigning bool, timeout time.Duration) *Client {
 	client := Client{
-		ChainAddress:   chain,
-		MempoolSigning: mempoolSigning,
-		KeyStore:       keys.NewKeyStore(keysDir, true),
-		timeout:        timeout,
+		ChainAddress: chain,
+		ProxySigning: proxySigning,
+		KeyStore:     keys.NewKeyStore(keysDir, true),
+		timeout:      timeout,
 	}
 	return &client
 }
@@ -246,7 +246,7 @@ func (c *Client) SignTx(tx payload.Payload, logger *logging.Logger) (*txs.Envelo
 		return nil, err
 	}
 	txEnv := txs.Enclose(c.chainID, tx)
-	if c.MempoolSigning {
+	if c.ProxySigning {
 		logger.InfoMsg("Using proxy signing")
 		return txEnv, nil
 	}
@@ -760,7 +760,7 @@ func (c *Client) Identify(arg *IdentifyArg, logger *logging.Logger) (*payload.Id
 	}, nil
 }
 
-func (c *Client) TxInput(inputString, amountString, sequenceString string, allowMempoolSigning bool, logger *logging.Logger) (*payload.TxInput, error) {
+func (c *Client) TxInput(inputString, amountString, sequenceString string, allowProxySigning bool, logger *logging.Logger) (*payload.TxInput, error) {
 	var err error
 	var inputAddress crypto.Address
 	if inputString != "" {
@@ -777,7 +777,7 @@ func (c *Client) TxInput(inputString, amountString, sequenceString string, allow
 		}
 	}
 	var sequence uint64
-	sequence, err = c.getSequence(sequenceString, inputAddress, c.MempoolSigning && allowMempoolSigning, logger)
+	sequence, err = c.getSequence(sequenceString, inputAddress, c.ProxySigning && allowProxySigning, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -788,15 +788,15 @@ func (c *Client) TxInput(inputString, amountString, sequenceString string, allow
 	}, nil
 }
 
-func (c *Client) getSequence(sequence string, inputAddress crypto.Address, mempoolSigning bool, logger *logging.Logger) (uint64, error) {
-	err := c.dial(logger)
-	if err != nil {
-		return 0, err
-	}
+func (c *Client) getSequence(sequence string, inputAddress crypto.Address, proxySigning bool, logger *logging.Logger) (uint64, error) {
 	if sequence == "" {
-		if mempoolSigning {
+		if proxySigning {
 			// Perform mempool signing
 			return 0, nil
+		}
+		err := c.dial(logger)
+		if err != nil {
+			return 0, err
 		}
 		// Get from chain
 		ctx, cancel := context.WithTimeout(context.Background(), c.timeout)

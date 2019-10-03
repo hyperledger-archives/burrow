@@ -59,7 +59,7 @@ func ProposalStateFromString(s string) (ProposalState, error) {
 }
 
 func ListProposals(args *def.DeployArgs, reqState ProposalState, logger *logging.Logger) error {
-	client := def.NewClient(args.Chain, args.KeysDir, args.MempoolSign, time.Duration(args.Timeout)*time.Second)
+	client := def.NewClient(args.Chain, args.KeysDir, args.ProxySign, time.Duration(args.Timeout)*time.Second)
 
 	props, err := client.ListProposals(reqState == PROPOSED, logger)
 	if err != nil {
