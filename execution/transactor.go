@@ -70,7 +70,7 @@ func NewTransactor(tip bcm.BlockchainInfo, emitter *event.Emitter, mempoolAccoun
 
 func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelope) (*exec.TxExecution, error) {
 	// Sign unless already signed - note we must attempt signing before subscribing so we get accurate final TxHash
-	unlock, err := trans.MaybeSignTxMempool(txEnv)
+	unlock, err := trans.maybeSignTxMempool(txEnv)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelop
 
 func (trans *Transactor) BroadcastTxStream(ctx context.Context, streamCtx context.Context, txEnv *txs.Envelope, consumer func(receipt *txs.Receipt, txe *exec.TxExecution) error) error {
 	// Sign unless already signed - note we must attempt signing before subscribing so we get accurate final TxHash
-	unlock, err := trans.MaybeSignTxMempool(txEnv)
+	unlock, err := trans.maybeSignTxMempool(txEnv)
 	if err != nil {
 		return err
 	}
@@ -182,7 +182,7 @@ func (trans *Transactor) CheckTxSync(ctx context.Context, txEnv *txs.Envelope) (
 		structure.TxHashKey, txEnv.Tx.Hash(),
 		"tx", txEnv.String())
 	// Sign unless already signed
-	unlock, err := trans.MaybeSignTxMempool(txEnv)
+	unlock, err := trans.maybeSignTxMempool(txEnv)
 	if err != nil {
 		return nil, err
 	}
@@ -198,13 +198,13 @@ func (trans *Transactor) CheckTxSync(ctx context.Context, txEnv *txs.Envelope) (
 	return trans.CheckTxSyncRaw(ctx, txBytes)
 }
 
-func (trans *Transactor) MaybeSignTxMempool(txEnv *txs.Envelope) (UnlockFunc, error) {
+func (trans *Transactor) maybeSignTxMempool(txEnv *txs.Envelope) (UnlockFunc, error) {
 	// Sign unless already signed
 	if len(txEnv.Signatories) == 0 {
 		var err error
 		var unlock UnlockFunc
 		// We are writing signatures back to txEnv so don't shadow txEnv here
-		txEnv, unlock, err = trans.SignTxMempool(txEnv)
+		txEnv, unlock, err = trans.signTxMempool(txEnv)
 		if err != nil {
 			return nil, fmt.Errorf("error signing transaction: %v", err)
 		}
@@ -217,7 +217,7 @@ func (trans *Transactor) MaybeSignTxMempool(txEnv *txs.Envelope) (UnlockFunc, er
 	return func() {}, nil
 }
 
-func (trans *Transactor) SignTxMempool(txEnv *txs.Envelope) (*txs.Envelope, UnlockFunc, error) {
+func (trans *Transactor) signTxMempool(txEnv *txs.Envelope) (*txs.Envelope, UnlockFunc, error) {
 	inputs := txEnv.Tx.GetInputs()
 	signers := make([]acm.AddressableSigner, len(inputs))
 	unlockers := make([]UnlockFunc, len(inputs))
@@ -246,23 +246,6 @@ func (trans *Transactor) SignTxMempool(txEnv *txs.Envelope) (*txs.Envelope, Unlo
 			defer unlock()
 		}
 	}), nil
-}
-
-func (trans *Transactor) SignTx(txEnv *txs.Envelope) (*txs.Envelope, error) {
-	var err error
-	inputs := txEnv.Tx.GetInputs()
-	signers := make([]acm.AddressableSigner, len(inputs))
-	for i, input := range inputs {
-		signers[i], err = trans.MempoolAccounts.SigningAccount(input.Address)
-		if err != nil {
-			return nil, err
-		}
-	}
-	err = txEnv.Sign(signers...)
-	if err != nil {
-		return nil, err
-	}
-	return txEnv, nil
 }
 
 func (trans *Transactor) CheckTxSyncRaw(ctx context.Context, txBytes []byte) (*txs.Receipt, error) {

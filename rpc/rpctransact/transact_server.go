@@ -79,20 +79,6 @@ func (ts *transactServer) BroadcastTxAsync(ctx context.Context, param *TxEnvelop
 	return ts.transactor.BroadcastTxAsync(ctx, txEnv)
 }
 
-func (ts *transactServer) SignTx(ctx context.Context, param *TxEnvelopeParam) (*TxEnvelope, error) {
-	txEnv := param.GetEnvelope(ts.transactor.BlockchainInfo.ChainID())
-	if txEnv == nil {
-		return nil, fmt.Errorf("no transaction envelope or payload provided")
-	}
-	txEnv, err := ts.transactor.SignTx(txEnv)
-	if err != nil {
-		return nil, err
-	}
-	return &TxEnvelope{
-		Envelope: txEnv,
-	}, nil
-}
-
 func (ts *transactServer) FormulateTx(ctx context.Context, param *payload.Any) (*TxEnvelope, error) {
 	txEnv := txs.EnvelopeFromAny(ts.transactor.BlockchainInfo.ChainID(), param)
 	if txEnv == nil {

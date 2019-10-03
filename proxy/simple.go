@@ -24,10 +24,6 @@ func (p *Proxy) BroadcastTxAsync(ctx context.Context, param *rpctransact.TxEnvel
 	return p.transact.BroadcastTxAsync(ctx, param)
 }
 
-func (p *Proxy) SignTx(ctx context.Context, param *rpctransact.TxEnvelopeParam) (*rpctransact.TxEnvelope, error) {
-	return p.transact.SignTx(ctx, param)
-}
-
 func (p *Proxy) FormulateTx(ctx context.Context, param *payload.Any) (*rpctransact.TxEnvelope, error) {
 	return p.transact.FormulateTx(ctx, param)
 }
