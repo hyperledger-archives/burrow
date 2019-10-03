@@ -7,7 +7,6 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
-	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -45,7 +44,7 @@ func (m *TestMessage) XXX_Unmarshal(b []byte) error {
 }
 func (m *TestMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
+	n, err := m.MarshalTo(b)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +106,7 @@ var fileDescriptor_ac330e3fa468db3c = []byte{
 func (m *TestMessage) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -115,42 +114,34 @@ func (m *TestMessage) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *TestMessage) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *TestMessage) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Type != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintEncoding(dAtA, i, uint64(m.Type))
 	}
 	if m.Amount != 0 {
-		i = encodeVarintEncoding(dAtA, i, uint64(m.Amount))
-		i--
 		dAtA[i] = 0x10
+		i++
+		i = encodeVarintEncoding(dAtA, i, uint64(m.Amount))
 	}
-	if m.Type != 0 {
-		i = encodeVarintEncoding(dAtA, i, uint64(m.Type))
-		i--
-		dAtA[i] = 0x8
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func encodeVarintEncoding(dAtA []byte, offset int, v uint64) int {
-	offset -= sovEncoding(v)
-	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return base
+	return offset + 1
 }
 func (m *TestMessage) Size() (n int) {
 	if m == nil {
@@ -171,7 +162,14 @@ func (m *TestMessage) Size() (n int) {
 }
 
 func sovEncoding(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozEncoding(x uint64) (n int) {
 	return sovEncoding(uint64((x << 1) ^ uint64((int64(x) >> 63))))

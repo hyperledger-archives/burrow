@@ -7,15 +7,12 @@ import (
 	context "context"
 	fmt "fmt"
 	math "math"
-	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
 	crypto "github.com/hyperledger/burrow/crypto"
 	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1346,44 +1343,6 @@ type KeysServer interface {
 	AddName(context.Context, *AddNameRequest) (*AddNameResponse, error)
 }
 
-// UnimplementedKeysServer can be embedded to have forward compatible implementations.
-type UnimplementedKeysServer struct {
-}
-
-func (*UnimplementedKeysServer) GenerateKey(ctx context.Context, req *GenRequest) (*GenResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GenerateKey not implemented")
-}
-func (*UnimplementedKeysServer) PublicKey(ctx context.Context, req *PubRequest) (*PubResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PublicKey not implemented")
-}
-func (*UnimplementedKeysServer) Sign(ctx context.Context, req *SignRequest) (*SignResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Sign not implemented")
-}
-func (*UnimplementedKeysServer) Verify(ctx context.Context, req *VerifyRequest) (*VerifyResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Verify not implemented")
-}
-func (*UnimplementedKeysServer) Import(ctx context.Context, req *ImportRequest) (*ImportResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Import not implemented")
-}
-func (*UnimplementedKeysServer) ImportJSON(ctx context.Context, req *ImportJSONRequest) (*ImportResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ImportJSON not implemented")
-}
-func (*UnimplementedKeysServer) Export(ctx context.Context, req *ExportRequest) (*ExportResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Export not implemented")
-}
-func (*UnimplementedKeysServer) Hash(ctx context.Context, req *HashRequest) (*HashResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Hash not implemented")
-}
-func (*UnimplementedKeysServer) RemoveName(ctx context.Context, req *RemoveNameRequest) (*RemoveNameResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RemoveName not implemented")
-}
-func (*UnimplementedKeysServer) List(ctx context.Context, req *ListRequest) (*ListResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
-}
-func (*UnimplementedKeysServer) AddName(ctx context.Context, req *AddNameRequest) (*AddNameResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddName not implemented")
-}
-
 func RegisterKeysServer(s *grpc.Server, srv KeysServer) {
 	s.RegisterService(&_Keys_serviceDesc, srv)
 }
@@ -2068,7 +2027,14 @@ func (m *AddNameRequest) Size() (n int) {
 }
 
 func sovKeys(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozKeys(x uint64) (n int) {
 	return sovKeys(uint64((x << 1) ^ uint64((int64(x) >> 63))))

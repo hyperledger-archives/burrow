@@ -705,10 +705,15 @@ func (c *Client) Identify(arg *IdentifyArg, logger *logging.Logger) (*payload.Id
 		return nil, err
 	}
 
+	id, err := crypto.AddressFromHexString(string(nodeKey.ID()))
+	if err != nil {
+		return nil, err
+	}
+
 	node := &registry.NodeIdentity{
 		Moniker:            arg.Moniker,
 		NetworkAddress:     arg.NetAddress,
-		TendermintNodeID:   string(nodeKey.ID()),
+		TendermintNodeID:   id,
 		ValidatorPublicKey: signer.GetPublicKey(),
 	}
 

@@ -111,9 +111,9 @@ type Updatable interface {
 type writeState struct {
 	forest       *storage.MutableForest
 	plain        *storage.PrefixDB
-	accountStats acmstate.AccountStats
-	nodeList     registry.NodeList
 	ring         *validator.Ring
+	accountStats acmstate.AccountStats
+	nodeStats    registry.NodeStats
 }
 
 type ReadState struct {
@@ -148,10 +148,10 @@ func NewState(db dbm.DB) *State {
 			History: ring,
 		},
 		writeState: writeState{
-			forest:   forest,
-			plain:    plain,
-			ring:     ring,
-			nodeList: make(registry.NodeList),
+			forest:    forest,
+			plain:     plain,
+			ring:      ring,
+			nodeStats: registry.NewNodeStats(),
 		},
 		logger: logging.NewNoopLogger(),
 	}
@@ -215,7 +215,7 @@ func LoadState(db dbm.DB, version int64) (*State, error) {
 		return nil, err
 	}
 
-	err = s.loadNodeList()
+	err = s.loadNodeStats()
 	if err != nil {
 		return nil, err
 	}
@@ -242,10 +242,9 @@ func (s *State) loadAccountStats() error {
 	})
 }
 
-func (s *State) loadNodeList() error {
-	s.writeState.nodeList = make(registry.NodeList)
-	return s.IterateNodes(func(addr crypto.Address, node *registry.NodeIdentity) error {
-		s.writeState.nodeList[addr] = node
+func (s *State) loadNodeStats() error {
+	return s.IterateNodes(func(id crypto.Address, node *registry.NodeIdentity) error {
+		s.writeState.nodeStats.Addresses[node.GetNetworkAddress()][id] = struct{}{}
 		return nil
 	})
 }

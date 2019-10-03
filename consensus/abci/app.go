@@ -32,10 +32,10 @@ type App struct {
 	// Node information to return in Info
 	nodeInfo string
 	// State
-	blockchain              *bcm.Blockchain
-	validators              Validators
-	mempoolLocker           sync.Locker
-	authorizedPeersProvider PeersFilterProvider
+	blockchain      *bcm.Blockchain
+	validators      Validators
+	mempoolLocker   sync.Locker
+	authorizedPeers AuthorizedPeers
 	// We need to cache these from BeginBlock for when we need actually need it in Commit
 	block *types.RequestBeginBlock
 	// Function to use to fail gracefully from panic rather than letting Tendermint make us a zombie
@@ -46,23 +46,20 @@ type App struct {
 	logger    *logging.Logger
 }
 
-// PeersFilterProvider provides current authorized nodes id and/or addresses
-type PeersFilterProvider func() (authorizedPeersID []string, authorizedPeersAddress []string)
-
 var _ types.Application = &App{}
 
 func NewApp(nodeInfo string, blockchain *bcm.Blockchain, validators Validators, checker execution.BatchExecutor,
-	committer execution.BatchCommitter, txDecoder txs.Decoder, authorizedPeersProvider PeersFilterProvider,
+	committer execution.BatchCommitter, txDecoder txs.Decoder, authorizedPeers AuthorizedPeers,
 	panicFunc func(error), logger *logging.Logger) *App {
 	return &App{
-		nodeInfo:                nodeInfo,
-		blockchain:              blockchain,
-		validators:              validators,
-		checker:                 checker,
-		committer:               committer,
-		txDecoder:               txDecoder,
-		authorizedPeersProvider: authorizedPeersProvider,
-		panicFunc:               panicFunc,
+		nodeInfo:        nodeInfo,
+		blockchain:      blockchain,
+		validators:      validators,
+		checker:         checker,
+		committer:       committer,
+		txDecoder:       txDecoder,
+		authorizedPeers: authorizedPeers,
+		panicFunc:       panicFunc,
 		logger: logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App",
 			"node_info", nodeInfo),
 	}

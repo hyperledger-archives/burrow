@@ -4,17 +4,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultBurrowTendermintConfig(t *testing.T) {
 	btc := DefaultBurrowTendermintConfig()
 	btc.AuthorizedPeers = "127.0.0.1:26656,836AB8674A33416718E5A19557A25ED826B2BDD3"
-	authorizedPeersID, authorizedPeersAddress := btc.DefaultAuthorizedPeersProvider()()
-	assert.Equal(t, []string{"127.0.0.1:26656"}, authorizedPeersAddress)
-	assert.Equal(t, []string{"836AB8674A33416718E5A19557A25ED826B2BDD3"}, authorizedPeersID)
+	authorizedPeers := btc.DefaultAuthorizedPeersProvider()
+	assert.True(t, authorizedPeers.QueryPeerByAddress("127.0.0.1:26656"))
+	assert.True(t, authorizedPeers.QueryPeerByID("836AB8674A33416718E5A19557A25ED826B2BDD3"))
 
 	tmConf, err := btc.Config(".burrow", 0.33)
 	require.NoError(t, err)

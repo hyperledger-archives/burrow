@@ -6,25 +6,35 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/execution/registry"
+	"github.com/hyperledger/burrow/storage"
 )
 
 var _ registry.IterableReader = &State{}
 
-func (s *ReadState) GetNode(addr crypto.Address) (*registry.NodeIdentity, error) {
-	tree, err := s.Forest.Reader(keys.Registry.Prefix())
+func getNode(forest storage.ForestReader, id crypto.Address) (*registry.NodeIdentity, error) {
+	tree, err := forest.Reader(keys.Registry.Prefix())
 	if err != nil {
 		return nil, err
 	}
-	nodeBytes := tree.Get(keys.Registry.KeyNoPrefix(addr))
+	nodeBytes := tree.Get(keys.Registry.KeyNoPrefix(id))
 	if nodeBytes == nil {
 		return nil, nil
 	}
 
 	regNode := new(registry.NodeIdentity)
 	return regNode, encoding.Decode(nodeBytes, regNode)
+
 }
 
-func (ws *writeState) UpdateNode(addr crypto.Address, node *registry.NodeIdentity) error {
+func (s *ReadState) GetNodeByID(id crypto.Address) (*registry.NodeIdentity, error) {
+	return getNode(s.Forest, id)
+}
+
+func (s *State) GetNodeIDsByAddress(net string) ([]crypto.Address, error) {
+	return s.writeState.nodeStats.GetAddresses(net), nil
+}
+
+func (ws *writeState) UpdateNode(id crypto.Address, node *registry.NodeIdentity) error {
 	if node == nil {
 		return fmt.Errorf("RegisterNode passed nil node in State")
 	}
@@ -38,19 +48,30 @@ func (ws *writeState) UpdateNode(addr crypto.Address, node *registry.NodeIdentit
 		return err
 	}
 
-	ws.nodeList[addr] = node
-	tree.Set(keys.Registry.KeyNoPrefix(addr), bs)
+	prev, err := getNode(ws.forest, id)
+	if err != nil {
+		return err
+	}
+
+	ws.nodeStats.Remove(prev)
+	ws.nodeStats.Insert(node.GetNetworkAddress(), id)
+	tree.Set(keys.Registry.KeyNoPrefix(id), bs)
 	return nil
 }
 
-func (ws *writeState) RemoveNode(addr crypto.Address) error {
+func (ws *writeState) RemoveNode(id crypto.Address) error {
 	tree, err := ws.forest.Writer(keys.Registry.Prefix())
 	if err != nil {
 		return err
 	}
 
-	delete(ws.nodeList, addr)
-	tree.Delete(keys.Registry.KeyNoPrefix(addr))
+	prev, err := getNode(ws.forest, id)
+	if err != nil {
+		return err
+	}
+
+	ws.nodeStats.Remove(prev)
+	tree.Delete(keys.Registry.KeyNoPrefix(id))
 	return nil
 }
 
@@ -73,6 +94,6 @@ func (s *ReadState) IterateNodes(consumer func(crypto.Address, *registry.NodeIde
 	})
 }
 
-func (s *State) GetNodes() registry.NodeList {
-	return s.writeState.nodeList
+func (s *State) GetNumPeers() int {
+	return len(s.writeState.nodeStats.Addresses)
 }

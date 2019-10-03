@@ -24,6 +24,7 @@ func (k CurveType) String() string {
 		return "unknown"
 	}
 }
+
 func (k CurveType) ABCIType() string {
 	switch k {
 	case CurveTypeSecp256k1:

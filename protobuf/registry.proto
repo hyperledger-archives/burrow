@@ -28,9 +28,8 @@ message NodeIdentity {
 	// Peer network address
 	string NetworkAddress = 2;
 	// The Tendermint p2p node ID
-	string TendermintNodeID = 3;
-	// The public key that this node will validate with if it becomes a validator (use this to create a binding between
-    // p2p node ID and validator)
+	bytes TendermintNodeID = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+	// The public key that this node will validate with if it becomes a validator 
+	// (use this to create a binding between p2p node ID and validator)
 	bytes ValidatorPublicKey = 4 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.PublicKey", (gogoproto.nullable) = false];
 }
-

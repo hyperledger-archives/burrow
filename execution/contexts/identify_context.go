@@ -36,13 +36,14 @@ func (ctx *IdentifyContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 	if err != nil {
 		return errors.Wrap(err, "at least one input lacks permission for IdentifyTx")
 	}
-	// Registry updates must be consensual and binding so we requires signatures from the validator key of the node
-	// being added
+
+	// Registry updates must be consensual and binding so we requires signatures
+	// from the validator key of the node being added
 	validatorAddress := ctx.tx.Node.ValidatorPublicKey.GetAddress()
 	if _, ok := inputs[validatorAddress]; !ok {
 		return fmt.Errorf("IdentifyTx must be signed by node's validator key, but missing %v in inputs",
 			validatorAddress)
 	}
 
-	return ctx.NodeWriter.UpdateNode(validatorAddress, ctx.tx.Node)
+	return ctx.NodeWriter.UpdateNode(ctx.tx.Node.TendermintNodeID, ctx.tx.Node)
 }

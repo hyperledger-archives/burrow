@@ -209,9 +209,9 @@ func (qs *queryServer) GetValidatorSetHistory(ctx context.Context, param *GetVal
 
 func (qs *queryServer) GetNetworkRegistry(ctx context.Context, param *GetNetworkRegistryParam) (*NetworkRegistry, error) {
 	rv := make([]*RegisteredValidator, 0)
-	err := qs.nodeReg.IterateNodes(func(val crypto.Address, rn *registry.NodeIdentity) error {
+	err := qs.nodeReg.IterateNodes(func(id crypto.Address, rn *registry.NodeIdentity) error {
 		rv = append(rv, &RegisteredValidator{
-			Address: val,
+			Address: rn.ValidatorPublicKey.GetAddress(),
 			Node:    rn,
 		})
 		return nil

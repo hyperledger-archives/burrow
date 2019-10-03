@@ -2,7 +2,6 @@ package abci
 
 import (
 	"fmt"
-	"net"
 	"strings"
 
 	"github.com/hyperledger/burrow/consensus/tendermint/codes"
@@ -17,6 +16,39 @@ func isPeersFilterQuery(query *abciTypes.RequestQuery) bool {
 	return strings.HasPrefix(query.Path, peersFilterQueryPath)
 }
 
+// AuthorizedPeers provides current authorized nodes id and/or addresses
+type AuthorizedPeers interface {
+	NumPeers() int
+	QueryPeerByID(id string) bool
+	QueryPeerByAddress(id string) bool
+}
+
+type PeerLists struct {
+	IDs       map[string]struct{}
+	Addresses map[string]struct{}
+}
+
+func NewPeerLists() *PeerLists {
+	return &PeerLists{
+		IDs:       make(map[string]struct{}),
+		Addresses: make(map[string]struct{}),
+	}
+}
+
+func (p PeerLists) QueryPeerByID(id string) bool {
+	_, ok := p.IDs[id]
+	return ok
+}
+
+func (p PeerLists) QueryPeerByAddress(id string) bool {
+	_, ok := p.Addresses[id]
+	return ok
+}
+
+func (p PeerLists) NumPeers() int {
+	return len(p.IDs)
+}
+
 func (app *App) peersFilter(reqQuery *abciTypes.RequestQuery, respQuery *abciTypes.ResponseQuery) {
 	app.logger.TraceMsg("abci.App/Query peers filter query", "query_path", reqQuery.Path)
 	path := strings.Split(reqQuery.Path, "/")
@@ -26,25 +58,19 @@ func (app *App) peersFilter(reqQuery *abciTypes.RequestQuery, respQuery *abciTyp
 
 	filterType := path[3]
 	peer := path[4]
-	authorizedPeersID, authorizedPeersAddress := app.authorizedPeersProvider()
-	var authorizedPeers []string
+
+	peerAuthorized := app.authorizedPeers.NumPeers() == 0
 	switch filterType {
 	case "id":
-		authorizedPeers = authorizedPeersID
+		if ok := app.authorizedPeers.QueryPeerByID(peer); ok {
+			peerAuthorized = ok
+		}
 	case "addr":
-		authorizedPeers = authorizedPeersAddress
+		if ok := app.authorizedPeers.QueryPeerByAddress(peer); ok {
+			peerAuthorized = ok
+		}
 	default:
 		panic(fmt.Errorf("invalid peers filter query type %v", reqQuery.Path))
-	}
-
-	peerAuthorized := len(authorizedPeers) == 0
-	for _, authorizedPeer := range authorizedPeers {
-		host, _, err := net.SplitHostPort(peer)
-		// may have different outbound port in address, so fallback to host
-		if peer == authorizedPeer || (err == nil && host == authorizedPeer) {
-			peerAuthorized = true
-			break
-		}
 	}
 
 	if peerAuthorized {

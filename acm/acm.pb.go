@@ -7,7 +7,6 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
-	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -70,7 +69,7 @@ func (m *Account) XXX_Unmarshal(b []byte) error {
 }
 func (m *Account) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
+	n, err := m.MarshalTo(b)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +154,7 @@ func (m *ContractMeta) XXX_Unmarshal(b []byte) error {
 }
 func (m *ContractMeta) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
-	n, err := m.MarshalToSizedBuffer(b)
+	n, err := m.MarshalTo(b)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +231,7 @@ var fileDescriptor_49ed775bc0a6adf6 = []byte{
 func (m *Account) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -240,129 +239,106 @@ func (m *Account) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *Account) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Account) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	dAtA[i] = 0xa
+	i++
+	i = encodeVarintAcm(dAtA, i, uint64(m.Address.Size()))
+	n1, err := m.Address.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
-	if len(m.NativeName) > 0 {
-		i -= len(m.NativeName)
-		copy(dAtA[i:], m.NativeName)
-		i = encodeVarintAcm(dAtA, i, uint64(len(m.NativeName)))
-		i--
-		dAtA[i] = 0x5a
+	i += n1
+	dAtA[i] = 0x12
+	i++
+	i = encodeVarintAcm(dAtA, i, uint64(m.PublicKey.Size()))
+	n2, err := m.PublicKey.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
-	if m.Forebear != nil {
-		{
-			size := m.Forebear.Size()
-			i -= size
-			if _, err := m.Forebear.MarshalTo(dAtA[i:]); err != nil {
+	i += n2
+	if m.Sequence != 0 {
+		dAtA[i] = 0x18
+		i++
+		i = encodeVarintAcm(dAtA, i, uint64(m.Sequence))
+	}
+	if m.Balance != 0 {
+		dAtA[i] = 0x20
+		i++
+		i = encodeVarintAcm(dAtA, i, uint64(m.Balance))
+	}
+	dAtA[i] = 0x2a
+	i++
+	i = encodeVarintAcm(dAtA, i, uint64(m.EVMCode.Size()))
+	n3, err := m.EVMCode.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n3
+	dAtA[i] = 0x32
+	i++
+	i = encodeVarintAcm(dAtA, i, uint64(m.Permissions.Size()))
+	n4, err := m.Permissions.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n4
+	dAtA[i] = 0x3a
+	i++
+	i = encodeVarintAcm(dAtA, i, uint64(m.WASMCode.Size()))
+	n5, err := m.WASMCode.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n5
+	dAtA[i] = 0x42
+	i++
+	i = encodeVarintAcm(dAtA, i, uint64(m.CodeHash.Size()))
+	n6, err := m.CodeHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n6
+	if len(m.ContractMeta) > 0 {
+		for _, msg := range m.ContractMeta {
+			dAtA[i] = 0x4a
+			i++
+			i = encodeVarintAcm(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
 				return 0, err
 			}
-			i = encodeVarintAcm(dAtA, i, uint64(size))
+			i += n
 		}
-		i--
+	}
+	if m.Forebear != nil {
 		dAtA[i] = 0x52
-	}
-	if len(m.ContractMeta) > 0 {
-		for iNdEx := len(m.ContractMeta) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.ContractMeta[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintAcm(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x4a
-		}
-	}
-	{
-		size := m.CodeHash.Size()
-		i -= size
-		if _, err := m.CodeHash.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintAcm(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x42
-	{
-		size := m.WASMCode.Size()
-		i -= size
-		if _, err := m.WASMCode.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintAcm(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x3a
-	{
-		size, err := m.Permissions.MarshalToSizedBuffer(dAtA[:i])
+		i++
+		i = encodeVarintAcm(dAtA, i, uint64(m.Forebear.Size()))
+		n7, err := m.Forebear.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i -= size
-		i = encodeVarintAcm(dAtA, i, uint64(size))
+		i += n7
 	}
-	i--
-	dAtA[i] = 0x32
-	{
-		size := m.EVMCode.Size()
-		i -= size
-		if _, err := m.EVMCode.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintAcm(dAtA, i, uint64(size))
+	if len(m.NativeName) > 0 {
+		dAtA[i] = 0x5a
+		i++
+		i = encodeVarintAcm(dAtA, i, uint64(len(m.NativeName)))
+		i += copy(dAtA[i:], m.NativeName)
 	}
-	i--
-	dAtA[i] = 0x2a
-	if m.Balance != 0 {
-		i = encodeVarintAcm(dAtA, i, uint64(m.Balance))
-		i--
-		dAtA[i] = 0x20
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	if m.Sequence != 0 {
-		i = encodeVarintAcm(dAtA, i, uint64(m.Sequence))
-		i--
-		dAtA[i] = 0x18
-	}
-	{
-		size, err := m.PublicKey.MarshalToSizedBuffer(dAtA[:i])
-		if err != nil {
-			return 0, err
-		}
-		i -= size
-		i = encodeVarintAcm(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x12
-	{
-		size := m.Address.Size()
-		i -= size
-		if _, err := m.Address.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintAcm(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *ContractMeta) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -370,59 +346,46 @@ func (m *ContractMeta) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ContractMeta) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ContractMeta) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.Metadata) > 0 {
-		i -= len(m.Metadata)
-		copy(dAtA[i:], m.Metadata)
-		i = encodeVarintAcm(dAtA, i, uint64(len(m.Metadata)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	{
-		size := m.MetadataHash.Size()
-		i -= size
-		if _, err := m.MetadataHash.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintAcm(dAtA, i, uint64(size))
-	}
-	i--
-	dAtA[i] = 0x12
-	{
-		size := m.CodeHash.Size()
-		i -= size
-		if _, err := m.CodeHash.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintAcm(dAtA, i, uint64(size))
-	}
-	i--
 	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
+	i++
+	i = encodeVarintAcm(dAtA, i, uint64(m.CodeHash.Size()))
+	n8, err := m.CodeHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n8
+	dAtA[i] = 0x12
+	i++
+	i = encodeVarintAcm(dAtA, i, uint64(m.MetadataHash.Size()))
+	n9, err := m.MetadataHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n9
+	if len(m.Metadata) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintAcm(dAtA, i, uint64(len(m.Metadata)))
+		i += copy(dAtA[i:], m.Metadata)
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func encodeVarintAcm(dAtA []byte, offset int, v uint64) int {
-	offset -= sovAcm(v)
-	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return base
+	return offset + 1
 }
 func (m *Account) Size() (n int) {
 	if m == nil {
@@ -489,7 +452,14 @@ func (m *ContractMeta) Size() (n int) {
 }
 
 func sovAcm(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozAcm(x uint64) (n int) {
 	return sovAcm(uint64((x << 1) ^ uint64((int64(x) >> 63))))

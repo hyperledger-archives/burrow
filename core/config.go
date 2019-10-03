@@ -60,7 +60,7 @@ func (kern *Kernel) LoadTendermintFromConfig(conf *config.BurrowConfig, privVal 
 
 	authorizedPeersProvider := conf.Tendermint.DefaultAuthorizedPeersProvider()
 	if conf.Tendermint.IdentifyPeers {
-		authorizedPeersProvider = registry.AuthorizedPeersProvider(kern.State)
+		authorizedPeersProvider = registry.NewNodeFilter(kern.State)
 	}
 
 	kern.database.Stats()
