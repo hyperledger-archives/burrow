@@ -5,7 +5,7 @@ import (
 )
 
 type ProxyConfig struct {
-	InternalProxyEnabled    bool
+	Enabled                 bool
 	ListenHost              string
 	ListenPort              string
 	AllowBadFilePermissions bool
@@ -15,7 +15,7 @@ type ProxyConfig struct {
 func DefaultProxyConfig() *ProxyConfig {
 	return &ProxyConfig{
 		// Default Monax keys port
-		InternalProxyEnabled:    false,
+		Enabled:                 false,
 		AllowBadFilePermissions: false,
 		ListenHost:              "0.0.0.0",
 		ListenPort:              "10998",

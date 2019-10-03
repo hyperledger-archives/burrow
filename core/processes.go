@@ -333,7 +333,7 @@ func GRPCLauncher(kern *Kernel, conf *rpc.ServerConfig) process.Launcher {
 func InternalProxyLauncher(kern *Kernel, conf *proxy.ProxyConfig) process.Launcher {
 	return process.Launcher{
 		Name:    InternalProxyName,
-		Enabled: conf.InternalProxyEnabled,
+		Enabled: conf.Enabled,
 		Launch: func() (process.Process, error) {
 			nodeView, err := kern.GetNodeView()
 			if err != nil {

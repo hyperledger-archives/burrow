@@ -96,7 +96,7 @@ func NewTestConfig(genesisDoc *genesis.GenesisDoc,
 	// Make blocks for purposes of tests
 	conf.Tendermint.CreateEmptyBlocks = tendermint.AlwaysCreateEmptyBlocks
 	// Run via proxy
-	conf.Proxy.InternalProxyEnabled = true
+	conf.Proxy.Enabled = true
 
 	// Assign run of ports
 	const freeport = "0"

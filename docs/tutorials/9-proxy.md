@@ -13,11 +13,11 @@ burrow keys command line if instructed to do so with `-c`.
 
 ## Configuring the internal proxy in burrow toml
 
-Set the `InternalProxyEnabled` to true
+Set the `Enabled` to true in the Proxy section.
 
 ```toml
 [Proxy]
-  InternalProxyEnabled = true
+  Enabled = true
   ListenHost = "0.0.0.0"
   ListenPort = "10998"
   AllowBadFilePermissions = false
