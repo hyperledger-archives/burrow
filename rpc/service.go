@@ -156,9 +156,9 @@ func (s *Service) NetworkRegistry() ([]*ResultNetworkRegistry, error) {
 	}
 
 	rnr := make([]*ResultNetworkRegistry, 0)
-	err := s.nodeReg.IterateNodes(func(val crypto.Address, rn *registry.NodeIdentity) error {
+	err := s.nodeReg.IterateNodes(func(id crypto.Address, rn *registry.NodeIdentity) error {
 		rnr = append(rnr, &ResultNetworkRegistry{
-			Address:      val,
+			Address:      rn.ValidatorPublicKey.GetAddress(),
 			NodeIdentity: *rn,
 		})
 		return nil

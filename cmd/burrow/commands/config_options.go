@@ -97,7 +97,7 @@ func (opts *configOptions) obtainBurrowConfig() (*config.BurrowConfig, error) {
 		return nil, err
 	}
 	// Which account am I?
-	conf.Address, err = accountAddress(conf, *opts.initAddressOpt, *opts.accountIndexOpt, *opts.validatorIndexOpt)
+	conf.ValidatorAddress, err = accountAddress(conf, *opts.initAddressOpt, *opts.accountIndexOpt, *opts.validatorIndexOpt)
 	if err != nil {
 		return nil, err
 	}
@@ -109,9 +109,9 @@ func (opts *configOptions) obtainBurrowConfig() (*config.BurrowConfig, error) {
 		if conf.GenesisDoc != nil && conf.GenesisDoc.ChainID() != "" {
 			chainIDHeader = conf.GenesisDoc.ChainID() + "_"
 		}
-		if conf.Address != nil {
+		if conf.ValidatorAddress != nil {
 			// Set a default moniker... since we can at this stage of config completion and it is required for start
-			conf.Tendermint.Moniker = fmt.Sprintf("%sNode_%s", chainIDHeader, conf.Address)
+			conf.Tendermint.Moniker = fmt.Sprintf("%sNode_%s", chainIDHeader, conf.ValidatorAddress)
 		}
 	} else {
 		conf.Tendermint.Moniker = *opts.initMonikerOpt
@@ -155,8 +155,8 @@ func accountAddress(conf *config.BurrowConfig, addressIn string, accIndex, valIn
 				valIndex, len(conf.GenesisDoc.Validators))
 		}
 		return &conf.GenesisDoc.Validators[valIndex].Address, nil
-	} else if conf.Address != nil {
-		return conf.Address, nil
+	} else if conf.ValidatorAddress != nil {
+		return conf.ValidatorAddress, nil
 	} else if conf.GenesisDoc != nil && len(conf.GenesisDoc.Validators) == 1 {
 		return &conf.GenesisDoc.Validators[0].Address, nil
 	}

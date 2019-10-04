@@ -39,7 +39,7 @@ func Tx(output Output) func(cmd *cli.Cmd) {
 			chainHost := jobs.FirstOf(*chainOpt, conf.RPC.GRPC.ListenAddress())
 			client := def.NewClient(chainHost, conf.Keys.RemoteAddress, true, time.Duration(*timeoutOpt)*time.Second)
 			logger := logging.NewNoopLogger()
-			address := conf.Address.String()
+			address := conf.ValidatorAddress.String()
 
 			cmd.Command("send", "send value to another account", func(cmd *cli.Cmd) {
 				sourceOpt := cmd.StringOpt("s source", "", "Address to send from, if not set config is used")

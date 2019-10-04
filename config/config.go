@@ -20,8 +20,8 @@ const DefaultGenesisDocJSONFileName = "genesis.json"
 
 type BurrowConfig struct {
 	// Set on startup
-	Address    *crypto.Address `json:",omitempty" toml:",omitempty"`
-	Passphrase *string         `json:",omitempty" toml:",omitempty"`
+	ValidatorAddress *crypto.Address `json:",omitempty" toml:",omitempty"`
+	Passphrase       *string         `json:",omitempty" toml:",omitempty"`
 	// From config file
 	BurrowDir  string
 	GenesisDoc *genesis.GenesisDoc                `json:",omitempty" toml:",omitempty"`
@@ -44,7 +44,7 @@ func DefaultBurrowConfig() *BurrowConfig {
 }
 
 func (conf *BurrowConfig) Verify() error {
-	if conf.Address == nil {
+	if conf.ValidatorAddress == nil {
 		return fmt.Errorf("could not finalise address - please provide one in config or via --account-address")
 	}
 	return nil

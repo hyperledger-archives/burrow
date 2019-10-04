@@ -39,8 +39,8 @@ type LastSignedInfo struct {
 	Height    int64           `json:"height"`
 	Round     int             `json:"round"`
 	Step      int8            `json:"step"`
-	Signature []byte          `json:"signature,omitempty"` // so we dont lose signatures
-	SignBytes binary.HexBytes `json:"signbytes,omitempty"` // so we dont lose signatures
+	Signature []byte          `json:"signature,omitempty"` // so we don't lose signatures
+	SignBytes binary.HexBytes `json:"signbytes,omitempty"` // so we don't lose signatures
 }
 
 func NewLastSignedInfo() *LastSignedInfo {

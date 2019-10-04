@@ -60,7 +60,7 @@ func (kern *Kernel) LoadTendermintFromConfig(conf *config.BurrowConfig, privVal 
 
 	authorizedPeersProvider := conf.Tendermint.DefaultAuthorizedPeersProvider()
 	if conf.Tendermint.IdentifyPeers {
-		authorizedPeersProvider = registry.AuthorizedPeersProvider(kern.State)
+		authorizedPeersProvider = registry.NewNodeFilter(kern.State)
 	}
 
 	kern.database.Stats()
@@ -117,11 +117,11 @@ func LoadKernelFromConfig(conf *config.BurrowConfig) (*Kernel, error) {
 		return nil, fmt.Errorf("could not load state: %v", err)
 	}
 
-	if conf.Address == nil {
+	if conf.ValidatorAddress == nil {
 		return nil, fmt.Errorf("Address must be set")
 	}
 
-	privVal, err := kern.PrivValidator(*conf.Address)
+	privVal, err := kern.PrivValidator(*conf.ValidatorAddress)
 	if err != nil {
 		return nil, fmt.Errorf("could not form PrivValidator from Address: %v", err)
 	}

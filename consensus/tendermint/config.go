@@ -122,23 +122,21 @@ func (btc *BurrowTendermintConfig) Config(rootDir string, timeoutFactor float64)
 	return conf, nil
 }
 
-func (btc *BurrowTendermintConfig) DefaultAuthorizedPeersProvider() abci.PeersFilterProvider {
-	var authorizedPeersID, authorizedPeersAddress []string
+func (btc *BurrowTendermintConfig) DefaultAuthorizedPeersProvider() abci.AuthorizedPeers {
+	authorizedPeers := abci.NewPeerLists()
 
 	authorizedPeersAddrOrID := strings.Split(btc.AuthorizedPeers, ",")
 	for _, authorizedPeerAddrOrID := range authorizedPeersAddrOrID {
 		_, err := url.Parse(authorizedPeerAddrOrID)
 		isNodeAddress := err != nil
 		if isNodeAddress {
-			authorizedPeersAddress = append(authorizedPeersAddress, authorizedPeerAddrOrID)
+			authorizedPeers.Addresses[authorizedPeerAddrOrID] = struct{}{}
 		} else {
-			authorizedPeersID = append(authorizedPeersID, authorizedPeerAddrOrID)
+			authorizedPeers.IDs[authorizedPeerAddrOrID] = struct{}{}
 		}
 	}
 
-	return func() ([]string, []string) {
-		return authorizedPeersID, authorizedPeersAddress
-	}
+	return authorizedPeers
 }
 
 func scaleTimeout(factor float64, timeout time.Duration) time.Duration {

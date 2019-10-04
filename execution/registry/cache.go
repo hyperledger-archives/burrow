@@ -26,6 +26,7 @@ type Cache struct {
 	sync.RWMutex
 	backend  Reader
 	registry map[crypto.Address]*nodeInfo
+	stats    NodeStats
 }
 
 type nodeInfo struct {
@@ -43,11 +44,12 @@ func NewCache(backend Reader) *Cache {
 	return &Cache{
 		backend:  backend,
 		registry: make(map[crypto.Address]*nodeInfo),
+		stats:    NewNodeStats(),
 	}
 }
 
-func (cache *Cache) GetNode(addr crypto.Address) (*NodeIdentity, error) {
-	info, err := cache.get(addr)
+func (cache *Cache) GetNodeByID(id crypto.Address) (*NodeIdentity, error) {
+	info, err := cache.get(id)
 	if err != nil {
 		return nil, err
 	}
@@ -59,44 +61,43 @@ func (cache *Cache) GetNode(addr crypto.Address) (*NodeIdentity, error) {
 	return info.node, nil
 }
 
-func (cache *Cache) GetNodes() NodeList {
-	nodes := make(NodeList)
-	for addr := range cache.registry {
-		n, err := cache.GetNode(addr)
-		if err != nil {
-			continue
-		}
-		nodes[addr] = n
-	}
-	return nodes
+func (cache *Cache) GetNodeIDsByAddress(net string) ([]crypto.Address, error) {
+	return cache.stats.GetAddresses(net), nil
 }
 
-func (cache *Cache) UpdateNode(addr crypto.Address, node *NodeIdentity) error {
-	info, err := cache.get(addr)
+func (cache *Cache) GetNumPeers() int {
+	return len(cache.registry)
+}
+
+func (cache *Cache) UpdateNode(id crypto.Address, node *NodeIdentity) error {
+	info, err := cache.get(id)
 	if err != nil {
 		return err
 	}
 	info.Lock()
 	defer info.Unlock()
 	if info.removed {
-		return fmt.Errorf("UpdateNode on a removed node: %x", addr)
+		return fmt.Errorf("UpdateNode on a removed node: %x", id)
 	}
 
 	info.node = node
 	info.updated = true
+	cache.stats.Remove(info.node)
+	cache.stats.Insert(node.GetNetworkAddress(), id)
 	return nil
 }
 
-func (cache *Cache) RemoveNode(addr crypto.Address) error {
-	info, err := cache.get(addr)
+func (cache *Cache) RemoveNode(id crypto.Address) error {
+	info, err := cache.get(id)
 	if err != nil {
 		return err
 	}
 	info.Lock()
 	defer info.Unlock()
 	if info.removed {
-		return fmt.Errorf("RemoveNode on removed node: %x", addr)
+		return fmt.Errorf("RemoveNode on removed node: %x", id)
 	}
+	cache.stats.Remove(info.node)
 	info.removed = true
 	return nil
 }
@@ -106,22 +107,17 @@ func (cache *Cache) RemoveNode(addr crypto.Address) error {
 func (cache *Cache) Sync(state Writer) error {
 	cache.Lock()
 	defer cache.Unlock()
-	var addresses []crypto.Address
-	for addr := range cache.registry {
-		addresses = append(addresses, addr)
-	}
 
-	for _, addr := range addresses {
-		info := cache.registry[addr]
+	for id, info := range cache.registry {
 		info.RLock()
 		if info.removed {
-			err := state.RemoveNode(addr)
+			err := state.RemoveNode(id)
 			if err != nil {
 				info.RUnlock()
 				return err
 			}
 		} else if info.updated {
-			err := state.UpdateNode(addr, info.node)
+			err := state.UpdateNode(id, info.node)
 			if err != nil {
 				info.RUnlock()
 				return err
@@ -154,23 +150,23 @@ func (cache *Cache) Backend() Reader {
 	return cache.backend
 }
 
-func (cache *Cache) get(addr crypto.Address) (*nodeInfo, error) {
+func (cache *Cache) get(id crypto.Address) (*nodeInfo, error) {
 	cache.RLock()
-	info := cache.registry[addr]
+	info := cache.registry[id]
 	cache.RUnlock()
 	if info == nil {
 		cache.Lock()
 		defer cache.Unlock()
-		info = cache.registry[addr]
+		info = cache.registry[id]
 		if info == nil {
-			node, err := cache.backend.GetNode(addr)
+			node, err := cache.backend.GetNodeByID(id)
 			if err != nil {
 				return nil, err
 			}
 			info = &nodeInfo{
 				node: node,
 			}
-			cache.registry[addr] = info
+			cache.registry[id] = info
 		}
 	}
 	return info, nil

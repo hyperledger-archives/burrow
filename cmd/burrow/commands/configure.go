@@ -289,7 +289,7 @@ func Configure(output Output) func(cmd *cli.Cmd) {
 				}
 				for i, acc := range genesisDoc.Accounts {
 					// set stuff
-					conf.Address = &acc.Address
+					conf.ValidatorAddress = &acc.Address
 					conf.Tendermint.PersistentPeers = strings.Join(peers, ",")
 					conf.BurrowDir = fmt.Sprintf(".burrow%03d", i)
 					conf.Tendermint.ListenHost = rpc.LocalHost

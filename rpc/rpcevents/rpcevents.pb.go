@@ -8,7 +8,6 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
-	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -16,8 +15,6 @@ import (
 	github_com_hyperledger_burrow_binary "github.com/hyperledger/burrow/binary"
 	exec "github.com/hyperledger/burrow/execution/exec"
 	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -95,7 +92,7 @@ func (m *GetBlockRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return xxx_messageInfo_GetBlockRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -156,7 +153,7 @@ func (m *TxRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_TxRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -243,7 +240,7 @@ func (m *BlocksRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return xxx_messageInfo_BlocksRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -302,7 +299,7 @@ func (m *EventsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return xxx_messageInfo_EventsResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -362,7 +359,7 @@ func (m *GetTxsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return xxx_messageInfo_GetTxsRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -428,7 +425,7 @@ func (m *GetTxsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return xxx_messageInfo_GetTxsResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -487,7 +484,7 @@ func (m *Bound) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_Bound.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -552,7 +549,7 @@ func (m *BlockRange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_BlockRange.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -766,20 +763,6 @@ type ExecutionEventsServer interface {
 	Events(*BlocksRequest, ExecutionEvents_EventsServer) error
 }
 
-// UnimplementedExecutionEventsServer can be embedded to have forward compatible implementations.
-type UnimplementedExecutionEventsServer struct {
-}
-
-func (*UnimplementedExecutionEventsServer) Stream(req *BlocksRequest, srv ExecutionEvents_StreamServer) error {
-	return status.Errorf(codes.Unimplemented, "method Stream not implemented")
-}
-func (*UnimplementedExecutionEventsServer) Tx(ctx context.Context, req *TxRequest) (*exec.TxExecution, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Tx not implemented")
-}
-func (*UnimplementedExecutionEventsServer) Events(req *BlocksRequest, srv ExecutionEvents_EventsServer) error {
-	return status.Errorf(codes.Unimplemented, "method Events not implemented")
-}
-
 func RegisterExecutionEventsServer(s *grpc.Server, srv ExecutionEventsServer) {
 	s.RegisterService(&_ExecutionEvents_serviceDesc, srv)
 }
@@ -871,7 +854,7 @@ var _ExecutionEvents_serviceDesc = grpc.ServiceDesc{
 func (m *GetBlockRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -879,41 +862,35 @@ func (m *GetBlockRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetBlockRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetBlockRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Height != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.Height))
 	}
 	if m.Wait {
-		i--
+		dAtA[i] = 0x10
+		i++
 		if m.Wait {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
 		}
-		i--
-		dAtA[i] = 0x10
+		i++
 	}
-	if m.Height != 0 {
-		i = encodeVarintRpcevents(dAtA, i, uint64(m.Height))
-		i--
-		dAtA[i] = 0x8
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *TxRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -921,46 +898,38 @@ func (m *TxRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *TxRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *TxRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	dAtA[i] = 0xa
+	i++
+	i = encodeVarintRpcevents(dAtA, i, uint64(m.TxHash.Size()))
+	n1, err := m.TxHash.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
+	i += n1
 	if m.Wait {
-		i--
+		dAtA[i] = 0x10
+		i++
 		if m.Wait {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
 		}
-		i--
-		dAtA[i] = 0x10
+		i++
 	}
-	{
-		size := m.TxHash.Size()
-		i -= size
-		if _, err := m.TxHash.MarshalTo(dAtA[i:]); err != nil {
-			return 0, err
-		}
-		i = encodeVarintRpcevents(dAtA, i, uint64(size))
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	i--
-	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *BlocksRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -968,45 +937,36 @@ func (m *BlocksRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *BlocksRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *BlocksRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if m.BlockRange != nil {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.BlockRange.Size()))
+		n2, err := m.BlockRange.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n2
 	}
 	if len(m.Query) > 0 {
-		i -= len(m.Query)
-		copy(dAtA[i:], m.Query)
-		i = encodeVarintRpcevents(dAtA, i, uint64(len(m.Query)))
-		i--
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintRpcevents(dAtA, i, uint64(len(m.Query)))
+		i += copy(dAtA[i:], m.Query)
 	}
-	if m.BlockRange != nil {
-		{
-			size, err := m.BlockRange.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintRpcevents(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0xa
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *EventsResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -1014,45 +974,37 @@ func (m *EventsResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *EventsResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *EventsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Height != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.Height))
 	}
 	if len(m.Events) > 0 {
-		for iNdEx := len(m.Events) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Events[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintRpcevents(dAtA, i, uint64(size))
-			}
-			i--
+		for _, msg := range m.Events {
 			dAtA[i] = 0x12
+			i++
+			i = encodeVarintRpcevents(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
 		}
 	}
-	if m.Height != 0 {
-		i = encodeVarintRpcevents(dAtA, i, uint64(m.Height))
-		i--
-		dAtA[i] = 0x8
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *GetTxsRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -1060,43 +1012,36 @@ func (m *GetTxsRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetTxsRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetTxsRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.Query) > 0 {
-		i -= len(m.Query)
-		copy(dAtA[i:], m.Query)
-		i = encodeVarintRpcevents(dAtA, i, uint64(len(m.Query)))
-		i--
-		dAtA[i] = 0x1a
+	if m.StartHeight != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.StartHeight))
 	}
 	if m.EndHeight != 0 {
-		i = encodeVarintRpcevents(dAtA, i, uint64(m.EndHeight))
-		i--
 		dAtA[i] = 0x10
+		i++
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.EndHeight))
 	}
-	if m.StartHeight != 0 {
-		i = encodeVarintRpcevents(dAtA, i, uint64(m.StartHeight))
-		i--
-		dAtA[i] = 0x8
+	if len(m.Query) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintRpcevents(dAtA, i, uint64(len(m.Query)))
+		i += copy(dAtA[i:], m.Query)
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *GetTxsResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -1104,45 +1049,37 @@ func (m *GetTxsResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetTxsResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetTxsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Height != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.Height))
 	}
 	if len(m.TxExecutions) > 0 {
-		for iNdEx := len(m.TxExecutions) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.TxExecutions[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintRpcevents(dAtA, i, uint64(size))
-			}
-			i--
+		for _, msg := range m.TxExecutions {
 			dAtA[i] = 0x12
+			i++
+			i = encodeVarintRpcevents(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
 		}
 	}
-	if m.Height != 0 {
-		i = encodeVarintRpcevents(dAtA, i, uint64(m.Height))
-		i--
-		dAtA[i] = 0x8
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *Bound) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -1150,36 +1087,30 @@ func (m *Bound) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *Bound) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Bound) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Type != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.Type))
 	}
 	if m.Index != 0 {
-		i = encodeVarintRpcevents(dAtA, i, uint64(m.Index))
-		i--
 		dAtA[i] = 0x10
+		i++
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.Index))
 	}
-	if m.Type != 0 {
-		i = encodeVarintRpcevents(dAtA, i, uint64(m.Type))
-		i--
-		dAtA[i] = 0x8
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *BlockRange) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -1187,56 +1118,44 @@ func (m *BlockRange) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *BlockRange) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *BlockRange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Start != nil {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.Start.Size()))
+		n3, err := m.Start.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n3
 	}
 	if m.End != nil {
-		{
-			size, err := m.End.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintRpcevents(dAtA, i, uint64(size))
-		}
-		i--
 		dAtA[i] = 0x12
-	}
-	if m.Start != nil {
-		{
-			size, err := m.Start.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintRpcevents(dAtA, i, uint64(size))
+		i++
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.End.Size()))
+		n4, err := m.End.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
 		}
-		i--
-		dAtA[i] = 0xa
+		i += n4
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func encodeVarintRpcevents(dAtA []byte, offset int, v uint64) int {
-	offset -= sovRpcevents(v)
-	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return base
+	return offset + 1
 }
 func (m *GetBlockRequest) Size() (n int) {
 	if m == nil {
@@ -1396,7 +1315,14 @@ func (m *BlockRange) Size() (n int) {
 }
 
 func sovRpcevents(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozRpcevents(x uint64) (n int) {
 	return sovRpcevents(uint64((x << 1) ^ uint64((int64(x) >> 63))))
