@@ -6,6 +6,7 @@ package evm
 import (
 	"bytes"
 	"encoding/binary"
+	"math/big"
 	"reflect"
 	"testing"
 	"time"
@@ -14,13 +15,14 @@ import (
 	"github.com/hyperledger/burrow/acm/acmstate"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
-
 	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/errors"
+	"github.com/hyperledger/burrow/execution/evm/abi"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
 	. "github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/native"
+	"github.com/hyperledger/burrow/execution/solidity"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1148,15 +1150,15 @@ func TestEVM(t *testing.T) {
 		for i := 0; i < size; i++ {
 			data[i] = byte(i)
 		}
-		for n := int64(0); n < size; n++ {
+		for n := uint64(0); n < size; n++ {
 			data = data[:n]
-			for offset := int64(-size); offset < size; offset++ {
-				for length := int64(-size); length < size; length++ {
+			for offset := uint64(0); offset < size; offset++ {
+				for length := uint64(0); length < size; length++ {
 					_, err := subslice(data, offset, length)
 					if offset < 0 || length < 0 || n < offset {
-						assert.NotNil(t, err)
+						assert.Error(t, err)
 					} else {
-						assert.Nil(t, err)
+						assert.NoError(t, err)
 					}
 				}
 			}
@@ -1398,6 +1400,49 @@ func TestEVM(t *testing.T) {
 		}
 		t.Fatalf("Did not see LogEvent")
 	})
+
+	t.Run("BigModExp", func(t *testing.T) {
+		st := acmstate.NewMemoryState()
+		account1 := newAccount(t, st, "1")
+		account2 := newAccount(t, st, "101")
+
+		// The solidity compiled contract. It calls bigmodexp with b,e,m inputs and compares the result with proof, where m is the mod, b the base, e the exp, and proof the expected result.
+		bytecode := solidity.DeployedBytecode_BigMod
+
+		// The function "expmod" is an assertion. It takes the base, exponent, modulus, and the expected value and
+		// returns 1 if the values match.
+		spec, err := abi.ReadSpec(solidity.Abi_BigMod)
+		require.NoError(t, err)
+
+		expModFunctionID := spec.Functions["expmod"].FunctionID
+
+		n := int64(10)
+		for base := -n; base < n; base++ {
+			for exp := -n; exp < n; exp++ {
+				for mod := int64(1); mod < n; mod++ {
+					b := big.NewInt(base)
+					e := big.NewInt(exp)
+					m := big.NewInt(mod)
+					v := new(big.Int).Exp(b, e, m)
+					if v == nil {
+						continue
+					}
+
+					input := MustSplice(expModFunctionID, // expmod function
+						BigIntToWord256(b), BigIntToWord256(e), BigIntToWord256(m), // base^exp % mod
+						BigIntToWord256(v)) // == expected
+
+					gas := uint64(10000000)
+					out, err := call(vm, st, account1, account2, bytecode, input, &gas)
+
+					require.NoError(t, err)
+
+					require.Equal(t, One256, LeftPadWord256(out), "expected %d^%d mod %d == %d",
+						base, exp, mod, e)
+				}
+			}
+		}
+	})
 }
 
 type blockchain struct {
@@ -1450,12 +1495,22 @@ func addToBalance(t testing.TB, st acmstate.ReaderWriter, address crypto.Address
 
 func call(vm *EVM, st acmstate.ReaderWriter, origin, callee crypto.Address, code []byte, input []byte,
 	gas *uint64) ([]byte, error) {
-	return vm.Execute(st, new(blockchain), exec.NewNoopEventSink(), engine.CallParams{
+
+	evs := new(exec.Events)
+	out, err := vm.Execute(st, new(blockchain), evs, engine.CallParams{
 		Caller: origin,
 		Callee: callee,
 		Input:  input,
 		Gas:    gas,
 	}, code)
+
+	if err != nil {
+		return nil, &errors.CallError{
+			CodedError:   errors.AsException(err),
+			NestedErrors: evs.NestedCallErrors(),
+		}
+	}
+	return out, nil
 }
 
 // These code segment helpers exercise the MSTORE MLOAD MSTORE cycle to test

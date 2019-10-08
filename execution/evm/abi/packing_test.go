@@ -66,11 +66,11 @@ func TestPackEvent(t *testing.T) {
 			Bignum:    100,
 			Hash:      "ba",
 		}
-		topics, data, err := PackEvent(&eventSpec, in)
+		topics, data, err := PackEvent(eventSpec, in)
 		require.NoError(t, err)
 
 		out := new(args)
-		err = UnpackEvent(&eventSpec, topics, data, out)
+		err = UnpackEvent(eventSpec, topics, data, out)
 		require.NoError(t, err)
 	})
 

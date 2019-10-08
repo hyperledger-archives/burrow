@@ -10,6 +10,7 @@ import (
 const FunctionIDSize = 4
 
 type FunctionSpec struct {
+	Name       string
 	FunctionID FunctionID
 	Constant   bool
 	Inputs     []Argument
@@ -17,6 +18,17 @@ type FunctionSpec struct {
 }
 
 type FunctionID [FunctionIDSize]byte
+
+func NewFunctionSpec(name string, inputs, outputs []Argument) *FunctionSpec {
+	sig := Signature(name, inputs)
+	return &FunctionSpec{
+		Name:       name,
+		FunctionID: GetFunctionID(sig),
+		Constant:   false,
+		Inputs:     inputs,
+		Outputs:    outputs,
+	}
+}
 
 func GetFunctionID(signature string) (id FunctionID) {
 	hash := sha3.NewLegacyKeccak256()
@@ -29,14 +41,15 @@ func Signature(name string, args []Argument) string {
 	return name + argsToSignature(args, false)
 }
 
-func (f *FunctionSpec) String(name string) string {
-	return name + argsToSignature(f.Inputs, true) +
-		" returns " + argsToSignature(f.Outputs, true)
+// Sets this function as constant
+func (f *FunctionSpec) SetConstant() *FunctionSpec {
+	f.Constant = true
+	return f
 }
 
-func (f *FunctionSpec) SetFunctionID(functionName string) {
-	sig := Signature(functionName, f.Inputs)
-	f.FunctionID = GetFunctionID(sig)
+func (f *FunctionSpec) String() string {
+	return f.Name + argsToSignature(f.Inputs, true) +
+		" returns " + argsToSignature(f.Outputs, true)
 }
 
 func (fs FunctionID) Bytes() []byte {

@@ -149,13 +149,13 @@ func (s *ReadState) IterateStorage(address crypto.Address, consumer func(key bin
 	return tree.Iterate(nil, nil, true,
 		func(key []byte, value []byte) error {
 
-			if len(key) != binary.Word256Length {
+			if len(key) != binary.Word256Bytes {
 				return fmt.Errorf("key '%X' stored for account %s is not a %v-byte word",
-					key, address, binary.Word256Length)
+					key, address, binary.Word256Bytes)
 			}
-			if len(value) != binary.Word256Length {
+			if len(value) != binary.Word256Bytes {
 				return fmt.Errorf("value '%X' stored for account %s is not a %v-byte word",
-					key, address, binary.Word256Length)
+					key, address, binary.Word256Bytes)
 			}
 			return consumer(binary.LeftPadWord256(key), value)
 		})

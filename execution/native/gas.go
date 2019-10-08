@@ -17,6 +17,8 @@ const (
 	GasSha256Base    uint64 = 1
 	GasRipemd160Word uint64 = 1
 	GasRipemd160Base uint64 = 1
+	GasExpModWord    uint64 = 1
+	GasExpModBase    uint64 = 1
 	GasIdentityWord  uint64 = 1
 	GasIdentityBase  uint64 = 1
 )

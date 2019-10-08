@@ -46,7 +46,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 	}
 
 	// Program counter - the index into code that tracks current instruction
-	var pc int64
+	var pc uint64
 	// Return data from a call
 	var returnData []byte
 
@@ -164,10 +164,13 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			c.debugf(" %v ** %v = %v (%v)\n", x, y, pow, res)
 
 		case SIGNEXTEND: // 0x0B
-			back := stack.PopU64()
-			if back < Word256Length-1 {
-				stack.PushBigInt(SignExtend(back, stack.PopBigInt()))
+			back := stack.Pop64()
+			if back < Word256Bytes-1 {
+				bits := uint(back*8 + 7)
+				stack.PushBigInt(SignExtend(stack.PopBigInt(), bits))
 			}
+			// Continue leaving the sign extension argument on the stack. This makes sign-extending a no-op if embedded
+			// integer is already one word wide
 
 		case LT: // 0x10
 			x, y := stack.PopBigInt(), stack.PopBigInt()
@@ -272,7 +275,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			if idx < 32 {
 				res = val[idx]
 			}
-			stack.Push64(int64(res))
+			stack.Push64(uint64(res))
 			c.debugf(" => 0x%X\n", res)
 
 		case SHL: //0x1B
@@ -333,7 +336,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			address := stack.PopAddress()
 			maybe.PushError(useGasNegative(params.Gas, native.GasGetAccount))
 			balance := mustGetAccount(st.CallFrame, maybe, address).Balance
-			stack.PushU64(balance)
+			stack.Push64(balance)
 			c.debugf(" => %v (%v)\n", balance, address)
 
 		case ORIGIN: // 0x32
@@ -345,7 +348,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			c.debugf(" => %v\n", params.Caller)
 
 		case CALLVALUE: // 0x34
-			stack.PushU64(params.Value)
+			stack.Push64(params.Value)
 			c.debugf(" => %v\n", params.Value)
 
 		case CALLDATALOAD: // 0x35
@@ -356,7 +359,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			c.debugf(" => 0x%v\n", res)
 
 		case CALLDATASIZE: // 0x36
-			stack.Push64(int64(len(params.Input)))
+			stack.Push64(uint64(len(params.Input)))
 			c.debugf(" => %d\n", len(params.Input))
 
 		case CALLDATACOPY: // 0x37
@@ -368,7 +371,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			c.debugf(" => [%v, %v, %v] %X\n", memOff, inputOff, length, data)
 
 		case CODESIZE: // 0x38
-			l := int64(len(c.code))
+			l := uint64(len(c.code))
 			stack.Push64(l)
 			c.debugf(" => %d\n", l)
 
@@ -392,7 +395,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 				stack.Push(Zero256)
 				c.debugf(" => 0\n")
 			} else {
-				length := int64(len(acc.EVMCode))
+				length := uint64(len(acc.EVMCode))
 				stack.Push64(length)
 				c.debugf(" => %d\n", length)
 			}
@@ -413,7 +416,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			}
 
 		case RETURNDATASIZE: // 0x3D
-			stack.Push64(int64(len(returnData)))
+			stack.Push64(uint64(len(returnData)))
 			c.debugf(" => %d\n", len(returnData))
 
 		case RETURNDATACOPY: // 0x3E
@@ -434,7 +437,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			acc := getAccount(st.CallFrame, maybe, address)
 			if acc == nil {
 				// In case the account does not exist 0 is pushed to the stack.
-				stack.PushU64(0)
+				stack.Push64(0)
 			} else {
 				// keccak256 hash of a contract's code
 				var extcodehash Word256
@@ -447,7 +450,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			}
 
 		case BLOCKHASH: // 0x40
-			blockNumber := stack.PopU64()
+			blockNumber := stack.Pop64()
 
 			lastBlockHeight := st.Blockchain.LastBlockHeight()
 			if blockNumber >= lastBlockHeight {
@@ -470,16 +473,16 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 
 		case TIMESTAMP: // 0x42
 			blockTime := st.Blockchain.LastBlockTime().Unix()
-			stack.Push64(blockTime)
+			stack.Push64(uint64(blockTime))
 			c.debugf(" => %d\n", blockTime)
 
 		case BLOCKHEIGHT: // 0x43
 			number := st.Blockchain.LastBlockHeight()
-			stack.PushU64(number)
+			stack.Push64(number)
 			c.debugf(" => %d\n", number)
 
 		case GASLIMIT: // 0x45
-			stack.PushU64(*params.Gas)
+			stack.Push64(*params.Gas)
 			c.debugf(" => %v\n", *params.Gas)
 
 		case POP: // 0x50
@@ -488,7 +491,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 
 		case MLOAD: // 0x51
 			offset := stack.PopBigInt()
-			data := memory.Read(offset, BigWord256Length)
+			data := memory.Read(offset, BigWord256Bytes)
 			stack.Push(LeftPadWord256(data))
 			c.debugf(" => 0x%X @ 0x%v\n", data, offset)
 
@@ -543,7 +546,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			c.debugf(" => 0x%X\n", capacity)
 
 		case GAS: // 0x5A
-			stack.PushU64(*params.Gas)
+			stack.Push64(*params.Gas)
 			c.debugf(" => %X\n", *params.Gas)
 
 		case JUMPDEST: // 0x5B
@@ -551,7 +554,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			// Do nothing
 
 		case PUSH1, PUSH2, PUSH3, PUSH4, PUSH5, PUSH6, PUSH7, PUSH8, PUSH9, PUSH10, PUSH11, PUSH12, PUSH13, PUSH14, PUSH15, PUSH16, PUSH17, PUSH18, PUSH19, PUSH20, PUSH21, PUSH22, PUSH23, PUSH24, PUSH25, PUSH26, PUSH27, PUSH28, PUSH29, PUSH30, PUSH31, PUSH32:
-			a := int64(op - PUSH1 + 1)
+			a := uint64(op - PUSH1 + 1)
 			codeSegment := maybe.Bytes(subslice(c.code, pc+1, a))
 			res := LeftPadWord256(codeSegment)
 			stack.Push(res)
@@ -581,11 +584,11 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 				Topics:  topics,
 				Data:    data,
 			}))
-			c.debugf(" => T:%X D:%X\n", topics, data)
+			c.debugf(" => T:%v D:%X\n", topics, data)
 
 		case CREATE, CREATE2: // 0xF0, 0xFB
 			returnData = nil
-			contractValue := stack.PopU64()
+			contractValue := stack.Pop64()
 			offset, size := stack.PopBigInt(), stack.PopBigInt()
 			input := memory.Read(offset, size)
 
@@ -650,7 +653,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 				continue
 			}
 			// Pull arguments off stack:
-			gasLimit := stack.PopU64()
+			gasLimit := stack.Pop64()
 			target := stack.PopAddress()
 			value := params.Value
 			// NOTE: for DELEGATECALL value is preserved from the original
@@ -659,7 +662,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			// caller value is used.  for CALL and CALLCODE value is stored
 			// on stack and needs to be overwritten from the given value.
 			if op != DELEGATECALL && op != STATICCALL {
-				value = stack.PopU64()
+				value = stack.Pop64()
 			}
 			// inputs
 			inOffset, inSize := stack.PopBigInt(), stack.PopBigInt()
@@ -848,7 +851,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 	return nil, maybe.Error()
 }
 
-func (c *Contract) jump(code []byte, to int64, pc *int64) error {
+func (c *Contract) jump(code []byte, to uint64, pc *uint64) error {
 	dest := codeGetOp(code, to)
 	if dest != JUMPDEST {
 		c.debugf(" ~> %v invalid jump dest %v\n", to, dest)
@@ -916,8 +919,8 @@ func useGasNegative(gasLeft *uint64, gasToUse uint64) error {
 // extends past the end of data it returns A COPY of the segment at the end of
 // data padded with zeroes on the right. If offset == len(data) it returns all
 // zeroes. if offset > len(data) it returns a false
-func subslice(data []byte, offset, length int64) ([]byte, error) {
-	size := int64(len(data))
+func subslice(data []byte, offset, length uint64) ([]byte, error) {
+	size := uint64(len(data))
 	if size < offset || offset < 0 || length < 0 {
 		return nil, errors.Errorf(errors.Codes.InputOutOfBounds,
 			"subslice could not slice data of size %d at offset %d for length %d", size, offset, length)
@@ -931,8 +934,8 @@ func subslice(data []byte, offset, length int64) ([]byte, error) {
 	return data[offset : offset+length], nil
 }
 
-func codeGetOp(code []byte, n int64) OpCode {
-	if int64(len(code)) <= n {
+func codeGetOp(code []byte, n uint64) OpCode {
+	if uint64(len(code)) <= n {
 		return OpCode(0) // stop
 	} else {
 		return OpCode(code[n])

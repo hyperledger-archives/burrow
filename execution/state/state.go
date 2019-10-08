@@ -58,7 +58,7 @@ var keys = KeyFormatStore{
 	// AccountAddress -> Account
 	Account: storage.NewMustKeyFormat("a", crypto.AddressLength),
 	// AccountAddress, Key -> Value
-	Storage: storage.NewMustKeyFormat("s", crypto.AddressLength, binary.Word256Length),
+	Storage: storage.NewMustKeyFormat("s", crypto.AddressLength, binary.Word256Bytes),
 	// Name -> Entry
 	Name: storage.NewMustKeyFormat("n", storage.VariadicSegmentLength),
 	// ProposalHash -> Proposal
