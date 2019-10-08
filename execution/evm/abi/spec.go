@@ -12,11 +12,11 @@ import (
 
 // Spec is the ABI for contract decoded.
 type Spec struct {
-	Constructor  FunctionSpec
-	Fallback     FunctionSpec
-	Functions    map[string]FunctionSpec
-	EventsByName map[string]EventSpec
-	EventsByID   map[EventID]EventSpec
+	Constructor  *FunctionSpec
+	Fallback     *FunctionSpec
+	Functions    map[string]*FunctionSpec
+	EventsByName map[string]*EventSpec
+	EventsByID   map[EventID]*EventSpec
 }
 
 type specJSON struct {
@@ -28,6 +28,17 @@ type specJSON struct {
 	Payable         bool
 	StateMutability string
 	Anonymous       bool
+}
+
+func NewSpec() *Spec {
+	return &Spec{
+		// Zero value for constructor and fallback function is assumed when those functions are not present
+		Constructor:  &FunctionSpec{},
+		Fallback:     &FunctionSpec{},
+		EventsByName: make(map[string]*EventSpec),
+		EventsByID:   make(map[EventID]*EventSpec),
+		Functions:    make(map[string]*FunctionSpec),
+	}
 }
 
 // ReadSpec takes an ABI and decodes it for futher use
@@ -46,11 +57,7 @@ func ReadSpec(specBytes []byte) (*Spec, error) {
 		specJ = binFile.Abi
 	}
 
-	abiSpec := Spec{
-		EventsByName: make(map[string]EventSpec),
-		EventsByID:   make(map[EventID]EventSpec),
-		Functions:    make(map[string]FunctionSpec),
-	}
+	abiSpec := NewSpec()
 
 	for _, s := range specJ {
 		switch s.Type {
@@ -63,7 +70,7 @@ func ReadSpec(specBytes []byte) (*Spec, error) {
 			abiSpec.Fallback.Inputs = make([]Argument, 0)
 			abiSpec.Fallback.Outputs = make([]Argument, 0)
 		case "event":
-			var ev EventSpec
+			ev := new(EventSpec)
 			err = ev.unmarshalSpec(&s)
 			if err != nil {
 				return nil, err
@@ -79,24 +86,18 @@ func ReadSpec(specBytes []byte) (*Spec, error) {
 			if err != nil {
 				return nil, err
 			}
-			fs := FunctionSpec{Inputs: inputs, Outputs: outputs, Constant: s.Constant}
-			fs.SetFunctionID(s.Name)
-			abiSpec.Functions[s.Name] = fs
+			abiSpec.Functions[s.Name] = NewFunctionSpec(s.Name, inputs, outputs).SetConstant()
 		}
 	}
 
-	return &abiSpec, nil
+	return abiSpec, nil
 }
 
 // MergeSpec takes multiple Specs and merges them into once structure. Note that
 // the same function name or event name can occur in different abis, so there might be
 // some information loss.
 func MergeSpec(abiSpec []*Spec) *Spec {
-	newSpec := Spec{
-		EventsByName: make(map[string]EventSpec),
-		EventsByID:   make(map[EventID]EventSpec),
-		Functions:    make(map[string]FunctionSpec),
-	}
+	newSpec := NewSpec()
 
 	for _, s := range abiSpec {
 		for n, f := range s.Functions {
@@ -111,7 +112,7 @@ func MergeSpec(abiSpec []*Spec) *Spec {
 		}
 	}
 
-	return &newSpec
+	return newSpec
 }
 
 func (spec *Spec) GetEventAbi(id EventID, addresses crypto.Address) (*EventSpec, error) {
@@ -119,7 +120,7 @@ func (spec *Spec) GetEventAbi(id EventID, addresses crypto.Address) (*EventSpec,
 	if !ok {
 		return nil, fmt.Errorf("could not find ABI for event with ID %v", id)
 	}
-	return &eventSpec, nil
+	return eventSpec, nil
 }
 
 // Pack ABI encodes a function call. The fname specifies which function should called, if
@@ -129,7 +130,7 @@ func (spec *Spec) GetEventAbi(id EventID, addresses crypto.Address) (*EventSpec,
 // Returns the ABI encoded function call, whether the function is constant according
 // to the ABI (which means it does not modified contract state)
 func (spec *Spec) Pack(fname string, args ...interface{}) ([]byte, *FunctionSpec, error) {
-	var funcSpec FunctionSpec
+	var funcSpec *FunctionSpec
 	var argSpec []Argument
 	if fname != "" {
 		if _, ok := spec.Functions[fname]; ok {
@@ -158,12 +159,12 @@ func (spec *Spec) Pack(fname string, args ...interface{}) ([]byte, *FunctionSpec
 		return nil, nil, err
 	}
 
-	return append(packed, packedArgs...), &funcSpec, nil
+	return append(packed, packedArgs...), funcSpec, nil
 }
 
 // Unpack decodes the return values from a function call
 func (spec *Spec) Unpack(data []byte, fname string, args ...interface{}) error {
-	var funcSpec FunctionSpec
+	var funcSpec *FunctionSpec
 	var argSpec []Argument
 	if fname != "" {
 		if _, ok := spec.Functions[fname]; ok {

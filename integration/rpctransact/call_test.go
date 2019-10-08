@@ -357,7 +357,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			var direction string
 			var depth int64
 			evAbi := spec.EventsByName["ChangeLevel"]
-			err = abi.UnpackEvent(&evAbi, log.Topics, log.Data, &direction, &depth)
+			err = abi.UnpackEvent(evAbi, log.Topics, log.Data, &direction, &depth)
 			require.NoError(t, err)
 			assert.Equal(t, evAbi.ID.Bytes(), log.Topics[0].Bytes())
 			assert.Equal(t, int64(18), depth)
@@ -382,7 +382,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			data := abi.GetPackingTypes(evAbi.Inputs)
 			// Check signature
 			assert.Equal(t, evAbi.ID.Bytes(), log.Topics[0].Bytes())
-			err = abi.UnpackEvent(&evAbi, log.Topics, log.Data.Bytes(), data...)
+			err = abi.UnpackEvent(evAbi, log.Topics, log.Data.Bytes(), data...)
 			require.NoError(t, err)
 
 			h := sha3.NewLegacyKeccak256()
@@ -424,7 +424,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 					data[i] = new(string)
 				}
 			}
-			err = abi.UnpackEvent(&evAbi, log.Topics, log.Data.Bytes(), data...)
+			err = abi.UnpackEvent(evAbi, log.Topics, log.Data.Bytes(), data...)
 			require.NoError(t, err)
 
 			h := sha3.NewLegacyKeccak256()

@@ -3,9 +3,6 @@ package exec
 import (
 	"fmt"
 	"reflect"
-
-	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/event/query"
 )
 
 var eventMessageType = reflect.TypeOf(&Event{}).String()
@@ -95,36 +92,4 @@ func (ev *Event) Body() string {
 		return ev.Call.String()
 	}
 	return "<empty>"
-}
-
-// Tags
-type Events []*Event
-
-func (tevs Events) Filter(qry query.Query) Events {
-	var filtered Events
-	for _, tev := range tevs {
-		if qry.Matches(tev) {
-			filtered = append(filtered, tev)
-		}
-	}
-	return filtered
-}
-
-func (ev *Event) Get(key string) (value interface{}, ok bool) {
-	switch key {
-	case event.MessageTypeKey:
-		return eventMessageType, true
-	}
-	if ev == nil {
-		return nil, false
-	}
-	v, ok := ev.Log.Get(key)
-	if ok {
-		return v, true
-	}
-	v, ok = query.GetReflect(reflect.ValueOf(ev.Header), key)
-	if ok {
-		return v, true
-	}
-	return query.GetReflect(reflect.ValueOf(ev), key)
 }

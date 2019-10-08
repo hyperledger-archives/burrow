@@ -46,7 +46,7 @@ func TestBlockConsumer(t *testing.T) {
 	}
 	direction := "frogs"
 	copy(in.Direction, direction)
-	topics, data, err := abi.PackEvent(&manyTypesEventSpec, in)
+	topics, data, err := abi.PackEvent(manyTypesEventSpec, in)
 	require.NoError(t, err)
 	log := &exec.LogEvent{
 		Address: crypto.Address{},

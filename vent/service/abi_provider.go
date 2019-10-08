@@ -22,7 +22,7 @@ type AbiProvider struct {
 // NewAbiProvider loads ABIs from the filesystem. A set of zero or more files or directories can be passed in the path
 // argument. If an event is encountered for which no ABI is known, it is retrieved from burrow
 func NewAbiProvider(paths []string, cli rpcquery.QueryClient, logger *logging.Logger) (provider *AbiProvider, err error) {
-	abiSpec := &abi.Spec{}
+	abiSpec := abi.NewSpec()
 	if len(paths) > 0 {
 		abiSpec, err = abi.LoadPath(paths...)
 		if err != nil {
@@ -66,5 +66,5 @@ func (p *AbiProvider) GetEventAbi(eventID abi.EventID, address crypto.Address) (
 		p.abiSpec = abi.MergeSpec([]*abi.Spec{p.abiSpec, a})
 	}
 
-	return &evAbi, nil
+	return evAbi, nil
 }

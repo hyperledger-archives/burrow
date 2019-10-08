@@ -76,8 +76,8 @@ func Accounts(output Output) func(cmd *cli.Cmd) {
 
 					if len(spec.Functions) > 0 {
 						output.Printf("  Functions:")
-						for name, f := range spec.Functions {
-							output.Printf("    %s", f.String(name))
+						for _, f := range spec.Functions {
+							output.Printf("    %s", f.String())
 						}
 					}
 

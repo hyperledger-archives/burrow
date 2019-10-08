@@ -6,8 +6,8 @@ import "fmt"
 // ErrValueNotSet is returned if the permission's set bits are not all on,
 // and should be caught by caller so the global permission can be fetched
 func (bp BasePermissions) Get(ty PermFlag) (bool, error) {
-	if ty == 0 {
-		return false, ErrInvalidPermission(ty)
+	if ty == None {
+		return true, nil
 	}
 	if !bp.IsSet(ty) {
 		return false, ErrValueNotSet(ty)
@@ -17,8 +17,8 @@ func (bp BasePermissions) Get(ty PermFlag) (bool, error) {
 
 // Set a permission bit. Will set the permission's set bit to true.
 func (bp *BasePermissions) Set(ty PermFlag, value bool) error {
-	if ty == 0 {
-		return ErrInvalidPermission(ty)
+	if ty == None {
+		return nil
 	}
 	bp.SetBit |= ty
 	if value {
@@ -31,8 +31,8 @@ func (bp *BasePermissions) Set(ty PermFlag, value bool) error {
 
 // Set the permission's set bits to false
 func (bp *BasePermissions) Unset(ty PermFlag) error {
-	if ty == 0 {
-		return ErrInvalidPermission(ty)
+	if ty == None {
+		return nil
 	}
 	bp.SetBit &= ^ty
 	return nil
@@ -40,7 +40,7 @@ func (bp *BasePermissions) Unset(ty PermFlag) error {
 
 // Check if the permission is set
 func (bp BasePermissions) IsSet(ty PermFlag) bool {
-	if ty == 0 {
+	if ty == None {
 		return false
 	}
 	return bp.SetBit&ty == ty

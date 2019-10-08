@@ -2,6 +2,7 @@ package native
 
 import (
 	"crypto/sha256"
+	"fmt"
 	"math/big"
 
 	"github.com/hyperledger/burrow/binary"
@@ -27,7 +28,11 @@ var Precompiles = New().
 	MustFunction(`Compute the operation base**exp % mod where the values are big ints`,
 		leftPadAddress(5),
 		permission.None,
-		bigModExp)
+		expModFunc)
+
+func leftPadAddress(bs ...byte) crypto.Address {
+	return crypto.AddressFromWord256(binary.LeftPadWord256(bs))
+}
 
 /* Removed due to C dependency
 func ecrecoverFunc(state State, caller crypto.Address, input []byte, gas *int64) (output []byte, err error) {
@@ -55,7 +60,7 @@ OH NO STOCASTIC CAT CODING!!!!
 
 func sha256Func(ctx Context) (output []byte, err error) {
 	// Deduct gas
-	gasRequired := uint64((len(ctx.Input)+31)/32)*GasSha256Word + GasSha256Base
+	gasRequired := wordsIn(uint64(len(ctx.Input)))*GasSha256Word + GasSha256Base
 	if *ctx.Gas < gasRequired {
 		return nil, errors.Codes.InsufficientGas
 	} else {
@@ -70,7 +75,7 @@ func sha256Func(ctx Context) (output []byte, err error) {
 
 func ripemd160Func(ctx Context) (output []byte, err error) {
 	// Deduct gas
-	gasRequired := uint64((len(ctx.Input)+31)/32)*GasRipemd160Word + GasRipemd160Base
+	gasRequired := wordsIn(uint64(len(ctx.Input)))*GasRipemd160Word + GasRipemd160Base
 	if *ctx.Gas < gasRequired {
 		return nil, errors.Codes.InsufficientGas
 	} else {
@@ -85,7 +90,7 @@ func ripemd160Func(ctx Context) (output []byte, err error) {
 
 func identityFunc(ctx Context) (output []byte, err error) {
 	// Deduct gas
-	gasRequired := uint64((len(ctx.Input)+31)/32)*GasIdentityWord + GasIdentityBase
+	gasRequired := wordsIn(uint64(len(ctx.Input)))*GasIdentityWord + GasIdentityBase
 	if *ctx.Gas < gasRequired {
 		return nil, errors.Codes.InsufficientGas
 	} else {
@@ -95,62 +100,74 @@ func identityFunc(ctx Context) (output []byte, err error) {
 	return ctx.Input, nil
 }
 
-const (
-	// gas requirement for bigModExp set to 1
-	GasRequire uint64 = 1
-)
+// expMod: function that implements the EIP 198 (https://github.com/ethereum/EIPs/blob/master/EIPS/eip-198.md with
+// a fixed gas requirement)
+func expModFunc(ctx Context) (output []byte, err error) {
+	const errHeader = "expModFunc"
 
-// bigModExp: function that implement the EIP 198 (https://github.com/ethereum/EIPs/blob/master/EIPS/eip-198.md with a fixed gas requirement)
-func bigModExp(ctx Context) (output []byte, err error) {
+	input, segments, err := cut(ctx.Input, binary.Word256Bytes, binary.Word256Bytes, binary.Word256Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %v", errHeader, err)
+	}
 
-	if *ctx.Gas < GasRequire {
+	// get the lengths of base, exp and mod
+	baseLength := getUint64(segments[0])
+	expLength := getUint64(segments[1])
+	modLength := getUint64(segments[2])
+
+	// TODO: implement non-trivial gas schedule for this operation. Probably a parameterised version of the one
+	// described in EIP though that one seems like a bit of a complicated fudge
+	gasRequired := GasExpModBase + GasExpModWord*(wordsIn(baseLength)*wordsIn(expLength)*wordsIn(modLength))
+
+	if *ctx.Gas < gasRequired {
 		return nil, errors.Codes.InsufficientGas
 	}
 
-	*ctx.Gas -= GasRequire
-	// get the lengths of base, exp and mod
-	baseLen := new(big.Int).SetBytes(binary.RightPadBytes(ctx.Input[0:32], 32)).Uint64()
-	expLen := new(big.Int).SetBytes(binary.RightPadBytes(ctx.Input[32:64], 32)).Uint64()
-	modLen := new(big.Int).SetBytes(binary.RightPadBytes(ctx.Input[64:96], 32)).Uint64()
+	*ctx.Gas -= gasRequired
 
-	// shift input array to the actual values
-	if len(ctx.Input) > 96 {
-		ctx.Input = ctx.Input[96:]
-	} else {
-		ctx.Input = ctx.Input[:0]
-	}
-
-	// handle the case when tehre is no base nor mod
-	if baseLen+modLen == 0 {
-		return []byte{}, nil
+	input, segments, err = cut(input, baseLength, expLength, modLength)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %v", errHeader, err)
 	}
 
 	// get the values of base, exp and mod
-	base := new(big.Int).SetBytes(getData(ctx.Input, 0, baseLen))
-	exp := new(big.Int).SetBytes(getData(ctx.Input, baseLen, expLen))
-	mod := new(big.Int).SetBytes(getData(ctx.Input, baseLen+expLen, modLen))
+	base := getBigInt(segments[0], baseLength)
+	exp := getBigInt(segments[1], expLength)
+	mod := getBigInt(segments[2], modLength)
+
 	// handle mod 0
 	if mod.Sign() == 0 {
-		return binary.LeftPadBytes([]byte{}, int(modLen)), nil
+		return binary.LeftPadBytes([]byte{}, int(modLength)), nil
 	}
+
 	// return base**exp % mod left padded
-	return binary.LeftPadBytes(new(big.Int).Exp(base, exp, mod).Bytes(), int(modLen)), nil
-
+	return binary.LeftPadBytes(new(big.Int).Exp(base, exp, mod).Bytes(), int(modLength)), nil
 }
 
-// auxiliar function to retrieve data from arrays
-func getData(data []byte, start uint64, size uint64) []byte {
-	length := uint64(len(data))
-	if start > length {
-		start = length
+// Partition the head of input into segments for each length in lengths. The first return value is the unconsumed tail
+// of input and the seconds is the segments. Returns an error if input is of insufficient length to establish each segment.
+func cut(input []byte, lengths ...uint64) ([]byte, [][]byte, error) {
+	segments := make([][]byte, len(lengths))
+	for i, length := range lengths {
+		if uint64(len(input)) < length {
+			return nil, nil, fmt.Errorf("input is not long enough")
+		}
+		segments[i] = input[:length]
+		input = input[length:]
 	}
-	end := start + size
-	if end > length {
-		end = length
-	}
-	return binary.RightPadBytes(data[start:end], int(size))
+	return input, segments, nil
 }
 
-func leftPadAddress(bs ...byte) crypto.Address {
-	return crypto.AddressFromWord256(binary.LeftPadWord256(bs))
+func getBigInt(bs []byte, numBytes uint64) *big.Int {
+	bits := uint(numBytes) * 8
+	// Push bytes into big.Int and interpret as twos complement encoding with of bits width
+	return binary.FromTwosComplement(new(big.Int).SetBytes(bs), bits)
+}
+
+func getUint64(bs []byte) uint64 {
+	return binary.Uint64FromWord256(binary.LeftPadWord256(bs))
+}
+
+func wordsIn(numBytes uint64) uint64 {
+	return numBytes + binary.Word256Bytes - 1/binary.Word256Bytes
 }
