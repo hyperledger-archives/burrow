@@ -62,6 +62,7 @@ type execContext struct {
 
 // RunWASM creates a WASM VM, and executes the given WASM contract code
 func RunWASM(state acmstate.ReaderWriter, address crypto.Address, createContract bool, wasm, input []byte) (output []byte, cerr error) {
+	const errHeader = "RunWASM"
 	defer func() {
 		if r := recover(); r != nil {
 			cerr = errors.Codes.ExecutionAborted
@@ -81,7 +82,7 @@ func RunWASM(state acmstate.ReaderWriter, address crypto.Address, createContract
 
 	vm, err := exec.NewVirtualMachine(wasm, config, &execContext, nil)
 	if err != nil {
-		return nil, errors.Codes.InvalidContract
+		return nil, errors.Errorf(errors.Codes.InvalidContract, "%s: %v", errHeader, err)
 	}
 	if execContext.Error() != nil {
 		return nil, execContext.Error()
@@ -105,7 +106,7 @@ func RunWASM(state acmstate.ReaderWriter, address crypto.Address, createContract
 	// The 0 argument is the offset where our calldata is stored (if any)
 	offset, err := vm.Run(entryID, 0)
 	if err != nil {
-		return nil, errors.Codes.ExecutionAborted
+		return nil, errors.Errorf(errors.Codes.ExecutionAborted, "%s: %v", errHeader, err)
 	}
 
 	if offset > 0 {
