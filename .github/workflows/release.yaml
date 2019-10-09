@@ -19,10 +19,13 @@ jobs:
       if: success()
 
   js:
-    name: NPM 
+    name: NPM
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '12.x'
     - name: Publish
       env:
         NPM_EMAIL: ${{ secrets.NPM_EMAIL }}
@@ -30,10 +33,11 @@ jobs:
         NPM_PASS: ${{ secrets.NPM_PASS }}
       run: |
         git config --global user.email "${NPM_EMAIL}"
+        npm install -g npm-cli-login
         npm-cli-login
         npm version from-git
         npm publish --access public .
-      
+
   docker:
     name: Docker
     runs-on: ubuntu-latest
