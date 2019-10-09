@@ -2,7 +2,9 @@ module github.com/hyperledger/burrow
 
 go 1.12
 
-replace github.com/go-interpreter/wagon v0.0.0 => github.com/perlin-network/wagon v0.3.1-0.20180825141017-f8cb99b55a39
+// replace github.com/perlin-network/life => github.com/silasdavis/life master
+// Avoid downstream pain due to unversioned go-wagon dep:
+replace github.com/perlin-network/life => github.com/silasdavis/life v0.0.0-20191009191257-e9c2a5fdbc96
 
 require (
 	github.com/BurntSushi/toml v0.3.1
@@ -31,7 +33,7 @@ require (
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/monax/relic v2.0.0+incompatible
-	github.com/perlin-network/life v0.0.0-20190521143330-57f3819c2df0
+	github.com/perlin-network/life v0.0.0-20190803100833-89b850c02992
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.3
 	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
@@ -56,7 +58,6 @@ require (
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
 	golang.org/x/sys v0.0.0-20190825160603-fb81701db80f // indirect
-	golang.org/x/text v0.3.2 // indirect
 	google.golang.org/grpc v1.23.1
 	gopkg.in/yaml.v2 v2.2.2
 )
