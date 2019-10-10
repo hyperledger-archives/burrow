@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/clearmatics/bn256"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
@@ -28,7 +29,19 @@ var Precompiles = New().
 	MustFunction(`Compute the operation base**exp % mod where the values are big ints`,
 		leftPadAddress(5),
 		permission.None,
-		expModFunc)
+		expModFunc).
+	MustFunction(`Return the add of two points on a bn256 curve`,
+		leftPadAddress(6),
+		permission.None,
+		bn256Add).
+	MustFunction(`Return the scalar multiplication of a big int and a point on a bn256 curve`,
+		leftPadAddress(7),
+		permission.None,
+		bn256ScalarMul).
+	MustFunction(`Check the pairing of a set of points on a bn256 curve `,
+		leftPadAddress(8),
+		permission.None,
+		bn256Pairing)
 
 func leftPadAddress(bs ...byte) crypto.Address {
 	return crypto.AddressFromWord256(binary.LeftPadWord256(bs))
@@ -131,9 +144,10 @@ func expModFunc(ctx Context) (output []byte, err error) {
 	}
 
 	// get the values of base, exp and mod
-	base := getBigInt(segments[0], baseLength)
-	exp := getBigInt(segments[1], expLength)
-	mod := getBigInt(segments[2], modLength)
+
+	base := new(big.Int).SetBytes(segments[0])
+	exp := new(big.Int).SetBytes(segments[1])
+	mod := new(big.Int).SetBytes(segments[2])
 
 	// handle mod 0
 	if mod.Sign() == 0 {
@@ -142,6 +156,99 @@ func expModFunc(ctx Context) (output []byte, err error) {
 
 	// return base**exp % mod left padded
 	return binary.LeftPadBytes(new(big.Int).Exp(base, exp, mod).Bytes(), int(modLength)), nil
+}
+
+// bn256Add implements the EIP-196 for add pairs in a bn256 curve https://github.com/ethereum/EIPs/blob/master/EIPS/eip-196.md
+func bn256Add(ctx Context) (output []byte, err error) {
+
+	if *ctx.Gas < GasBn256Add {
+		return nil, errors.Codes.InsufficientGas
+	}
+	*ctx.Gas -= GasBn256Add
+	// retrieve the points from the input
+	x := new(bn256.G1)
+	y := new(bn256.G1)
+
+	_, sgmnt, errs := cut(ctx.Input, binary.Word256Bytes*2, binary.Word256Bytes*2)
+	if errs != nil {
+		return nil, errs
+	}
+
+	_, errx := x.Unmarshal(sgmnt[0])
+	if errx != nil {
+		return nil, fmt.Errorf("error x: " + errx.Error())
+	}
+
+	_, erry := y.Unmarshal(sgmnt[1])
+	if erry != nil {
+		return nil, fmt.Errorf("error y: " + erry.Error())
+	}
+	//add them
+	res := new(bn256.G1)
+	res.Add(x, y)
+	return res.Marshal(), nil
+}
+
+//bn256bn256ScalarMul implements the EIP-196 for scalar multiplication in a bn256 curve https://github.com/ethereum/EIPs/blob/master/EIPS/eip-196.md
+func bn256ScalarMul(ctx Context) ([]byte, error) {
+	if *ctx.Gas < GasBn256ScalarMul {
+		return nil, errors.Codes.InsufficientGas
+	}
+	*ctx.Gas -= GasBn256ScalarMul
+
+	//retrieve the point from the input
+	_, sgmnt, errs := cut(ctx.Input, binary.Word256Bytes*2, binary.Word256Bytes)
+
+	if errs != nil {
+		return nil, errs
+	}
+
+	bnp := new(bn256.G1)
+	_, errp := bnp.Unmarshal(sgmnt[0])
+	if errp != nil {
+		return nil, errp
+	}
+	//make the scalar multiplication
+	res := new(bn256.G1)
+	res.ScalarMult(bnp, new(big.Int).SetBytes(sgmnt[1]))
+	return res.Marshal(), nil
+}
+
+// bn256Pairing implements the EIP-197 https://github.com/ethereum/EIPs/blob/master/EIPS/eip-197.md
+func bn256Pairing(ctx Context) ([]byte, error) {
+	if *ctx.Gas < GasBn256Pairing {
+		return nil, errors.Codes.InsufficientGas
+	}
+
+	*ctx.Gas -= GasBn256Pairing
+
+	// Handle some corner cases cheaply
+
+	if len(ctx.Input)%192 > 0 {
+
+		return nil, fmt.Errorf("bad elliptic curve pairing size")
+	}
+	// auxiliars for parse the inputs
+	var (
+		cs []*bn256.G1
+		ts []*bn256.G2
+	)
+	// retrieving the inputs into the curve points
+	for i := 0; i < len(ctx.Input); i += 192 {
+		c, errc := newCurvePoint(ctx.Input[i : i+64])
+		if errc != nil {
+			return nil, errc
+		}
+		cs = append(cs, c)
+
+		t, errt := newTwistPoint(ctx.Input[i+64 : i+192])
+		if errt != nil {
+			return nil, errt
+		}
+		ts = append(ts, t)
+	}
+	// check the parity
+	return pairingCheckByte(cs, ts), nil
 }
 
 // Partition the head of input into segments for each length in lengths. The first return value is the unconsumed tail
@@ -158,10 +265,31 @@ func cut(input []byte, lengths ...uint64) ([]byte, [][]byte, error) {
 	return input, segments, nil
 }
 
-func getBigInt(bs []byte, numBytes uint64) *big.Int {
-	bits := uint(numBytes) * 8
-	// Push bytes into big.Int and interpret as twos complement encoding with of bits width
-	return binary.FromTwosComplement(new(big.Int).SetBytes(bs), bits)
+//represent bools as byte arrays of size 32. 1 for true, 0 for false
+func pairingCheckByte(a []*bn256.G1, b []*bn256.G2) []byte {
+	if bn256.PairingCheck(a, b) {
+		return []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+
+	}
+	return make([]byte, binary.Word256Bytes)
+}
+
+func newCurvePoint(blob []byte) (*bn256.G1, error) {
+	p := new(bn256.G1)
+	if _, err := p.Unmarshal(blob); err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+// newTwistPoint unmarshals a binary blob into a bn256 elliptic curve point,
+// returning it, or an error if the point is invalid.
+func newTwistPoint(blob []byte) (*bn256.G2, error) {
+	p := new(bn256.G2)
+	if _, err := p.Unmarshal(blob); err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
 func getUint64(bs []byte) uint64 {

@@ -38,6 +38,8 @@ github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA
 github.com/cep21/xdgbasedir v0.0.0-20170329171747-21470bfc93b9 h1:Iy/9yf1PnKnwH8V0phEnqKE6aSIaqIZ+yn4PQgHF84E=
 github.com/cep21/xdgbasedir v0.0.0-20170329171747-21470bfc93b9/go.mod h1:6R3C29d3JonDKVjnlzFv5BGL/bfZP+0I7rKHKwiqKP8=
 github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghfAqPWnc=
+github.com/clearmatics/bn256 v0.0.0-20190516154049-c6c2a2b131e6 h1:GcPwuT8CSZB1uGmNPGHefp/C1NwlcmnbhRBDniwFpTI=
+github.com/clearmatics/bn256 v0.0.0-20190516154049-c6c2a2b131e6/go.mod h1:Vg/LC6++mrS0u5RhoUKUyP4B+0PuFvy/s8BjSL1PSwM=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=

@@ -21,4 +21,8 @@ const (
 	GasExpModBase    uint64 = 1
 	GasIdentityWord  uint64 = 1
 	GasIdentityBase  uint64 = 1
+
+	GasBn256Add       uint64 = 1
+	GasBn256ScalarMul uint64 = 1
+	GasBn256Pairing   uint64 = 1
 )
