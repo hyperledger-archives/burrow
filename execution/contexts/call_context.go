@@ -21,13 +21,14 @@ import (
 const GasLimit = uint64(1000000)
 
 type CallContext struct {
-	EVM        *evm.EVM
-	State      acmstate.ReaderWriter
-	Blockchain engine.Blockchain
-	RunCall    bool
-	Logger     *logging.Logger
-	tx         *payload.CallTx
-	txe        *exec.TxExecution
+	EVM           *evm.EVM
+	State         acmstate.ReaderWriter
+	MetadataState acmstate.MetadataReaderWriter
+	Blockchain    engine.Blockchain
+	RunCall       bool
+	Logger        *logging.Logger
+	tx            *payload.CallTx
+	txe           *exec.TxExecution
 }
 
 func (ctx *CallContext) Execute(txe *exec.TxExecution, p payload.Payload) error {
@@ -121,6 +122,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 	createContract := ctx.tx.Address == nil
 	caller := inAcc.Address
 	txCache := acmstate.NewCache(ctx.State, acmstate.Named("TxCache"))
+	metaCache := acmstate.NewMetadataCache(ctx.MetadataState)
 
 	var callee crypto.Address
 	var code []byte
@@ -141,7 +143,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 			"init_code", code)
 
 		// store abis
-		err = native.UpdateContractMeta(txCache, callee, ctx.tx.ContractMeta)
+		err = native.UpdateContractMeta(txCache, metaCache, callee, ctx.tx.ContractMeta)
 		if err != nil {
 			return err
 		}
@@ -198,7 +200,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 			ctx.txe.PushError(errors.Wrap(err, "call error"))
 		} else {
 			ctx.Logger.TraceMsg("Successful execution")
-			err := txCache.Sync(ctx.State)
+			err = ctx.Sync(txCache, metaCache)
 			if err != nil {
 				return err
 			}
@@ -234,7 +236,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 					return err
 				}
 			}
-			err := txCache.Sync(ctx.State)
+			err = ctx.Sync(txCache, metaCache)
 			if err != nil {
 				return err
 			}
@@ -258,4 +260,12 @@ func (ctx *CallContext) CallEvents(err error) {
 	if ctx.tx.Address != nil {
 		ctx.txe.Input(*ctx.tx.Address, errors.AsException(err))
 	}
+}
+
+func (ctx *CallContext) Sync(cache *acmstate.Cache, metaCache *acmstate.MetadataCache) error {
+	err := cache.Sync(ctx.State)
+	if err != nil {
+		return err
+	}
+	return metaCache.Sync(ctx.MetadataState)
 }

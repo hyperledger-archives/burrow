@@ -20,11 +20,12 @@ func CallSim(reader acmstate.Reader, blockchain bcm.BlockchainInfo, fromAddress,
 
 	cache := acmstate.NewCache(reader)
 	exe := contexts.CallContext{
-		EVM:        evm.Default(),
-		RunCall:    true,
-		State:      cache,
-		Blockchain: blockchain,
-		Logger:     logger,
+		EVM:           evm.Default(),
+		RunCall:       true,
+		State:         cache,
+		MetadataState: acmstate.NewMemoryState(),
+		Blockchain:    blockchain,
+		Logger:        logger,
 	}
 
 	txe := exec.NewTxExecution(txs.Enclose(blockchain.ChainID(), &payload.CallTx{

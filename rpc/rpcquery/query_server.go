@@ -25,40 +25,40 @@ import (
 )
 
 type queryServer struct {
-	accounts    acmstate.IterableStatsReader
-	nameReg     names.IterableReader
-	nodeReg     registry.IterableReader
-	proposalReg proposal.IterableReader
-	blockchain  bcm.BlockchainInfo
-	validators  validator.History
-	nodeView    *tendermint.NodeView
-	logger      *logging.Logger
+	state      QueryState
+	blockchain bcm.BlockchainInfo
+	nodeView   *tendermint.NodeView
+	logger     *logging.Logger
 }
 
 var _ QueryServer = &queryServer{}
 
-func NewQueryServer(state acmstate.IterableStatsReader, nameReg names.IterableReader, nodeReg registry.IterableReader, proposalReg proposal.IterableReader,
-	blockchain bcm.BlockchainInfo, validators validator.History, nodeView *tendermint.NodeView, logger *logging.Logger) *queryServer {
+type QueryState interface {
+	acmstate.IterableStatsReader
+	acmstate.MetadataReader
+	names.IterableReader
+	registry.IterableReader
+	proposal.IterableReader
+	validator.History
+}
+
+func NewQueryServer(state QueryState, blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, logger *logging.Logger) *queryServer {
 	return &queryServer{
-		accounts:    state,
-		nameReg:     nameReg,
-		nodeReg:     nodeReg,
-		proposalReg: proposalReg,
-		blockchain:  blockchain,
-		validators:  validators,
-		nodeView:    nodeView,
-		logger:      logger,
+		state:      state,
+		blockchain: blockchain,
+		nodeView:   nodeView,
+		logger:     logger,
 	}
 }
 
 func (qs *queryServer) Status(ctx context.Context, param *StatusParam) (*rpc.ResultStatus, error) {
-	return rpc.Status(qs.blockchain, qs.validators, qs.nodeView, param.BlockTimeWithin, param.BlockSeenTimeWithin)
+	return rpc.Status(qs.blockchain, qs.state, qs.nodeView, param.BlockTimeWithin, param.BlockSeenTimeWithin)
 }
 
 // Account state
 
 func (qs *queryServer) GetAccount(ctx context.Context, param *GetAccountParam) (*acm.Account, error) {
-	acc, err := qs.accounts.GetAccount(param.Address)
+	acc, err := qs.state.GetAccount(param.Address)
 	if acc == nil {
 		acc = &acm.Account{}
 	}
@@ -72,14 +72,14 @@ func (qs *queryServer) GetMetadata(ctx context.Context, param *GetMetadataParam)
 	var contractMeta *acm.ContractMeta
 	var err error
 	if param.Address != nil {
-		acc, err := qs.accounts.GetAccount(*param.Address)
+		acc, err := qs.state.GetAccount(*param.Address)
 		if err != nil {
 			return metadata, err
 		}
 		if acc != nil && acc.CodeHash != nil {
 			codehash := acc.CodeHash
 			if acc.Forebear != nil {
-				acc, err = qs.accounts.GetAccount(*acc.Forebear)
+				acc, err = qs.state.GetAccount(*acc.Forebear)
 				if err != nil {
 					return metadata, err
 				}
@@ -116,13 +116,13 @@ func (qs *queryServer) GetMetadata(ctx context.Context, param *GetMetadataParam)
 	} else {
 		var metadataHash acmstate.MetadataHash
 		copy(metadataHash[:], contractMeta.MetadataHash)
-		metadata.Metadata, err = qs.accounts.GetMetadata(metadataHash)
+		metadata.Metadata, err = qs.state.GetMetadata(metadataHash)
 	}
 	return metadata, err
 }
 
 func (qs *queryServer) GetStorage(ctx context.Context, param *GetStorageParam) (*StorageValue, error) {
-	val, err := qs.accounts.GetStorage(param.Address, param.Key)
+	val, err := qs.state.GetStorage(param.Address, param.Key)
 	return &StorageValue{Value: val}, err
 }
 
@@ -132,7 +132,7 @@ func (qs *queryServer) ListAccounts(param *ListAccountsParam, stream Query_ListA
 		return err
 	}
 	var streamErr error
-	err = qs.accounts.IterateAccounts(func(acc *acm.Account) error {
+	err = qs.state.IterateAccounts(func(acc *acm.Account) error {
 		if qry.Matches(acc) {
 			return stream.Send(acc)
 		} else {
@@ -148,7 +148,7 @@ func (qs *queryServer) ListAccounts(param *ListAccountsParam, stream Query_ListA
 // Names
 
 func (qs *queryServer) GetName(ctx context.Context, param *GetNameParam) (entry *names.Entry, err error) {
-	entry, err = qs.nameReg.GetName(param.Name)
+	entry, err = qs.state.GetName(param.Name)
 	if entry == nil && err == nil {
 		err = fmt.Errorf("name %s not found", param.Name)
 	}
@@ -161,7 +161,7 @@ func (qs *queryServer) ListNames(param *ListNamesParam, stream Query_ListNamesSe
 		return err
 	}
 	var streamErr error
-	err = qs.nameReg.IterateNames(func(entry *names.Entry) error {
+	err = qs.state.IterateNames(func(entry *names.Entry) error {
 		if qry.Matches(entry) {
 			return stream.Send(entry)
 		} else {
@@ -177,7 +177,7 @@ func (qs *queryServer) ListNames(param *ListNamesParam, stream Query_ListNamesSe
 // Validators
 
 func (qs *queryServer) GetValidatorSet(ctx context.Context, param *GetValidatorSetParam) (*ValidatorSet, error) {
-	set := validator.Copy(qs.validators.Validators(0))
+	set := validator.Copy(qs.state.Validators(0))
 	return &ValidatorSet{
 		Set: set.Validators(),
 	}, nil
@@ -197,7 +197,7 @@ func (qs *queryServer) GetValidatorSetHistory(ctx context.Context, param *GetVal
 	}
 	history := &ValidatorSetHistory{}
 	for i := 0; i < lookback; i++ {
-		set := validator.Copy(qs.validators.Validators(i))
+		set := validator.Copy(qs.state.Validators(i))
 		vs := &ValidatorSet{
 			Height: height - uint64(i),
 			Set:    set.Validators(),
@@ -209,7 +209,7 @@ func (qs *queryServer) GetValidatorSetHistory(ctx context.Context, param *GetVal
 
 func (qs *queryServer) GetNetworkRegistry(ctx context.Context, param *GetNetworkRegistryParam) (*NetworkRegistry, error) {
 	rv := make([]*RegisteredValidator, 0)
-	err := qs.nodeReg.IterateNodes(func(id crypto.Address, rn *registry.NodeIdentity) error {
+	err := qs.state.IterateNodes(func(id crypto.Address, rn *registry.NodeIdentity) error {
 		rv = append(rv, &RegisteredValidator{
 			Address: rn.ValidatorPublicKey.GetAddress(),
 			Node:    rn,
@@ -222,7 +222,7 @@ func (qs *queryServer) GetNetworkRegistry(ctx context.Context, param *GetNetwork
 // Proposals
 
 func (qs *queryServer) GetProposal(ctx context.Context, param *GetProposalParam) (proposal *payload.Ballot, err error) {
-	proposal, err = qs.proposalReg.GetProposal(param.Hash)
+	proposal, err = qs.state.GetProposal(param.Hash)
 	if proposal == nil && err == nil {
 		err = fmt.Errorf("proposal %x not found", param.Hash)
 	}
@@ -231,7 +231,7 @@ func (qs *queryServer) GetProposal(ctx context.Context, param *GetProposalParam)
 
 func (qs *queryServer) ListProposals(param *ListProposalsParam, stream Query_ListProposalsServer) error {
 	var streamErr error
-	err := qs.proposalReg.IterateProposals(func(hash []byte, ballot *payload.Ballot) error {
+	err := qs.state.IterateProposals(func(hash []byte, ballot *payload.Ballot) error {
 		if !param.GetProposed() || ballot.ProposalState == payload.Ballot_PROPOSED {
 			return stream.Send(&ProposalResult{Hash: hash, Ballot: ballot})
 		} else {
@@ -245,7 +245,7 @@ func (qs *queryServer) ListProposals(param *ListProposalsParam, stream Query_Lis
 }
 
 func (qs *queryServer) GetStats(ctx context.Context, param *GetStatsParam) (*Stats, error) {
-	stats := qs.accounts.GetAccountStats()
+	stats := qs.state.GetAccountStats()
 
 	return &Stats{
 		AccountsWithCode:    stats.AccountsWithCode,

@@ -93,6 +93,7 @@ type Updatable interface {
 	proposal.Writer
 	registry.Writer
 	validator.Writer
+	acmstate.MetadataWriter
 	AddBlock(blockExecution *exec.BlockExecution) error
 }
 
