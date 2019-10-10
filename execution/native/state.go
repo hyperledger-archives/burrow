@@ -64,14 +64,6 @@ func (s *State) SetStorage(address crypto.Address, key binary.Word256, value []b
 	return s.backend.SetStorage(address, key, value)
 }
 
-func (s *State) GetMetadata(metahash acmstate.MetadataHash) (string, error) {
-	return s.backend.GetMetadata(metahash)
-}
-
-func (s *State) SetMetadata(metahash acmstate.MetadataHash, metadata string) error {
-	return s.backend.SetMetadata(metahash, metadata)
-}
-
 func (s *State) ensureNonNative(address crypto.Address, action string) error {
 	contract := s.natives.GetByAddress(address)
 	if contract != nil {

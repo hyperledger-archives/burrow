@@ -19,7 +19,6 @@ type Cache struct {
 	name     string
 	backend  Reader
 	accounts map[crypto.Address]*accountInfo
-	metadata map[MetadataHash]*metadataInfo
 	readonly bool
 }
 
@@ -31,11 +30,6 @@ type accountInfo struct {
 	updated bool
 }
 
-type metadataInfo struct {
-	metadata string
-	updated  bool
-}
-
 type CacheOption func(*Cache) *Cache
 
 // Returns a Cache that wraps an underlying Reader to use on a cache miss, can write to an output Writer
@@ -44,7 +38,6 @@ func NewCache(backend Reader, options ...CacheOption) *Cache {
 	cache := &Cache{
 		backend:  backend,
 		accounts: make(map[crypto.Address]*accountInfo),
-		metadata: make(map[MetadataHash]*metadataInfo),
 	}
 	for _, option := range options {
 		option(cache)
@@ -96,28 +89,6 @@ func (cache *Cache) UpdateAccount(account *acm.Account) error {
 	}
 	accInfo.account = account.Copy()
 	accInfo.updated = true
-	return nil
-}
-
-func (cache *Cache) GetMetadata(metahash MetadataHash) (string, error) {
-	metaInfo, err := cache.getMetadata(metahash)
-	if err != nil {
-		return "", err
-	}
-
-	return metaInfo.metadata, nil
-}
-
-func (cache *Cache) SetMetadata(metahash MetadataHash, metadata string) error {
-	if cache.readonly {
-		return errors.Errorf(errors.Codes.IllegalWrite, "SetMetadata called in read-only context on metadata hash: %v", metahash)
-	}
-
-	cache.Lock()
-	defer cache.Unlock()
-
-	cache.metadata[metahash] = &metadataInfo{updated: true, metadata: metadata}
-
 	return nil
 }
 
@@ -268,14 +239,6 @@ func (cache *Cache) Sync(st Writer) error {
 		accInfo.RUnlock()
 	}
 
-	for metahash, metadataInfo := range cache.metadata {
-		if metadataInfo.updated {
-			err := st.SetMetadata(metahash, metadataInfo.metadata)
-			if err != nil {
-				return err
-			}
-		}
-	}
 	return nil
 }
 
@@ -326,27 +289,4 @@ func (cache *Cache) get(address crypto.Address) (*accountInfo, error) {
 		}
 	}
 	return accInfo, nil
-}
-
-// Get the cache accountInfo item creating it if necessary
-func (cache *Cache) getMetadata(metahash MetadataHash) (*metadataInfo, error) {
-	cache.RLock()
-	metaInfo := cache.metadata[metahash]
-	cache.RUnlock()
-	if metaInfo == nil {
-		cache.Lock()
-		defer cache.Unlock()
-		metaInfo = cache.metadata[metahash]
-		if metaInfo == nil {
-			metadata, err := cache.backend.GetMetadata(metahash)
-			if err != nil {
-				return nil, err
-			}
-			metaInfo = &metadataInfo{
-				metadata: metadata,
-			}
-			cache.metadata[metahash] = metaInfo
-		}
-	}
-	return metaInfo, nil
 }

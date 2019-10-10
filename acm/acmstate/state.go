@@ -110,12 +110,12 @@ type StorageIterable interface {
 	IterateStorage(address crypto.Address, consumer func(key binary.Word256, value []byte) error) (err error)
 }
 
-type MetadataGetter interface {
+type MetadataReader interface {
 	// Get an Metadata by its hash. This is content-addressed
 	GetMetadata(metahash MetadataHash) (string, error)
 }
 
-type MetadataSetter interface {
+type MetadataWriter interface {
 	// Set an Metadata according to it keccak-256 hash.
 	SetMetadata(metahash MetadataHash, metadata string) error
 }
@@ -135,7 +135,6 @@ type AccountStatsGetter interface {
 type Reader interface {
 	AccountGetter
 	StorageGetter
-	MetadataGetter
 }
 
 type Iterable interface {
@@ -158,13 +157,17 @@ type IterableStatsReader interface {
 type Writer interface {
 	AccountUpdater
 	StorageSetter
-	MetadataSetter
 }
 
 // Read and write account and storage state
 type ReaderWriter interface {
 	Reader
 	Writer
+}
+
+type MetadataReaderWriter interface {
+	MetadataReader
+	MetadataWriter
 }
 
 type IterableReaderWriter interface {

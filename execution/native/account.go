@@ -155,7 +155,7 @@ func Transfer(st acmstate.ReaderWriter, from, to crypto.Address, amount uint64) 
 	})
 }
 
-func UpdateContractMeta(st acmstate.ReaderWriter, address crypto.Address, payloadMeta []*payload.ContractMeta) error {
+func UpdateContractMeta(st acmstate.ReaderWriter, metaSt acmstate.MetadataWriter, address crypto.Address, payloadMeta []*payload.ContractMeta) error {
 	if len(payloadMeta) == 0 {
 		return nil
 	}
@@ -171,7 +171,7 @@ func UpdateContractMeta(st acmstate.ReaderWriter, address crypto.Address, payloa
 			MetadataHash: metahash[:],
 			CodeHash:     abi.CodeHash,
 		}
-		err = st.SetMetadata(metahash, abi.Meta)
+		err = metaSt.SetMetadata(metahash, abi.Meta)
 		if err != nil {
 			return errors.Errorf(errors.Codes.IllegalWrite,
 				"cannot update metadata for %v: %v", address, err)

@@ -310,7 +310,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			qcli := rpctest.NewQueryClient(t, kern.GRPCListenAddress().String())
 			res, err := qcli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: &addressA})
 			require.NoError(t, err)
-			assert.Equal(t, res.Metadata, string(solidity.Abi_A))
+			assert.Equal(t, string(solidity.Abi_A), res.Metadata)
 			// CreateB
 			spec, err := abi.ReadSpec(solidity.Abi_A)
 			require.NoError(t, err)
@@ -323,7 +323,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			// check ABI for contract B
 			res, err = qcli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: &addressB})
 			require.NoError(t, err)
-			assert.Equal(t, res.Metadata, string(solidity.Abi_B))
+			assert.Equal(t, string(solidity.Abi_B), res.Metadata)
 			// CreateC
 			spec, err = abi.ReadSpec(solidity.Abi_B)
 			require.NoError(t, err)
@@ -336,7 +336,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			// check abi for contract C
 			res, err = qcli.GetMetadata(context.Background(), &rpcquery.GetMetadataParam{Address: &addressC})
 			require.NoError(t, err)
-			assert.Equal(t, res.Metadata, string(solidity.Abi_C))
+			assert.Equal(t, string(solidity.Abi_C), res.Metadata)
 			return
 		})
 

@@ -45,10 +45,11 @@ func (f ExecutorFunc) Execute(txEnv *txs.Envelope) (*exec.TxExecution, error) {
 
 type ExecutorState interface {
 	Update(updater func(ws state.Updatable) error) (hash []byte, version int64, err error)
+	acmstate.IterableReader
+	acmstate.MetadataReader
 	names.Reader
 	registry.Reader
 	proposal.Reader
-	acmstate.IterableReader
 	validator.IterableReader
 }
 
@@ -76,6 +77,7 @@ type executor struct {
 	params           Params
 	state            ExecutorState
 	stateCache       *acmstate.Cache
+	metadataCache    *acmstate.MetadataCache
 	nameRegCache     *names.Cache
 	nodeRegCache     *registry.Cache
 	proposalRegCache *proposal.Cache
@@ -124,6 +126,7 @@ func newExecutor(name string, runCall bool, params Params, backend ExecutorState
 		params:           params,
 		state:            backend,
 		stateCache:       acmstate.NewCache(backend, acmstate.Named(name)),
+		metadataCache:    acmstate.NewMetadataCache(backend),
 		nameRegCache:     names.NewCache(backend),
 		nodeRegCache:     registry.NewCache(backend),
 		proposalRegCache: proposal.NewCache(backend),
@@ -140,11 +143,12 @@ func newExecutor(name string, runCall bool, params Params, backend ExecutorState
 
 	baseContexts := map[payload.Type]contexts.Context{
 		payload.TypeCall: &contexts.CallContext{
-			EVM:        evm.New(exe.vmOptions),
-			Blockchain: blockchain,
-			State:      exe.stateCache,
-			RunCall:    runCall,
-			Logger:     exe.logger,
+			EVM:           evm.New(exe.vmOptions),
+			Blockchain:    blockchain,
+			State:         exe.stateCache,
+			MetadataState: exe.metadataCache,
+			RunCall:       runCall,
+			Logger:        exe.logger,
 		},
 		payload.TypeSend: &contexts.SendContext{
 			State:  exe.stateCache,
@@ -355,6 +359,10 @@ func (exe *executor) Commit(header *abciTypes.Header) (stateHash []byte, err err
 		if err != nil {
 			return err
 		}
+		err = exe.metadataCache.Flush(ws, exe.state)
+		if err != nil {
+			return err
+		}
 		err = exe.nameRegCache.Flush(ws, exe.state)
 		if err != nil {
 			return err
@@ -409,12 +417,6 @@ func (exe *executor) GetAccount(address crypto.Address) (*acm.Account, error) {
 	exe.RLock()
 	defer exe.RUnlock()
 	return exe.stateCache.GetAccount(address)
-}
-
-func (exe *executor) GetMetadata(metahash acmstate.MetadataHash) (string, error) {
-	exe.RLock()
-	defer exe.RUnlock()
-	return exe.stateCache.GetMetadata(metahash)
 }
 
 // Storage
