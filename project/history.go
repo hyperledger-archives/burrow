@@ -48,6 +48,10 @@ func FullVersion() string {
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases(
+		"0.29.1 - 2019-10-10",
+		`### Changed
+- [State] Split metadata and account state to be kinder to downstream EVM integrators
+`,
 		"0.29.0 - 2019-10-08",
 		`### Changed
 - [Config] Reverted rename of ValidatorAddress to Address in config (each Burrow node has a specific validator key it uses for signing whether or not it is running as a validator right now)
