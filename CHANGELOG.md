@@ -1,4 +1,9 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.29.2] - 2019-10-15
+### Changed
+- [NPM] Publish with index.js in TLD
+
+
 ## [0.29.1] - 2019-10-10
 ### Changed
 - [State] Split metadata and account state to be kinder to downstream EVM integrators
@@ -583,6 +588,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.29.2]: https://github.com/hyperledger/burrow/compare/v0.29.1...v0.29.2
 [0.29.1]: https://github.com/hyperledger/burrow/compare/v0.29.0...v0.29.1
 [0.29.0]: https://github.com/hyperledger/burrow/compare/v0.28.2...v0.29.0
 [0.28.2]: https://github.com/hyperledger/burrow/compare/v0.28.1...v0.28.2

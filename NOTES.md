@@ -1,3 +1,3 @@
 ### Changed
-- [State] Split metadata and account state to be kinder to downstream EVM integrators
+- [NPM] Publish with index.js in TLD
 
