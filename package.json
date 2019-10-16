@@ -1,7 +1,7 @@
 {
   "name": "@hyperledger/burrow",
   "description": "Javascript library that calls a Hyperledger Burrow server over rpc.",
-  "main": "./index.js",
+  "main": "./js/index.js",
   "author": {
     "name": "Dennis Mckinnon"
   },
