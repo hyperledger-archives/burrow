@@ -1,3 +1,3 @@
 ### Changed
-- [NPM] Publish with index.js in TLD
+- [NPM] Point package.json to index.js
 

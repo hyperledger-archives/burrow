@@ -37,7 +37,6 @@ jobs:
         npm install -g npm-cli-login
         npm-cli-login
         npm version from-git
-        cp -R js/* .
         npm publish --access public .
 
   docker:
