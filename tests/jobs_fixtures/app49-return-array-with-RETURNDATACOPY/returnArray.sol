@@ -1,4 +1,4 @@
-pragma solidity ^0.5.4;
+pragma solidity ^0.5;
 
 contract ReturnArray {
     function singleDigitPrimes() pure external returns (uint256[] memory) {

@@ -1,4 +1,4 @@
-pragma solidity ^0.5.4;
+pragma solidity ^0.5;
 
 contract BigMod {
     function expmod(int256 base, int256 e, int256 m, int256 proof) public returns (uint256) {

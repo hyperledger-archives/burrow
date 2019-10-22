@@ -1,4 +1,4 @@
-pragma solidity ^0.5.4;
+pragma solidity ^0.5;
 
 contract StrangeLoop {
     int top = 23;
