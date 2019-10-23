@@ -1,4 +1,4 @@
-pragma solidity ^0.5.4;
+pragma solidity ^0.5;
 
 contract Revert {
     function RevertIf0(uint32 i) public pure

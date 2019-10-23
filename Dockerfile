@@ -1,5 +1,5 @@
 # For solc binary
-FROM ethereum/solc:0.4.25 as solc-builder
+FROM ethereum/solc:0.5.12 as solc-builder
 # We use a multistage build to avoid bloating our deployment image with build dependencies
 FROM golang:1.12.0-alpine3.9 as builder
 

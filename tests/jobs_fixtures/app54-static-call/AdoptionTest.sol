@@ -1,4 +1,4 @@
-pragma solidity ^0.5.4;
+pragma solidity ^0.5;
 interface AdoptionInterface{
 	    function adopt(uint petId) external returns (uint);
 	    function getAdopters() external view returns (address[16] memory);

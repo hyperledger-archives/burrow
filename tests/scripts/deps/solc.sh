@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # Static solc that will run on linux included Alpine
-SOLC_URL="https://github.com/ethereum/solidity/releases/download/v0.5.4/solc-static-linux"
+SOLC_URL="https://github.com/ethereum/solidity/releases/download/v0.5.12/solc-static-linux"
 SOLC_BIN="$1"
 
 wget -O "$SOLC_BIN" "$SOLC_URL"
