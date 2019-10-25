@@ -24,7 +24,7 @@ Hyperledger Burrow is a permissioned blockchain node that executes smart contrac
 
 ## JavaScript Client
 
-There is a [JavaScript API](https://github.com/hyperledger/burrow/tree/develop/js)
+There is a [JavaScript API](https://github.com/hyperledger/burrow/tree/master/js)
 
 ## Project Roadmap
 
