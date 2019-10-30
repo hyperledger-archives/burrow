@@ -5,7 +5,7 @@
 [![GoDoc](https://godoc.org/github.com/burrow?status.png)](https://godoc.org/github.com/hyperledger/burrow)
 [![license](https://img.shields.io/github/license/hyperledger/burrow.svg)](LICENSE.md)
 [![LoC](https://tokei.rs/b1/github/hyperledger/burrow?category=lines)](https://github.com/hyperledger/burrow)
-[![codecov](https://codecov.io/gh/hyperledger/burrow/branch/develop/graph/badge.svg)](https://codecov.io/gh/hyperledger/burrow)
+[![codecov](https://codecov.io/gh/hyperledger/burrow/branch/master/graph/badge.svg)](https://codecov.io/gh/hyperledger/burrow)
 
 Hyperledger Burrow is a permissioned Ethereum smart-contract blockchain node. It executes Ethereum EVM smart contract code (usually written in [Solidity](https://solidity.readthedocs.io)) on a permissioned virtual machine. Burrow provides transaction finality and high transaction throughput on a proof-of-stake [Tendermint](https://tendermint.com) consensus engine.
 
@@ -24,7 +24,7 @@ Hyperledger Burrow is a permissioned blockchain node that executes smart contrac
 
 ## JavaScript Client
 
-There is a [JavaScript API](https://github.com/hyperledger/burrow/tree/develop/js)
+There is a [JavaScript API](https://github.com/hyperledger/burrow/tree/master/js)
 
 ## Project Roadmap
 
