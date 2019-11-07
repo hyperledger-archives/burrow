@@ -31,7 +31,7 @@ There is a [JavaScript API](https://github.com/hyperledger/burrow/tree/master/js
 Project information generally updated on a quarterly basis can be found on the [Hyperledger Burrow Wiki](https://wiki.hyperledger.org/display/burrow).
 
 ## Documentation
-Burrow getting started documentation is available in the [docs](docs/README.md) directory and in [GoDocs](https://godoc.org/github.com/hyperledger/burrow).
+Burrow getting started documentation is available in the [docs](https://hyperledger.github.io/burrow) directory and in [GoDocs](https://godoc.org/github.com/hyperledger/burrow).
 
 
 ## Contribute

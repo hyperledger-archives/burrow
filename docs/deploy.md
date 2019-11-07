@@ -39,7 +39,7 @@ parameters:
 * _data:_ the arguments to the contract's constructor
 
 The solidity source file is compiled using the [solidity compiler](https://github.com/ethereum/solidity) unless the `--wasm` argument was given
-on the burrow deploy command line, in which case the [solang compiler](https://github.com/ethereum/solidity) is used.
+on the burrow deploy command line, in which case the [solang compiler](https://github.com/hyperledger-labs/solang) is used.
 
 The contract is deployed with its metadata, so that we can retrieve the ABI when we need to call a function of this contract. For this
 reason, the bin file is a modified version of the [solidity output json](https://solidity.readthedocs.io/en/v0.5.11/using-the-compiler.html#output-description).
