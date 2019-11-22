@@ -1,4 +1,9 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.29.4] - 2019-11-22
+### Changed
+- [Build] Move to solidity 0.5.12
+
+
 ## [0.29.3] - 2019-10-16
 ### Changed
 - [NPM] Point package.json to index.js
@@ -593,6 +598,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.29.4]: https://github.com/hyperledger/burrow/compare/v0.29.3...v0.29.4
 [0.29.3]: https://github.com/hyperledger/burrow/compare/v0.29.2...v0.29.3
 [0.29.2]: https://github.com/hyperledger/burrow/compare/v0.29.1...v0.29.2
 [0.29.1]: https://github.com/hyperledger/burrow/compare/v0.29.0...v0.29.1
