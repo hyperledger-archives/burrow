@@ -48,6 +48,11 @@ func FullVersion() string {
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases(
+		"0.29.4 - 2019-11-22",
+		`### Changed
+- [Build] Move to solidity 0.5.12
+`,
+
 		"0.29.3 - 2019-10-16",
 		`### Changed
 - [NPM] Point package.json to index.js

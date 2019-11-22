@@ -1,3 +1,3 @@
 ### Changed
-- [NPM] Point package.json to index.js
+- [Build] Move to solidity 0.5.12
 
