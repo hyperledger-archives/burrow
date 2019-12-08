@@ -4,7 +4,6 @@ package service_test
 
 import (
 	"encoding/json"
-	"strconv"
 	"testing"
 	"time"
 
@@ -78,10 +77,10 @@ func TestPostgresConsumer(t *testing.T) {
 			require.NoError(t, err)
 
 			type payload struct {
-				Height string `json:"_height"`
+				Height uint64 `json:"_height"`
 			}
 
-			var height uint64
+			heightCh := make(chan uint64)
 			notifications := make(map[string]string)
 			go func() {
 				for n := range listener.Notify {
@@ -92,11 +91,9 @@ func TestPostgresConsumer(t *testing.T) {
 						if err != nil {
 							panic(err)
 						}
-						if pl.Height != "" {
-							height, err = strconv.ParseUint(pl.Height, 10, 64)
-							if err != nil {
-								panic(err)
-							}
+						if pl.Height >= txe.Height {
+							heightCh <- pl.Height
+							return
 						}
 					}
 				}
@@ -105,10 +102,15 @@ func TestPostgresConsumer(t *testing.T) {
 			runConsumer(t, cfg)
 
 			// Give events a chance
-			time.Sleep(time.Second)
-			// Assert we get expected returns
-			t.Logf("latest height: %d, txe height: %d", height, txe.Height)
-			assert.True(t, height >= txe.Height)
+			const timeout = 3 * time.Second
+			select {
+			case <-time.After(timeout):
+				t.Fatalf("timed out after %v waiting for notification", timeout)
+			case height := <-heightCh:
+				// Assert we get expected returns
+				t.Logf("latest height: %d, txe height: %d", height, txe.Height)
+				assert.True(t, height >= txe.Height)
+			}
 			assert.Equal(t, `{"_action" : "INSERT", "testdescription" : "\\x5472696767657220697421000000000000000000000000000000000000000000", "testname" : "TestTriggerEvent"}`, notifications["meta"])
 			assert.Equal(t, `{"_action" : "INSERT", "testdescription" : "\\x5472696767657220697421000000000000000000000000000000000000000000", "testkey" : "\\x544553545f4556454e5453000000000000000000000000000000000000000000", "testname" : "TestTriggerEvent"}`,
 				notifications["keyed_meta"])

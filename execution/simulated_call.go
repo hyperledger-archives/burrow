@@ -36,6 +36,9 @@ func CallSim(reader acmstate.Reader, blockchain bcm.BlockchainInfo, fromAddress,
 		Data:     data,
 		GasLimit: contexts.GasLimit,
 	}))
+
+	// Set height for downstream synchronisation purposes
+	txe.Height = blockchain.LastBlockHeight()
 	err := exe.Execute(txe, txe.Envelope.Tx.Payload)
 	if err != nil {
 		return nil, err

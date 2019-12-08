@@ -126,16 +126,11 @@ func NewBlockConsumer(projection *sqlsol.Projection, opt sqlsol.SpecOpt, getEven
 
 		// upsert rows in specific SQL event tables and update block number
 		// store block data in SQL tables (if any)
-		if blockData.PendingRows(fromBlock) {
-			// gets block data to upsert
-			blk := blockData.Data
-
-			for name, rows := range blk.Tables {
-				logger.InfoMsg("Upserting rows in SQL table", "height", fromBlock, "table", name, "action", "UPSERT", "rows", rows)
-			}
-
-			eventCh <- blk
+		for name, rows := range blockData.Data.Tables {
+			logger.InfoMsg("Upserting rows in SQL table", "height", fromBlock, "table", name, "action", "UPSERT", "rows", rows)
 		}
+
+		eventCh <- blockData.Data
 		return nil
 	}
 }

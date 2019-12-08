@@ -127,8 +127,8 @@ func TestBlockConsumer(t *testing.T) {
 		})
 		require.NoError(t, err)
 		blockConsumer := NewBlockConsumer(projection, sqlsol.None, spec.GetEventAbi, eventCh, doneCh, logger)
-		_, err = consumeBlock(blockConsumer, eventCh, log)
-		require.Equal(t, errTimeout, err)
+		table, err := consumeBlock(blockConsumer, eventCh, log)
+		require.Len(t, table, 0, "should match no event")
 	})
 
 	// This is possibly 'bad' behaviour - since you may be missing an ABI - but for now it is expected. On-chain ABIs
@@ -151,15 +151,17 @@ func TestBlockConsumer(t *testing.T) {
 		require.NoError(t, err)
 
 		blockConsumer := NewBlockConsumer(projection, sqlsol.None, spec.GetEventAbi, eventCh, doneCh, logger)
-		_, err = consumeBlock(blockConsumer, eventCh, log)
+		table, err := consumeBlock(blockConsumer, eventCh, log)
 		// Check matches
 		require.NoError(t, err)
-
-		// Now Remove the ABI - should timeout indicating we did not match the event, but it wasn't an error
+		require.Len(t, table, 1)
+		require.Len(t, table[tableName], 1)
+		// Now Remove the ABI - should not match the event
 		delete(spec.EventsByID, manyTypesEventSpec.ID)
 		blockConsumer = NewBlockConsumer(projection, sqlsol.None, spec.GetEventAbi, eventCh, doneCh, logger)
-		_, err = consumeBlock(blockConsumer, eventCh, log)
-		require.Equal(t, errTimeout, err)
+		table, err = consumeBlock(blockConsumer, eventCh, log)
+		require.NoError(t, err)
+		require.Len(t, table, 0, "should match no events")
 	})
 }
 
