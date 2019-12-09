@@ -1,4 +1,9 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.29.5] - 2019-12-09
+### Security
+- [Tendermint] Upgraded to v0.32.8, checkTxAsync now includes node ID
+
+
 ## [0.29.4] - 2019-11-22
 ### Changed
 - [Build] Move to solidity 0.5.12
@@ -598,6 +603,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.29.5]: https://github.com/hyperledger/burrow/compare/v0.29.4...v0.29.5
 [0.29.4]: https://github.com/hyperledger/burrow/compare/v0.29.3...v0.29.4
 [0.29.3]: https://github.com/hyperledger/burrow/compare/v0.29.2...v0.29.3
 [0.29.2]: https://github.com/hyperledger/burrow/compare/v0.29.1...v0.29.2

@@ -19,12 +19,16 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
 	abciTypes "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/mempool"
+	"github.com/tendermint/tendermint/p2p"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
 const (
 	SubscribeBufferSize = 10
 )
+
+type txChecker func(tx tmTypes.Tx, callback func(*abciTypes.Response), txInfo mempool.TxInfo) error
 
 // Transactor is responsible for helping to formulate, sign, and broadcast transactions to tendermint
 //
@@ -38,20 +42,21 @@ type Transactor struct {
 	BlockchainInfo  bcm.BlockchainInfo
 	Emitter         *event.Emitter
 	MempoolAccounts *Accounts
-	checkTxAsync    func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error
+	checkTxAsync    txChecker
+	nodeID          p2p.ID
 	txEncoder       txs.Encoder
 	logger          *logging.Logger
 }
 
 func NewTransactor(tip bcm.BlockchainInfo, emitter *event.Emitter, mempoolAccounts *Accounts,
-	checkTxAsync func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error, txEncoder txs.Encoder,
-	logger *logging.Logger) *Transactor {
+	checkTxAsync txChecker, id p2p.ID, txEncoder txs.Encoder, logger *logging.Logger) *Transactor {
 
 	return &Transactor{
 		BlockchainInfo:  tip,
 		Emitter:         emitter,
 		MempoolAccounts: mempoolAccounts,
 		checkTxAsync:    checkTxAsync,
+		nodeID:          id,
 		txEncoder:       txEncoder,
 		logger:          logger.With(structure.ComponentKey, "Transactor"),
 	}
@@ -229,7 +234,7 @@ func (trans *Transactor) CheckTxSyncRaw(ctx context.Context, txBytes []byte) (*t
 }
 
 func (trans *Transactor) CheckTxAsyncRaw(txBytes []byte, callback func(res *abciTypes.Response)) error {
-	return trans.checkTxAsync(txBytes, callback)
+	return trans.checkTxAsync(txBytes, callback, mempool.TxInfo{SenderP2PID: trans.nodeID})
 }
 
 func (trans *Transactor) CheckTxAsync(txEnv *txs.Envelope, callback func(res *abciTypes.Response)) error {

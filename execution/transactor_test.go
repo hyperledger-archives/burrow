@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	abciTypes "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/mempool"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
@@ -42,7 +43,7 @@ func TestTransactor_BroadcastTxSync(t *testing.T) {
 	require.NoError(t, err)
 	height := uint64(35)
 	trans := NewTransactor(bc, evc, NewAccounts(acmstate.NewMemoryState(), mock.NewKeyClient(privAccount), 100),
-		func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error {
+		func(tx tmTypes.Tx, cb func(*abciTypes.Response), txInfo mempool.TxInfo) error {
 			txe := exec.NewTxExecution(txEnv)
 			txe.Height = height
 			err := evc.Publish(context.Background(), txe, txe)
@@ -58,7 +59,7 @@ func TestTransactor_BroadcastTxSync(t *testing.T) {
 				Data: bs,
 			}))
 			return nil
-		}, txCodec, logger)
+		}, "", txCodec, logger)
 	txe, err := trans.BroadcastTxSync(context.Background(), txEnv)
 	require.NoError(t, err)
 	assert.Equal(t, height, txe.Height)

@@ -20,7 +20,7 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/go-kit/kit v0.9.0
 	github.com/go-ozzo/ozzo-validation v3.5.0+incompatible
-	github.com/gogo/protobuf v1.3.0
+	github.com/gogo/protobuf v1.3.1
 	github.com/golang/protobuf v1.3.2
 	github.com/gorilla/websocket v1.4.1
 	github.com/hashicorp/golang-lru v0.5.1
@@ -36,18 +36,17 @@ require (
 	github.com/perlin-network/life v0.0.0-20190803100833-89b850c02992
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.3
-	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
+	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/prometheus/common v0.4.0
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a
 	github.com/sirupsen/logrus v1.4.2 // indirect
-	github.com/spf13/viper v1.4.0
+	github.com/spf13/viper v1.5.0
 	github.com/streadway/simpleuuid v0.0.0-20130420165545-6617b501e485
 	github.com/stretchr/testify v1.4.0
-	github.com/stumble/gorocksdb v0.0.3 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20190318030020-c3a204f8e965
 	github.com/tendermint/go-amino v0.14.1
 	github.com/tendermint/iavl v0.12.4
-	github.com/tendermint/tendermint v0.32.4
+	github.com/tendermint/tendermint v0.32.8
 	github.com/tendermint/tm-db v0.2.0
 	github.com/test-go/testify v1.1.4
 	github.com/tmthrgd/go-hex v0.0.0-20190303111820-0bdcb15db631
@@ -58,6 +57,6 @@ require (
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
 	golang.org/x/sys v0.0.0-20190825160603-fb81701db80f // indirect
-	google.golang.org/grpc v1.23.1
-	gopkg.in/yaml.v2 v2.2.2
+	google.golang.org/grpc v1.25.1
+	gopkg.in/yaml.v2 v2.2.4
 )
