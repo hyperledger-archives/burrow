@@ -22,6 +22,8 @@ import (
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/tendermint/tendermint/abci/types"
 	tmtypes "github.com/tendermint/tendermint/types"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type queryServer struct {
@@ -150,7 +152,7 @@ func (qs *queryServer) ListAccounts(param *ListAccountsParam, stream Query_ListA
 func (qs *queryServer) GetName(ctx context.Context, param *GetNameParam) (entry *names.Entry, err error) {
 	entry, err = qs.state.GetName(param.Name)
 	if entry == nil && err == nil {
-		err = fmt.Errorf("name %s not found", param.Name)
+		err = status.Error(codes.NotFound, fmt.Sprintf("name %s not found", param.Name))
 	}
 	return
 }

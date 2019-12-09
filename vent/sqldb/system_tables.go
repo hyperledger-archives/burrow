@@ -65,7 +65,6 @@ func (db *SQLDB) systemTablesDefinition() types.EventTables {
 					Type: types.SQLColumnTypeText,
 				},
 			},
-			NotifyChannels: map[string][]string{types.BlockHeightLabel: {columns.Height}},
 		},
 		tables.Dictionary: {
 			Name: tables.Dictionary,
@@ -117,6 +116,7 @@ func (db *SQLDB) systemTablesDefinition() types.EventTables {
 					Length: digits(maxUint64),
 				},
 			},
+			NotifyChannels: map[string][]string{types.BlockHeightLabel: {columns.Height}},
 		},
 	}
 }

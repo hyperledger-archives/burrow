@@ -198,7 +198,7 @@ test_truffle:
 .PHONY:	test_integration_vent
 test_integration_vent:
 	# Include sqlite adapter with tests - will build with CGO but that's probably fine
-	go test -v -tags 'integration sqlite' ./vent/...
+	go test -count=1 -v -tags 'integration sqlite' ./vent/...
 
 .PHONY:	test_integration_vent_postgres
 test_integration_vent_postgres:
@@ -212,7 +212,7 @@ test_restore:
 
 .PHONY: test_integration
 test_integration:
-	@go test -v -tags integration ./integration/...
+	@go test -count=1 -v -tags integration ./integration/...
 
 .PHONY: test_integration_all
 test_integration_all: test_keys test_deploy test_integration_vent_postgres test_restore test_truffle test_integration
