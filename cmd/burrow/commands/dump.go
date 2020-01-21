@@ -21,24 +21,33 @@ type dumpOptions struct {
 	useBinaryEncoding *bool
 }
 
+func maybeOutput(verbose *bool, output Output, format string, args ...interface{}) {
+	if verbose != nil && *verbose {
+		output.Logf(format, args)
+	}
+}
+
 func addDumpOptions(cmd *cli.Cmd, specOptions ...string) *dumpOptions {
 	cmd.Spec += "[--height=<state height to dump at>] [--binary]"
 	for _, spec := range specOptions {
 		cmd.Spec += " " + spec
 	}
-	cmd.Spec += " FILE"
+	cmd.Spec += "[FILE]"
 	return &dumpOptions{
 		height:            cmd.IntOpt("h height", 0, "Block height to dump to, defaults to latest block height"),
 		useBinaryEncoding: cmd.BoolOpt("b binary", false, "Output in binary encoding (default is JSON)"),
-		filename:          cmd.StringArg("FILE", "", "Save dump here"),
+		filename:          cmd.StringArg("FILE", "", "Location to output dump, if no argument is given then this streams to STDOUT"),
 	}
 }
 
 // Dump saves the state from a remote chain
 func Dump(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
+		verbose := cmd.BoolOpt("v verbose", false, "Verbose debug information")
+		cmd.Spec += "[--verbose]"
+
 		cmd.Command("local", "create a dump from local Burrow directory", func(cmd *cli.Cmd) {
-			output.Logf("dumping from local Burrow dir")
+			maybeOutput(verbose, output, "dumping from local Burrow dir")
 			configFileOpt := cmd.String(configFileOption)
 			genesisFileOpt := cmd.String(genesisFileOption)
 
@@ -73,18 +82,17 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 				if err != nil {
 					output.Fatalf("could not dump to file %s': %v", *dumpOpts.filename, err)
 				}
-				output.Logf("dump successfully written to '%s'", *dumpOpts.filename)
+				maybeOutput(verbose, output, "dump successfully written to '%s'", *dumpOpts.filename)
 			}
 		})
 
 		cmd.Command("remote", "pull a dump from a remote Burrow node", func(cmd *cli.Cmd) {
 			chainURLOpt := cmd.StringOpt("c chain", "127.0.0.1:10997", "chain to be used in IP:PORT format")
 			timeoutOpt := cmd.IntOpt("t timeout", 0, "Timeout in seconds")
-			dumpOpts := addDumpOptions(cmd, "[--chain=<chain GRPC address>]",
-				"[--timeout=<GRPC timeout seconds>]")
+			dumpOpts := addDumpOptions(cmd, "[--chain=<chain GRPC address>]", "[--timeout=<GRPC timeout seconds>]")
 
 			cmd.Action = func() {
-				output.Logf("dumping from remote chain at %s", *chainURLOpt)
+				maybeOutput(verbose, output, "dumping from remote chain at %s", *chainURLOpt)
 
 				ctx, cancel := context.WithCancel(context.Background())
 				if *timeoutOpt != 0 {
@@ -109,7 +117,7 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 				if err != nil {
 					output.Logf("failed to marshal: %v", err)
 				}
-				output.Logf("dumping from chain: %s", string(stat))
+				maybeOutput(verbose, output, "dumping from chain: %s", string(stat))
 
 				dc := rpcdump.NewDumpClient(conn)
 				receiver, err := dc.GetDump(ctx, &rpcdump.GetDumpParam{Height: uint64(*dumpOpts.height)})
@@ -121,26 +129,32 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 				if err != nil {
 					output.Fatalf("could not dump to file %s': %v", *dumpOpts.filename, err)
 				}
-				output.Logf("dump successfully written to '%s'", *dumpOpts.filename)
 
+				maybeOutput(verbose, output, "dump successfully written to '%s'", *dumpOpts.filename)
 			}
 		})
 	}
 }
 
 func dumpToFile(filename string, source dump.Source, useBinaryEncoding bool) error {
-	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
+	var file *os.File
+	var err error
+	if filename == "" {
+		file = os.Stdout
+	} else {
+		file, err = os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Receive
-	err = dump.Write(f, source, useBinaryEncoding, dump.All)
+	err = dump.Write(file, source, useBinaryEncoding, dump.All)
 	if err != nil {
 		return err
 	}
 
-	err = f.Close()
+	err = file.Close()
 	if err != nil {
 		return err
 	}
