@@ -1,0 +1,61 @@
+{
+  "name": "@hyperledger/burrow",
+  "description": "TypeScript library that calls a Hyperledger Burrow server over GRPC.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "author": {
+    "name": "Dennis Mckinnon"
+  },
+  "files": [
+    "dist",
+    "proto"
+  ],
+  "bugs": {
+    "url": "https://github.com/hyperledger/burrow/issues"
+  },
+  "dependencies": {
+    "@types/ethereumjs-abi": "^0.6.3",
+    "ethereumjs-abi": "^0.6.8",
+    "bn.js": "^5.1.1",
+    "grpc": "^1.24.2",
+    "sha3": "^2.1.1",
+    "solc": "^0.6.1",
+    "ts-node": "^8.6.2",
+    "typescript": "^3.7.4"
+  },
+  "devDependencies": {
+    "@types/mocha": "^5.2.7",
+    "mocha": "6.2.0",
+    "grpc-tools": "^1.8.1",
+    "ts-protoc-gen": "^0.12.0"
+  },
+  "homepage": "https://github.com/hyperledger/burrow/",
+  "keywords": [
+    "Burrow",
+    "Hyperledger",
+    "Monax"
+  ],
+  "license": "Apache-2.0",
+  "maintainers": [
+    {
+      "name": "Silas Davis",
+      "email": "silas@monax.io"
+    },
+    {
+      "name": "Sean Young",
+      "email": "sean.young@monax.io"
+    },
+    {
+      "name": "Greg Hill",
+      "email": "greg.hill@monax.io"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hyperledger/burrow.git"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "test": "./test.sh 'src/test/*.test.ts'"
+  }
+}

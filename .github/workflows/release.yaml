@@ -36,6 +36,9 @@ jobs:
       run: |
         git config --global user.email "doug@monax.io"
         git config --global user.name "doug"
+        cd ./js
+        npm install
+        npm run build
         npm version from-git
         npm config set '//registry.npmjs.org/:_authToken' "${NPM_TOKEN}"
         npm publish --access public .
