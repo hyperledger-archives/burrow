@@ -2,11 +2,11 @@ name: master
 on:
   push:
     branches:
-      - master
+    - master
 
 jobs:
   cover:
-    name: Coverage
+    name: coverage
     runs-on: ubuntu-latest
     steps:
     - uses: actions/setup-go@v1
@@ -23,12 +23,12 @@ jobs:
         file: ./coverage.txt
 
   docker:
-    name: Docker
+    name: docker
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
     - run: make docker_build
-    - name: Publish Quay Image
+    - name: publish
       env:
         DOCKER_REPO: "hyperledger/burrow"
         DOCKER_REPO_DEV: "quay.io/monax/burrow"
