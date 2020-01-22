@@ -1,4 +1,4 @@
-name: Release
+name: release
 on:
   push:
     tags:
@@ -6,11 +6,11 @@ on:
 
 jobs:
   go:
-    name: GoReleaser
+    name: goreleaser
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - name: Publish
+    - name: publish
       uses: docker://goreleaser/goreleaser
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -19,33 +19,28 @@ jobs:
       if: success()
 
   js:
-    name: NPM
+    name: npm
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
     - uses: actions/setup-node@v1
       with:
         node-version: '12.x'
-    - name: Publish
+    - name: publish
       env:
-        NPM_EMAIL: ${{ secrets.NPM_EMAIL }}
-        NPM_USER: ${{ secrets.NPM_USER }}
-        NPM_PASS: ${{ secrets.NPM_PASS }}
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       run: |
-        git config --global user.name "${NPM_USER}"
-        git config --global user.email "${NPM_EMAIL}"
-        npm install -g npm-cli-login
-        npm-cli-login
         npm version from-git
+        npm config set '//registry.npmjs.org/:_authToken' "${NPM_TOKEN}"
         npm publish --access public .
 
   docker:
-    name: Docker
+    name: docker
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
     - run: make docker_build
-    - name: Publish
+    - name: publish
       env:
         DOCKER_REPO: "hyperledger/burrow"
         DOCKER_USER: ${{ secrets.DOCKER_USER }}
