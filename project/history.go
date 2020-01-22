@@ -48,6 +48,13 @@ func FullVersion() string {
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases(
+		"0.29.6 - 2020-01-22",
+		`### Changed
+- [CLI] Burrow dump can now stream to STDOUT
+
+### Fixed
+- [NPM] Burrow-js is now published via an auth token
+`,
 		"0.29.5 - 2019-12-09",
 		`### Security
 - [Tendermint] Upgraded to v0.32.8, checkTxAsync now includes node ID
@@ -58,7 +65,6 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 
 ### Fixed
 - [Execution] Simulated calls (e.g. query contracts) now returns the height of the state on which the query was run. Useful for downstream sync.
-- 
 `,
 		"0.29.4 - 2019-11-22",
 		`### Changed
