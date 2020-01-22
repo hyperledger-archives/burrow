@@ -1,4 +1,12 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.29.6] - 2020-01-22
+### Changed
+- [CLI] Burrow dump can now stream to STDOUT
+
+### Fixed
+- [NPM] Burrow-js is now published via an auth token
+
+
 ## [0.29.5] - 2019-12-09
 ### Security
 - [Tendermint] Upgraded to v0.32.8, checkTxAsync now includes node ID
@@ -9,7 +17,6 @@
 
 ### Fixed
 - [Execution] Simulated calls (e.g. query contracts) now returns the height of the state on which the query was run. Useful for downstream sync.
-- 
 
 
 ## [0.29.4] - 2019-11-22
@@ -611,6 +618,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.29.6]: https://github.com/hyperledger/burrow/compare/v0.29.5...v0.29.6
 [0.29.5]: https://github.com/hyperledger/burrow/compare/v0.29.4...v0.29.5
 [0.29.4]: https://github.com/hyperledger/burrow/compare/v0.29.3...v0.29.4
 [0.29.3]: https://github.com/hyperledger/burrow/compare/v0.29.2...v0.29.3
