@@ -48,6 +48,10 @@ func FullVersion() string {
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases(
+		"0.29.7 - 2020-01-27",
+		`### Fixed
+- [Build] Updates to CI build process
+`,
 		"0.29.6 - 2020-01-22",
 		`### Changed
 - [CLI] Burrow dump can now stream to STDOUT
