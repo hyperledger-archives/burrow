@@ -9,14 +9,18 @@ jobs:
     name: goreleaser
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: publish
-      uses: docker://goreleaser/goreleaser
+    - uses: actions/checkout@v2
+    - run: git fetch --prune --unshallow
+    - uses: actions/setup-go@v1
+      with:
+        go-version: 1.13.x
+    - uses: goreleaser/goreleaser-action@v1
+      with:
+        version: latest
+        args: release --release-notes "NOTES.md"
+        key: ${{ secrets.YOUR_PRIVATE_KEY }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        args: release --release-notes "NOTES.md"
-      if: success()
 
   js:
     name: npm
