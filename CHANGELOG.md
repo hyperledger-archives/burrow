@@ -1,4 +1,9 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.29.7] - 2020-01-27
+### Fixed
+- [Build] Updates to CI build process
+
+
 ## [0.29.6] - 2020-01-22
 ### Changed
 - [CLI] Burrow dump can now stream to STDOUT
@@ -618,6 +623,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.29.7]: https://github.com/hyperledger/burrow/compare/v0.29.6...v0.29.7
 [0.29.6]: https://github.com/hyperledger/burrow/compare/v0.29.5...v0.29.6
 [0.29.5]: https://github.com/hyperledger/burrow/compare/v0.29.4...v0.29.5
 [0.29.4]: https://github.com/hyperledger/burrow/compare/v0.29.3...v0.29.4
