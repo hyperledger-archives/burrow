@@ -30,16 +30,17 @@ jobs:
     - uses: actions/setup-node@v1
       with:
         node-version: '12.x'
+    - echo ::set-env name=RELEASE_VERSION::${GITHUB_REF:10}
     - name: publish
       env:
         NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       run: |
         git config --global user.email "doug@monax.io"
         git config --global user.name "doug"
-        cd ./js
+        cd js
         npm install
         npm run build
-        npm version from-git
+        npm version $RELEASE_VERSION
         npm config set '//registry.npmjs.org/:_authToken' "${NPM_TOKEN}"
         npm publish --access public .
 
