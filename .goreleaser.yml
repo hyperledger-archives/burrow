@@ -1,20 +1,22 @@
-# Make sure to check the documentation at http://goreleaser.com
+before:
+  hooks:
+  - go mod tidy
 builds:
 - main: ./cmd/burrow
   env:
-    - CGO_ENABLED=0
+  - CGO_ENABLED=0
   ldflags:
-    - -extldflags "-static"
-    - -s -w
-    - -X github.com/hyperledger/burrow/project.commit={{.Commit}}
-    - -X github.com/hyperledger/burrow/project.date={{.Date}}
+  - -extldflags "-static"
+  - -s -w
+  - -X github.com/hyperledger/burrow/project.commit={{.Commit}}
+  - -X github.com/hyperledger/burrow/project.date={{.Date}}
   goos:
-    - darwin
-    - linux
-    - freebsd
-    - windows
-archive:
-  replacements:
+  - darwin
+  - linux
+  - freebsd
+  - windows
+archives:
+- replacements:
     darwin: Darwin
     linux: Linux
     windows: Windows
@@ -28,5 +30,5 @@ changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+    - '^docs:'
+    - '^test:'
