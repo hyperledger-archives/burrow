@@ -17,7 +17,7 @@ Maintainers
 |------|--------|-------------------
 | Benjamin Bollen | benjaminbollen |  <ben@ost.com>
 | Dennis Mckinnon | dennismckinnon |  <dennis.r.mckinnon@gmail.com>
-| Ethan Buchman | ebuchman |  <>
+| Ethan Buchman | ebuchman |  
 
 **Future Maintainers**
 
