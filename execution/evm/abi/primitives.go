@@ -514,29 +514,22 @@ func (e EVMAddress) GetSignature() string {
 }
 
 func (e EVMAddress) pack(v interface{}) ([]byte, error) {
-	var err error
-	a, ok := v.(crypto.Address)
-	if !ok {
-		s, ok := v.(string)
-		if ok {
-			a, err = crypto.AddressFromHexString(s)
-			if err != nil {
-				return nil, err
-			}
-		}
-	} else {
-		b, ok := v.([]byte)
-		if !ok {
-			return nil, fmt.Errorf("cannot map to %s to EVM address", reflect.ValueOf(v).Kind().String())
-		}
-
-		a, err = crypto.AddressFromBytes(b)
+	var bs []byte
+	switch a := v.(type) {
+	case crypto.Address:
+		bs = a[:]
+	case *crypto.Address:
+		bs = (*a)[:]
+	case []byte:
+		address, err := crypto.AddressFromBytes(a)
 		if err != nil {
 			return nil, err
 		}
+		bs = address[:]
+	default:
+		return nil, fmt.Errorf("cannot map from %s to EVM address", reflect.ValueOf(v).Kind().String())
 	}
-
-	return pad(a[:], ElementSize, true), nil
+	return pad(bs, ElementSize, true), nil
 }
 
 func (e EVMAddress) unpack(data []byte, offset int, v interface{}) (int, error) {
