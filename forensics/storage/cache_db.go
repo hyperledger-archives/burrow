@@ -18,49 +18,67 @@ func NewCacheDB(backend storage.KVIterableReader) *CacheDB {
 }
 
 // DB implementation
-func (cdb *CacheDB) Get(key []byte) []byte {
+func (cdb *CacheDB) Get(key []byte) ([]byte, error) {
 	value, deleted := cdb.cache.Info(key)
 	if deleted {
-		return nil
+		return nil, nil
 	}
 	if value != nil {
-		return value
+		return value, nil
 	}
 	return cdb.backend.Get(key)
 }
 
-func (cdb *CacheDB) Has(key []byte) bool {
+func (cdb *CacheDB) Has(key []byte) (bool, error) {
 	value, deleted := cdb.cache.Info(key)
-	return !deleted && (value != nil || cdb.backend.Has(key))
+	has, err := cdb.backend.Has(key)
+	if err != nil {
+		return false, err
+	}
+	return !deleted && (value != nil || has), nil
 }
 
-func (cdb *CacheDB) Iterator(low, high []byte) storage.KVIterator {
+func (cdb *CacheDB) Iterator(low, high []byte) (storage.KVIterator, error) {
 	// Keys from cache will sort first because of order in MultiIterator and Uniq will take the first KVs so KVs
 	// appearing in cache will override values from backend.
-	return Uniq(NewMultiIterator(false, cdb.cache.Iterator(low, high), cdb.backend.Iterator(low, high)))
+	iterator, err := cdb.backend.Iterator(low, high)
+	if err != nil {
+		return nil, err
+	}
+
+	return Uniq(NewMultiIterator(false, cdb.cache.Iterator(low, high), iterator)), nil
 }
 
-func (cdb *CacheDB) ReverseIterator(low, high []byte) storage.KVIterator {
-	return Uniq(NewMultiIterator(true, cdb.cache.ReverseIterator(low, high), cdb.backend.ReverseIterator(low, high)))
+func (cdb *CacheDB) ReverseIterator(low, high []byte) (storage.KVIterator, error) {
+	iterator, err := cdb.backend.ReverseIterator(low, high)
+	if err != nil {
+		return nil, err
+	}
+
+	return Uniq(NewMultiIterator(true, cdb.cache.ReverseIterator(low, high), iterator)), nil
 }
 
-func (cdb *CacheDB) Set(key, value []byte) {
+func (cdb *CacheDB) Set(key, value []byte) error {
 	cdb.cache.Set(key, value)
+	return nil
 }
 
-func (cdb *CacheDB) SetSync(key, value []byte) {
+func (cdb *CacheDB) SetSync(key, value []byte) error {
 	cdb.cache.Set(key, value)
+	return nil
 }
 
-func (cdb *CacheDB) Delete(key []byte) {
+func (cdb *CacheDB) Delete(key []byte) error {
 	cdb.cache.Delete(key)
+	return nil
 }
 
-func (cdb *CacheDB) DeleteSync(key []byte) {
-	cdb.Delete(key)
+func (cdb *CacheDB) DeleteSync(key []byte) error {
+	return cdb.Delete(key)
 }
 
-func (cdb *CacheDB) Close() {
+func (cdb *CacheDB) Close() error {
+	return nil
 }
 
 func (cdb *CacheDB) NewBatch() dbm.Batch {
@@ -88,18 +106,20 @@ func (cb *cacheBatch) Delete(key []byte) {
 	cb.cache.Delete(key)
 }
 
-func (cb *cacheBatch) Write() {
+func (cb *cacheBatch) Write() error {
 	cb.cache.WriteTo(cb.backend)
+	return nil
 }
 
 func (cb *cacheBatch) Close() {
 }
 
-func (cb *cacheBatch) WriteSync() {
-	cb.Write()
+func (cb *cacheBatch) WriteSync() error {
+	return cb.Write()
 }
 
-func (cdb *CacheDB) Print() {
+func (cdb *CacheDB) Print() error {
+	return nil
 }
 
 func (cdb *CacheDB) Stats() map[string]string {

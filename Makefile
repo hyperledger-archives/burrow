@@ -267,7 +267,7 @@ tag_release: test check docs build
 
 .PHONY: build_ci_image
 build_ci_image:
-	docker build -t ${CI_IMAGE} -f ./.circleci/Dockerfile .
+	docker build -t ${CI_IMAGE} -f ./.github/Dockerfile .
 
 .PHONY: push_ci_image
 push_ci_image: build_ci_image

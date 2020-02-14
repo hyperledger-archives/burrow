@@ -14,8 +14,10 @@ func (s *ReadState) GetName(name string) (*names.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	entryBytes := tree.Get(keys.Name.KeyNoPrefix(name))
-	if entryBytes == nil {
+	entryBytes, err := tree.Get(keys.Name.KeyNoPrefix(name))
+	if err != nil {
+		return nil, err
+	} else if entryBytes == nil {
 		return nil, nil
 	}
 

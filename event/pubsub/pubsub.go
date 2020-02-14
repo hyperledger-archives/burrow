@@ -21,7 +21,7 @@ import (
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	"github.com/tendermint/tendermint/libs/common"
+	"github.com/tendermint/tendermint/libs/service"
 )
 
 type operation int
@@ -55,7 +55,7 @@ type cmd struct {
 // Server allows clients to subscribe/unsubscribe for messages, publishing
 // messages with or without tags, and manages internal state.
 type Server struct {
-	common.BaseService
+	service.BaseService
 
 	cmds    chan cmd
 	cmdsCap int
@@ -76,7 +76,7 @@ func NewServer(options ...Option) *Server {
 		subscriptions: make(map[string]map[string]query.Query),
 		logger:        logging.NewNoopLogger(),
 	}
-	s.BaseService = *common.NewBaseService(nil, "PubSub", s)
+	s.BaseService = *service.NewBaseService(nil, "PubSub", s)
 
 	for _, option := range options {
 		option(s)

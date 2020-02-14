@@ -45,3 +45,7 @@ func (ui *uniqueIterator) Value() []byte {
 func (ui *uniqueIterator) Close() {
 	ui.source.Close()
 }
+
+func (ui *uniqueIterator) Error() error {
+	return ui.source.Error()
+}

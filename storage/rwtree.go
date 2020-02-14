@@ -23,12 +23,12 @@ type RWTree struct {
 
 // Creates a concurrency safe version of an IAVL tree whereby reads are routed to the last saved tree.
 // Writes must be serialised (as they are within a commit for example).
-func NewRWTree(db dbm.DB, cacheSize int) *RWTree {
-	tree := NewMutableTree(db, cacheSize)
+func NewRWTree(db dbm.DB, cacheSize int) (*RWTree, error) {
+	tree, err := NewMutableTree(db, cacheSize)
 	return &RWTree{
 		tree:          tree,
 		ImmutableTree: &ImmutableTree{iavl.NewImmutableTree(db, cacheSize)},
-	}
+	}, err
 }
 
 // Tries to load the execution state from DB, returns nil with no error if no state found

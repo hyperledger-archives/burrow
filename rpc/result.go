@@ -25,7 +25,7 @@ var aminoCodec = NewAminoCodec()
 
 func NewAminoCodec() *amino.Codec {
 	aminoCodec := amino.NewCodec()
-	consensus.RegisterConsensusMessages(aminoCodec)
+	consensus.RegisterMessages(aminoCodec)
 	core_types.RegisterAmino(aminoCodec)
 	return aminoCodec
 }

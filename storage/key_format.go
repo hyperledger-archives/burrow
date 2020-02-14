@@ -211,7 +211,7 @@ func (kf *KeyFormat) Fix(args ...interface{}) (*KeyFormat, error) {
 // Returns an iterator over the underlying iterable using this KeyFormat's prefix. This is to support proper iteration over the
 // prefix in the presence of nil start or end which requests iteration to the inclusive edges of the domain. An optional
 // argument for reverse can be passed to get reverse iteration.
-func (kf *KeyFormat) Iterator(iterable KVIterable, start, end []byte, reverse ...bool) KVIterator {
+func (kf *KeyFormat) Iterator(iterable KVIterable, start, end []byte, reverse ...bool) (KVIterator, error) {
 	if len(reverse) > 0 && reverse[0] {
 		return kf.prefix.Iterator(iterable.ReverseIterator, start, end)
 	}

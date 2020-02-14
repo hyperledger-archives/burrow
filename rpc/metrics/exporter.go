@@ -271,7 +271,7 @@ func (e *Exporter) getTxBuckets(blockMetas []*types.BlockMeta) error {
 	// Collect number of txs per block as an array of floats
 	txsPerBlock := make([]float64, len(blockMetas))
 	for i, block := range blockMetas {
-		txsPerBlock[i] = float64(block.Header.NumTxs)
+		txsPerBlock[i] = float64(block.NumTxs)
 	}
 
 	e.datum.TxPerBlockBuckets, e.datum.TotalTxs = e.txPerBlockHistogramBuilder(txsPerBlock)

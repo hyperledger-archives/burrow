@@ -94,3 +94,12 @@ func (it *ChannelIterator) Close() {
 		// drain channel if necessary
 	}
 }
+
+func (it *ChannelIterator) Error() error {
+	for range it.ch {
+		if err := it.Error(); err != nil {
+			return nil
+		}
+	}
+	return nil
+}
