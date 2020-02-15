@@ -15,31 +15,60 @@ type Syncable interface {
 }
 
 func NewStreamLogger(writer io.Writer, format string) (log.Logger, error) {
-	var logger log.Logger
-	var err error
 	switch format {
 	case "":
 		return NewStreamLogger(writer, DefaultFormat)
 	case JSONFormat:
-		logger = log.NewJSONLogger(writer)
+		return NewJSONLogger(writer), nil
 	case LogfmtFormat:
-		logger = log.NewLogfmtLogger(writer)
+		return NewLogfmtLogger(writer), nil
 	case TerminalFormat:
-		logger = term.NewLogger(writer, log.NewLogfmtLogger, func(keyvals ...interface{}) term.FgBgColor {
-			switch structure.Value(keyvals, structure.ChannelKey) {
-			case structure.TraceChannelName:
-				return term.FgBgColor{Fg: term.DarkGreen}
-			default:
-				return term.FgBgColor{Fg: term.Yellow}
-			}
-		})
+		return NewTerminalLogger(writer), nil
 	default:
-		logger, err = NewTemplateLogger(writer, format, []byte{})
-		if err != nil {
-			return nil, fmt.Errorf("did not recognise format '%s' as named format and could not parse as "+
-				"template: %v", format, err)
-		}
+		return NewTemplateLogger(writer, format, []byte{})
 	}
+}
+
+func NewJSONLogger(writer io.Writer) log.Logger {
+	return interceptSync(writer, log.NewJSONLogger(writer))
+}
+
+func NewLogfmtLogger(writer io.Writer) log.Logger {
+	return interceptSync(writer, log.NewLogfmtLogger(writer))
+}
+
+func NewTerminalLogger(writer io.Writer) log.Logger {
+	logger := term.NewLogger(writer, log.NewLogfmtLogger, func(keyvals ...interface{}) term.FgBgColor {
+		kvm := structure.KeyValuesMap(keyvals)
+		delete(kvm, structure.TraceChannelName)
+		delete(kvm, structure.MessageKey)
+		delete(kvm, structure.TimeKey)
+		switch structure.Value(keyvals, structure.ChannelKey) {
+		case structure.TraceChannelName:
+			return term.FgBgColor{Fg: term.DarkGreen}
+		default:
+			return term.FgBgColor{Fg: term.Yellow}
+		}
+	})
+	return interceptSync(writer, logger)
+}
+
+func NewTemplateLogger(writer io.Writer, textTemplate string, recordSeparator []byte) (log.Logger, error) {
+	tmpl, err := template.New("template-logger").Parse(textTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse '%s' as a text template: %v", textTemplate, err)
+	}
+	logger := log.LoggerFunc(func(keyvals ...interface{}) error {
+		err := tmpl.Execute(writer, structure.KeyValuesMap(keyvals))
+		if err == nil {
+			_, err = writer.Write(recordSeparator)
+		}
+		return err
+	})
+	return interceptSync(writer, logger), nil
+}
+
+func interceptSync(writer io.Writer, logger log.Logger) log.Logger {
 	return log.LoggerFunc(func(keyvals ...interface{}) error {
 		switch structure.Signal(keyvals) {
 		case structure.SyncSignal:
@@ -51,20 +80,5 @@ func NewStreamLogger(writer io.Writer, format string) (log.Logger, error) {
 		default:
 			return logger.Log(keyvals...)
 		}
-	}), nil
-}
-
-func NewTemplateLogger(writer io.Writer, textTemplate string, recordSeparator []byte) (log.Logger, error) {
-	tmpl, err := template.New("template-logger").Parse(textTemplate)
-	if err != nil {
-		return nil, err
-	}
-	return log.LoggerFunc(func(keyvals ...interface{}) error {
-		err := tmpl.Execute(writer, structure.KeyValuesMap(keyvals))
-		if err == nil {
-			_, err = writer.Write(recordSeparator)
-		}
-		return err
-	}), nil
-
+	})
 }

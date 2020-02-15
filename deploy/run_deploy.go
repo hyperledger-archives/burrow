@@ -112,8 +112,10 @@ func RunPlaybooks(args *def.DeployArgs, playbooks []string, logger *logging.Logg
 	successes := 0
 
 	for range playbooks {
+		// Receive results as they come
 		jobResult := <-resultQ
 		results[jobResult.jobNo] = &jobResult
+		// Print them in order
 		for results[printed] != nil {
 			res := results[printed]
 			os.Stderr.Write(res.log.Bytes())
@@ -121,7 +123,7 @@ func RunPlaybooks(args *def.DeployArgs, playbooks []string, logger *logging.Logg
 				fmt.Fprintf(os.Stderr, "ERROR: %v", res.err)
 			}
 			res.log.Truncate(0)
-			if jobResult.err != nil {
+			if res.err != nil {
 				failures++
 			} else {
 				successes++
@@ -135,7 +137,7 @@ func RunPlaybooks(args *def.DeployArgs, playbooks []string, logger *logging.Logg
 	close(resultQ)
 
 	if successes > 0 {
-		logger.InfoMsg("JOBS THAT SUCCEEEDED", "count", successes)
+		logger.InfoMsg("JOBS THAT SUCCEEDED", "count", successes)
 		for i, playbook := range playbooks {
 			res := results[i]
 			if res.err != nil {
