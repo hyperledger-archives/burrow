@@ -16,7 +16,7 @@ func TestStaticCallWithValue(t *testing.T) {
 	cache := acmstate.NewMemoryState()
 
 	// run constructor
-	_, cerr := RunWASM(cache, crypto.ZeroAddress, true, Bytecode_storage_test, []byte{})
+	runtime, cerr := RunWASM(cache, crypto.ZeroAddress, true, Bytecode_storage_test, []byte{})
 	require.NoError(t, cerr)
 
 	// run getFooPlus2
@@ -24,7 +24,7 @@ func TestStaticCallWithValue(t *testing.T) {
 	require.NoError(t, err)
 	calldata, _, err := spec.Pack("getFooPlus2")
 
-	returndata, cerr := RunWASM(cache, crypto.ZeroAddress, false, Bytecode_storage_test, calldata)
+	returndata, cerr := RunWASM(cache, crypto.ZeroAddress, false, runtime, calldata)
 	require.NoError(t, cerr)
 
 	data := abi.GetPackingTypes(spec.Functions["getFooPlus2"].Outputs)
@@ -39,7 +39,7 @@ func TestStaticCallWithValue(t *testing.T) {
 	// call incFoo
 	calldata, _, err = spec.Pack("incFoo")
 
-	returndata, cerr = RunWASM(cache, crypto.ZeroAddress, false, Bytecode_storage_test, calldata)
+	returndata, cerr = RunWASM(cache, crypto.ZeroAddress, false, runtime, calldata)
 	require.NoError(t, cerr)
 
 	require.Equal(t, returndata, []byte{})
@@ -48,7 +48,7 @@ func TestStaticCallWithValue(t *testing.T) {
 	calldata, _, err = spec.Pack("getFooPlus2")
 	require.NoError(t, err)
 
-	returndata, cerr = RunWASM(cache, crypto.ZeroAddress, false, Bytecode_storage_test, calldata)
+	returndata, cerr = RunWASM(cache, crypto.ZeroAddress, false, runtime, calldata)
 	require.NoError(t, cerr)
 
 	spec.Unpack(returndata, "getFooPlus2", data...)
