@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/proposals"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/loggers"
 	cli "github.com/jawher/mow.cli"
 )
 
@@ -33,9 +34,6 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 
 		defaultOutputOpt := cmd.StringOpt("o output", def.DefaultOutputFile,
 			"filename for playbook output file. by default, this name will reflect the playbook passed")
-
-		playbooksOpt := cmd.StringsArg("FILE", []string{},
-			"path to playbook file which deploy should run. if also using the --dir flag, give the relative path to playbooks file, which should be in the same directory")
 
 		defaultSetsOpt := cmd.StringsOpt("e set", []string{},
 			"default sets to use; operates the same way as the [set] jobs, only before the jobs file is ran (and after default address")
@@ -74,6 +72,9 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 		timeoutSecondsOpt := cmd.IntOpt("t timeout", int(defaultChainTimeout/time.Second), "Timeout to talk to the chain in seconds")
 
 		proposalList := cmd.StringOpt("list-proposals state", "", "List proposals, either all, executed, expired, or current")
+
+		playbooksArg := cmd.StringsArg("FILE", []string{},
+			"path to playbook file which deploy should run. if also using the --dir flag, give the relative path to playbooks file, which should be in the same directory")
 
 		cmd.Spec = "[--chain=<host:port>] [--keys=<host:port>] [--mempool-signing] [--dir=<root directory>] " +
 			"[--output=<output file>] [--wasm] [--set=<KEY=VALUE>]... [--bin-path=<path>] [--gas=<gas>] " +
@@ -115,7 +116,10 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			args.ProposeVerify = *proposalVerify
 			args.ProposeVote = *proposalVote
 			args.ProposeCreate = *proposalCreate
-			stderrLogger := log.NewLogfmtLogger(os.Stderr)
+			stderrLogger, err := loggers.NewStreamLogger(os.Stderr, loggers.TerminalFormat)
+			if err != nil {
+				output.Fatalf("Could not make logger: %v", err)
+			}
 			logger := logging.NewLogger(stderrLogger)
 			handleTerm()
 
@@ -133,10 +137,10 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 					output.Fatalf(err.Error())
 				}
 			} else {
-				if len(*playbooksOpt) == 0 {
+				if len(*playbooksArg) == 0 {
 					output.Fatalf("incorrect usage: missing deployment yaml file(s)")
 				}
-				failures, err := pkgs.RunPlaybooks(args, *playbooksOpt, logger)
+				failures, err := pkgs.RunPlaybooks(args, *playbooksArg, logger)
 				if err != nil {
 					fmt.Fprintln(os.Stderr, err)
 					os.Exit(1)

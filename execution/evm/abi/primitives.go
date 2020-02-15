@@ -520,10 +520,16 @@ func (e EVMAddress) pack(v interface{}) ([]byte, error) {
 		bs = a[:]
 	case *crypto.Address:
 		bs = (*a)[:]
+	case string:
+		address, err := crypto.AddressFromHexString(a)
+		if err != nil {
+			return nil, fmt.Errorf("could not convert '%s' to address: %v", a, err)
+		}
+		bs = address[:]
 	case []byte:
 		address, err := crypto.AddressFromBytes(a)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not convert byte 0x%X to address: %v", a, err)
 		}
 		bs = address[:]
 	default:

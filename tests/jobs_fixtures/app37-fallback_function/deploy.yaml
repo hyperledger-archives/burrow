@@ -11,7 +11,7 @@ jobs:
 - name: getX
   query-contract:
       destination: $deployC
-      function: x 
+      function: x
 
 - name: assertLevelUp
   assert:
