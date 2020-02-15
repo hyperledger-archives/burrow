@@ -185,12 +185,6 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 	txHash := ctx.txe.Envelope.Tx.Hash()
 	gas := ctx.tx.GasLimit
 	if len(wcode) != 0 {
-		if createContract {
-			err := native.InitWASMCode(txCache, callee, wcode)
-			if err != nil {
-				return err
-			}
-		}
 		ret, err = wasm.RunWASM(txCache, callee, createContract, wcode, ctx.tx.Data)
 		if err != nil {
 			// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
@@ -200,6 +194,12 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 			ctx.txe.PushError(errors.Wrap(err, "call error"))
 		} else {
 			ctx.Logger.TraceMsg("Successful execution")
+			if createContract {
+				err := native.InitWASMCode(txCache, callee, ret)
+				if err != nil {
+					return err
+				}
+			}
 			err = ctx.Sync(txCache, metaCache)
 			if err != nil {
 				return err
