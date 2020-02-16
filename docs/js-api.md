@@ -18,7 +18,7 @@ If your distribution of Linux has a version older than 6 then you can update it.
 ## Install
 
 ``` bash
-$ npm install @monax/burrow
+$ npm install @hyperledger/burrow
 ```
 
 ## Usage
