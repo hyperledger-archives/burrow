@@ -35,6 +35,7 @@ message Any {
     BatchTx BatchTx = 8;
     ProposalTx ProposalTx = 9;
     IdentifyTx IdentifyTx = 10;
+    InterchainTx InterchainTx = 11;
 }
 
 // An input to a transaction that may carry an Amount as a charge and whose sequence number must be one greater than
@@ -159,6 +160,13 @@ message IdentifyTx {
     repeated TxInput Inputs = 1;
 	// Node to register
     registry.NodeIdentity Node = 2;
+}
+
+message InterchainTx {
+    option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_getters) = false;
+
+    bytes Data = 1;
 }
 
 message BatchTx {

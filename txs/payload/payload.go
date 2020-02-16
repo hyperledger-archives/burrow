@@ -41,6 +41,8 @@ const (
 	TypeGovernance  = Type(0x22)
 	TypeProposal    = Type(0x23)
 	TypeIdentify    = Type(0x24)
+
+	TypeInterchain = Type(0x25)
 )
 
 type Payload interface {
@@ -64,6 +66,7 @@ var nameFromType = map[Type]string{
 	TypeBond:        "BondTx",
 	TypeUnbond:      "UnbondTx",
 	TypeIdentify:    "IdentifyTx",
+	TypeInterchain:  "InterchainTx",
 }
 
 var typeFromName = make(map[string]Type)
