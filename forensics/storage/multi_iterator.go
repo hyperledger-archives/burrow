@@ -115,3 +115,12 @@ func (mi *MultiIterator) Close() {
 		it.Close()
 	}
 }
+
+func (mi *MultiIterator) Error() error {
+	for _, it := range mi.iterators {
+		if err := it.Error(); err != nil {
+			return err
+		}
+	}
+	return nil
+}

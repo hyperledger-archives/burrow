@@ -204,6 +204,8 @@ func (kvi *KVCacheIterator) Valid() bool {
 
 func (kvi *KVCacheIterator) Close() {}
 
+func (kvi *KVCacheIterator) Error() error { return nil }
+
 func (kvi *KVCacheIterator) sliceIndex() int {
 	if kvi.reverse {
 		//reflect

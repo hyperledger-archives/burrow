@@ -16,8 +16,10 @@ func getNode(forest storage.ForestReader, id crypto.Address) (*registry.NodeIden
 	if err != nil {
 		return nil, err
 	}
-	nodeBytes := tree.Get(keys.Registry.KeyNoPrefix(id))
-	if nodeBytes == nil {
+	nodeBytes, err := tree.Get(keys.Registry.KeyNoPrefix(id))
+	if err != nil {
+		return nil, err
+	} else if nodeBytes == nil {
 		return nil, nil
 	}
 

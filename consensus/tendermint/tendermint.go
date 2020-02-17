@@ -25,17 +25,17 @@ import (
 type Node struct {
 	*node.Node
 	closers []interface {
-		Close()
+		Close() error
 	}
 }
 
-func DBProvider(ID string, backendType dbm.DBBackendType, dbDir string) dbm.DB {
+func DBProvider(ID string, backendType dbm.BackendType, dbDir string) dbm.DB {
 	return dbm.NewDB(ID, backendType, dbDir)
 }
 
 // Since Tendermint doesn't close its DB connections
 func (n *Node) DBProvider(ctx *node.DBContext) (dbm.DB, error) {
-	db := DBProvider(ctx.ID, dbm.DBBackendType(ctx.Config.DBBackend), ctx.Config.DBDir())
+	db := DBProvider(ctx.ID, dbm.BackendType(ctx.Config.DBBackend), ctx.Config.DBDir())
 	n.closers = append(n.closers, db)
 	return db, nil
 }

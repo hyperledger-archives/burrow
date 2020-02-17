@@ -1,4 +1,4 @@
-FROM golang:1.12.6-alpine3.10
+FROM golang:1.13-alpine3.11
 MAINTAINER Monax <support@monax.io>
 
 ENV DOCKER_VERSION "17.12.1-ce"

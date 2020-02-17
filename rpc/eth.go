@@ -247,13 +247,13 @@ func (srv *EthService) EthGetBlockTransactionCountByHash(req *web3.EthGetBlockTr
 		return nil, err
 	}
 
-	block, err := srv.getBlockHeaderAtHeight(height)
+	numTxs, err := srv.blockchain.GetNumTxs(height)
 	if err != nil {
 		return nil, err
 	}
 
 	return &web3.EthGetBlockTransactionCountByHashResult{
-		BlockTransactionCountByHash: x.EncodeNumber(uint64(block.NumTxs)),
+		BlockTransactionCountByHash: x.EncodeNumber(uint64(numTxs)),
 	}, nil
 }
 
@@ -264,13 +264,13 @@ func (srv *EthService) EthGetBlockTransactionCountByNumber(req *web3.EthGetBlock
 		return nil, err
 	}
 
-	block, err := srv.getBlockHeaderAtHeight(height)
+	numTxs, err := srv.blockchain.GetNumTxs(height)
 	if err != nil {
 		return nil, err
 	}
 
 	return &web3.EthGetBlockTransactionCountByNumberResult{
-		BlockTransactionCountByHash: x.EncodeNumber(uint64(block.NumTxs)),
+		BlockTransactionCountByHash: x.EncodeNumber(uint64(numTxs)),
 	}, nil
 }
 
@@ -719,6 +719,11 @@ func (srv *EthService) getBlockInfoAtHeight(height uint64, includeTxs bool) (web
 		return web3.Block{}, fmt.Errorf("block at height %d does not exist", height)
 	}
 
+	numTxs, err := srv.blockchain.GetNumTxs(height)
+	if err != nil {
+		return web3.Block{}, err
+	}
+
 	transactions := make([]web3.Transactions, 0)
 	if includeTxs {
 		txes, err := srv.events.TxsAtHeight(height)
@@ -743,7 +748,7 @@ func (srv *EthService) getBlockInfoAtHeight(height uint64, includeTxs bool) (web
 		StateRoot:        hexKeccak(block.Hash().Bytes()),
 		ReceiptsRoot:     hexKeccak(block.Hash().Bytes()),
 		Nonce:            hexZeroNonce,
-		Size:             x.EncodeNumber(uint64(block.TotalTxs)),
+		Size:             x.EncodeNumber(uint64(numTxs)),
 		Number:           x.EncodeNumber(uint64(block.Height)),
 		Miner:            x.EncodeBytes(block.ProposerAddress.Bytes()),
 		Sha3Uncles:       hexZero,

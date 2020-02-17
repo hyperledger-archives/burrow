@@ -23,7 +23,7 @@ func NewBlockStore(blockStore state.BlockStoreRPC) *BlockStore {
 	}
 }
 
-func NewBlockExplorer(dbBackendType dbm.DBBackendType, dbDir string) *BlockStore {
+func NewBlockExplorer(dbBackendType dbm.BackendType, dbDir string) *BlockStore {
 	return NewBlockStore(store.NewBlockStore(dbm.NewDB("blockstore", dbBackendType, dbDir)))
 }
 

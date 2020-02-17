@@ -60,7 +60,7 @@ func TestExporter_Collect_Histogram(t *testing.T) {
 			timePerBlock[i-1] = block.Header.Time.Sub(blockTime).Seconds()
 		}
 		blockTime = block.Header.Time
-		numTxsPerBlock[i] = float64(block.Header.NumTxs)
+		numTxsPerBlock[i] = float64(block.NumTxs)
 	}
 
 	// Pull out the histograms and make sure they check out
@@ -141,16 +141,16 @@ func genBlocks(n int64) []*types.BlockMeta {
 	for i := int64(0); i < n; i++ {
 		blockDuration := time.Second*2 + time.Millisecond*time.Duration(rnd.Int63()>>48)
 		blockTime = blockTime.Add(blockDuration)
-		bms[i] = blockMeta(i+1, rnd.Int63()>>56, blockTime)
+		bms[i] = blockMeta(i+1, rnd.Int()>>56, blockTime)
 	}
 	return bms
 }
 
-func blockMeta(height, numTxs int64, blockTime time.Time) *types.BlockMeta {
+func blockMeta(height int64, numTxs int, blockTime time.Time) *types.BlockMeta {
 	return &types.BlockMeta{
+		NumTxs: numTxs,
 		Header: types.Header{
 			Height: height,
-			NumTxs: numTxs,
 			Time:   blockTime,
 		},
 	}

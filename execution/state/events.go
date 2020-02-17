@@ -105,13 +105,16 @@ func (s *ReadState) TxsAtHeight(height uint64) ([]*exec.TxExecution, error) {
 
 func (s *ReadState) TxByHash(txHash []byte) (*exec.TxExecution, error) {
 	const errHeader = "TxByHash():"
-	bs := s.Plain.Get(keys.TxHash.Key(txHash))
+	bs, err := s.Plain.Get(keys.TxHash.Key(txHash))
+	if err != nil {
+		return nil, err
+	}
 	if len(bs) == 0 {
 		return nil, nil
 	}
 
 	key := new(exec.TxExecutionKey)
-	err := encoding.Decode(bs, key)
+	err = encoding.Decode(bs, key)
 	if err != nil {
 		return nil, err
 	}
@@ -121,8 +124,10 @@ func (s *ReadState) TxByHash(txHash []byte) (*exec.TxExecution, error) {
 		return nil, err
 	}
 
-	bs = blockTree.Get(keys.Event.KeyNoPrefix(key.Height))
-	if len(bs) == 0 {
+	bs, err = blockTree.Get(keys.Event.KeyNoPrefix(key.Height))
+	if err != nil {
+		return nil, err
+	} else if len(bs) == 0 {
 		return nil, fmt.Errorf("%s could not retrieve transaction with TxHash %X despite finding reference",
 			errHeader, txHash)
 	}

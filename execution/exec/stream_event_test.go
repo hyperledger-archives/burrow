@@ -39,7 +39,6 @@ func TestConsumeBlockExecution(t *testing.T) {
 		Header: &types.Header{
 			ChainID: genesisDoc.ChainID(),
 			AppHash: crypto.Keccak256([]byte("hashily")),
-			NumTxs:  1,
 			Time:    time.Now(),
 			Height:  height,
 		},

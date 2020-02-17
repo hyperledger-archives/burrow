@@ -13,7 +13,8 @@ import (
 	"github.com/hyperledger/burrow/rpc/lib/types"
 	"github.com/pkg/errors"
 	metrics "github.com/rcrowley/go-metrics"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	"github.com/tendermint/tendermint/libs/rand"
+	"github.com/tendermint/tendermint/libs/service"
 )
 
 const (
@@ -26,7 +27,7 @@ const (
 // WSClient is a WebSocket client. The methods of WSClient are safe for use by
 // multiple goroutines.
 type WSClient struct {
-	cmn.BaseService
+	service.BaseService
 
 	conn *websocket.Conn
 
@@ -85,7 +86,7 @@ func NewWSClient(remoteAddr, endpoint string, options ...func(*WSClient)) *WSCli
 		writeWait:            defaultWriteWait,
 		pingPeriod:           defaultPingPeriod,
 	}
-	c.BaseService = *cmn.NewBaseService(nil, "WSClient", c)
+	c.BaseService = *service.NewBaseService(nil, "WSClient", c)
 	for _, option := range options {
 		option(c)
 	}
@@ -253,7 +254,7 @@ func (c *WSClient) reconnect() error {
 	}()
 
 	for {
-		jitterSeconds := time.Duration(cmn.RandFloat64() * float64(time.Second)) // 1s == (1e9 ns)
+		jitterSeconds := time.Duration(rand.Float64() * float64(time.Second)) // 1s == (1e9 ns)
 		backoffDuration := jitterSeconds + ((1 << uint(attempt)) * time.Second)
 
 		c.Logger.Info("reconnecting", "attempt", attempt+1, "backoff_duration", backoffDuration)

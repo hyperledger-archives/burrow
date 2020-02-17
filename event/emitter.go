@@ -11,7 +11,7 @@ import (
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	"github.com/tendermint/tendermint/libs/common"
+	"github.com/tendermint/tendermint/libs/service"
 	hex "github.com/tmthrgd/go-hex"
 )
 
@@ -22,7 +22,7 @@ const DefaultEventBufferCapacity = 2 << 10
 
 // Emitter has methods for working with events
 type Emitter struct {
-	common.BaseService
+	service.BaseService
 	pubsubServer *pubsub.Server
 	logger       *logging.Logger
 }
@@ -30,7 +30,7 @@ type Emitter struct {
 // NewEmitter initializes an emitter struct with a pubsubServer
 func NewEmitter() *Emitter {
 	pubsubServer := pubsub.NewServer(pubsub.BufferCapacity(DefaultEventBufferCapacity))
-	pubsubServer.BaseService = *common.NewBaseService(nil, "Emitter", pubsubServer)
+	pubsubServer.BaseService = *service.NewBaseService(nil, "Emitter", pubsubServer)
 	pubsubServer.Start()
 	return &Emitter{
 		pubsubServer: pubsubServer,
