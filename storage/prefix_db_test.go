@@ -35,7 +35,8 @@ func TestPrefixDBSimple(t *testing.T) {
 	}
 
 	get := func(key []byte, value []byte) interface{} {
-		act := db.Get(key)
+		act, err := db.Get(key)
+		require.NoError(t, err)
 		return act
 	}
 
@@ -48,7 +49,8 @@ func TestPrefixDBIterator1(t *testing.T) {
 	db := mockDBWithStuff()
 	pdb := NewPrefixDB(db, "key")
 
-	itr := pdb.Iterator(nil, nil)
+	itr, err := pdb.Iterator(nil, nil)
+	require.NoError(t, err)
 	checkDomain(t, itr, nil, nil)
 	checkItem(t, itr, []byte(""), []byte("value"))
 	checkNext(t, itr, true)
@@ -66,7 +68,8 @@ func TestPrefixDBIterator2(t *testing.T) {
 	db := mockDBWithStuff()
 	pdb := NewPrefixDB(db, "key")
 
-	itr := pdb.Iterator(nil, []byte(""))
+	itr, err := pdb.Iterator(nil, []byte(""))
+	require.NoError(t, err)
 	checkDomain(t, itr, nil, []byte(""))
 	checkInvalid(t, itr)
 	itr.Close()
@@ -76,7 +79,8 @@ func TestPrefixDBIterator3(t *testing.T) {
 	db := mockDBWithStuff()
 	pdb := NewPrefixDB(db, "key")
 
-	itr := pdb.Iterator([]byte(""), nil)
+	itr, err := pdb.Iterator([]byte(""), nil)
+	require.NoError(t, err)
 	checkDomain(t, itr, []byte(""), nil)
 	checkItem(t, itr, []byte(""), []byte("value"))
 	checkNext(t, itr, true)
@@ -94,7 +98,8 @@ func TestPrefixDBIterator4(t *testing.T) {
 	db := mockDBWithStuff()
 	pdb := NewPrefixDB(db, "key")
 
-	itr := pdb.Iterator([]byte(""), []byte(""))
+	itr, err := pdb.Iterator([]byte(""), []byte(""))
+	require.NoError(t, err)
 	checkDomain(t, itr, []byte(""), []byte(""))
 	checkInvalid(t, itr)
 	itr.Close()
@@ -104,7 +109,8 @@ func TestPrefixDBReverseIterator1(t *testing.T) {
 	db := mockDBWithStuff()
 	pdb := NewPrefixDB(db, "key")
 
-	itr := pdb.ReverseIterator(nil, nil)
+	itr, err := pdb.ReverseIterator(nil, nil)
+	require.NoError(t, err)
 	checkDomain(t, itr, nil, nil)
 	checkItem(t, itr, []byte("3"), []byte("value3"))
 	checkNext(t, itr, true)
@@ -122,7 +128,8 @@ func TestPrefixDBReverseIterator2(t *testing.T) {
 	db := mockDBWithStuff()
 	pdb := NewPrefixDB(db, "key")
 
-	itr := pdb.ReverseIterator([]byte(""), nil)
+	itr, err := pdb.ReverseIterator([]byte(""), nil)
+	require.NoError(t, err)
 	checkDomain(t, itr, []byte(""), nil)
 	checkItem(t, itr, []byte("3"), []byte("value3"))
 	checkNext(t, itr, true)
@@ -140,7 +147,8 @@ func TestPrefixDBReverseIterator3(t *testing.T) {
 	db := mockDBWithStuff()
 	pdb := NewPrefixDB(db, "key")
 
-	itr := pdb.ReverseIterator(nil, []byte(""))
+	itr, err := pdb.ReverseIterator(nil, []byte(""))
+	require.NoError(t, err)
 	checkDomain(t, itr, nil, []byte(""))
 	checkInvalid(t, itr)
 	itr.Close()
@@ -150,7 +158,8 @@ func TestPrefixDBReverseIterator4(t *testing.T) {
 	db := mockDBWithStuff()
 	pdb := NewPrefixDB(db, "key")
 
-	itr := pdb.ReverseIterator([]byte(""), []byte(""))
+	itr, err := pdb.ReverseIterator([]byte(""), []byte(""))
+	require.NoError(t, err)
 	checkDomain(t, itr, []byte(""), []byte(""))
 	checkInvalid(t, itr)
 	itr.Close()
@@ -160,7 +169,8 @@ func TestPrefixDBReverseIterator5(t *testing.T) {
 	db := mockDBWithStuff()
 	pdb := NewPrefixDB(db, "key")
 
-	itr := pdb.ReverseIterator([]byte("1"), nil)
+	itr, err := pdb.ReverseIterator([]byte("1"), nil)
+	require.NoError(t, err)
 	checkDomain(t, itr, []byte("1"), nil)
 	checkItem(t, itr, []byte("3"), []byte("value3"))
 	checkNext(t, itr, true)
@@ -176,7 +186,8 @@ func TestPrefixDBReverseIterator6(t *testing.T) {
 	db := mockDBWithStuff()
 	pdb := NewPrefixDB(db, "key")
 
-	itr := pdb.ReverseIterator([]byte("2"), nil)
+	itr, err := pdb.ReverseIterator([]byte("2"), nil)
+	require.NoError(t, err)
 	checkDomain(t, itr, []byte("2"), nil)
 	checkItem(t, itr, []byte("3"), []byte("value3"))
 	checkNext(t, itr, true)
@@ -190,7 +201,8 @@ func TestPrefixDBReverseIterator7(t *testing.T) {
 	db := mockDBWithStuff()
 	pdb := NewPrefixDB(db, "key")
 
-	itr := pdb.ReverseIterator(nil, []byte("2"))
+	itr, err := pdb.ReverseIterator(nil, []byte("2"))
+	require.NoError(t, err)
 	checkDomain(t, itr, nil, []byte("2"))
 	checkItem(t, itr, []byte("1"), []byte("value1"))
 	checkNext(t, itr, true)
@@ -216,7 +228,8 @@ func TestBadSuffix(t *testing.T) {
 }
 
 func checkValue(t *testing.T, db dbm.DB, key []byte, valueWanted []byte) {
-	valueGot := db.Get(key)
+	valueGot, err := db.Get(key)
+	require.NoError(t, err)
 	assert.Equal(t, valueWanted, valueGot)
 }
 

@@ -95,8 +95,10 @@ func (s *ReadState) Power(id crypto.Address) (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-	bs := tree.Get(keys.Validator.KeyNoPrefix(id))
-	if len(bs) == 0 {
+	bs, err := tree.Get(keys.Validator.KeyNoPrefix(id))
+	if err != nil {
+		return nil, err
+	} else if len(bs) == 0 {
 		return new(big.Int), nil
 	}
 	v := new(validator.Validator)

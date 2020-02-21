@@ -91,7 +91,7 @@ func TestGovernance(t *testing.T) {
 			require.NoError(t, err)
 			height := int64(genesisKernels[0].Blockchain.LastBlockHeight())
 			genesisKernels[0].Node.ConfigureRPC()
-			tmVals, err := tmcore.Validators(&rpctypes.Context{}, &height)
+			tmVals, err := tmcore.Validators(&rpctypes.Context{}, &height, 0, 0)
 			require.NoError(t, err)
 			vsOut = validator.NewTrimSet()
 

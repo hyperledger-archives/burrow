@@ -14,8 +14,10 @@ func (s *ReadState) GetProposal(proposalHash []byte) (*payload.Ballot, error) {
 	if err != nil {
 		return nil, err
 	}
-	bs := tree.Get(keys.Proposal.KeyNoPrefix(proposalHash))
-	if len(bs) == 0 {
+	bs, err := tree.Get(keys.Proposal.KeyNoPrefix(proposalHash))
+	if err != nil {
+		return nil, err
+	} else if len(bs) == 0 {
 		return nil, nil
 	}
 

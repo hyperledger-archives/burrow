@@ -21,7 +21,7 @@ require (
 	github.com/go-kit/kit v0.9.0
 	github.com/go-ozzo/ozzo-validation v3.5.0+incompatible
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.3.3
 	github.com/gorilla/websocket v1.4.1
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/howeyc/gopass v0.0.0-20170109162249-bf9dde6d0d2c
@@ -34,29 +34,29 @@ require (
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/monax/relic v2.0.0+incompatible
 	github.com/perlin-network/life v0.0.0-20190803100833-89b850c02992
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v0.9.3
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/prometheus/common v0.4.0
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a
 	github.com/sirupsen/logrus v1.4.2 // indirect
-	github.com/spf13/viper v1.5.0
+	github.com/spf13/viper v1.6.2
 	github.com/streadway/simpleuuid v0.0.0-20130420165545-6617b501e485
 	github.com/stretchr/testify v1.4.0
-	github.com/syndtr/goleveldb v1.0.1-0.20190318030020-c3a204f8e965
+	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
 	github.com/tendermint/go-amino v0.14.1
-	github.com/tendermint/iavl v0.12.4
-	github.com/tendermint/tendermint v0.32.8
-	github.com/tendermint/tm-db v0.2.0
+	github.com/tendermint/iavl v0.13.0
+	github.com/tendermint/tendermint v0.33.1
+	github.com/tendermint/tm-db v0.4.0
 	github.com/test-go/testify v1.1.4
 	github.com/tmthrgd/go-hex v0.0.0-20190303111820-0bdcb15db631
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.1.0
 	github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca
-	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
+	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
 	golang.org/x/sys v0.0.0-20190825160603-fb81701db80f // indirect
-	google.golang.org/grpc v1.25.1
+	google.golang.org/grpc v1.27.1
 	gopkg.in/yaml.v2 v2.2.4
 )

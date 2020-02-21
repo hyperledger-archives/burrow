@@ -11,7 +11,7 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/common"
+	"github.com/tendermint/tendermint/libs/kv"
 )
 
 // Attempt to execute a transaction using ABCI conventions and codes
@@ -36,9 +36,9 @@ func ExecuteTx(logHeader string, executor execution.Executor, txDecoder txs.Deco
 		}
 	}
 
-	tags := []common.KVPair{{Key: []byte(structure.TxHashKey), Value: []byte(txEnv.Tx.Hash().String())}}
+	tags := []kv.Pair{{Key: []byte(structure.TxHashKey), Value: []byte(txEnv.Tx.Hash().String())}}
 	if txe.Receipt.CreatesContract {
-		tags = append(tags, common.KVPair{
+		tags = append(tags, kv.Pair{
 			Key:   []byte("created_contract_address"),
 			Value: []byte(txe.Receipt.ContractAddress.String()),
 		})

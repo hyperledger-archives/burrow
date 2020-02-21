@@ -16,13 +16,13 @@ type KVIterable interface {
 	// Iterator must be closed by caller.
 	// To iterate over entire domain, use store.Iterator(nil, nil)
 	// CONTRACT: No writes may happen within a domain while an iterator exists over it.
-	Iterator(low, high []byte) KVIterator
+	Iterator(low, high []byte) (KVIterator, error)
 
 	// Iterator over a domain of keys in descending order. high is exclusive.
 	//  must be less than high, or the Iterator is invalid.
 	// Iterator must be closed by caller.
 	// CONTRACT: No writes may happen within a domain while an iterator exists over it.
-	ReverseIterator(low, high []byte) KVIterator
+	ReverseIterator(low, high []byte) (KVIterator, error)
 }
 
 // Provides the native iteration for IAVLTree
@@ -34,16 +34,16 @@ type KVCallbackIterable interface {
 
 type KVReader interface {
 	// Get returns nil iff key doesn't exist. Panics on nil key.
-	Get(key []byte) []byte
+	Get(key []byte) ([]byte, error)
 	// Has checks if a key exists. Panics on nil key.
-	Has(key []byte) bool
+	Has(key []byte) (bool, error)
 }
 
 type KVWriter interface {
 	// Set sets the key. Panics on nil key.
-	Set(key, value []byte)
+	Set(key, value []byte) error
 	// Delete deletes the key. Panics on nil key.
-	Delete(key []byte)
+	Delete(key []byte) error
 }
 
 type KVIterableReader interface {

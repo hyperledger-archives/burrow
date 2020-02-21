@@ -16,11 +16,11 @@ type ImmutableTree struct {
 	*iavl.ImmutableTree
 }
 
-func NewMutableTree(db dbm.DB, cacheSize int) *MutableTree {
-	tree := iavl.NewMutableTree(db, cacheSize)
+func NewMutableTree(db dbm.DB, cacheSize int) (*MutableTree, error) {
+	tree, err := iavl.NewMutableTree(db, cacheSize)
 	return &MutableTree{
 		MutableTree: tree,
-	}
+	}, err
 }
 
 func (mut *MutableTree) Load(version int64, overwriting bool) error {
@@ -57,9 +57,14 @@ func (mut *MutableTree) IterateWriteTree(start, end []byte, ascending bool, fn f
 	return err
 }
 
-func (mut *MutableTree) Get(key []byte) []byte {
+func (mut *MutableTree) Has(key []byte) (bool, error) {
+	ok := mut.MutableTree.Has(key)
+	return ok, nil
+}
+
+func (mut *MutableTree) Get(key []byte) ([]byte, error) {
 	_, bs := mut.MutableTree.Get(key)
-	return bs
+	return bs, nil
 }
 
 func (mut *MutableTree) GetImmutable(version int64) (*ImmutableTree, error) {
@@ -70,9 +75,14 @@ func (mut *MutableTree) GetImmutable(version int64) (*ImmutableTree, error) {
 	return &ImmutableTree{tree}, nil
 }
 
-func (imt *ImmutableTree) Get(key []byte) []byte {
+func (imt *ImmutableTree) Has(key []byte) (bool, error) {
+	ok := imt.ImmutableTree.Has(key)
+	return ok, nil
+}
+
+func (imt *ImmutableTree) Get(key []byte) ([]byte, error) {
 	_, value := imt.ImmutableTree.Get(key)
-	return value
+	return value, nil
 }
 
 func (imt *ImmutableTree) Iterate(start, end []byte, ascending bool, fn func(key []byte, value []byte) error) error {

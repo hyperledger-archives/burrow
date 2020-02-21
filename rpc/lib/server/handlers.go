@@ -20,7 +20,7 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/rpc/lib/types"
 	"github.com/pkg/errors"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	"github.com/tendermint/tendermint/libs/service"
 )
 
 // RegisterRPCFuncs adds a route for each function in the funcMap, as well as general jsonrpc and websocket handlers for all functions.
@@ -366,7 +366,7 @@ const (
 //
 // In case of an error, the connection is stopped.
 type wsConnection struct {
-	cmn.BaseService
+	service.BaseService
 
 	remoteAddr string
 	baseConn   *websocket.Conn
@@ -411,7 +411,7 @@ func NewWSConnection(baseConn *websocket.Conn, funcMap map[string]*RPCFunc,
 		option(wsc)
 	}
 
-	wsc.BaseService = *cmn.NewBaseService(tendermint.NewLogger(logger.With("remote", baseConn.RemoteAddr())),
+	wsc.BaseService = *service.NewBaseService(tendermint.NewLogger(logger.With("remote", baseConn.RemoteAddr())),
 		"wsConnection", wsc)
 	return wsc
 }
@@ -457,7 +457,7 @@ func PingPeriod(pingPeriod time.Duration) func(*wsConnection) {
 	}
 }
 
-// OnStart implements cmn.Service by starting the read and write routines. It
+// OnStart implements service.Service by starting the read and write routines. It
 // blocks until the connection closes.
 func (wsc *wsConnection) OnStart() error {
 	wsc.writeChan = make(chan types.RPCResponse, wsc.writeChanCapacity)
@@ -470,7 +470,7 @@ func (wsc *wsConnection) OnStart() error {
 	return nil
 }
 
-// OnStop implements cmn.Service by unsubscribing remoteAddr from all subscriptions.
+// OnStop implements service.Service by unsubscribing remoteAddr from all subscriptions.
 func (wsc *wsConnection) OnStop() {
 	// Both read and write loops close the websocket connection when they exit their loops.
 	// The writeChan is never closed, to allow WriteRPCResponse() to fail.

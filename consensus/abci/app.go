@@ -262,7 +262,6 @@ func (app *App) Commit() types.ResponseCommit {
 		structure.ScopeKey, "Commit()",
 		"height", app.block.Header.Height,
 		"hash", app.block.Hash,
-		"txs", app.block.Header.NumTxs,
 		"block_time", blockTime,
 		"last_block_time", app.blockchain.LastBlockTime(),
 		"last_block_duration", app.blockchain.LastCommitDuration(),

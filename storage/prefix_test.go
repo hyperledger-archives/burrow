@@ -58,7 +58,10 @@ func requireKeysSorted(t *testing.T, keys [][]byte, reverse ...bool) {
 	require.Equal(t, sortedKeys, keys)
 }
 
-func dumpKeys(it dbm.Iterator) [][]byte {
+func dumpKeys(it dbm.Iterator, err error) [][]byte {
+	if err != nil {
+		panic(err)
+	}
 	var keys [][]byte
 	for it.Valid() {
 		keys = append(keys, it.Key())

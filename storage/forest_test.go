@@ -31,7 +31,9 @@ func TestMutableForest_Genesis(t *testing.T) {
 	assert.Contains(t, dump, "\"bar\" -> \"nog\"")
 	reader, err := rwf.Reader(prefix)
 	require.NoError(t, err)
-	require.Equal(t, val1, reader.Get(key1))
+	val2, err := reader.Get(key1)
+	require.NoError(t, err)
+	require.Equal(t, val1, val2)
 
 }
 

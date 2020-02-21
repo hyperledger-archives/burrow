@@ -16,8 +16,10 @@ func (s *ReadState) GetAccount(address crypto.Address) (*acm.Account, error) {
 	if err != nil {
 		return nil, err
 	}
-	accBytes := tree.Get(keys.Account.KeyNoPrefix(address))
-	if accBytes == nil {
+	accBytes, err := tree.Get(keys.Account.KeyNoPrefix(address))
+	if err != nil {
+		return nil, err
+	} else if accBytes == nil {
 		return nil, nil
 	}
 	account := new(acm.Account)
@@ -116,7 +118,7 @@ func (s *ReadState) GetStorage(address crypto.Address, key binary.Word256) ([]by
 	if err != nil {
 		return []byte{}, err
 	}
-	return tree.Get(keyFormat.KeyNoPrefix(key)), nil
+	return tree.Get(keyFormat.KeyNoPrefix(key))
 }
 
 func (ws *writeState) SetStorage(address crypto.Address, key binary.Word256, value []byte) error {

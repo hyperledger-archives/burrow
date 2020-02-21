@@ -94,7 +94,10 @@ var WithOverwriting ForestOption = func(imf *ImmutableForest) { imf.overwriting 
 
 func NewMutableForest(db dbm.DB, cacheSize int) (*MutableForest, error) {
 	// The tree whose state root hash is the global state hash
-	commitsTree := NewRWTree(NewPrefixDB(db, commitsPrefix), cacheSize)
+	commitsTree, err := NewRWTree(NewPrefixDB(db, commitsPrefix), cacheSize)
+	if err != nil {
+		return nil, err
+	}
 	forest, err := NewImmutableForest(commitsTree, NewPrefixDB(db, treePrefix), cacheSize, WithOverwriting)
 	if err != nil {
 		return nil, err
@@ -261,7 +264,7 @@ func (imf *ImmutableForest) tree(prefix []byte) (*RWTree, error) {
 }
 
 func (imf *ImmutableForest) commitID(prefix []byte) (*CommitID, error) {
-	bs := imf.commitsTree.Get(prefix)
+	bs, _ := imf.commitsTree.Get(prefix)
 	if bs == nil {
 		return new(CommitID), nil
 	}
@@ -274,14 +277,17 @@ func (imf *ImmutableForest) commitID(prefix []byte) (*CommitID, error) {
 
 func (imf *ImmutableForest) loadOrCreateTree(prefix []byte) (*RWTree, error) {
 	const errHeader = "ImmutableForest.loadOrCreateTree():"
-	tree := imf.newTree(prefix)
+	tree, err := imf.newTree(prefix)
+	if err != nil {
+		return nil, err
+	}
 	commitID, err := imf.commitID(prefix)
 	if err != nil {
 		return nil, fmt.Errorf("%s %v", errHeader, err)
 	}
 	if commitID.Version == 0 {
 		// This is the first time we have been asked to load this tree
-		return imf.newTree(prefix), nil
+		return imf.newTree(prefix)
 	}
 	err = tree.Load(commitID.Version, imf.overwriting)
 	if err != nil {
@@ -291,11 +297,14 @@ func (imf *ImmutableForest) loadOrCreateTree(prefix []byte) (*RWTree, error) {
 }
 
 // Create a new in-memory IAVL tree
-func (imf *ImmutableForest) newTree(prefix []byte) *RWTree {
+func (imf *ImmutableForest) newTree(prefix []byte) (*RWTree, error) {
 	p := string(prefix)
-	tree := NewRWTree(NewPrefixDB(imf.treeDB, p), imf.cacheSize)
+	tree, err := NewRWTree(NewPrefixDB(imf.treeDB, p), imf.cacheSize)
+	if err != nil {
+		return nil, err
+	}
 	imf.treeCache.Add(p, tree)
-	return tree
+	return tree, nil
 }
 
 // CommitID serialisation
