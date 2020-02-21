@@ -14,6 +14,7 @@ type Argument struct {
 	Name        string
 	EVM         EVMType
 	IsArray     bool
+	IsTuple     bool
 	Indexed     bool
 	Hashed      bool
 	ArrayLength uint64

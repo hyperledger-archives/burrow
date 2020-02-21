@@ -230,6 +230,20 @@ func readArgSpec(argsJ []argumentJSON) ([]Argument, error) {
 			baseType = strings.TrimSuffix(a.Type, "[]")
 		}
 
+		isTuple := regexp.MustCompile(`tuple`)
+		m = isTuple.FindStringSubmatch(a.Type)
+		if m != nil {
+			components, err := readArgSpec(a.Components)
+			if err != nil {
+				return nil, err
+			}
+			args[i].IsTuple = true
+			args[i].EVM = EVMTuple{
+				Arguments: components,
+			}
+			continue
+		}
+
 		isM := regexp.MustCompile("(bytes|uint|int)([0-9]+)")
 		m = isM.FindStringSubmatch(baseType)
 		if m != nil {
@@ -300,6 +314,8 @@ func readArgSpec(argsJ []argumentJSON) ([]Argument, error) {
 			args[i].EVM = EVMBytes{M: 0}
 		case "string":
 			args[i].EVM = EVMString{}
+		case "tuple":
+			args[i].EVM = EVMTuple{}
 		default:
 			// Assume it is a type of Contract
 			args[i].EVM = EVMAddress{}

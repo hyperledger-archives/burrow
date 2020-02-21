@@ -2,6 +2,7 @@ package abi
 
 import (
 	"fmt"
+	"math/big"
 	"reflect"
 	"strings"
 
@@ -86,6 +87,8 @@ func argGetter(argSpec []Argument, args []interface{}, ptr bool) (func(int) inte
 				return func(i int) interface{} { return args[i] }, nil
 			}
 			return nil, fmt.Errorf("expected single argument to be struct but got %v", rv.Kind())
+		} else if _, ok := args[0].(*big.Int); ok {
+			return func(i int) interface{} { return args[i] }, nil
 		}
 		fields := rv.NumField()
 		if fields != len(argSpec) {
@@ -153,7 +156,7 @@ func pack(argSpec []Argument, getArg func(int) interface{}) ([]byte, error) {
 	fixedSize := 0
 	// Anything dynamic is stored after the "fixed" block. For the dynamic types, the fixed
 	// block contains byte offsets to the data. We need to know the length of the fixed
-	// block, so we can calcute the offsets
+	// block, so we can calculate the offsets
 	for _, as := range argSpec {
 		if as.Indexed {
 			continue
@@ -209,7 +212,7 @@ func pack(argSpec []Argument, getArg func(int) interface{}) ([]byte, error) {
 
 			if as.ArrayLength > 0 {
 				if as.ArrayLength != uint64(val.Len()) {
-					return nil, fmt.Errorf("argumment %d should be array of %d, not %d", i, as.ArrayLength, val.Len())
+					return nil, fmt.Errorf("argument %d should be array of %d, not %d", i, as.ArrayLength, val.Len())
 				}
 
 				for n := 0; n < val.Len(); n++ {
@@ -236,6 +239,15 @@ func pack(argSpec []Argument, getArg func(int) interface{}) ([]byte, error) {
 					packedDynamic = append(packedDynamic, d...)
 				}
 			}
+		} else if as.IsTuple {
+
+			offset := EVMUint{M: 256}
+			b, _ := offset.pack(fixedSize)
+			packed = append(packed, b...)
+
+			d, _ := as.EVM.pack(a)
+			packed = append(packed, d...)
+
 		} else {
 			err := addArg(a, as)
 			if err != nil {
@@ -362,6 +374,47 @@ func unpack(argSpec []Argument, data []byte, getArg func(int) interface{}) error
 				s += "]"
 				*ret = s
 			}
+		} else if as.IsTuple {
+			var length int64
+
+			_, err := offType.unpack(data, offset, &length)
+			if err != nil {
+				return err
+			}
+
+			offset += int(length)
+
+			tuple, ok := as.EVM.(EVMTuple)
+			if !ok {
+				return fmt.Errorf("wanted EVMTuple, got %s", as.EVM.GetSignature())
+			}
+
+			intermediate := make([]interface{}, len(tuple.Arguments))
+			for i, arg := range tuple.Arguments {
+				intermediate[i] = arg.EVM.getGoType()
+
+				if arg.EVM.Dynamic() {
+					l, err := offType.unpack(data, offset, &length)
+					if err != nil {
+						return err
+					}
+					_, err = arg.EVM.unpack(data, offset+int(length), intermediate[i])
+					if err != nil {
+						return err
+					}
+					offset += l
+				} else {
+					l, err := arg.EVM.unpack(data, offset, intermediate[i])
+					if err != nil {
+						return err
+					}
+					offset += l
+				}
+			}
+
+			if ret, ok := arg.(*string); ok {
+				*ret = strings.Join(tupleToStrings(intermediate), ",")
+			}
 		} else {
 			err := getPrimitive(arg, as)
 			if err != nil {
@@ -371,4 +424,19 @@ func unpack(argSpec []Argument, data []byte, getArg func(int) interface{}) error
 	}
 
 	return nil
+}
+
+func tupleToStrings(elements []interface{}) []string {
+	result := make([]string, 0)
+	for _, elem := range elements {
+		switch elem := elem.(type) {
+		case *[]interface{}:
+			result = append(result, tupleToStrings(*elem)...)
+		case *string:
+			result = append(result, *elem)
+		default:
+			result = append(result, fmt.Sprintf("%v", elem))
+		}
+	}
+	return result
 }

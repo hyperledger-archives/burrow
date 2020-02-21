@@ -763,3 +763,96 @@ func pad(input []byte, size int, left bool) []byte {
 	}
 	return padded
 }
+
+var _ EVMType = (*EVMTuple)(nil)
+
+type EVMTuple struct {
+	Arguments []Argument
+}
+
+func (e EVMTuple) String() string {
+	return "EVMTuple"
+}
+
+func (e EVMTuple) GetSignature() string {
+	params := make([]string, 0)
+	for _, arg := range e.Arguments {
+		params = append(params, arg.EVM.GetSignature())
+	}
+	return fmt.Sprintf("(%s)", strings.Join(params, ","))
+}
+
+func (e EVMTuple) getGoType() interface{} {
+	return &[]interface{}{}
+}
+
+func (e EVMTuple) pack(v interface{}) ([]byte, error) {
+	packedStatic := make([]byte, 0)
+	var packedDynamic []byte
+
+	var args []string
+	s, ok := v.(string)
+	if ok {
+		s = strings.Trim(s, " ")
+		if s[0:1] == "[" && s[len(s)-1:] == "]" {
+			args = strings.Split(s[1:len(s)-1], ",")
+		}
+	}
+	// TODO: throw error if input not string?
+
+	for i, a := range args {
+		data, err := e.Arguments[i].EVM.pack(a)
+		if err != nil {
+			return nil, err
+		}
+		if e.Arguments[i].EVM.Dynamic() {
+			packedDynamic = append(packedDynamic, data...)
+		} else {
+			packedStatic = append(packedStatic, data...)
+		}
+	}
+
+	if len(packedDynamic) > 0 {
+		fixedSize := len(packedStatic)
+		if len(packedStatic) == 0 {
+			offset := EVMUint{M: 256}
+			fixedSize += ElementSize
+			b, _ := offset.pack(fixedSize)
+			packedDynamic = append(b, packedDynamic...)
+			fixedSize += len(b)
+		} else {
+			fixedSize += ElementSize
+		}
+		offset := EVMUint{M: 256}
+		b, _ := offset.pack(fixedSize)
+		packedStatic = append(b, packedStatic...)
+	}
+
+	return append(packedStatic, packedDynamic...), nil
+}
+
+func (e EVMTuple) unpack(data []byte, offset int, v interface{}) (int, error) {
+	vals := make([]interface{}, len(e.Arguments))
+	for i, arg := range e.Arguments {
+		vals[i] = arg.EVM.getGoType()
+	}
+	err := Unpack(e.Arguments, data[offset:], vals...)
+	if err != nil {
+		return 0, err
+	}
+
+	switch v := v.(type) {
+	case *[]interface{}:
+		*v = vals
+	}
+
+	return ElementSize, nil
+}
+
+func (e EVMTuple) Dynamic() bool {
+	return false
+}
+
+func (e EVMTuple) ImplicitCast(o EVMType) bool {
+	return false
+}

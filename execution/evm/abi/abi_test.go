@@ -132,6 +132,18 @@ func TestPacker(t *testing.T) {
 			"arrayOfBoolsPack",
 			append(pad([]byte{1}, 32, true), pad([]byte{0}, 32, true)...),
 		},
+		{
+			`[{"constant":false,"inputs":[{"components":[{"internalType":"string","name":"name","type":"string"},{"components":[{"internalType":"uint256","name":"value","type":"uint256"}],"internalType":"struct Test.Inner","name":"data","type":"tuple"}],"internalType":"struct Test.Outer","name":"value","type":"tuple"}],"name":"set","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"get","outputs":[{"components":[{"internalType":"string","name":"name","type":"string"},{"components":[{"internalType":"uint256","name":"value","type":"uint256"}],"internalType":"struct Test.Inner","name":"data","type":"tuple"}],"internalType":"struct Test.Outer","name":"","type":"tuple"}],"payable":false,"stateMutability":"view","type":"function"}]`,
+			[]interface{}{"[hello,[100]]"},
+			"set",
+			hex.MustDecodeString("000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000064000000000000000000000000000000000000000000000000000000000000000568656c6c6f000000000000000000000000000000000000000000000000000000"),
+		},
+		{
+			`[{"constant":false,"inputs":[{"components":[{"internalType":"uint256","name":"value","type":"uint256"},{"components":[{"internalType":"string","name":"name","type":"string"}],"internalType":"struct Test.Inner","name":"data","type":"tuple"}],"internalType":"struct Test.Outer","name":"value","type":"tuple"}],"name":"set","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"get","outputs":[{"components":[{"internalType":"uint256","name":"value","type":"uint256"},{"components":[{"internalType":"string","name":"name","type":"string"}],"internalType":"struct Test.Inner","name":"data","type":"tuple"}],"internalType":"struct Test.Outer","name":"","type":"tuple"}],"payable":false,"stateMutability":"view","type":"function"}]`,
+			[]interface{}{"[100,[hello]]"},
+			"set",
+			hex.MustDecodeString("0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000568656c6c6f000000000000000000000000000000000000000000000000000000"),
+		},
 	} {
 		t.Log(test.args)
 		if output, _, err := EncodeFunctionCall(test.ABI, test.name, logging.NewNoopLogger(), test.args...); err != nil {
@@ -311,8 +323,30 @@ func TestUnpackerString(t *testing.T) {
 				},
 			},
 		},
+		{
+			`[{"constant":false,"inputs":[{"components":[{"internalType":"string","name":"name","type":"string"},{"components":[{"internalType":"uint256","name":"value","type":"uint256"}],"internalType":"struct Test.Inner","name":"data","type":"tuple"}],"internalType":"struct Test.Outer","name":"value","type":"tuple"}],"name":"set","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"get","outputs":[{"components":[{"internalType":"string","name":"name","type":"string"},{"components":[{"internalType":"uint256","name":"value","type":"uint256"}],"internalType":"struct Test.Inner","name":"data","type":"tuple"}],"internalType":"struct Test.Outer","name":"","type":"tuple"}],"payable":false,"stateMutability":"view","type":"function"}]`,
+			hex.MustDecodeString("000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000064000000000000000000000000000000000000000000000000000000000000000568656c6c6f000000000000000000000000000000000000000000000000000000"),
+			"get",
+			[]Variable{
+				{
+					Name:  "0",
+					Value: "hello,100",
+				},
+			},
+		},
+		{
+			`[{"constant":false,"inputs":[{"components":[{"internalType":"uint256","name":"value","type":"uint256"},{"components":[{"internalType":"string","name":"name","type":"string"}],"internalType":"struct Test.Inner","name":"data","type":"tuple"}],"internalType":"struct Test.Outer","name":"value","type":"tuple"}],"name":"set","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"get","outputs":[{"components":[{"internalType":"uint256","name":"value","type":"uint256"},{"components":[{"internalType":"string","name":"name","type":"string"}],"internalType":"struct Test.Inner","name":"data","type":"tuple"}],"internalType":"struct Test.Outer","name":"","type":"tuple"}],"payable":false,"stateMutability":"view","type":"function"}]`,
+			hex.MustDecodeString("0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000568656c6c6f000000000000000000000000000000000000000000000000000000"),
+			"get",
+			[]Variable{
+				{
+					Name:  "0",
+					Value: "100,hello",
+				},
+			},
+		},
 	} {
-		//t.Log(test.name)
+		// t.Log(test.name)
 		t.Log(test.packed)
 		output, err := DecodeFunctionReturn(test.abi, test.name, test.packed)
 		if err != nil {
