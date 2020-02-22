@@ -13,6 +13,8 @@ Hyperledger Burrow is a permissioned Ethereum smart-contract blockchain node. It
 
 ## What is Burrow
 
+See [Burrow - the Boring Blockchain](https://wiki.hyperledger.org/display/burrow/Burrow+-+The+Boring+Blockchain) for an introduction to Burrow and its motivating vision.
+
 Hyperledger Burrow is a permissioned blockchain node that executes smart contract code following the Ethereum specification. Burrow is built for a multi-chain universe with application specific optimization in mind. Burrow as a node is constructed out of three main components: the consensus engine, the permissioned Ethereum virtual machine and the rpc gateway. More specifically Burrow consists of the following:
 
 - **Consensus Engine:** Transactions are ordered and finalised with the Byzantine fault-tolerant Tendermint protocol.  The Tendermint protocol provides high transaction throughput over a set of known validators and prevents the blockchain from forking.
