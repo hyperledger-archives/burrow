@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/logging"
-	dbm "github.com/tendermint/tm-db"
 )
 
 const (
@@ -225,67 +224,36 @@ func (ds *Dumper) WithLogger(logger *logging.Logger) *Dumper {
 
 // Write a dump to the Writer out by pulling rows from stream
 func Write(out io.Writer, source Source, useBinaryEncoding bool, options Option) error {
-	st := state.NewState(dbm.NewMemDB())
-	_, _, err := st.Update(func(ws state.Updatable) error {
-		for {
-			resp, err := source.Recv()
+	for {
+		resp, err := source.Recv()
+		if err != nil {
 			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return fmt.Errorf("failed to recv dump: %v", err)
-			}
-
-			if options.Enabled(Accounts) {
-				// update our temporary state
-				if resp.Account != nil {
-					err := ws.UpdateAccount(resp.Account)
-					if err != nil {
-						return err
-					}
-				}
-				if resp.AccountStorage != nil {
-					for _, storage := range resp.AccountStorage.Storage {
-						err := ws.SetStorage(resp.AccountStorage.Address, storage.Key, storage.Value)
-						if err != nil {
-							return err
-						}
-					}
-				}
-			}
-
-			if options.Enabled(Names) {
-				if resp.Name != nil {
-					err := ws.UpdateName(resp.Name)
-					if err != nil {
-						return err
-					}
-				}
-			}
-
-			if useBinaryEncoding {
-				_, err := encoding.WriteMessage(out, resp)
-				if err != nil {
-					return fmt.Errorf("failed write to binary dump message: %v", err)
-				}
 				return nil
 			}
 
-			bs, err := json.Marshal(resp)
-			if err != nil {
-				return fmt.Errorf("failed to marshall dump: %v", err)
-			}
-
-			if len(bs) > 0 {
-				bs = append(bs, []byte("\n")...)
-				n, err := out.Write(bs)
-				if err == nil && n < len(bs) {
-					return fmt.Errorf("failed to write dump: %v", err)
-				}
-			}
+			return fmt.Errorf("failed to recv dump: %v", err)
 		}
 
-		return nil
-	})
-	return err
+		if useBinaryEncoding {
+			_, err := encoding.WriteMessage(out, resp)
+			if err != nil {
+				return fmt.Errorf("failed write to binary dump message: %v", err)
+			}
+			return nil
+		}
+
+		bs, err := json.Marshal(resp)
+		if err != nil {
+			return fmt.Errorf("failed to marshal dump: %v", err)
+		}
+
+		if len(bs) > 0 {
+			bs = append(bs, []byte("\n")...)
+			n, err := out.Write(bs)
+			if err == nil && n < len(bs) {
+				return fmt.Errorf("failed to write dump: %v", err)
+			}
+		}
+	}
+
 }
