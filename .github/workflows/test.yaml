@@ -13,7 +13,7 @@ jobs:
       with:
         go-version: 1.13
       id: go
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - run: make test
     - run: make build
     - uses: actions/upload-artifact@master
@@ -34,13 +34,13 @@ jobs:
   vent:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - run: docker-compose run burrow make test_integration_vent
 
   docker:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - run: make docker_build
       env:
         DOCKER_REPO: "hyperledger/burrow"
@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: unit
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - uses: actions/download-artifact@master
       with:
         name: burrow
@@ -64,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: unit
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - uses: actions/setup-node@v1
       with:
         node-version: '8.x'
@@ -82,7 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: unit
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - uses: actions/download-artifact@master
       with:
         name: burrow
@@ -97,7 +97,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: unit
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - uses: actions/download-artifact@master
       with:
         name: burrow
@@ -112,7 +112,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: unit
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - uses: actions/setup-node@v1
       with:
         node-version: '8.x'
