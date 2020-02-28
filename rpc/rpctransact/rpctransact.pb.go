@@ -8,6 +8,7 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 	time "time"
 
 	_ "github.com/gogo/protobuf/gogoproto"
@@ -21,6 +22,8 @@ import (
 	txs "github.com/hyperledger/burrow/txs"
 	payload "github.com/hyperledger/burrow/txs/payload"
 	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -34,7 +37,7 @@ var _ = time.Kitchen
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type CallCodeParam struct {
 	FromAddress          github_com_hyperledger_burrow_crypto.Address `protobuf:"bytes,1,opt,name=FromAddress,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"FromAddress"`
@@ -59,7 +62,7 @@ func (m *CallCodeParam) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return xxx_messageInfo_CallCodeParam.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -117,7 +120,7 @@ func (m *TxEnvelope) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_TxEnvelope.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -168,7 +171,7 @@ func (m *TxEnvelopeParam) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return xxx_messageInfo_TxEnvelopeParam.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
+		n, err := m.MarshalToSizedBuffer(b)
 		if err != nil {
 			return nil, err
 		}
@@ -439,6 +442,47 @@ type TransactServer interface {
 	NameTxSync(context.Context, *payload.NameTx) (*exec.TxExecution, error)
 	// Formulate a NameTx signed server-side
 	NameTxAsync(context.Context, *payload.NameTx) (*txs.Receipt, error)
+}
+
+// UnimplementedTransactServer can be embedded to have forward compatible implementations.
+type UnimplementedTransactServer struct {
+}
+
+func (*UnimplementedTransactServer) BroadcastTxSync(ctx context.Context, req *TxEnvelopeParam) (*exec.TxExecution, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BroadcastTxSync not implemented")
+}
+func (*UnimplementedTransactServer) BroadcastTxAsync(ctx context.Context, req *TxEnvelopeParam) (*txs.Receipt, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BroadcastTxAsync not implemented")
+}
+func (*UnimplementedTransactServer) SignTx(ctx context.Context, req *TxEnvelopeParam) (*TxEnvelope, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SignTx not implemented")
+}
+func (*UnimplementedTransactServer) FormulateTx(ctx context.Context, req *payload.Any) (*TxEnvelope, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FormulateTx not implemented")
+}
+func (*UnimplementedTransactServer) CallTxSync(ctx context.Context, req *payload.CallTx) (*exec.TxExecution, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CallTxSync not implemented")
+}
+func (*UnimplementedTransactServer) CallTxAsync(ctx context.Context, req *payload.CallTx) (*txs.Receipt, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CallTxAsync not implemented")
+}
+func (*UnimplementedTransactServer) CallTxSim(ctx context.Context, req *payload.CallTx) (*exec.TxExecution, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CallTxSim not implemented")
+}
+func (*UnimplementedTransactServer) CallCodeSim(ctx context.Context, req *CallCodeParam) (*exec.TxExecution, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CallCodeSim not implemented")
+}
+func (*UnimplementedTransactServer) SendTxSync(ctx context.Context, req *payload.SendTx) (*exec.TxExecution, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendTxSync not implemented")
+}
+func (*UnimplementedTransactServer) SendTxAsync(ctx context.Context, req *payload.SendTx) (*txs.Receipt, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendTxAsync not implemented")
+}
+func (*UnimplementedTransactServer) NameTxSync(ctx context.Context, req *payload.NameTx) (*exec.TxExecution, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NameTxSync not implemented")
+}
+func (*UnimplementedTransactServer) NameTxAsync(ctx context.Context, req *payload.NameTx) (*txs.Receipt, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NameTxAsync not implemented")
 }
 
 func RegisterTransactServer(s *grpc.Server, srv TransactServer) {
@@ -721,7 +765,7 @@ var _Transact_serviceDesc = grpc.ServiceDesc{
 func (m *CallCodeParam) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -729,40 +773,50 @@ func (m *CallCodeParam) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *CallCodeParam) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CallCodeParam) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	dAtA[i] = 0xa
-	i++
-	i = encodeVarintRpctransact(dAtA, i, uint64(m.FromAddress.Size()))
-	n1, err := m.FromAddress.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n1
-	if len(m.Code) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintRpctransact(dAtA, i, uint64(len(m.Code)))
-		i += copy(dAtA[i:], m.Code)
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.Data) > 0 {
-		dAtA[i] = 0x1a
-		i++
+		i -= len(m.Data)
+		copy(dAtA[i:], m.Data)
 		i = encodeVarintRpctransact(dAtA, i, uint64(len(m.Data)))
-		i += copy(dAtA[i:], m.Data)
+		i--
+		dAtA[i] = 0x1a
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.Code) > 0 {
+		i -= len(m.Code)
+		copy(dAtA[i:], m.Code)
+		i = encodeVarintRpctransact(dAtA, i, uint64(len(m.Code)))
+		i--
+		dAtA[i] = 0x12
 	}
-	return i, nil
+	{
+		size := m.FromAddress.Size()
+		i -= size
+		if _, err := m.FromAddress.MarshalTo(dAtA[i:]); err != nil {
+			return 0, err
+		}
+		i = encodeVarintRpctransact(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
 }
 
 func (m *TxEnvelope) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -770,30 +824,38 @@ func (m *TxEnvelope) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *TxEnvelope) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *TxEnvelope) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Envelope != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintRpctransact(dAtA, i, uint64(m.Envelope.Size()))
-		n2, err := m.Envelope.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n2
-	}
 	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return i, nil
+	if m.Envelope != nil {
+		{
+			size := m.Envelope.Size()
+			i -= size
+			if _, err := m.Envelope.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+			i = encodeVarintRpctransact(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *TxEnvelopeParam) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -801,52 +863,64 @@ func (m *TxEnvelopeParam) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *TxEnvelopeParam) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *TxEnvelopeParam) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Envelope != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintRpctransact(dAtA, i, uint64(m.Envelope.Size()))
-		n3, err := m.Envelope.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n3
-	}
-	if m.Payload != nil {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintRpctransact(dAtA, i, uint64(m.Payload.Size()))
-		n4, err := m.Payload.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n4
-	}
-	dAtA[i] = 0x1a
-	i++
-	i = encodeVarintRpctransact(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdDuration(m.Timeout)))
-	n5, err := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.Timeout, dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n5
 	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return i, nil
+	n2, err2 := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.Timeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(m.Timeout):])
+	if err2 != nil {
+		return 0, err2
+	}
+	i -= n2
+	i = encodeVarintRpctransact(dAtA, i, uint64(n2))
+	i--
+	dAtA[i] = 0x1a
+	if m.Payload != nil {
+		{
+			size, err := m.Payload.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRpctransact(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Envelope != nil {
+		{
+			size := m.Envelope.Size()
+			i -= size
+			if _, err := m.Envelope.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+			i = encodeVarintRpctransact(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func encodeVarintRpctransact(dAtA []byte, offset int, v uint64) int {
+	offset -= sovRpctransact(v)
+	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return offset + 1
+	return base
 }
 func (m *CallCodeParam) Size() (n int) {
 	if m == nil {
@@ -909,14 +983,7 @@ func (m *TxEnvelopeParam) Size() (n int) {
 }
 
 func sovRpctransact(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozRpctransact(x uint64) (n int) {
 	return sovRpctransact(uint64((x << 1) ^ uint64((int64(x) >> 63))))
@@ -1328,6 +1395,7 @@ func (m *TxEnvelopeParam) Unmarshal(dAtA []byte) error {
 func skipRpctransact(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0
+	depth := 0
 	for iNdEx < l {
 		var wire uint64
 		for shift := uint(0); ; shift += 7 {
@@ -1359,10 +1427,8 @@ func skipRpctransact(dAtA []byte) (n int, err error) {
 					break
 				}
 			}
-			return iNdEx, nil
 		case 1:
 			iNdEx += 8
-			return iNdEx, nil
 		case 2:
 			var length int
 			for shift := uint(0); ; shift += 7 {
@@ -1383,55 +1449,30 @@ func skipRpctransact(dAtA []byte) (n int, err error) {
 				return 0, ErrInvalidLengthRpctransact
 			}
 			iNdEx += length
-			if iNdEx < 0 {
-				return 0, ErrInvalidLengthRpctransact
-			}
-			return iNdEx, nil
 		case 3:
-			for {
-				var innerWire uint64
-				var start int = iNdEx
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return 0, ErrIntOverflowRpctransact
-					}
-					if iNdEx >= l {
-						return 0, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					innerWire |= (uint64(b) & 0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				innerWireType := int(innerWire & 0x7)
-				if innerWireType == 4 {
-					break
-				}
-				next, err := skipRpctransact(dAtA[start:])
-				if err != nil {
-					return 0, err
-				}
-				iNdEx = start + next
-				if iNdEx < 0 {
-					return 0, ErrInvalidLengthRpctransact
-				}
-			}
-			return iNdEx, nil
+			depth++
 		case 4:
-			return iNdEx, nil
+			if depth == 0 {
+				return 0, ErrUnexpectedEndOfGroupRpctransact
+			}
+			depth--
 		case 5:
 			iNdEx += 4
-			return iNdEx, nil
 		default:
 			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
 		}
+		if iNdEx < 0 {
+			return 0, ErrInvalidLengthRpctransact
+		}
+		if depth == 0 {
+			return iNdEx, nil
+		}
 	}
-	panic("unreachable")
+	return 0, io.ErrUnexpectedEOF
 }
 
 var (
-	ErrInvalidLengthRpctransact = fmt.Errorf("proto: negative length found during unmarshaling")
-	ErrIntOverflowRpctransact   = fmt.Errorf("proto: integer overflow")
+	ErrInvalidLengthRpctransact        = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowRpctransact          = fmt.Errorf("proto: integer overflow")
+	ErrUnexpectedEndOfGroupRpctransact = fmt.Errorf("proto: unexpected end of group")
 )

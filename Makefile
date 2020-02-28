@@ -69,24 +69,36 @@ megacheck:
 
 # Protobuffing
 
-# Protobuf generated go files
-PROTO_FILES = $(shell find . -path ./node_modules -prune -o -type f -name '*.proto' -print)
+BURROW_TS_PATH = ./js
+PROTO_GEN_TS_PATH = ${BURROW_TS_PATH}/proto
+PROTOC_GEN_TS_PATH = ${BURROW_TS_PATH}/node_modules/.bin/protoc-gen-ts
+PROTOC_GEN_GRPC_PATH= ${BURROW_TS_PATH}/node_modules/.bin/grpc_tools_node_protoc_plugin
+
+PROTO_FILES = $(shell find . -path $(BURROW_TS_PATH) -prune -o -path ./node_modules -prune -o -type f -name '*.proto' -print)
 PROTO_GO_FILES = $(patsubst %.proto, %.pb.go, $(PROTO_FILES))
-PROTO_GO_FILES_REAL = $(shell find . -path ./vendor -prune -o -type f -name '*.pb.go' -print)
+PROTO_GO_FILES_REAL = $(shell find . -type f -name '*.pb.go' -print)
+PROTO_TS_FILES = $(patsubst %.proto, %.pb.ts, $(PROTO_FILES))
 
 .PHONY: protobuf
-protobuf: $(PROTO_GO_FILES) fix
+protobuf: $(PROTO_GO_FILES) ${PROTO_TS_FILES} fix
 
 # Implicit compile rule for GRPC/proto files (note since pb.go files no longer generated
 # in same directory as proto file this just regenerates everything
 %.pb.go: %.proto
 	protoc -I ./protobuf $< --gogo_out=plugins=grpc:${GOPATH}/src
 
+%.pb.ts: %.proto
+	@protoc -I protobuf \
+		--plugin="protoc-gen-ts=${PROTOC_GEN_TS_PATH}" \
+		--plugin=protoc-gen-grpc=${PROTOC_GEN_GRPC_PATH} \
+		--js_out="import_style=commonjs,binary:${PROTO_GEN_TS_PATH}" \
+		--ts_out="service=grpc-node:${PROTO_GEN_TS_PATH}" \
+		--grpc_out="${PROTO_GEN_TS_PATH}" $<
 
 .PHONY: protobuf_deps
 protobuf_deps:
 	@go get -u github.com/gogo/protobuf/protoc-gen-gogo
-#	@go get -u github.com/golang/protobuf/protoc-gen-go
+	@cd ${BURROW_TS_PATH} && npm install --only=dev
 
 .PHONY: clean_protobuf
 clean_protobuf:
@@ -171,17 +183,15 @@ solang: $(patsubst %.solang, %.solang.go, $(wildcard ./execution/wasm/*.solang))
 	@go run ./deploy/compile/solgo/main.go -wasm $^
 
 # node/js
-#
-# Install dependency
 .PHONY: npm_install
 npm_install:
-	npm install
+	@cd ${BURROW_TS_PATH} && npm install
 
 # Test
 
 .PHONY: test_js
 test_js:
-	./tests/scripts/bin_wrapper.sh npm test
+	@cd ${BURROW_TS_PATH} && npm test
 
 .PHONY: test
 test: check bin/solc

@@ -13,7 +13,7 @@ jobs:
       with:
         go-version: 1.13
       id: go
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - run: make test
       env:
         GO_TEST_ARGS: "-coverprofile=coverage.txt -covermode=atomic"
@@ -26,7 +26,7 @@ jobs:
     name: docker
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - run: make docker_build
     - name: publish
       env:
