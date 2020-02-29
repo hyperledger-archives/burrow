@@ -7,6 +7,7 @@ import (
 	context "context"
 	fmt "fmt"
 	math "math"
+	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -21,6 +22,8 @@ import (
 	payload "github.com/hyperledger/burrow/txs/payload"
 	types "github.com/tendermint/tendermint/abci/types"
 	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -33,7 +36,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type StatusParam struct {
 	BlockTimeWithin      string   `protobuf:"bytes,1,opt,name=BlockTimeWithin,proto3" json:"BlockTimeWithin,omitempty"`
@@ -1313,6 +1316,53 @@ type QueryServer interface {
 	GetBlockHeader(context.Context, *GetBlockParam) (*types.Header, error)
 }
 
+// UnimplementedQueryServer can be embedded to have forward compatible implementations.
+type UnimplementedQueryServer struct {
+}
+
+func (*UnimplementedQueryServer) Status(ctx context.Context, req *StatusParam) (*rpc.ResultStatus, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Status not implemented")
+}
+func (*UnimplementedQueryServer) GetAccount(ctx context.Context, req *GetAccountParam) (*acm.Account, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAccount not implemented")
+}
+func (*UnimplementedQueryServer) GetMetadata(ctx context.Context, req *GetMetadataParam) (*MetadataResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMetadata not implemented")
+}
+func (*UnimplementedQueryServer) GetStorage(ctx context.Context, req *GetStorageParam) (*StorageValue, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetStorage not implemented")
+}
+func (*UnimplementedQueryServer) ListAccounts(req *ListAccountsParam, srv Query_ListAccountsServer) error {
+	return status.Errorf(codes.Unimplemented, "method ListAccounts not implemented")
+}
+func (*UnimplementedQueryServer) GetName(ctx context.Context, req *GetNameParam) (*names.Entry, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetName not implemented")
+}
+func (*UnimplementedQueryServer) ListNames(req *ListNamesParam, srv Query_ListNamesServer) error {
+	return status.Errorf(codes.Unimplemented, "method ListNames not implemented")
+}
+func (*UnimplementedQueryServer) GetNetworkRegistry(ctx context.Context, req *GetNetworkRegistryParam) (*NetworkRegistry, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetNetworkRegistry not implemented")
+}
+func (*UnimplementedQueryServer) GetValidatorSet(ctx context.Context, req *GetValidatorSetParam) (*ValidatorSet, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorSet not implemented")
+}
+func (*UnimplementedQueryServer) GetValidatorSetHistory(ctx context.Context, req *GetValidatorSetHistoryParam) (*ValidatorSetHistory, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetValidatorSetHistory not implemented")
+}
+func (*UnimplementedQueryServer) GetProposal(ctx context.Context, req *GetProposalParam) (*payload.Ballot, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetProposal not implemented")
+}
+func (*UnimplementedQueryServer) ListProposals(req *ListProposalsParam, srv Query_ListProposalsServer) error {
+	return status.Errorf(codes.Unimplemented, "method ListProposals not implemented")
+}
+func (*UnimplementedQueryServer) GetStats(ctx context.Context, req *GetStatsParam) (*Stats, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetStats not implemented")
+}
+func (*UnimplementedQueryServer) GetBlockHeader(ctx context.Context, req *GetBlockParam) (*types.Header, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBlockHeader not implemented")
+}
+
 func RegisterQueryServer(s *grpc.Server, srv QueryServer) {
 	s.RegisterService(&_Query_serviceDesc, srv)
 }
@@ -2006,14 +2056,7 @@ func (m *GetBlockParam) Size() (n int) {
 }
 
 func sovRpcquery(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozRpcquery(x uint64) (n int) {
 	return sovRpcquery(uint64((x << 1) ^ uint64((int64(x) >> 63))))
