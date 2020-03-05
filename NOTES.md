@@ -1,3 +1,6 @@
+### Changed
+- [JS] Partial rewrite of client API in typescript 
+		
 ### Fixed
-- [ABI] Fix failure to convert crypto.Address to EVMAddress (https://github.com/hyperledger/burrow/issues/1326)
+- [State] Blockchain now commits initial AppHash to avoid IAVL panic
 
