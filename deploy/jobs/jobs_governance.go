@@ -107,6 +107,7 @@ func FormulateUnbondJob(unbond *def.Unbond, account string, client *def.Client, 
 
 	arg := &def.UnbondArg{
 		Output:   unbond.Source,
+		Amount:   unbond.Amount,
 		Sequence: unbond.Sequence,
 	}
 
