@@ -48,6 +48,11 @@ func FullVersion() string {
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases(
+		"0.30.1 - 2020-03-06",
+		`### Fixed
+- [CLI/Tx] Unbond formulation now specifies amount
+`,
+
 		"0.30.0 - 2020-03-05",
 		`### Changed
 - [JS] Partial rewrite of client API in typescript 
