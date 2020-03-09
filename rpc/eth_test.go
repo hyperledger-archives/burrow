@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/crypto"
@@ -37,7 +38,7 @@ func TestWeb3Service(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(dir)
 
-	store := keys.NewKeyStore(dir, true)
+	store := keys.NewFilesystemKeyStore(dir, true)
 	for _, acc := range genesisAccounts {
 		err = store.StoreKeyPlain(&keys.Key{
 			CurveType:  acc.PrivateKey().CurveType,
@@ -142,7 +143,39 @@ func TestWeb3Service(t *testing.T) {
 
 		// create contract on chain
 		t.Run("EthSendTransaction", func(t *testing.T) {
-			result, err := eth.EthSendTransaction(&web3.EthSendTransactionParams{
+			type ret struct {
+				*web3.EthSendTransactionResult
+				error
+			}
+			ch := make(chan ret)
+			numSends := 5
+			for i := 0; i < numSends; i++ {
+				idx := i
+				go func() {
+					tx := &web3.EthSendTransactionParams{
+						Transaction: web3.Transaction{
+							From: x.EncodeBytes(genesisAccounts[3].GetAddress().Bytes()),
+							Gas:  x.EncodeNumber(uint64(40 + idx)), // make tx unique in mempool
+							Data: x.EncodeBytes(rpc.Bytecode_HelloWorld),
+						},
+					}
+					result, err := eth.EthSendTransaction(tx)
+					ch <- ret{result, err}
+				}()
+			}
+			for i := 0; i < numSends; i++ {
+				select {
+				case r := <-ch:
+					require.NoError(t, r.error)
+					require.NotEmpty(t, r.TransactionHash)
+				case <-time.After(2 * time.Second):
+					t.Fatalf("timed out waiting for EthSendTransaction result")
+				}
+			}
+		})
+
+		t.Run("EthGetTransactionReceipt", func(t *testing.T) {
+			sendResult, err := eth.EthSendTransaction(&web3.EthSendTransactionParams{
 				Transaction: web3.Transaction{
 					From: x.EncodeBytes(genesisAccounts[3].GetAddress().Bytes()),
 					Gas:  x.EncodeNumber(40),
@@ -150,17 +183,13 @@ func TestWeb3Service(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
-			txHash = result.TransactionHash
-			require.NotEmpty(t, txHash)
-		})
-
-		t.Run("EthGetTransactionReceipt", func(t *testing.T) {
+			txHash = sendResult.TransactionHash
 			require.NotEmpty(t, txHash, "need tx hash to get tx receipt")
-			result, err := eth.EthGetTransactionReceipt(&web3.EthGetTransactionReceiptParams{
+			receiptResult, err := eth.EthGetTransactionReceipt(&web3.EthGetTransactionReceiptParams{
 				TransactionHash: txHash,
 			})
 			require.NoError(t, err)
-			contractAddress = result.Receipt.ContractAddress
+			contractAddress = receiptResult.Receipt.ContractAddress
 			require.NotEmpty(t, contractAddress)
 		})
 

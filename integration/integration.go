@@ -21,7 +21,7 @@ import (
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
-	"github.com/hyperledger/burrow/keys/mock"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/permission"
@@ -76,6 +76,7 @@ func NewTestConfig(genesisDoc *genesis.GenesisDoc,
 	nodeNumber := atomic.AddUint64(&node, 1)
 	name := fmt.Sprintf("node_%03d", nodeNumber)
 	conf = config.DefaultBurrowConfig()
+	conf.Logging = nil
 	testDir, cleanup := EnterTestDirectory()
 	conf.BurrowDir = path.Join(testDir, fmt.Sprintf(".burrow_%s", name))
 	conf.GenesisDoc = genesisDoc
@@ -116,7 +117,8 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 		return nil, err
 	}
 
-	kern.SetLogger(logging.NewNoopLogger())
+	logger := logging.NewNoopLogger()
+	kern.SetLogger(logger)
 	if testConfig.Logging != nil {
 		err := kern.LoadLoggerFromConfig(testConfig.Logging)
 		if err != nil {
@@ -124,7 +126,7 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 		}
 	}
 
-	kern.SetKeyClient(mock.NewKeyClient(keysAccounts...))
+	kern.SetKeyClient(keys.NewLocalKeyClient(keys.NewMemoryKeyStore(keysAccounts...), logger))
 
 	err = kern.LoadExecutionOptionsFromConfig(testConfig.Execution)
 	if err != nil {

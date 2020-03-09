@@ -64,7 +64,7 @@ type Kernel struct {
 	checker        execution.BatchExecutor
 	committer      execution.BatchCommitter
 	keyClient      keys.KeyClient
-	keyStore       *keys.KeyStore
+	keyStore       *keys.FilesystemKeyStore
 	info           string
 	processes      map[string]process.Process
 	listeners      map[string]net.Listener
@@ -227,7 +227,7 @@ func (kern *Kernel) SetKeyClient(client keys.KeyClient) {
 }
 
 // SetKeyStore explicitly sets the key store
-func (kern *Kernel) SetKeyStore(store *keys.KeyStore) {
+func (kern *Kernel) SetKeyStore(store *keys.FilesystemKeyStore) {
 	kern.keyStore = store
 }
 
