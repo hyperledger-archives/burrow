@@ -40,6 +40,7 @@ func (txe *TxExecution) StreamEvents() []*StreamEvent {
 		&StreamEvent{
 			BeginTx: &BeginTx{
 				TxHeader:  txe.TxHeader,
+				NumEvents: uint64(len(txe.Events)),
 				Exception: txe.Exception,
 				Result:    txe.Result,
 			},

@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/storage"
 )
 
 const (
@@ -164,7 +165,7 @@ func (ds *Dumper) Transmit(sink Sink, startHeight, endHeight uint64, options Opt
 		var origin *exec.Origin
 
 		// Only return events from specified start height - allows for resume
-		err = ds.state.IterateStreamEvents(&startHeight, &endHeight,
+		err = ds.state.IterateStreamEvents(&startHeight, &endHeight, storage.AscendingSort,
 			func(ev *exec.StreamEvent) error {
 				switch {
 				case ev.BeginBlock != nil:

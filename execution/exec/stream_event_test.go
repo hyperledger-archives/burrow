@@ -1,6 +1,7 @@
 package exec
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -26,7 +27,7 @@ func TestTxExecution(t *testing.T) {
 		txeOut, err = stack.Consume(ev)
 		require.NoError(t, err)
 		if txeOut != nil {
-			require.Equal(t, txe, txeOut)
+			require.Equal(t, jsonString(t, txe), jsonString(t, txeOut))
 		}
 	}
 
@@ -43,21 +44,21 @@ func TestConsumeBlockExecution(t *testing.T) {
 			Height:  height,
 		},
 		Height: uint64(height),
-		TxExecutions: []*TxExecution{
-			NewTxExecution(txs.Enclose(genesisDoc.ChainID(), newCallTx(0, 3))),
-			NewTxExecution(txs.Enclose(genesisDoc.ChainID(), newCallTx(0, 2))),
-			NewTxExecution(txs.Enclose(genesisDoc.ChainID(), newCallTx(2, 1))),
-		},
 	}
+	be.AppendTxs(
+		NewTxExecution(txs.Enclose(genesisDoc.ChainID(), newCallTx(0, 3))),
+		NewTxExecution(txs.Enclose(genesisDoc.ChainID(), newCallTx(0, 2))),
+		NewTxExecution(txs.Enclose(genesisDoc.ChainID(), newCallTx(2, 1))),
+	)
 
-	stack := new(BlockAccumulator)
+	stack := NewBlockAccumulator()
 	var beOut *BlockExecution
 	var err error
 	for _, ev := range be.StreamEvents() {
 		beOut, err = stack.Consume(ev)
 		require.NoError(t, err)
 		if beOut != nil {
-			require.Equal(t, be, beOut)
+			require.Equal(t, jsonString(t, be), jsonString(t, beOut))
 		}
 	}
 	assert.NotNil(t, beOut, "should have consumed input BlockExecution")
@@ -67,4 +68,10 @@ func newCallTx(fromIndex, toIndex int) *payload.CallTx {
 	from := accounts[fromIndex]
 	to := accounts[toIndex].GetAddress()
 	return payload.NewCallTxWithSequence(from.GetPublicKey(), &to, []byte{1, 2, 3}, 324, 34534534, 23, 1)
+}
+
+func jsonString(t testing.TB, conf interface{}) string {
+	bs, err := json.MarshalIndent(conf, "", "  ")
+	require.NoError(t, err, "must be able to convert interface to string for comparison")
+	return string(bs)
 }

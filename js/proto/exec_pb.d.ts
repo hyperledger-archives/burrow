@@ -89,6 +89,12 @@ export class BeginBlock extends jspb.Message {
   getHeight(): number;
   setHeight(value: number): void;
 
+  getNumtxs(): number;
+  setNumtxs(value: number): void;
+
+  getPredecessorheight(): number;
+  setPredecessorheight(value: number): void;
+
   hasHeader(): boolean;
   clearHeader(): void;
   getHeader(): github_com_tendermint_tendermint_abci_types_types_pb.Header | undefined;
@@ -107,6 +113,8 @@ export class BeginBlock extends jspb.Message {
 export namespace BeginBlock {
   export type AsObject = {
     height: number,
+    numtxs: number,
+    predecessorheight: number,
     header?: github_com_tendermint_tendermint_abci_types_types_pb.Header.AsObject,
   }
 }
@@ -137,6 +145,9 @@ export class BeginTx extends jspb.Message {
   getTxheader(): TxHeader | undefined;
   setTxheader(value?: TxHeader): void;
 
+  getNumevents(): number;
+  setNumevents(value: number): void;
+
   hasResult(): boolean;
   clearResult(): void;
   getResult(): Result | undefined;
@@ -160,6 +171,7 @@ export class BeginTx extends jspb.Message {
 export namespace BeginTx {
   export type AsObject = {
     txheader?: TxHeader.AsObject,
+    numevents: number,
     result?: Result.AsObject,
     exception?: errors_pb.Exception.AsObject,
   }
@@ -231,6 +243,9 @@ export class BlockExecution extends jspb.Message {
   getHeight(): number;
   setHeight(value: number): void;
 
+  getPredecessorheight(): number;
+  setPredecessorheight(value: number): void;
+
   hasHeader(): boolean;
   clearHeader(): void;
   getHeader(): github_com_tendermint_tendermint_abci_types_types_pb.Header | undefined;
@@ -254,6 +269,7 @@ export class BlockExecution extends jspb.Message {
 export namespace BlockExecution {
   export type AsObject = {
     height: number,
+    predecessorheight: number,
     header?: github_com_tendermint_tendermint_abci_types_types_pb.Header.AsObject,
     txexecutionsList: Array<TxExecution.AsObject>,
   }

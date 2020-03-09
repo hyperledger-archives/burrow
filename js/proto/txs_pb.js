@@ -17,7 +17,7 @@ goog.object.extend(proto, github_com_gogo_protobuf_gogoproto_gogo_pb);
 var crypto_pb = require('./crypto_pb.js');
 goog.object.extend(proto, crypto_pb);
 goog.exportSymbol('proto.txs.Envelope', null, global);
-goog.exportSymbol('proto.txs.Envelope.Encoding', null, global);
+goog.exportSymbol('proto.txs.Envelope.EncodingType', null, global);
 goog.exportSymbol('proto.txs.Receipt', null, global);
 goog.exportSymbol('proto.txs.Signatory', null, global);
 /**
@@ -125,7 +125,7 @@ proto.txs.Envelope.toObject = function(includeInstance, msg) {
     signatoriesList: jspb.Message.toObjectList(msg.getSignatoriesList(),
     proto.txs.Signatory.toObject, includeInstance),
     tx: msg.getTx_asB64(),
-    enc: jspb.Message.getFieldWithDefault(msg, 3, 0)
+    encoding: jspb.Message.getFieldWithDefault(msg, 3, 0)
   };
 
   if (includeInstance) {
@@ -172,8 +172,8 @@ proto.txs.Envelope.deserializeBinaryFromReader = function(msg, reader) {
       msg.setTx(value);
       break;
     case 3:
-      var value = /** @type {!proto.txs.Envelope.Encoding} */ (reader.readEnum());
-      msg.setEnc(value);
+      var value = /** @type {!proto.txs.Envelope.EncodingType} */ (reader.readEnum());
+      msg.setEncoding(value);
       break;
     default:
       reader.skipField();
@@ -219,7 +219,7 @@ proto.txs.Envelope.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
-  f = message.getEnc();
+  f = message.getEncoding();
   if (f !== 0.0) {
     writer.writeEnum(
       3,
@@ -232,7 +232,7 @@ proto.txs.Envelope.serializeBinaryToWriter = function(message, writer) {
 /**
  * @enum {number}
  */
-proto.txs.Envelope.Encoding = {
+proto.txs.Envelope.EncodingType = {
   JSON: 0,
   RLP: 1
 };
@@ -318,19 +318,19 @@ proto.txs.Envelope.prototype.setTx = function(value) {
 
 
 /**
- * optional Encoding Enc = 3;
- * @return {!proto.txs.Envelope.Encoding}
+ * optional EncodingType Encoding = 3;
+ * @return {!proto.txs.Envelope.EncodingType}
  */
-proto.txs.Envelope.prototype.getEnc = function() {
-  return /** @type {!proto.txs.Envelope.Encoding} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
+proto.txs.Envelope.prototype.getEncoding = function() {
+  return /** @type {!proto.txs.Envelope.EncodingType} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
 };
 
 
 /**
- * @param {!proto.txs.Envelope.Encoding} value
+ * @param {!proto.txs.Envelope.EncodingType} value
  * @return {!proto.txs.Envelope} returns this
  */
-proto.txs.Envelope.prototype.setEnc = function(value) {
+proto.txs.Envelope.prototype.setEncoding = function(value) {
   return jspb.Message.setProto3EnumField(this, 3, value);
 };
 

@@ -45,6 +45,7 @@ func (f ExecutorFunc) Execute(txEnv *txs.Envelope) (*exec.TxExecution, error) {
 
 type ExecutorState interface {
 	Update(updater func(ws state.Updatable) error) (hash []byte, version int64, err error)
+	LastStoredHeight() (uint64, error)
 	acmstate.IterableReader
 	acmstate.MetadataReader
 	names.Reader
@@ -52,7 +53,6 @@ type ExecutorState interface {
 	proposal.Reader
 	validator.IterableReader
 }
-
 type BatchExecutor interface {
 	// Provides access to write lock for a BatchExecutor so reads can be prevented for the duration of a commit
 	sync.Locker
@@ -105,14 +105,14 @@ var _ BatchExecutor = (*executor)(nil)
 
 // Wraps a cache of what is variously known as the 'check cache' and 'mempool'
 func NewBatchChecker(backend ExecutorState, params Params, blockchain engine.Blockchain, logger *logging.Logger,
-	options ...Option) BatchExecutor {
+	options ...Option) (BatchExecutor, error) {
 
 	return newExecutor("CheckCache", false, params, backend, blockchain, nil,
 		logger.WithScope("NewBatchExecutor"), options...)
 }
 
 func NewBatchCommitter(backend ExecutorState, params Params, blockchain engine.Blockchain, emitter *event.Emitter,
-	logger *logging.Logger, options ...Option) BatchCommitter {
+	logger *logging.Logger, options ...Option) (BatchCommitter, error) {
 
 	return newExecutor("CommitCache", true, params, backend, blockchain, emitter,
 		logger.WithScope("NewBatchCommitter"), options...)
@@ -120,7 +120,12 @@ func NewBatchCommitter(backend ExecutorState, params Params, blockchain engine.B
 }
 
 func newExecutor(name string, runCall bool, params Params, backend ExecutorState, blockchain engine.Blockchain,
-	emitter *event.Emitter, logger *logging.Logger, options ...Option) *executor {
+	emitter *event.Emitter, logger *logging.Logger, options ...Option) (*executor, error) {
+	// We need to track the last block stored in state
+	predecessor, err := backend.LastStoredHeight()
+	if err != nil {
+		return nil, err
+	}
 	exe := &executor{
 		runCall:          runCall,
 		params:           params,
@@ -133,7 +138,8 @@ func newExecutor(name string, runCall bool, params Params, backend ExecutorState
 		validatorCache:   validator.NewCache(backend),
 		emitter:          emitter,
 		block: &exec.BlockExecution{
-			Height: blockchain.LastBlockHeight() + 1,
+			Height:            blockchain.LastBlockHeight() + 1,
+			PredecessorHeight: predecessor,
 		},
 		logger: logger.With(structure.ComponentKey, "Executor"),
 	}
@@ -202,7 +208,7 @@ func newExecutor(name string, runCall bool, params Params, backend ExecutorState
 		exe.contexts[k] = v
 	}
 
-	return exe
+	return exe, nil
 }
 
 func (exe *executor) AddContext(ty payload.Type, ctx contexts.Context) *executor {
@@ -447,9 +453,18 @@ func (exe *executor) finaliseBlockExecution(header *abciTypes.Header) (*exec.Blo
 	be := exe.block
 	// Set the header when provided
 	be.Header = header
+	// My default the predecessor of the next block is the is the predecessor of the current block
+	// (in case the current block has no transactions - since we do not currently store empty blocks in state, see
+	// /execution/state/events.go)
+	predecessor := be.PredecessorHeight
+	if len(be.TxExecutions) > 0 {
+		// If the current block has transactions then it will be the predecessor of the next block
+		predecessor = be.Height
+	}
 	// Start new execution for the next height
 	exe.block = &exec.BlockExecution{
-		Height: exe.block.Height + 1,
+		Height:            exe.block.Height + 1,
+		PredecessorHeight: predecessor,
 	}
 	return be, nil
 }

@@ -27,7 +27,7 @@ func testLoadStudio(t *testing.T, i int) {
 	fmt.Printf("Validator %d hash: %X\n", i, st.Hash())
 	//txHash := hex.MustDecodeString("DEF358F2CD8746CC2CEADE6EDF6518699FA91C512C45A3894FBB0E746E57B749")
 
-	accum := new(exec.BlockAccumulator)
+	accum := exec.NewBlockAccumulator()
 	buf := new(bytes.Buffer)
 	err = st.IterateStreamEvents(nil, nil, func(ev *exec.StreamEvent) error {
 		be, err := accum.Consume(ev)

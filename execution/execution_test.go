@@ -1455,8 +1455,45 @@ func TestSelfDestruct(t *testing.T) {
 	require.Nil(t, accRemoved, "Expected account to be removed")
 }
 
-//-------------------------------------------------------------------------------------
-// helpers
+func TestPredecessorTracking(t *testing.T) {
+	st, signers := makeGenesisState(3, 1)
+	exe := makeExecutor(st)
+
+	mkTx := func() *payload.SendTx {
+		tx := payload.NewSendTx()
+		err := tx.AddInput(st, signers[0].GetPublicKey(), 100)
+		require.NoError(t, err)
+		tx.AddOutput(signers[1].GetAddress(), 100)
+		require.NoError(t, err)
+		return tx
+	}
+
+	// Empty block - predecessor does not advance
+	_, err := exe.Commit(nil)
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), exe.block.PredecessorHeight)
+	require.Equal(t, uint64(2), exe.block.Height)
+
+	// Tx in block - predecessor becomes this block
+	err = exe.signExecuteCommit(mkTx(), signers[0])
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), exe.block.PredecessorHeight)
+	require.Equal(t, uint64(3), exe.block.Height)
+
+	//  Empty again
+	_, err = exe.Commit(nil)
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), exe.block.PredecessorHeight)
+	require.Equal(t, uint64(4), exe.block.Height)
+
+	// Non-empty - back to consecutive predecessor
+	err = exe.signExecuteCommit(mkTx(), signers[0])
+	require.NoError(t, err)
+	require.Equal(t, uint64(4), exe.block.PredecessorHeight)
+	require.Equal(t, uint64(5), exe.block.Height)
+}
+
+// Helpers
 
 func makeUsers(n int) []acm.AddressableSigner {
 	users := make([]acm.AddressableSigner, n)
@@ -1544,10 +1581,14 @@ func makeExecutor(state *state.State) *testExecutor {
 	if err != nil {
 		panic(err)
 	}
+	executor, err := newExecutor("makeExecutorCache", true, ParamsFromGenesis(testGenesisDoc), state,
+		blockchain, nil, logger)
+	if err != nil {
+		panic(err)
+	}
 	return &testExecutor{
 		Blockchain: blockchain,
-		executor: newExecutor("makeExecutorCache", true, ParamsFromGenesis(testGenesisDoc), state,
-			blockchain, nil, logger),
+		executor:   executor,
 	}
 }
 

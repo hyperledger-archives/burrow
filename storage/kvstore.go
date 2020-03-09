@@ -8,7 +8,7 @@ import (
 
 type KVIterator = dbm.Iterator
 
-// This is partially extrated from Cosmos SDK for alignment but is more minimal, we should suggest this becomes an
+// This is partially extracted from Cosmos SDK for alignment but is more minimal, we should suggest this becomes an
 // embedded interface
 type KVIterable interface {
 	// Iterator over a domain of keys in ascending order. high is exclusive.

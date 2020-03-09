@@ -119,7 +119,7 @@ func TestExecutionEventsTest(t *testing.T) {
 				blocks = append(blocks, be)
 				assert.Contains(t, strconv.FormatUint(be.Height, 10), "2")
 				return nil
-			})
+			}, exec.NonConsecutiveBlocks|exec.NonConsecutiveTxs)
 			require.Equal(t, io.EOF, err)
 			require.Len(t, blocks, 2, "should record blocks 2 and 12")
 			assert.Equal(t, uint64(2), blocks[0].Height)

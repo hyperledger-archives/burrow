@@ -109,7 +109,7 @@ func (txEnv *Envelope) Verify(chainID string) error {
 		return fmt.Errorf("%s: number of inputs (= %v) should equal number of signatories (= %v)",
 			errPrefix, len(inputs), len(txEnv.Signatories))
 	}
-	signBytes, err := txEnv.Tx.SignBytes(txEnv.GetEnc())
+	signBytes, err := txEnv.Tx.SignBytes(txEnv.GetEncoding())
 	if err != nil {
 		return fmt.Errorf("%s: could not generate SignBytes: %v", errPrefix, err)
 	}
@@ -132,7 +132,7 @@ func (txEnv *Envelope) Verify(chainID string) error {
 func (txEnv *Envelope) Sign(signingAccounts ...acm.AddressableSigner) error {
 	// Clear any existing
 	txEnv.Signatories = nil
-	signBytes, err := txEnv.Tx.SignBytes(txEnv.GetEnc())
+	signBytes, err := txEnv.Tx.SignBytes(txEnv.GetEncoding())
 	if err != nil {
 		return err
 	}
