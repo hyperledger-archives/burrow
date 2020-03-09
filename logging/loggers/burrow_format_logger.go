@@ -22,7 +22,27 @@ import (
 // we control and generic output loggers are unlikely to know about.
 type burrowFormatLogger struct {
 	sync.Mutex
-	logger log.Logger
+	logger  log.Logger
+	options opt
+}
+
+type opt byte
+
+func (o opt) enabled(q opt) bool {
+	return o&q > 0
+}
+
+const (
+	DefaultOptions opt = iota
+	StringifyValues
+)
+
+func NewBurrowFormatLogger(logger log.Logger, options ...opt) *burrowFormatLogger {
+	bfl := &burrowFormatLogger{logger: logger}
+	for _, option := range options {
+		bfl.options |= option
+	}
+	return bfl
 }
 
 var _ log.Logger = &burrowFormatLogger{}
@@ -42,7 +62,10 @@ func (bfl *burrowFormatLogger) Log(keyvals ...interface{}) error {
 			case []byte:
 				value = hex.EncodeUpperToString(v)
 			}
-			return structure.StringifyKey(key), value
+			if bfl.options.enabled(StringifyValues) {
+				value = structure.Stringify(value)
+			}
+			return structure.Stringify(key), value
 		})
 	if err != nil {
 		return err
@@ -50,8 +73,4 @@ func (bfl *burrowFormatLogger) Log(keyvals ...interface{}) error {
 	bfl.Lock()
 	defer bfl.Unlock()
 	return bfl.logger.Log(keyvals...)
-}
-
-func BurrowFormatLogger(logger log.Logger) *burrowFormatLogger {
-	return &burrowFormatLogger{logger: logger}
 }

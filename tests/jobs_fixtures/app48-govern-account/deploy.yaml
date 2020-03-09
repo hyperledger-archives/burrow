@@ -1,3 +1,6 @@
+# Exclusive with app57
+no-parallel: true
+
 jobs:
 #
 # Add validator
@@ -43,7 +46,7 @@ jobs:
   query-vals:
     field: "Set.TotalPower"
 
-- name: AssertPowerNonZero
+- name: AssertPowerConserved
   assert:
     key: $PowerAfterRemoved
     relation: eq

@@ -5,7 +5,7 @@ import (
 	"github.com/hyperledger/burrow/logging"
 )
 
-func SetAccountJob(account *def.Account, do *def.DeployArgs, script *def.Playbook, logger *logging.Logger) (string, error) {
+func SetAccountJob(account *def.Account, script *def.Playbook, logger *logging.Logger) (string, error) {
 	var result string
 
 	// Set the Account in the Package & Announce

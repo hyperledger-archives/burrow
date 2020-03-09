@@ -10,15 +10,15 @@ import (
 )
 
 var Permissions = New().MustContract("Permissions",
-	`* acmstate.ReaderWriter for managing Secure Native authorizations.
+	`* Interface for managing Secure Native authorizations.
 		* @dev This interface describes the functions exposed by the native permissions layer in burrow.
 		`,
 	Function{
 		Comment: `
 			* @notice Adds a role to an account
-			* @param Account account address
-			* @param Role role name
-			* @return result whether role was added
+			* @param _account account address
+			* @param _role role name
+			* @return _result whether role was added
 			`,
 		PermFlag: permission.AddRole,
 		F:        addRole,
@@ -26,9 +26,9 @@ var Permissions = New().MustContract("Permissions",
 	Function{
 		Comment: `
 			* @notice Removes a role from an account
-			* @param Account account address
-			* @param Role role name
-			* @return result whether role was removed
+			* @param _account account address
+			* @param _role role name
+			* @return _result whether role was removed
 			`,
 		PermFlag: permission.RemoveRole,
 		F:        removeRole,
@@ -36,9 +36,9 @@ var Permissions = New().MustContract("Permissions",
 	Function{
 		Comment: `
 			* @notice Indicates whether an account has a role
-			* @param Account account address
-			* @param Role role name
-			* @return result whether account has role
+			* @param _account account address
+			* @param _role role name
+			* @return _result whether account has role
 			`,
 		PermFlag: permission.HasRole,
 		F:        hasRole,
@@ -46,10 +46,10 @@ var Permissions = New().MustContract("Permissions",
 	Function{
 		Comment: `
 			* @notice Sets the permission flags for an account. Makes them explicitly set (on or off).
-			* @param Account account address
-			* @param Permission the base permissions flags to set for the account
-			* @param Set whether to set or unset the permissions flags at the account level
-			* @return The permission flag that was set as uint64
+			* @param _account account address
+			* @param _permission the base permissions flags to set for the account
+			* @param _set whether to set or unset the permissions flags at the account level
+			* @return _result is the permission flag that was set as uint64
 			`,
 		PermFlag: permission.SetBase,
 		F:        setBase,
@@ -57,9 +57,9 @@ var Permissions = New().MustContract("Permissions",
 	Function{
 		Comment: `
 			* @notice Unsets the permissions flags for an account. Causes permissions being unset to fall through to global permissions.
-      		* @param Account account address
-      		* @param Permission the permissions flags to unset for the account
-			* @return The permission flag that was unset as uint64
+      		* @param _account account address
+      		* @param _permission the permissions flags to unset for the account
+			* @return _result is the permission flag that was unset as uint64
       `,
 		PermFlag: permission.UnsetBase,
 		F:        unsetBase,
@@ -67,18 +67,18 @@ var Permissions = New().MustContract("Permissions",
 	Function{
 		Comment: `
 			* @notice Indicates whether an account has a subset of permissions set
-			* @param Account account address
-			* @param Permission the permissions flags (mask) to check whether enabled against base permissions for the account
-			* @return result whether account has the passed permissions flags set
+			* @param _account account address
+			* @param _permission the permissions flags (mask) to check whether enabled against base permissions for the account
+			* @return _result is whether account has the passed permissions flags set
 			`,
 		PermFlag: permission.HasBase,
 		F:        hasBase,
 	},
 	Function{Comment: `
 			* @notice Sets the global (default) permissions flags for the entire chain
-			* @param Permission the permissions flags to set
-			* @param Set whether to set (or unset) the permissions flags
-			* @return The permission flag that was set as uint64
+			* @param _permission the permissions flags to set
+			* @param _set whether to set (or unset) the permissions flags
+			* @return _result is the permission flag that was set as uint64
 			`,
 		PermFlag: permission.SetGlobal,
 		F:        setGlobal,
@@ -152,7 +152,8 @@ func setBase(ctx Context, args setBaseArgs) (setBaseRets, error) {
 		return setBaseRets{}, permission.ErrInvalidPermission(permFlag)
 	}
 	err := UpdateAccount(ctx.State, args.Account, func(acc *acm.Account) error {
-		return acc.Permissions.Base.Set(permFlag, args.Set)
+		err := acc.Permissions.Base.Set(permFlag, args.Set)
+		return err
 	})
 	if err != nil {
 		return setBaseRets{}, err

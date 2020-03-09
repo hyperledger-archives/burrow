@@ -46,7 +46,7 @@ func TestQueryBuilder(t *testing.T) {
 func makeTagMap(keyvals ...interface{}) TagMap {
 	tmap := make(TagMap)
 	for i := 0; i < len(keyvals); i += 2 {
-		tmap[keyvals[i].(string)] = structure.StringifyKey(keyvals[i+1])
+		tmap[keyvals[i].(string)] = structure.Stringify(keyvals[i+1])
 	}
 	return tmap
 }

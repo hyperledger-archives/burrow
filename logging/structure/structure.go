@@ -65,7 +65,7 @@ func ValuesAndContext(keyvals []interface{},
 		for k := 0; k < len(keys); k++ {
 			if keyvals[i] == keys[k] {
 				// Pull the matching key-value pair into vals to return
-				vals[StringifyKey(keys[k])] = keyvals[i+1]
+				vals[Stringify(keys[k])] = keyvals[i+1]
 				// Delete the key once it's found
 				keys = DeleteAt(keys, k)
 				// And remove the key-value pair from context
@@ -85,7 +85,7 @@ func KeyValuesMap(keyvals []interface{}) map[string]interface{} {
 	length := len(keyvals) / 2
 	vals := make(map[string]interface{}, length)
 	for i := 0; i < 2*length; i += 2 {
-		vals[StringifyKey(keyvals[i])] = keyvals[i+1]
+		vals[Stringify(keyvals[i])] = keyvals[i+1]
 	}
 	return vals
 }
@@ -240,19 +240,19 @@ func DeleteAt(slice []interface{}, i int) []interface{} {
 }
 
 // Provides a canonical way to stringify keys
-func StringifyKey(key interface{}) string {
-	switch key {
+func Stringify(v interface{}) string {
+	switch v {
 	// For named keys we want to handle explicitly
 
 	default:
 		// Stringify keys
-		switch k := key.(type) {
+		switch k := v.(type) {
 		case string:
 			return k
 		case fmt.Stringer:
 			return k.String()
 		default:
-			return fmt.Sprint(key)
+			return fmt.Sprint(v)
 		}
 	}
 }

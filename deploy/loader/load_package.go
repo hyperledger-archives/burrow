@@ -36,10 +36,8 @@ func loadPlaybook(fileName string, args *def.DeployArgs, parent *def.Playbook, l
 		playbook.BinPath = args.BinPath
 	}
 
-	if _, err := os.Stat(playbook.BinPath); os.IsNotExist(err) {
-		if err := os.Mkdir(playbook.BinPath, 0775); err != nil {
-			return nil, err
-		}
+	if err := os.MkdirAll(playbook.BinPath, 0775); err != nil {
+		return nil, err
 	}
 
 	// setup file

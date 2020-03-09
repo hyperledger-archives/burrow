@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs/payload"
+	"github.com/hyperledger/burrow/util"
 )
 
 type BondContext struct {
@@ -59,6 +60,8 @@ func (ctx *BondContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 		return err
 	}
 
+	cache := ctx.ValidatorSet.(*validator.Cache)
+	util.Debugf("%v", cache.Bucket)
 	// assume public key is know as we update account from signatures
 	err = validator.AddPower(ctx.ValidatorSet, account.PublicKey, power)
 	if err != nil {
