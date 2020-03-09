@@ -6,6 +6,7 @@ import (
 
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/acm/validator"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -31,6 +32,11 @@ func (ctx *BondContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 	account, err := ctx.State.GetAccount(ctx.tx.Input.Address)
 	if err != nil {
 		return err
+	}
+
+	ct := account.PublicKey.GetCurveType()
+	if ct == crypto.CurveTypeSecp256k1 {
+		return fmt.Errorf("secp256k1 not supported")
 	}
 
 	// can the account bond?
