@@ -50,13 +50,13 @@ func FormulateUpdateAccountJob(gov *def.UpdateAccount, account string, client *d
 	return tx, util.Variables(arg), nil
 }
 
-func UpdateAccountJob(gov *def.UpdateAccount, account string, tx *payload.GovTx, client *def.Client, logger *logging.Logger) error {
+func UpdateAccountJob(tx *payload.GovTx, client *def.Client, logger *logging.Logger) error {
 	txe, err := client.SignAndBroadcast(tx, logger)
 	if err != nil {
-		return util.ChainErrorHandler(account, err, logger)
+		return fmt.Errorf("error in UpdateAccountJob with payload %v: %w", tx, err)
 	}
 
-	util.ReadTxSignAndBroadcast(txe, err, logger)
+	LogTxExecution(txe, logger)
 	if err != nil {
 		return err
 	}
@@ -82,14 +82,14 @@ func FormulateBondJob(bond *def.Bond, account string, client *def.Client, logger
 	return client.Bond(arg, logger)
 }
 
-func BondJob(bond *def.Bond, tx *payload.BondTx, account string, client *def.Client, logger *logging.Logger) (string, error) {
+func BondJob(tx *payload.BondTx, client *def.Client, logger *logging.Logger) (string, error) {
 	// Sign, broadcast, display
 	txe, err := client.SignAndBroadcast(tx, logger)
 	if err != nil {
-		return "", util.ChainErrorHandler(account, err, logger)
+		return "", fmt.Errorf("error in BondJob with payload %v: %w", tx, err)
 	}
 
-	util.ReadTxSignAndBroadcast(txe, err, logger)
+	LogTxExecution(txe, logger)
 	if err != nil {
 		return "", err
 	}
@@ -114,14 +114,14 @@ func FormulateUnbondJob(unbond *def.Unbond, account string, client *def.Client, 
 	return client.Unbond(arg, logger)
 }
 
-func UnbondJob(bond *def.Unbond, tx *payload.UnbondTx, account string, client *def.Client, logger *logging.Logger) (string, error) {
+func UnbondJob(tx *payload.UnbondTx, client *def.Client, logger *logging.Logger) (string, error) {
 	// Sign, broadcast, display
 	txe, err := client.SignAndBroadcast(tx, logger)
 	if err != nil {
-		return "", util.ChainErrorHandler(account, err, logger)
+		return "", fmt.Errorf("error in UnbondJob with payload %v: %w", tx, err)
 	}
 
-	util.ReadTxSignAndBroadcast(txe, err, logger)
+	LogTxExecution(txe, logger)
 	if err != nil {
 		return "", err
 	}

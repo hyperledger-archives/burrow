@@ -155,12 +155,12 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if err != nil {
 				return err
 			}
-			err = UpdateAccountJob(job.UpdateAccount, playbook.Account, tx, client, logger)
+			err = UpdateAccountJob(tx, client, logger)
 
 		// Util jobs
 		case *def.Account:
 			announce(job.Name, "Account", logger)
-			job.Result, err = SetAccountJob(job.Account, args, playbook, logger)
+			job.Result, err = SetAccountJob(job.Account, playbook, logger)
 		case *def.Set:
 			announce(job.Name, "Set", logger)
 			job.Result, err = SetValJob(job.Set, args, logger)
@@ -172,7 +172,7 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if err != nil {
 				return err
 			}
-			job.Result, err = SendJob(job.Send, tx, playbook.Account, client, logger)
+			job.Result, err = SendJob(tx, client, logger)
 			if err != nil {
 				return err
 			}
@@ -182,7 +182,7 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if err != nil {
 				return err
 			}
-			job.Result, err = BondJob(job.Bond, tx, playbook.Account, client, logger)
+			job.Result, err = BondJob(tx, client, logger)
 			if err != nil {
 				return err
 			}
@@ -192,7 +192,7 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if err != nil {
 				return err
 			}
-			job.Result, err = UnbondJob(job.Unbond, tx, playbook.Account, client, logger)
+			job.Result, err = UnbondJob(tx, client, logger)
 			if err != nil {
 				return err
 			}
@@ -202,7 +202,7 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if err != nil {
 				return err
 			}
-			job.Result, err = RegisterNameJob(job.RegisterName, args, playbook, txs, client, logger)
+			job.Result, err = RegisterNameJob(txs, client, logger)
 			if err != nil {
 				return err
 			}
@@ -212,7 +212,7 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if err != nil {
 				return err
 			}
-			job.Result, err = PermissionJob(job.Permission, playbook.Account, tx, client, logger)
+			job.Result, err = PermissionJob(tx, client, logger)
 			if err != nil {
 				return err
 			}
@@ -222,7 +222,7 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if err != nil {
 				return err
 			}
-			job.Result, err = IdentifyJob(job.Identify, tx, playbook.Account, client, logger)
+			job.Result, err = IdentifyJob(tx, client, logger)
 			if err != nil {
 				return err
 			}
@@ -234,7 +234,7 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if ferr != nil {
 				return ferr
 			}
-			job.Result, err = DeployJob(job.Deploy, args, playbook, client, txs, contracts, logger)
+			job.Result, err = DeployJob(job.Deploy, playbook, client, txs, contracts, logger)
 
 		case *def.Call:
 			announce(job.Name, "Call", logger)

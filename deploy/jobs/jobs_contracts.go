@@ -276,7 +276,7 @@ func FormulateDeployJob(deploy *def.Deploy, do *def.DeployArgs, deployScript *de
 	return
 }
 
-func DeployJob(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook, client *def.Client, txs []*payload.CallTx, contracts []*compilers.ResponseItem, logger *logging.Logger) (result string, err error) {
+func DeployJob(deploy *def.Deploy, script *def.Playbook, client *def.Client, txs []*payload.CallTx, contracts []*compilers.ResponseItem, logger *logging.Logger) (result string, err error) {
 	// saving contract
 	// additional data may be sent along with the contract
 	// these are naively added to the end of the contract code using standard
@@ -284,9 +284,9 @@ func DeployJob(deploy *def.Deploy, do *def.DeployArgs, script *def.Playbook, cli
 
 	for i, tx := range txs {
 		// Sign, broadcast, display
-		contractAddress, err := deployFinalize(do, client, tx, logger)
+		contractAddress, err := deployFinalize(client, tx, logger)
 		if err != nil {
-			return "", fmt.Errorf("Error finalizing contract deploy %s: %v", deploy.Contract, err)
+			return "", fmt.Errorf("error finalizing contract deploy %s: %w", deploy.Contract, err)
 		}
 
 		// saving contract/library abi at abi/address
@@ -467,8 +467,8 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 			packedBytes, funcSpec, err = abi.EncodeFunctionCallFromFile(call.Destination, deployScript.BinPath, call.Function, logger, callDataArray...)
 		}
 		if err != nil {
-			err = util.ABIErrorHandler(err, call, nil, logger)
-			return
+			return nil, fmt.Errorf("error in FormulateCallJob with %v: %w",
+				call, err)
 		}
 	}
 
@@ -495,13 +495,11 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 }
 
 func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, playbook *def.Playbook, client *def.Client, logger *logging.Logger) (string, []*abi.Variable, error) {
-	var err error
 
 	// Sign, broadcast, display
 	txe, err := client.SignAndBroadcast(tx, logger)
 	if err != nil {
-		var err = util.ChainErrorHandler(payload.InputsString(tx.GetInputs()), err, logger)
-		return "", nil, err
+		return "", nil, fmt.Errorf("error in CallJob with %v: %w", call, err)
 	}
 
 	if txe.Exception != nil {
@@ -561,15 +559,13 @@ func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, playbook *d
 	return result, call.Variables, nil
 }
 
-func deployFinalize(do *def.DeployArgs, client *def.Client, tx payload.Payload, logger *logging.Logger) (*crypto.Address, error) {
+func deployFinalize(client *def.Client, tx payload.Payload, logger *logging.Logger) (*crypto.Address, error) {
 	txe, err := client.SignAndBroadcast(tx, logger)
 	if err != nil {
-		return nil, util.ChainErrorHandler(payload.InputsString(tx.GetInputs()), err, logger)
-	}
-
-	if err := util.ReadTxSignAndBroadcast(txe, err, logger); err != nil {
 		return nil, err
 	}
+
+	LogTxExecution(txe, logger)
 
 	// The contructor can generate events
 	logEvents(txe, client, logger)
