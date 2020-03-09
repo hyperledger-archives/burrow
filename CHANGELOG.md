@@ -1,4 +1,17 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.30.1] - 2020-03-06
+### Fixed
+- [CLI/Tx] Unbond formulation now specifies amount
+
+
+## [0.30.0] - 2020-03-05
+### Changed
+- [JS] Partial rewrite of client API in typescript 
+		
+### Fixed
+- [State] Blockchain now commits initial AppHash to avoid IAVL panic
+
+
 ## [0.29.8] - 2020-02-11
 ### Fixed
 - [ABI] Fix failure to convert crypto.Address to EVMAddress (https://github.com/hyperledger/burrow/issues/1326)
@@ -628,6 +641,8 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.30.1]: https://github.com/hyperledger/burrow/compare/v0.30.0...v0.30.1
+[0.30.0]: https://github.com/hyperledger/burrow/compare/v0.29.8...v0.30.0
 [0.29.8]: https://github.com/hyperledger/burrow/compare/v0.29.7...v0.29.8
 [0.29.7]: https://github.com/hyperledger/burrow/compare/v0.29.6...v0.29.7
 [0.29.6]: https://github.com/hyperledger/burrow/compare/v0.29.5...v0.29.6

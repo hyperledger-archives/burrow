@@ -128,7 +128,13 @@ func (kern *Kernel) LoadState(genesisDoc *genesis.GenesisDoc) (err error) {
 			return fmt.Errorf("could not build genesis state: %v", err)
 		}
 
-		if err = kern.State.InitialCommit(); err != nil {
+		err = kern.State.InitialCommit()
+		if err != nil {
+			return err
+		}
+
+		err = kern.Blockchain.CommitWithAppHash(kern.State.Hash())
+		if err != nil {
 			return err
 		}
 	}
