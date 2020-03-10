@@ -120,7 +120,7 @@ func RunPlaybooks(args *def.DeployArgs, playbooks []string, logger *logging.Logg
 			res := results[printed]
 			os.Stderr.Write(res.log.Bytes())
 			if res.err != nil {
-				fmt.Fprintf(os.Stderr, "ERROR: %v", res.err)
+				fmt.Fprintf(os.Stderr, "Error in RunPlaybooks: %v\n", res.err)
 			}
 			res.log.Truncate(0)
 			if res.err != nil {

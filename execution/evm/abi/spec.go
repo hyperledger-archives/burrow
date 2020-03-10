@@ -10,6 +10,9 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 )
 
+// Token to use in deploy yaml in order to indicate call to the fallback function.
+const FallbackFunctionName = "()"
+
 // Spec is the ABI for contract decoded.
 type Spec struct {
 	Constructor  *FunctionSpec
@@ -69,6 +72,8 @@ func ReadSpec(specBytes []byte) (*Spec, error) {
 		case "fallback":
 			abiSpec.Fallback.Inputs = make([]Argument, 0)
 			abiSpec.Fallback.Outputs = make([]Argument, 0)
+			abiSpec.Fallback.SetConstant()
+			abiSpec.Functions[FallbackFunctionName] = abiSpec.Fallback
 		case "event":
 			ev := new(EventSpec)
 			err = ev.unmarshalSpec(&s)
@@ -136,13 +141,13 @@ func (spec *Spec) Pack(fname string, args ...interface{}) ([]byte, *FunctionSpec
 		if _, ok := spec.Functions[fname]; ok {
 			funcSpec = spec.Functions[fname]
 		} else {
-			return nil, nil, fmt.Errorf("Unknown function %s", fname)
+			return nil, nil, fmt.Errorf("unknown function in Pack: %s", fname)
 		}
 	} else {
 		if spec.Constructor.Inputs != nil {
 			funcSpec = spec.Constructor
 		} else {
-			return nil, nil, fmt.Errorf("Contract does not have a constructor")
+			return nil, nil, fmt.Errorf("contract does not have a constructor")
 		}
 	}
 
@@ -179,7 +184,7 @@ func (spec *Spec) Unpack(data []byte, fname string, args ...interface{}) error {
 	argSpec = funcSpec.Outputs
 
 	if argSpec == nil {
-		return fmt.Errorf("Unknown function %s", fname)
+		return fmt.Errorf("unknown function in Unpack: %s", fname)
 	}
 
 	return unpack(argSpec, data, func(i int) interface{} {
@@ -199,7 +204,7 @@ func (spec *Spec) UnpackWithID(data []byte, args ...interface{}) error {
 	}
 
 	if argSpec == nil {
-		return fmt.Errorf("Unknown function %x", id)
+		return fmt.Errorf("unknown function in UnpackWithID: %x", id)
 	}
 
 	return unpack(argSpec, data[4:], func(i int) interface{} {

@@ -7,15 +7,14 @@ import (
 	"strings"
 
 	"github.com/hyperledger/burrow/acm/acmstate"
-	"github.com/hyperledger/burrow/execution/errors"
-	"github.com/hyperledger/burrow/execution/exec"
-	"github.com/hyperledger/burrow/logging"
-
 	"github.com/hyperledger/burrow/crypto"
 	compilers "github.com/hyperledger/burrow/deploy/compile"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/util"
+	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
+	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs/payload"
 	hex "github.com/tmthrgd/go-hex"
 )
@@ -431,6 +430,7 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 	if err != nil {
 		return nil, err
 	}
+
 	// Use default
 	call.Source = FirstOf(call.Source, deployScript.Account)
 	call.Amount = FirstOf(call.Amount, do.DefaultAmount)

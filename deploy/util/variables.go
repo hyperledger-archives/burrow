@@ -195,12 +195,10 @@ func replaceBlockVariable(toReplace string, client *def.Client, logger *logging.
 func PreProcessInputData(function string, data interface{}, do *def.DeployArgs, script *def.Playbook, client *def.Client, constructor bool, logger *logging.Logger) (string, []interface{}, error) {
 	var callDataArray []interface{}
 	var callArray []string
-	if function == "" && !constructor {
-		if reflect.TypeOf(data).Kind() == reflect.Slice {
-			return "", []interface{}{""}, fmt.Errorf("Incorrect formatting of deploy.yaml. Please update it to include a function field.")
-		}
-		function = strings.Split(data.(string), " ")[0]
-		callArray = strings.Split(data.(string), " ")[1:]
+	if _, ok := data.(string); function == "" && !constructor && ok {
+		callArray = strings.Split(data.(string), " ")
+		function = callArray[0]
+		callArray = callArray[1:]
 		for _, val := range callArray {
 			output, _ := PreProcess(val, do, script, client, logger)
 			callDataArray = append(callDataArray, output)
