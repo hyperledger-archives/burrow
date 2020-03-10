@@ -19,7 +19,7 @@ import (
 	hex "github.com/tmthrgd/go-hex"
 )
 
-var errCodeMissing = fmt.Errorf("error: no binary code found in contract. Contract may be abstract due to missing function body or inherited function signatures not matching.")
+var errCodeMissing = fmt.Errorf("error: no binary code found in contract. Contract may be abstract due to missing function body or inherited function signatures not matching")
 
 func BuildJob(build *def.Build, deployScript *def.Playbook, resp *compilers.Response, logger *logging.Logger) (result string, err error) {
 	// assemble contract
@@ -494,7 +494,7 @@ func FormulateCallJob(call *def.Call, do *def.DeployArgs, deployScript *def.Play
 	}, logger)
 }
 
-func CallJob(call *def.Call, tx *payload.CallTx, do *def.DeployArgs, playbook *def.Playbook, client *def.Client, logger *logging.Logger) (string, []*abi.Variable, error) {
+func CallJob(call *def.Call, tx *payload.CallTx, playbook *def.Playbook, client *def.Client, logger *logging.Logger) (string, []*abi.Variable, error) {
 
 	// Sign, broadcast, display
 	txe, err := client.SignAndBroadcast(tx, logger)

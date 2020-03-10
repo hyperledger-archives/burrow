@@ -395,7 +395,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 				stack.Push(Zero256)
 				c.debugf(" => 0\n")
 			} else {
-				length := uint64(len(acc.EVMCode))
+				length := uint64(len(acc.Code()))
 				stack.Push64(length)
 				c.debugf(" => %d\n", length)
 			}

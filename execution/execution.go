@@ -291,12 +291,12 @@ func (exe *executor) validateInputsAndStorePublicKeys(txEnv *txs.Envelope) error
 				acc.GetAddress())
 		}
 		// Check sequences
-		if acc.Sequence+1 != uint64(in.Sequence) {
+		if acc.Sequence+1 != in.Sequence {
 			return errors.Errorf(errors.Codes.InvalidSequence, "Error invalid sequence in input %v: input has sequence %d, but account has sequence %d, "+
 				"so expected input to have sequence %d", in, in.Sequence, acc.Sequence, acc.Sequence+1)
 		}
 		// Check amount
-		if acc.Balance < uint64(in.Amount) {
+		if txEnv.Tx.Type() != payload.TypeUnbond && acc.Balance < in.Amount {
 			return errors.Codes.InsufficientFunds
 		}
 		// Check for Input permission

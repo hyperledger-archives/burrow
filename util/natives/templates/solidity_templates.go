@@ -29,7 +29,7 @@ interface [[.Name]] {[[range .Functions]]
 const functionTemplateText = `/**
 [[.Comment]]
 */
-function [[.Name]]([[.ArgList]]) public view returns ([[.RetList]]);`
+function [[.Name]]([[.ArgList]]) external returns ([[.RetList]]);`
 
 // Solidity style guide recommends 4 spaces per indentation level
 // (see: http://solidity.readthedocs.io/en/develop/style-guide.html)
@@ -129,7 +129,7 @@ func (function *solidityFunction) ArgList() string {
 	for i, arg := range abi.Inputs {
 		storage := ""
 		if arg.EVM.Dynamic() {
-			storage = " memory"
+			storage = " calldata"
 		}
 		argList[i] = fmt.Sprintf("%s%s %s", arg.EVM.GetSignature(), storage, param(arg.Name))
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs/payload"
+	"github.com/hyperledger/burrow/util"
 )
 
 type UnbondContext struct {
@@ -41,6 +42,9 @@ func (ctx *UnbondContext) Execute(txe *exec.TxExecution, p payload.Payload) erro
 		return err
 	}
 
+	util.Debugf("unbonding %v", power)
+	cache := ctx.ValidatorSet.(*validator.Cache)
+	util.Debugf("%v", cache.Bucket)
 	err = validator.SubtractPower(ctx.ValidatorSet, account.PublicKey, power)
 	if err != nil {
 		return err

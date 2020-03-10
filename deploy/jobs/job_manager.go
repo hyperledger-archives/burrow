@@ -242,7 +242,7 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if ferr != nil {
 				return ferr
 			}
-			job.Result, job.Variables, err = CallJob(job.Call, CallTx, args, playbook, client, logger)
+			job.Result, job.Variables, err = CallJob(job.Call, CallTx, playbook, client, logger)
 		case *def.Build:
 			announce(job.Name, "Build", logger)
 			var resp *compilers.Response

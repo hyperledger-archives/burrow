@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/util"
 )
 
 // Cache is just a Ring with no memory
@@ -22,6 +23,7 @@ func (vc *Cache) Reset(backend Iterable) {
 }
 
 func (vc *Cache) Flush(output Writer, backend Iterable) error {
+	util.Debugf("Flushing validators...")
 	err := vc.Delta.IterateValidators(func(id crypto.Addressable, power *big.Int) error {
 		_, err := output.SetPower(id.GetPublicKey(), power)
 		return err

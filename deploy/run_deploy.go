@@ -118,7 +118,8 @@ func RunPlaybooks(args *def.DeployArgs, playbooks []string, logger *logging.Logg
 		// Print them in order
 		for results[printed] != nil {
 			res := results[printed]
-			os.Stderr.Write(res.log.Bytes())
+			bs := res.log.Bytes()
+			os.Stderr.Write(bs)
 			if res.err != nil {
 				fmt.Fprintf(os.Stderr, "Error in RunPlaybooks: %v\n", res.err)
 			}
