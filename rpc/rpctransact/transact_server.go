@@ -2,6 +2,7 @@ package rpctransact
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/hyperledger/burrow/logging"
@@ -25,6 +26,7 @@ type transactServer struct {
 	transactor *execution.Transactor
 	txCodec    txs.Codec
 	logger     *logging.Logger
+	lock       *sync.Mutex
 }
 
 func NewTransactServer(state acmstate.Reader, blockchain bcm.BlockchainInfo, transactor *execution.Transactor,
@@ -35,6 +37,7 @@ func NewTransactServer(state acmstate.Reader, blockchain bcm.BlockchainInfo, tra
 		transactor: transactor,
 		txCodec:    txCodec,
 		logger:     logger.WithScope("NewTransactServer()"),
+		lock:       &sync.Mutex{},
 	}
 }
 
@@ -100,10 +103,14 @@ func (ts *transactServer) CallTxSim(ctx context.Context, param *payload.CallTx) 
 	if param.Address == nil {
 		return nil, fmt.Errorf("CallSim requires a non-nil address from which to retrieve code")
 	}
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
 	return execution.CallSim(ts.state, ts.blockchain, param.Input.Address, *param.Address, param.Data, ts.logger)
 }
 
 func (ts *transactServer) CallCodeSim(ctx context.Context, param *CallCodeParam) (*exec.TxExecution, error) {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
 	return execution.CallCodeSim(ts.state, ts.blockchain, param.FromAddress, param.FromAddress, param.Code, param.Data,
 		ts.logger)
 }
