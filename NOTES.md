@@ -1,3 +1,3 @@
-### Fixed
-- [RPC] add mutex to callSim and callCode
+### Added
+- [TS] Default ts client interface implementation
 

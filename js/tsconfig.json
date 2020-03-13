@@ -13,6 +13,6 @@
     "dist",
     "proto",
     "types",
-    "src/test"
+    "src/test/"
   ]
 }
