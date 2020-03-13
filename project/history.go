@@ -48,6 +48,10 @@ func FullVersion() string {
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases(
+		"0.30.2 - 2020-03-13",
+		`### Fixed
+- [RPC] add mutex to callSim and callCode
+`,
 		"0.30.1 - 2020-03-06",
 		`### Fixed
 - [CLI/Tx] Unbond formulation now specifies amount

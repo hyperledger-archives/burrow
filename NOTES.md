@@ -1,3 +1,3 @@
 ### Fixed
-- [CLI/Tx] Unbond formulation now specifies amount
+- [RPC] add mutex to callSim and callCode
 
