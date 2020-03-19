@@ -106,7 +106,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 				stack.Push(Zero256)
 				c.debugf(" %v / %v = %v\n", x, y, 0)
 			} else {
-				div := new(big.Int).Div(x, y)
+				div := new(big.Int).Quo(x, y)
 				res := stack.PushBigInt(div)
 				c.debugf(" %v / %v = %v (%v)\n", x, y, div, res)
 			}
