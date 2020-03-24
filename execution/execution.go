@@ -388,6 +388,11 @@ func (exe *executor) Commit(header *abciTypes.Header) (stateHash []byte, err err
 	if err != nil {
 		return nil, err
 	}
+
+	// previous flush will invalidate validator cache,
+	// reset from new state
+	exe.validatorCache.Reset(exe.state)
+
 	expectedHeight := HeightAtVersion(version)
 	if expectedHeight != height {
 		return nil, fmt.Errorf("expected height at state tree version %d is %d but actual height is %d",
