@@ -38,7 +38,7 @@ func NewLogfmtLogger(writer io.Writer) log.Logger {
 }
 
 func NewTerminalLogger(writer io.Writer) log.Logger {
-	logger := term.NewLogger(writer,  log.NewLogfmtLogger, func(keyvals ...interface{}) term.FgBgColor {
+	logger := term.NewLogger(writer, log.NewLogfmtLogger, func(keyvals ...interface{}) term.FgBgColor {
 		switch structure.Value(keyvals, structure.ChannelKey) {
 		case structure.TraceChannelName:
 			return term.FgBgColor{Fg: term.DarkGreen}
@@ -46,7 +46,7 @@ func NewTerminalLogger(writer io.Writer) log.Logger {
 			return term.FgBgColor{Fg: term.Yellow}
 		}
 	})
-	return interceptSync(writer,NewBurrowFormatLogger(logger, StringifyValues))
+	return interceptSync(writer, NewBurrowFormatLogger(logger, StringifyValues))
 }
 
 func NewTemplateLogger(writer io.Writer, textTemplate string, recordSeparator []byte) (log.Logger, error) {

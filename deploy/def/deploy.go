@@ -38,4 +38,3 @@ func (args *DeployArgs) Validate() error {
 		validation.Field(&args.DefaultGas, rule.Uint64),
 	)
 }
-

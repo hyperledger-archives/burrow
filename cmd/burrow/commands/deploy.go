@@ -50,9 +50,9 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 		addressOpt := cmd.StringOpt("a address", "",
 			"default address (or account name) to use; operates the same way as the [account] job, only before the deploy file is ran")
 
-		defaultFeeOpt := cmd.StringOpt("n fee", "9999", "default fee to use")
+		defaultFeeOpt := cmd.StringOpt("n fee", "99", "default fee to use")
 
-		defaultAmountOpt := cmd.StringOpt("m amount", "9999",
+		defaultAmountOpt := cmd.StringOpt("m amount", "99",
 			"default amount to use")
 
 		verboseOpt := cmd.BoolOpt("v verbose", false, "verbose output")
@@ -116,11 +116,11 @@ func Deploy(output Output) func(cmd *cli.Cmd) {
 			args.ProposeVerify = *proposalVerify
 			args.ProposeVote = *proposalVote
 			args.ProposeCreate = *proposalCreate
-			stderrLogger, err := loggers.NewStreamLogger(os.Stderr, loggers.TerminalFormat)
+			stdoutLogger, err := loggers.NewStreamLogger(os.Stdout, loggers.TerminalFormat)
 			if err != nil {
 				output.Fatalf("Could not make logger: %v", err)
 			}
-			logger := logging.NewLogger(stderrLogger)
+			logger := logging.NewLogger(stdoutLogger)
 			handleTerm()
 
 			if !*debugOpt {

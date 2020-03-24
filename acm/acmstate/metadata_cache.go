@@ -55,13 +55,9 @@ func (cache *MetadataCache) Sync(st MetadataWriter) error {
 	return nil
 }
 
-func (cache *MetadataCache) Flush(output MetadataWriter, backend MetadataReader) error {
-	err := cache.Sync(output)
-	if err != nil {
-		return err
-	}
+func (cache *MetadataCache) Reset(backend MetadataReader) {
+	cache.backend = backend
 	cache.m = sync.Map{}
-	return nil
 }
 
 // Get the cache accountInfo item creating it if necessary

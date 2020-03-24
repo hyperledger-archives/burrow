@@ -1,6 +1,6 @@
 package def
 
-import "github.com/go-ozzo/ozzo-validation"
+import validation "github.com/go-ozzo/ozzo-validation"
 
 type Playbook struct {
 	Filename string

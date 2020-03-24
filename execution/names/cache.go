@@ -120,16 +120,6 @@ func (cache *Cache) Reset(backend Reader) {
 	cache.names = make(map[string]*nameInfo)
 }
 
-// Syncs the Cache and Resets it to use Writer as the backend Reader
-func (cache *Cache) Flush(output Writer, backend Reader) error {
-	err := cache.Sync(output)
-	if err != nil {
-		return err
-	}
-	cache.Reset(backend)
-	return nil
-}
-
 func (cache *Cache) Backend() Reader {
 	return cache.backend
 }

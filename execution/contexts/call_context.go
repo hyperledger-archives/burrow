@@ -72,7 +72,8 @@ func (ctx *CallContext) Precheck() (*acm.Account, *acm.Account, error) {
 	err = inAcc.SubtractFromBalance(ctx.tx.Fee)
 	if err != nil {
 		return nil, nil, errors.Errorf(errors.Codes.InsufficientFunds,
-			"Input account does not have sufficient balance to cover input amount: %v", ctx.tx.Input)
+			"Input account %v (balance: %d) does not have sufficient balance to cover input amount: %v",
+			inAcc.Address, inAcc.Balance, ctx.tx.Input)
 	}
 
 	// Calling a nil destination is defined as requesting contract creation
