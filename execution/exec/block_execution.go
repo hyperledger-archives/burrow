@@ -9,7 +9,9 @@ import (
 	"github.com/hyperledger/burrow/txs"
 )
 
-func EventStringBlockExecution(height uint64) string { return fmt.Sprintf("Execution/Block/%v", height) }
+func EventStringBlockExecution(height uint64) string {
+	return fmt.Sprintf("Execution/Block/%v", height)
+}
 
 // Write out TxExecutions parenthetically
 func (be *BlockExecution) StreamEvents() []*StreamEvent {

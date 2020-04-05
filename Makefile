@@ -170,17 +170,17 @@ docker_build: check commit_hash
 
 # Solidity fixtures
 .PHONY: solidity
-solidity: $(patsubst %.sol, %.sol.go, $(wildcard ./execution/solidity/*.sol))
+solidity: $(patsubst %.sol, %.sol.go, $(wildcard ./execution/solidity/*.sol)) build_burrow
 
 %.sol.go: %.sol
-	@go run ./deploy/compile/solgo/main.go $^
+	@burrow compile $^
 
 # Solang fixtures
 .PHONY: solang
-solang: $(patsubst %.solang, %.solang.go, $(wildcard ./execution/wasm/*.solang))
+solang: $(patsubst %.solang, %.solang.go, $(wildcard ./execution/wasm/*.solang)) build_burrow
 
 %.solang.go: %.solang
-	@go run ./deploy/compile/solgo/main.go -wasm $^
+	@burrow compile --wasm $^
 
 # node/js
 .PHONY: npm_install
