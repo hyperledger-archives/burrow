@@ -1,6 +1,7 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
-## [0.30.3] - 2020-03-13
+## [0.30.3] - 2020-04-05
 ### Added
+- [CLI] Made previously internal Solidity Go fixtures compilation available through 'burrow compile'
 - [TS] Default ts client interface implementation
 
 
