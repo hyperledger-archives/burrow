@@ -3,7 +3,7 @@ FROM ethereum/solc:0.5.12 as solc-builder
 # We use a multistage build to avoid bloating our deployment image with build dependencies
 FROM golang:1.13-alpine3.11 as builder
 
-RUN apk add --no-cache --update git bash make
+RUN apk add --no-cache --update git bash make musl-dev gcc libc6-compat
 
 ARG REPO=/src/burrow
 COPY . $REPO
@@ -34,6 +34,7 @@ WORKDIR $BURROW_PATH
 
 # Copy binaries built in previous stage
 COPY --from=builder /src/burrow/bin/burrow $INSTALL_BASE/
+COPY --from=builder /src/burrow/bin/burrow-debug $INSTALL_BASE/
 COPY --from=solc-builder /usr/bin/solc $INSTALL_BASE/
 
 # Expose ports for 26656:peer; 26658:info; 10997:grpc
