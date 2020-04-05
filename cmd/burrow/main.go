@@ -84,6 +84,9 @@ func burrow(output commands.Output) *cli.Cli {
 	app.Command("abi", "List, decode and encode using ABI",
 		commands.Abi(output))
 
+	app.Command("compile", "Compile solidity files embedding the compilation results as a fixture in a Go file",
+		commands.Compile(output))
+
 	return app
 }
 
