@@ -164,9 +164,9 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			c.debugf(" %v ** %v = %v (%v)\n", x, y, pow, res)
 
 		case SIGNEXTEND: // 0x0B
-			back := stack.Pop64()
+			back := stack.PopBigInt().Uint64()
 			if back < Word256Bytes-1 {
-				bits := uint(back*8 + 7)
+				bits := uint(back*8 + 8)
 				stack.PushBigInt(SignExtend(stack.PopBigInt(), bits))
 			}
 			// Continue leaving the sign extension argument on the stack. This makes sign-extending a no-op if embedded
