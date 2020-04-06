@@ -1626,6 +1626,50 @@ func TestEVM(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("JUMPDEST", func(t *testing.T) {
+		st := acmstate.NewMemoryState()
+		blockchain := new(blockchain)
+		eventSink := exec.NewNoopEventSink()
+
+		account1 := newAccount(t, st, "1")
+		account2 := newAccount(t, st, "101")
+		var gas uint64 = 100000
+
+		tests := []struct {
+			name     string
+			bytecode []byte
+			expected_out []byte
+			expected_err *errors.Code
+		}{
+			{
+				name: "Jump_InsidePushWithJumpDest",
+				bytecode: MustSplice(PUSH1, 0x04, PUSH1, 0x03, ADD, JUMP,
+					PUSH6, JUMPDEST, 0x60, 0x01, 0x60, 0x01, 0x55, return1()),
+				expected_err: errors.Codes.InvalidJumpDest,
+			},
+			{
+				name: "Jumpi_InsidePushWithJumpDest",
+				bytecode: MustSplice(PUSH1, 0x01, PUSH1, 0x06, PUSH1, 0x03, ADD, JUMPI,
+					PUSH6, JUMPDEST, 0x60, 0x01, 0x60, 0x01, 0x55, return1()),
+				expected_err: errors.Codes.InvalidJumpDest,
+			},
+		}
+		for _, tt := range tests {
+			params := engine.CallParams{
+				Caller: account1,
+				Callee: account2,
+				Gas:    &gas,
+			}
+			if output, err := vm.Execute(st, blockchain, eventSink, params, tt.bytecode); errors.GetCode(err) != tt.expected_err {
+				t.Errorf("FAIL: %v.", tt.name)
+				assert.Equal(t, tt.expected_err, errors.GetCode(err))
+			} else if tt.expected_err == errors.Codes.None && !bytes.Equal(output, tt.expected_out) {
+				t.Errorf("FAIL: %v.", tt.name)
+				assert.Equal(t, tt.expected_out, output)
+			}
+		}
+	})
 }
 
 type blockchain struct {

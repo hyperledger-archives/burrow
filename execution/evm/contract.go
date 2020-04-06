@@ -853,13 +853,29 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 
 func (c *Contract) jump(code []byte, to uint64, pc *uint64) error {
 	dest := codeGetOp(code, to)
-	if dest != JUMPDEST {
+	if dest != JUMPDEST || isInsidePushData(code, to) {
 		c.debugf(" ~> %v invalid jump dest %v\n", to, dest)
 		return errors.Codes.InvalidJumpDest
 	}
 	c.debugf(" ~> %v\n", to)
 	*pc = to
 	return nil
+}
+
+// isInsidePushData checks if the operator code(n) is inside push data
+func isInsidePushData(code []byte, n uint64) bool {
+	if uint64(len(code)) <= n {
+		return false
+	}
+	i := uint64(0)
+	for i < n {
+		if op := OpCode(code[i]); op >= PUSH1 && op <= PUSH32 {
+			i += uint64(op - PUSH1 + 2)
+		} else {
+			i++
+		}
+	}
+	return i > n
 }
 
 func createAccount(callFrame *engine.CallFrame, creator, address crypto.Address) error {
