@@ -128,7 +128,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 				stack.Push(Zero256)
 				c.debugf(" %v %% %v = %v\n", x, y, 0)
 			} else {
-				mod := new(big.Int).Mod(x, y)
+				mod := new(big.Int).Rem(x, y)
 				res := stack.PushBigInt(mod)
 				c.debugf(" %v %% %v = %v (%v)\n", x, y, mod, res)
 			}
