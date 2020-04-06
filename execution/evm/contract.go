@@ -502,7 +502,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 
 		case MSTORE8: // 0x53
 			offset := stack.PopBigInt()
-			val64 := stack.Pop64()
+			val64 := stack.PopBigInt().Uint64()
 			val := byte(val64 & 0xFF)
 			memory.Write(offset, []byte{val})
 			c.debugf(" => [%v] 0x%X\n", offset, val)
