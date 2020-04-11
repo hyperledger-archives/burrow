@@ -49,7 +49,7 @@ jobs:
       relation: eq
       val: -2
 
-# third test: (-7) / (-3) == 2
+# fourth test: (-7) / (-3) == 2
 - name: test4
   call:
     destination: $deployOperatorSdiv

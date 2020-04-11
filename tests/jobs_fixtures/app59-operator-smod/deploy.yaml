@@ -1,0 +1,65 @@
+jobs:
+
+  - name: deployOperatorSmod
+    deploy:
+      contract: OperatorSmod.sol
+
+  # first test: 7 % 3 == 1
+  - name: test1
+    call:
+      destination: $deployOperatorSmod
+      function: smod
+      data:
+        - 7
+        - 3
+
+  - name: assertTest1
+    assert:
+      key: $test1
+      relation: eq
+      val: 1
+
+  # second test: 7 % (-3) == 1
+  - name: test2
+    call:
+      destination: $deployOperatorSmod
+      function: smod
+      data:
+        - 7
+        - -3
+
+  - name: assertTest2
+    assert:
+      key: $test2
+      relation: eq
+      val: 1
+
+  # third test: (-7) % 3 == -1
+  - name: test3
+    call:
+      destination: $deployOperatorSmod
+      function: smod
+      data:
+        - -7
+        - 3
+
+  - name: assertTest3
+    assert:
+      key: $test3
+      relation: eq
+      val: -1
+
+  # fourth test: (-7) % (-3) == -1
+  - name: test4
+    call:
+      destination: $deployOperatorSmod
+      function: smod
+      data:
+        - -7
+        - -3
+
+  - name: assertTest4
+    assert:
+      key: $test4
+      relation: eq
+      val: -1
