@@ -166,7 +166,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 		case SIGNEXTEND: // 0x0B
 			back := stack.PopBigInt().Uint64()
 			if back < Word256Bytes-1 {
-				bits := uint(back*8 + 8)
+				bits := uint((back + 1) * 8)
 				stack.PushBigInt(SignExtend(stack.PopBigInt(), bits))
 			}
 			// Continue leaving the sign extension argument on the stack. This makes sign-extending a no-op if embedded
@@ -862,17 +862,15 @@ func (c *Contract) jump(code []byte, to uint64, pc *uint64) error {
 	return nil
 }
 
-// isInsidePushData checks if the operator code(n) is inside push data
+// isInsidePushData checks if the symbol at code(n) is inside push data i.e. is data for the stack and not an opcode.
 func isInsidePushData(code []byte, n uint64) bool {
 	if uint64(len(code)) <= n {
 		return false
 	}
 	i := uint64(0)
-	for i < n {
+	for ; i < n; i++ {
 		if op := OpCode(code[i]); op >= PUSH1 && op <= PUSH32 {
-			i += uint64(op - PUSH1 + 2)
-		} else {
-			i++
+			i += uint64(op - PUSH1 + 1)
 		}
 	}
 	return i > n
