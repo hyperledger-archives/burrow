@@ -2,7 +2,7 @@ import * as utils from '../utils/utils';
 import * as coder from 'ethereumjs-abi';
 import * as convert from '../utils/convert';
 import sha3 from '../utils/sha3';
-import { Burrow, Error } from '../Burrow';
+import { Burrow, Error } from '../burrow';
 import { LogEvent } from '../../../proto/exec_pb'
 import { Event, EventInput } from 'solc';
 

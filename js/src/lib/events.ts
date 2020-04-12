@@ -1,7 +1,7 @@
 import { ExecutionEventsClient } from '../../proto/rpcevents_grpc_pb';
 import { BlocksRequest, BlockRange, Bound, EventsResponse } from '../../proto/rpcevents_pb';
 import { LogEvent } from '../../proto/exec_pb';
-import { Error } from './Burrow';
+import { Error } from './burrow';
 import * as grpc from 'grpc';
 
 export type EventStream = grpc.ClientReadableStream<EventsResponse>;

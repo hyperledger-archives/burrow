@@ -1,6 +1,6 @@
 import { SolidityEvent } from './event';
 import { SolidityFunction, Handler } from './function';
-import { Burrow } from '../Burrow';
+import { Burrow } from '../burrow';
 import { Function, Event } from 'solc';
 
 type FunctionOrEvent = Function | Event;
