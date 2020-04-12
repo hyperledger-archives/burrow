@@ -5,7 +5,7 @@ import * as grpc from 'grpc';
 import sha3 from '../utils/sha3';
 import { TxInput, CallTx } from '../../../proto/payload_pb';
 import { TxExecution, Result } from '../../../proto/exec_pb';
-import { Burrow, Error } from '../Burrow';
+import { Burrow, Error } from '../burrow';
 import { Envelope } from '../../../proto/txs_pb';
 import { Function, FunctionInput, FunctionOutput } from 'solc';
 

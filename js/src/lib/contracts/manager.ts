@@ -1,5 +1,5 @@
 import { Contract, Handlers } from './contract';
-import { Burrow } from '../Burrow';
+import { Burrow } from '../burrow';
 import { GetMetadataParam } from '../../../proto/rpcquery_pb';
 import { Function, Event } from 'solc';
 
