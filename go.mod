@@ -2,10 +2,6 @@ module github.com/hyperledger/burrow
 
 go 1.12
 
-// replace github.com/perlin-network/life => github.com/silasdavis/life master
-// Avoid downstream pain due to unversioned go-wagon dep:
-replace github.com/perlin-network/life => github.com/silasdavis/life v0.0.0-20191009191257-e9c2a5fdbc96
-
 require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/OneOfOne/xxhash v1.2.5
@@ -33,7 +29,7 @@ require (
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/monax/relic v2.0.0+incompatible
-	github.com/perlin-network/life v0.0.0-20190803100833-89b850c02992
+	github.com/perlin-network/life v0.0.0-20191203030451-05c0e0f7eaea
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v0.9.3
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
@@ -49,7 +45,13 @@ require (
 	github.com/tendermint/tendermint v0.33.1
 	github.com/tendermint/tm-db v0.4.0
 	github.com/test-go/testify v1.1.4
+	github.com/tmthrgd/atomics v0.0.0-20190904060638-dc7a5fcc7e0d // indirect
+	github.com/tmthrgd/go-bitset v0.0.0-20190904054048-394d9a556c05
+	github.com/tmthrgd/go-bitwise v0.0.0-20190904053232-1430ee983fca // indirect
+	github.com/tmthrgd/go-byte-test v0.0.0-20190904060354-2794345b9929 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190303111820-0bdcb15db631
+	github.com/tmthrgd/go-memset v0.0.0-20190904060434-6fb7a21f88f1 // indirect
+	github.com/tmthrgd/go-popcount v0.0.0-20190904054823-afb1ace8b04f // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.1.0

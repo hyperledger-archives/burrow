@@ -1,3 +1,4 @@
+// source: permission.proto
 /**
  * @fileoverview
  * @enhanceable
@@ -91,13 +92,15 @@ proto.permission.AccountPermissions.repeatedFields_ = [2];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto suitable for use in Soy templates.
+ * Creates an object representation of this proto.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
+ * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
- * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
- *     for transitional soy proto support: http://goto/soy-param-migration
+ *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
+ * @param {boolean=} opt_includeInstance Deprecated. whether to include the
+ *     JSPB instance for transitional soy proto support:
+ *     http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.permission.AccountPermissions.prototype.toObject = function(opt_includeInstance) {
@@ -107,8 +110,8 @@ proto.permission.AccountPermissions.prototype.toObject = function(opt_includeIns
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Whether to include the JSPB
- *     instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Deprecated. Whether to include
+ *     the JSPB instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.permission.AccountPermissions} msg The msg instance to transform.
  * @return {!Object}
@@ -117,7 +120,7 @@ proto.permission.AccountPermissions.prototype.toObject = function(opt_includeIns
 proto.permission.AccountPermissions.toObject = function(includeInstance, msg) {
   var f, obj = {
     base: (f = msg.getBase()) && proto.permission.BasePermissions.toObject(includeInstance, f),
-    rolesList: jspb.Message.getRepeatedField(msg, 2)
+    rolesList: (f = jspb.Message.getRepeatedField(msg, 2)) == null ? undefined : f
   };
 
   if (includeInstance) {
@@ -220,17 +223,21 @@ proto.permission.AccountPermissions.prototype.getBase = function() {
 };
 
 
-/** @param {?proto.permission.BasePermissions|undefined} value */
+/**
+ * @param {?proto.permission.BasePermissions|undefined} value
+ * @return {!proto.permission.AccountPermissions} returns this
+*/
 proto.permission.AccountPermissions.prototype.setBase = function(value) {
-  jspb.Message.setWrapperField(this, 1, value);
+  return jspb.Message.setWrapperField(this, 1, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
+ * @return {!proto.permission.AccountPermissions} returns this
  */
 proto.permission.AccountPermissions.prototype.clearBase = function() {
-  this.setBase(undefined);
+  return this.setBase(undefined);
 };
 
 
@@ -252,26 +259,31 @@ proto.permission.AccountPermissions.prototype.getRolesList = function() {
 };
 
 
-/** @param {!Array<string>} value */
+/**
+ * @param {!Array<string>} value
+ * @return {!proto.permission.AccountPermissions} returns this
+ */
 proto.permission.AccountPermissions.prototype.setRolesList = function(value) {
-  jspb.Message.setField(this, 2, value || []);
+  return jspb.Message.setField(this, 2, value || []);
 };
 
 
 /**
  * @param {string} value
  * @param {number=} opt_index
+ * @return {!proto.permission.AccountPermissions} returns this
  */
 proto.permission.AccountPermissions.prototype.addRoles = function(value, opt_index) {
-  jspb.Message.addToRepeatedField(this, 2, value, opt_index);
+  return jspb.Message.addToRepeatedField(this, 2, value, opt_index);
 };
 
 
 /**
  * Clears the list making it empty but non-null.
+ * @return {!proto.permission.AccountPermissions} returns this
  */
 proto.permission.AccountPermissions.prototype.clearRolesList = function() {
-  this.setRolesList([]);
+  return this.setRolesList([]);
 };
 
 
@@ -280,13 +292,15 @@ proto.permission.AccountPermissions.prototype.clearRolesList = function() {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto suitable for use in Soy templates.
+ * Creates an object representation of this proto.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
+ * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
- * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
- *     for transitional soy proto support: http://goto/soy-param-migration
+ *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
+ * @param {boolean=} opt_includeInstance Deprecated. whether to include the
+ *     JSPB instance for transitional soy proto support:
+ *     http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.permission.BasePermissions.prototype.toObject = function(opt_includeInstance) {
@@ -296,8 +310,8 @@ proto.permission.BasePermissions.prototype.toObject = function(opt_includeInstan
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Whether to include the JSPB
- *     instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Deprecated. Whether to include
+ *     the JSPB instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.permission.BasePermissions} msg The msg instance to transform.
  * @return {!Object}
@@ -305,8 +319,8 @@ proto.permission.BasePermissions.prototype.toObject = function(opt_includeInstan
  */
 proto.permission.BasePermissions.toObject = function(includeInstance, msg) {
   var f, obj = {
-    perms: jspb.Message.getField(msg, 1),
-    setbit: jspb.Message.getField(msg, 2)
+    perms: (f = jspb.Message.getField(msg, 1)) == null ? undefined : f,
+    setbit: (f = jspb.Message.getField(msg, 2)) == null ? undefined : f
   };
 
   if (includeInstance) {
@@ -406,17 +420,21 @@ proto.permission.BasePermissions.prototype.getPerms = function() {
 };
 
 
-/** @param {number} value */
+/**
+ * @param {number} value
+ * @return {!proto.permission.BasePermissions} returns this
+ */
 proto.permission.BasePermissions.prototype.setPerms = function(value) {
-  jspb.Message.setField(this, 1, value);
+  return jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
+ * @return {!proto.permission.BasePermissions} returns this
  */
 proto.permission.BasePermissions.prototype.clearPerms = function() {
-  jspb.Message.setField(this, 1, undefined);
+  return jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -438,17 +456,21 @@ proto.permission.BasePermissions.prototype.getSetbit = function() {
 };
 
 
-/** @param {number} value */
+/**
+ * @param {number} value
+ * @return {!proto.permission.BasePermissions} returns this
+ */
 proto.permission.BasePermissions.prototype.setSetbit = function(value) {
-  jspb.Message.setField(this, 2, value);
+  return jspb.Message.setField(this, 2, value);
 };
 
 
 /**
  * Clears the field making it undefined.
+ * @return {!proto.permission.BasePermissions} returns this
  */
 proto.permission.BasePermissions.prototype.clearSetbit = function() {
-  jspb.Message.setField(this, 2, undefined);
+  return jspb.Message.setField(this, 2, undefined);
 };
 
 
@@ -466,13 +488,15 @@ proto.permission.BasePermissions.prototype.hasSetbit = function() {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto suitable for use in Soy templates.
+ * Creates an object representation of this proto.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
+ * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
- * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
- *     for transitional soy proto support: http://goto/soy-param-migration
+ *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
+ * @param {boolean=} opt_includeInstance Deprecated. whether to include the
+ *     JSPB instance for transitional soy proto support:
+ *     http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.permission.PermArgs.prototype.toObject = function(opt_includeInstance) {
@@ -482,8 +506,8 @@ proto.permission.PermArgs.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Whether to include the JSPB
- *     instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Deprecated. Whether to include
+ *     the JSPB instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.permission.PermArgs} msg The msg instance to transform.
  * @return {!Object}
@@ -491,11 +515,11 @@ proto.permission.PermArgs.prototype.toObject = function(opt_includeInstance) {
  */
 proto.permission.PermArgs.toObject = function(includeInstance, msg) {
   var f, obj = {
-    action: jspb.Message.getField(msg, 1),
+    action: (f = jspb.Message.getField(msg, 1)) == null ? undefined : f,
     target: msg.getTarget_asB64(),
-    permission: jspb.Message.getField(msg, 3),
-    role: jspb.Message.getField(msg, 4),
-    value: jspb.Message.getField(msg, 5)
+    permission: (f = jspb.Message.getField(msg, 3)) == null ? undefined : f,
+    role: (f = jspb.Message.getField(msg, 4)) == null ? undefined : f,
+    value: (f = jspb.Message.getBooleanField(msg, 5)) == null ? undefined : f
   };
 
   if (includeInstance) {
@@ -628,17 +652,21 @@ proto.permission.PermArgs.prototype.getAction = function() {
 };
 
 
-/** @param {number} value */
+/**
+ * @param {number} value
+ * @return {!proto.permission.PermArgs} returns this
+ */
 proto.permission.PermArgs.prototype.setAction = function(value) {
-  jspb.Message.setField(this, 1, value);
+  return jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
+ * @return {!proto.permission.PermArgs} returns this
  */
 proto.permission.PermArgs.prototype.clearAction = function() {
-  jspb.Message.setField(this, 1, undefined);
+  return jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -684,17 +712,21 @@ proto.permission.PermArgs.prototype.getTarget_asU8 = function() {
 };
 
 
-/** @param {!(string|Uint8Array)} value */
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.permission.PermArgs} returns this
+ */
 proto.permission.PermArgs.prototype.setTarget = function(value) {
-  jspb.Message.setField(this, 2, value);
+  return jspb.Message.setField(this, 2, value);
 };
 
 
 /**
  * Clears the field making it undefined.
+ * @return {!proto.permission.PermArgs} returns this
  */
 proto.permission.PermArgs.prototype.clearTarget = function() {
-  jspb.Message.setField(this, 2, undefined);
+  return jspb.Message.setField(this, 2, undefined);
 };
 
 
@@ -716,17 +748,21 @@ proto.permission.PermArgs.prototype.getPermission = function() {
 };
 
 
-/** @param {number} value */
+/**
+ * @param {number} value
+ * @return {!proto.permission.PermArgs} returns this
+ */
 proto.permission.PermArgs.prototype.setPermission = function(value) {
-  jspb.Message.setField(this, 3, value);
+  return jspb.Message.setField(this, 3, value);
 };
 
 
 /**
  * Clears the field making it undefined.
+ * @return {!proto.permission.PermArgs} returns this
  */
 proto.permission.PermArgs.prototype.clearPermission = function() {
-  jspb.Message.setField(this, 3, undefined);
+  return jspb.Message.setField(this, 3, undefined);
 };
 
 
@@ -748,17 +784,21 @@ proto.permission.PermArgs.prototype.getRole = function() {
 };
 
 
-/** @param {string} value */
+/**
+ * @param {string} value
+ * @return {!proto.permission.PermArgs} returns this
+ */
 proto.permission.PermArgs.prototype.setRole = function(value) {
-  jspb.Message.setField(this, 4, value);
+  return jspb.Message.setField(this, 4, value);
 };
 
 
 /**
  * Clears the field making it undefined.
+ * @return {!proto.permission.PermArgs} returns this
  */
 proto.permission.PermArgs.prototype.clearRole = function() {
-  jspb.Message.setField(this, 4, undefined);
+  return jspb.Message.setField(this, 4, undefined);
 };
 
 
@@ -773,26 +813,28 @@ proto.permission.PermArgs.prototype.hasRole = function() {
 
 /**
  * optional bool Value = 5;
- * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
- * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.permission.PermArgs.prototype.getValue = function() {
-  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 5, false));
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 5, false));
 };
 
 
-/** @param {boolean} value */
+/**
+ * @param {boolean} value
+ * @return {!proto.permission.PermArgs} returns this
+ */
 proto.permission.PermArgs.prototype.setValue = function(value) {
-  jspb.Message.setField(this, 5, value);
+  return jspb.Message.setField(this, 5, value);
 };
 
 
 /**
  * Clears the field making it undefined.
+ * @return {!proto.permission.PermArgs} returns this
  */
 proto.permission.PermArgs.prototype.clearValue = function() {
-  jspb.Message.setField(this, 5, undefined);
+  return jspb.Message.setField(this, 5, undefined);
 };
 
 

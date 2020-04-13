@@ -1,3 +1,4 @@
+// source: github.com/gogo/protobuf/gogoproto/gogo.proto
 /**
  * @fileoverview
  * @enhanceable
