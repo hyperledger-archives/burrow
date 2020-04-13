@@ -231,7 +231,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		} else {
 			ctx.Logger.TraceMsg("Successful execution")
 			if createContract {
-				err := native.InitCode(txCache, callee, ret)
+				err := native.InitEVMCode(txCache, callee, ret)
 				if err != nil {
 					return err
 				}
