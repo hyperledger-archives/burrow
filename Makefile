@@ -17,9 +17,13 @@ REPO := $(shell pwd)
 
 CI_IMAGE="hyperledger/burrow:ci"
 
+VERSION := $(shell scripts/version.sh)
 # Gets implicit default GOPATH if not set
 GOPATH?=$(shell go env GOPATH)
-BIN_PATH?=${GOPATH}/bin
+BIN_PATH?=$(GOPATH)/bin
+HELM_PATH?=helm/package
+HELM_PACKAGE=$(HELM_PATH)/burrow-$(VERSION).tgz
+ARCH?=linux-amd64
 
 export GO111MODULE=on
 
@@ -261,7 +265,7 @@ clean:
 # Print version
 .PHONY: version
 version:
-	@go run ./project/cmd/version/main.go
+	@echo $(VERSION)
 
 # Generate full changelog of all release notes
 CHANGELOG.md: project/history.go project/cmd/changelog/main.go
@@ -295,3 +299,34 @@ ready_for_pull_request: docs fix
 staticcheck:
 	go get honnef.co/go/tools/cmd/staticcheck
 	staticcheck ./...
+
+# Note --set flag currently needs helm 3 version < 3.0.3 https://github.com/helm/helm/issues/3141 - but hopefully they will reintroduce support
+bin/helm:
+	@echo Downloading helm...
+	mkdir -p bin
+	curl https://get.helm.sh/helm-v3.0.2-$(ARCH).tar.gz | tar xvzO $(ARCH)/helm > bin/helm && chmod +x bin/helm
+
+.PHONY: helm_deps
+helm_deps: bin/helm
+	@bin/helm repo add --username "$(CM_USERNAME)" --password "$(CM_PASSWORD)" chartmuseum $(CM_URL)
+
+.PHONY: helm_test
+helm_test: bin/helm
+	bin/helm dep up helm/burrow
+	bin/helm lint helm/burrow
+
+helm_package: $(HELM_PACKAGE)
+
+$(HELM_PACKAGE): helm_test bin/helm
+	bin/helm package helm/burrow \
+		--version "$(VERSION)" \
+		--app-version "$(VERSION)" \
+		--set "image.tag=$(VERSION)" \
+		--dependency-update \
+		--destination helm/package
+
+.PHONY: helm_push
+helm_push: helm_package
+	@echo pushing helm chart...
+	@curl -sS -u ${CM_USERNAME}:${CM_PASSWORD} \
+		--data-binary "@burrow-${VERSION}.tgz" $(CM_URL)/api/charts
