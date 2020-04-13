@@ -328,5 +328,5 @@ $(HELM_PACKAGE): helm_test bin/helm
 .PHONY: helm_push
 helm_push: helm_package
 	@echo pushing helm chart...
-	@curl -sS -u ${CM_USERNAME}:${CM_PASSWORD} \
-		--data-binary "@burrow-${VERSION}.tgz" $(CM_URL)/api/charts
+	@curl -u ${CM_USERNAME}:${CM_PASSWORD} \
+		--data-binary "@$(HELM_PACKAGE)" $(CM_URL)/api/charts
