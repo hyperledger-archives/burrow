@@ -2,16 +2,19 @@ package native
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
-	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/errors"
+	"github.com/hyperledger/burrow/execution/evm/asm"
+	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tmthrgd/go-bitset"
 )
 
 func TestState_CreateAccount(t *testing.T) {
@@ -26,7 +29,7 @@ func TestState_CreateAccount(t *testing.T) {
 	st = acmstate.NewMemoryState()
 	err = CreateAccount(st, address)
 	require.NoError(t, err)
-	err = InitCode(st, address, []byte{1, 2, 3})
+	err = InitEVMCode(st, address, []byte{1, 2, 3})
 	require.NoError(t, err)
 }
 
@@ -81,8 +84,43 @@ func TestState_NewCache(t *testing.T) {
 	require.Equal(t, errors.Codes.IllegalWrite, errors.GetCode(err))
 }
 
-func blockHashGetter(height uint64) []byte {
-	return binary.LeftPadWord256([]byte(fmt.Sprintf("block_hash_%d", height))).Bytes()
+func TestOpcodeBitset(t *testing.T) {
+	tests := []struct {
+		name   string
+		code   []byte
+		bitset bitset.Bitset
+	}{
+		{
+			name:   "Only one real JUMPDEST",
+			code:   bc.MustSplice(asm.PUSH2, 1, asm.JUMPDEST, asm.ADD, asm.JUMPDEST),
+			bitset: mkBitset("10011"),
+		},
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := opcodeBitset(tt.code); !reflect.DeepEqual(got, tt.bitset) {
+				t.Errorf("opcodeBitset() = %v, want %v", got, tt.bitset)
+			}
+		})
+	}
+}
+
+func mkBitset(binaryString string) bitset.Bitset {
+	length := uint(len(binaryString))
+	bs := bitset.New(length)
+	for i := uint(0); i < length; i++ {
+		switch binaryString[i] {
+		case '1':
+			bs.Set(i)
+		case '0':
+		case ' ':
+			i++
+		default:
+			panic(fmt.Errorf("mkBitset() expects a string containing only 1s, 0s, and spaces"))
+		}
+	}
+	return bs
 }
 
 func addToBalance(t testing.TB, st acmstate.ReaderWriter, address crypto.Address, amt uint64) {
