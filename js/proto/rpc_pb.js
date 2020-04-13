@@ -1,3 +1,4 @@
+// source: rpc.proto
 /**
  * @fileoverview
  * @enhanceable
@@ -46,13 +47,15 @@ if (goog.DEBUG && !COMPILED) {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto suitable for use in Soy templates.
+ * Creates an object representation of this proto.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
+ * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
- * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
- *     for transitional soy proto support: http://goto/soy-param-migration
+ *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
+ * @param {boolean=} opt_includeInstance Deprecated. whether to include the
+ *     JSPB instance for transitional soy proto support:
+ *     http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.rpc.ResultStatus.prototype.toObject = function(opt_includeInstance) {
@@ -62,8 +65,8 @@ proto.rpc.ResultStatus.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Whether to include the JSPB
- *     instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Deprecated. Whether to include
+ *     the JSPB instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.rpc.ResultStatus} msg The msg instance to transform.
  * @return {!Object}
@@ -77,7 +80,7 @@ proto.rpc.ResultStatus.toObject = function(includeInstance, msg) {
     genesishash: msg.getGenesishash_asB64(),
     nodeinfo: (f = msg.getNodeinfo()) && tendermint_pb.NodeInfo.toObject(includeInstance, f),
     syncinfo: (f = msg.getSyncinfo()) && bcm_pb.SyncInfo.toObject(includeInstance, f),
-    catchingup: jspb.Message.getFieldWithDefault(msg, 8, false),
+    catchingup: jspb.Message.getBooleanFieldWithDefault(msg, 8, false),
     validatorinfo: (f = msg.getValidatorinfo()) && validator_pb.Validator.toObject(includeInstance, f)
   };
 
@@ -250,9 +253,12 @@ proto.rpc.ResultStatus.prototype.getChainid = function() {
 };
 
 
-/** @param {string} value */
+/**
+ * @param {string} value
+ * @return {!proto.rpc.ResultStatus} returns this
+ */
 proto.rpc.ResultStatus.prototype.setChainid = function(value) {
-  jspb.Message.setProto3StringField(this, 1, value);
+  return jspb.Message.setProto3StringField(this, 1, value);
 };
 
 
@@ -265,9 +271,12 @@ proto.rpc.ResultStatus.prototype.getRunid = function() {
 };
 
 
-/** @param {string} value */
+/**
+ * @param {string} value
+ * @return {!proto.rpc.ResultStatus} returns this
+ */
 proto.rpc.ResultStatus.prototype.setRunid = function(value) {
-  jspb.Message.setProto3StringField(this, 2, value);
+  return jspb.Message.setProto3StringField(this, 2, value);
 };
 
 
@@ -280,9 +289,12 @@ proto.rpc.ResultStatus.prototype.getBurrowversion = function() {
 };
 
 
-/** @param {string} value */
+/**
+ * @param {string} value
+ * @return {!proto.rpc.ResultStatus} returns this
+ */
 proto.rpc.ResultStatus.prototype.setBurrowversion = function(value) {
-  jspb.Message.setProto3StringField(this, 3, value);
+  return jspb.Message.setProto3StringField(this, 3, value);
 };
 
 
@@ -319,9 +331,12 @@ proto.rpc.ResultStatus.prototype.getGenesishash_asU8 = function() {
 };
 
 
-/** @param {!(string|Uint8Array)} value */
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.rpc.ResultStatus} returns this
+ */
 proto.rpc.ResultStatus.prototype.setGenesishash = function(value) {
-  jspb.Message.setProto3BytesField(this, 4, value);
+  return jspb.Message.setProto3BytesField(this, 4, value);
 };
 
 
@@ -335,17 +350,21 @@ proto.rpc.ResultStatus.prototype.getNodeinfo = function() {
 };
 
 
-/** @param {?proto.tendermint.NodeInfo|undefined} value */
+/**
+ * @param {?proto.tendermint.NodeInfo|undefined} value
+ * @return {!proto.rpc.ResultStatus} returns this
+*/
 proto.rpc.ResultStatus.prototype.setNodeinfo = function(value) {
-  jspb.Message.setWrapperField(this, 5, value);
+  return jspb.Message.setWrapperField(this, 5, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
+ * @return {!proto.rpc.ResultStatus} returns this
  */
 proto.rpc.ResultStatus.prototype.clearNodeinfo = function() {
-  this.setNodeinfo(undefined);
+  return this.setNodeinfo(undefined);
 };
 
 
@@ -368,17 +387,21 @@ proto.rpc.ResultStatus.prototype.getSyncinfo = function() {
 };
 
 
-/** @param {?proto.bcm.SyncInfo|undefined} value */
+/**
+ * @param {?proto.bcm.SyncInfo|undefined} value
+ * @return {!proto.rpc.ResultStatus} returns this
+*/
 proto.rpc.ResultStatus.prototype.setSyncinfo = function(value) {
-  jspb.Message.setWrapperField(this, 6, value);
+  return jspb.Message.setWrapperField(this, 6, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
+ * @return {!proto.rpc.ResultStatus} returns this
  */
 proto.rpc.ResultStatus.prototype.clearSyncinfo = function() {
-  this.setSyncinfo(undefined);
+  return this.setSyncinfo(undefined);
 };
 
 
@@ -393,18 +416,19 @@ proto.rpc.ResultStatus.prototype.hasSyncinfo = function() {
 
 /**
  * optional bool CatchingUp = 8;
- * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
- * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.rpc.ResultStatus.prototype.getCatchingup = function() {
-  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 8, false));
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 8, false));
 };
 
 
-/** @param {boolean} value */
+/**
+ * @param {boolean} value
+ * @return {!proto.rpc.ResultStatus} returns this
+ */
 proto.rpc.ResultStatus.prototype.setCatchingup = function(value) {
-  jspb.Message.setProto3BooleanField(this, 8, value);
+  return jspb.Message.setProto3BooleanField(this, 8, value);
 };
 
 
@@ -418,17 +442,21 @@ proto.rpc.ResultStatus.prototype.getValidatorinfo = function() {
 };
 
 
-/** @param {?proto.validator.Validator|undefined} value */
+/**
+ * @param {?proto.validator.Validator|undefined} value
+ * @return {!proto.rpc.ResultStatus} returns this
+*/
 proto.rpc.ResultStatus.prototype.setValidatorinfo = function(value) {
-  jspb.Message.setWrapperField(this, 7, value);
+  return jspb.Message.setWrapperField(this, 7, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
+ * @return {!proto.rpc.ResultStatus} returns this
  */
 proto.rpc.ResultStatus.prototype.clearValidatorinfo = function() {
-  this.setValidatorinfo(undefined);
+  return this.setValidatorinfo(undefined);
 };
 
 

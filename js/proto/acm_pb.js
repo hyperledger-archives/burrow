@@ -1,3 +1,4 @@
+// source: acm.proto
 /**
  * @fileoverview
  * @enhanceable
@@ -73,13 +74,15 @@ proto.acm.Account.repeatedFields_ = [9];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto suitable for use in Soy templates.
+ * Creates an object representation of this proto.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
+ * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
- * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
- *     for transitional soy proto support: http://goto/soy-param-migration
+ *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
+ * @param {boolean=} opt_includeInstance Deprecated. whether to include the
+ *     JSPB instance for transitional soy proto support:
+ *     http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.acm.Account.prototype.toObject = function(opt_includeInstance) {
@@ -89,8 +92,8 @@ proto.acm.Account.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Whether to include the JSPB
- *     instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Deprecated. Whether to include
+ *     the JSPB instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.acm.Account} msg The msg instance to transform.
  * @return {!Object}
@@ -109,7 +112,8 @@ proto.acm.Account.toObject = function(includeInstance, msg) {
     codehash: msg.getCodehash_asB64(),
     contractmetaList: jspb.Message.toObjectList(msg.getContractmetaList(),
     proto.acm.ContractMeta.toObject, includeInstance),
-    forebear: msg.getForebear_asB64()
+    forebear: msg.getForebear_asB64(),
+    opcodebitset: msg.getOpcodebitset_asB64()
   };
 
   if (includeInstance) {
@@ -192,6 +196,10 @@ proto.acm.Account.deserializeBinaryFromReader = function(msg, reader) {
     case 10:
       var value = /** @type {!Uint8Array} */ (reader.readBytes());
       msg.setForebear(value);
+      break;
+    case 12:
+      var value = /** @type {!Uint8Array} */ (reader.readBytes());
+      msg.setOpcodebitset(value);
       break;
     default:
       reader.skipField();
@@ -302,6 +310,13 @@ proto.acm.Account.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getOpcodebitset_asU8();
+  if (f.length > 0) {
+    writer.writeBytes(
+      12,
+      f
+    );
+  }
 };
 
 
@@ -338,9 +353,12 @@ proto.acm.Account.prototype.getAddress_asU8 = function() {
 };
 
 
-/** @param {!(string|Uint8Array)} value */
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.acm.Account} returns this
+ */
 proto.acm.Account.prototype.setAddress = function(value) {
-  jspb.Message.setProto3BytesField(this, 1, value);
+  return jspb.Message.setProto3BytesField(this, 1, value);
 };
 
 
@@ -354,17 +372,21 @@ proto.acm.Account.prototype.getPublickey = function() {
 };
 
 
-/** @param {?proto.crypto.PublicKey|undefined} value */
+/**
+ * @param {?proto.crypto.PublicKey|undefined} value
+ * @return {!proto.acm.Account} returns this
+*/
 proto.acm.Account.prototype.setPublickey = function(value) {
-  jspb.Message.setWrapperField(this, 2, value);
+  return jspb.Message.setWrapperField(this, 2, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
+ * @return {!proto.acm.Account} returns this
  */
 proto.acm.Account.prototype.clearPublickey = function() {
-  this.setPublickey(undefined);
+  return this.setPublickey(undefined);
 };
 
 
@@ -386,9 +408,12 @@ proto.acm.Account.prototype.getSequence = function() {
 };
 
 
-/** @param {number} value */
+/**
+ * @param {number} value
+ * @return {!proto.acm.Account} returns this
+ */
 proto.acm.Account.prototype.setSequence = function(value) {
-  jspb.Message.setProto3IntField(this, 3, value);
+  return jspb.Message.setProto3IntField(this, 3, value);
 };
 
 
@@ -401,9 +426,12 @@ proto.acm.Account.prototype.getBalance = function() {
 };
 
 
-/** @param {number} value */
+/**
+ * @param {number} value
+ * @return {!proto.acm.Account} returns this
+ */
 proto.acm.Account.prototype.setBalance = function(value) {
-  jspb.Message.setProto3IntField(this, 4, value);
+  return jspb.Message.setProto3IntField(this, 4, value);
 };
 
 
@@ -440,9 +468,12 @@ proto.acm.Account.prototype.getEvmcode_asU8 = function() {
 };
 
 
-/** @param {!(string|Uint8Array)} value */
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.acm.Account} returns this
+ */
 proto.acm.Account.prototype.setEvmcode = function(value) {
-  jspb.Message.setProto3BytesField(this, 5, value);
+  return jspb.Message.setProto3BytesField(this, 5, value);
 };
 
 
@@ -456,17 +487,21 @@ proto.acm.Account.prototype.getPermissions = function() {
 };
 
 
-/** @param {?proto.permission.AccountPermissions|undefined} value */
+/**
+ * @param {?proto.permission.AccountPermissions|undefined} value
+ * @return {!proto.acm.Account} returns this
+*/
 proto.acm.Account.prototype.setPermissions = function(value) {
-  jspb.Message.setWrapperField(this, 6, value);
+  return jspb.Message.setWrapperField(this, 6, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
+ * @return {!proto.acm.Account} returns this
  */
 proto.acm.Account.prototype.clearPermissions = function() {
-  this.setPermissions(undefined);
+  return this.setPermissions(undefined);
 };
 
 
@@ -512,9 +547,12 @@ proto.acm.Account.prototype.getWasmcode_asU8 = function() {
 };
 
 
-/** @param {!(string|Uint8Array)} value */
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.acm.Account} returns this
+ */
 proto.acm.Account.prototype.setWasmcode = function(value) {
-  jspb.Message.setProto3BytesField(this, 7, value);
+  return jspb.Message.setProto3BytesField(this, 7, value);
 };
 
 
@@ -527,9 +565,12 @@ proto.acm.Account.prototype.getNativename = function() {
 };
 
 
-/** @param {string} value */
+/**
+ * @param {string} value
+ * @return {!proto.acm.Account} returns this
+ */
 proto.acm.Account.prototype.setNativename = function(value) {
-  jspb.Message.setProto3StringField(this, 11, value);
+  return jspb.Message.setProto3StringField(this, 11, value);
 };
 
 
@@ -566,9 +607,12 @@ proto.acm.Account.prototype.getCodehash_asU8 = function() {
 };
 
 
-/** @param {!(string|Uint8Array)} value */
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.acm.Account} returns this
+ */
 proto.acm.Account.prototype.setCodehash = function(value) {
-  jspb.Message.setProto3BytesField(this, 8, value);
+  return jspb.Message.setProto3BytesField(this, 8, value);
 };
 
 
@@ -582,9 +626,12 @@ proto.acm.Account.prototype.getContractmetaList = function() {
 };
 
 
-/** @param {!Array<!proto.acm.ContractMeta>} value */
+/**
+ * @param {!Array<!proto.acm.ContractMeta>} value
+ * @return {!proto.acm.Account} returns this
+*/
 proto.acm.Account.prototype.setContractmetaList = function(value) {
-  jspb.Message.setRepeatedWrapperField(this, 9, value);
+  return jspb.Message.setRepeatedWrapperField(this, 9, value);
 };
 
 
@@ -600,9 +647,10 @@ proto.acm.Account.prototype.addContractmeta = function(opt_value, opt_index) {
 
 /**
  * Clears the list making it empty but non-null.
+ * @return {!proto.acm.Account} returns this
  */
 proto.acm.Account.prototype.clearContractmetaList = function() {
-  this.setContractmetaList([]);
+  return this.setContractmetaList([]);
 };
 
 
@@ -639,9 +687,54 @@ proto.acm.Account.prototype.getForebear_asU8 = function() {
 };
 
 
-/** @param {!(string|Uint8Array)} value */
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.acm.Account} returns this
+ */
 proto.acm.Account.prototype.setForebear = function(value) {
-  jspb.Message.setProto3BytesField(this, 10, value);
+  return jspb.Message.setProto3BytesField(this, 10, value);
+};
+
+
+/**
+ * optional bytes OpcodeBitset = 12;
+ * @return {!(string|Uint8Array)}
+ */
+proto.acm.Account.prototype.getOpcodebitset = function() {
+  return /** @type {!(string|Uint8Array)} */ (jspb.Message.getFieldWithDefault(this, 12, ""));
+};
+
+
+/**
+ * optional bytes OpcodeBitset = 12;
+ * This is a type-conversion wrapper around `getOpcodebitset()`
+ * @return {string}
+ */
+proto.acm.Account.prototype.getOpcodebitset_asB64 = function() {
+  return /** @type {string} */ (jspb.Message.bytesAsB64(
+      this.getOpcodebitset()));
+};
+
+
+/**
+ * optional bytes OpcodeBitset = 12;
+ * Note that Uint8Array is not supported on all browsers.
+ * @see http://caniuse.com/Uint8Array
+ * This is a type-conversion wrapper around `getOpcodebitset()`
+ * @return {!Uint8Array}
+ */
+proto.acm.Account.prototype.getOpcodebitset_asU8 = function() {
+  return /** @type {!Uint8Array} */ (jspb.Message.bytesAsU8(
+      this.getOpcodebitset()));
+};
+
+
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.acm.Account} returns this
+ */
+proto.acm.Account.prototype.setOpcodebitset = function(value) {
+  return jspb.Message.setProto3BytesField(this, 12, value);
 };
 
 
@@ -650,13 +743,15 @@ proto.acm.Account.prototype.setForebear = function(value) {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto suitable for use in Soy templates.
+ * Creates an object representation of this proto.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
+ * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
- * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
- *     for transitional soy proto support: http://goto/soy-param-migration
+ *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
+ * @param {boolean=} opt_includeInstance Deprecated. whether to include the
+ *     JSPB instance for transitional soy proto support:
+ *     http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.acm.ContractMeta.prototype.toObject = function(opt_includeInstance) {
@@ -666,8 +761,8 @@ proto.acm.ContractMeta.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Whether to include the JSPB
- *     instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Deprecated. Whether to include
+ *     the JSPB instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.acm.ContractMeta} msg The msg instance to transform.
  * @return {!Object}
@@ -812,9 +907,12 @@ proto.acm.ContractMeta.prototype.getCodehash_asU8 = function() {
 };
 
 
-/** @param {!(string|Uint8Array)} value */
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.acm.ContractMeta} returns this
+ */
 proto.acm.ContractMeta.prototype.setCodehash = function(value) {
-  jspb.Message.setProto3BytesField(this, 1, value);
+  return jspb.Message.setProto3BytesField(this, 1, value);
 };
 
 
@@ -851,9 +949,12 @@ proto.acm.ContractMeta.prototype.getMetadatahash_asU8 = function() {
 };
 
 
-/** @param {!(string|Uint8Array)} value */
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.acm.ContractMeta} returns this
+ */
 proto.acm.ContractMeta.prototype.setMetadatahash = function(value) {
-  jspb.Message.setProto3BytesField(this, 2, value);
+  return jspb.Message.setProto3BytesField(this, 2, value);
 };
 
 
@@ -866,9 +967,12 @@ proto.acm.ContractMeta.prototype.getMetadata = function() {
 };
 
 
-/** @param {string} value */
+/**
+ * @param {string} value
+ * @return {!proto.acm.ContractMeta} returns this
+ */
 proto.acm.ContractMeta.prototype.setMetadata = function(value) {
-  jspb.Message.setProto3StringField(this, 3, value);
+  return jspb.Message.setProto3StringField(this, 3, value);
 };
 
 
