@@ -137,5 +137,4 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: git fetch --unshallow --prune
-    - run: make helm_deps
     - run: make helm_package
