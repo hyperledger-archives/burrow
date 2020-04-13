@@ -1,3 +1,4 @@
+// source: txs.proto
 /**
  * @fileoverview
  * @enhanceable
@@ -94,13 +95,15 @@ proto.txs.Envelope.repeatedFields_ = [1];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto suitable for use in Soy templates.
+ * Creates an object representation of this proto.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
+ * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
- * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
- *     for transitional soy proto support: http://goto/soy-param-migration
+ *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
+ * @param {boolean=} opt_includeInstance Deprecated. whether to include the
+ *     JSPB instance for transitional soy proto support:
+ *     http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.txs.Envelope.prototype.toObject = function(opt_includeInstance) {
@@ -110,8 +113,8 @@ proto.txs.Envelope.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Whether to include the JSPB
- *     instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Deprecated. Whether to include
+ *     the JSPB instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.txs.Envelope} msg The msg instance to transform.
  * @return {!Object}
@@ -244,9 +247,12 @@ proto.txs.Envelope.prototype.getSignatoriesList = function() {
 };
 
 
-/** @param {!Array<!proto.txs.Signatory>} value */
+/**
+ * @param {!Array<!proto.txs.Signatory>} value
+ * @return {!proto.txs.Envelope} returns this
+*/
 proto.txs.Envelope.prototype.setSignatoriesList = function(value) {
-  jspb.Message.setRepeatedWrapperField(this, 1, value);
+  return jspb.Message.setRepeatedWrapperField(this, 1, value);
 };
 
 
@@ -262,9 +268,10 @@ proto.txs.Envelope.prototype.addSignatories = function(opt_value, opt_index) {
 
 /**
  * Clears the list making it empty but non-null.
+ * @return {!proto.txs.Envelope} returns this
  */
 proto.txs.Envelope.prototype.clearSignatoriesList = function() {
-  this.setSignatoriesList([]);
+  return this.setSignatoriesList([]);
 };
 
 
@@ -301,9 +308,12 @@ proto.txs.Envelope.prototype.getTx_asU8 = function() {
 };
 
 
-/** @param {!(string|Uint8Array)} value */
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.txs.Envelope} returns this
+ */
 proto.txs.Envelope.prototype.setTx = function(value) {
-  jspb.Message.setProto3BytesField(this, 2, value);
+  return jspb.Message.setProto3BytesField(this, 2, value);
 };
 
 
@@ -316,9 +326,12 @@ proto.txs.Envelope.prototype.getEnc = function() {
 };
 
 
-/** @param {!proto.txs.Envelope.Encoding} value */
+/**
+ * @param {!proto.txs.Envelope.Encoding} value
+ * @return {!proto.txs.Envelope} returns this
+ */
 proto.txs.Envelope.prototype.setEnc = function(value) {
-  jspb.Message.setProto3EnumField(this, 3, value);
+  return jspb.Message.setProto3EnumField(this, 3, value);
 };
 
 
@@ -327,13 +340,15 @@ proto.txs.Envelope.prototype.setEnc = function(value) {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto suitable for use in Soy templates.
+ * Creates an object representation of this proto.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
+ * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
- * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
- *     for transitional soy proto support: http://goto/soy-param-migration
+ *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
+ * @param {boolean=} opt_includeInstance Deprecated. whether to include the
+ *     JSPB instance for transitional soy proto support:
+ *     http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.txs.Signatory.prototype.toObject = function(opt_includeInstance) {
@@ -343,8 +358,8 @@ proto.txs.Signatory.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Whether to include the JSPB
- *     instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Deprecated. Whether to include
+ *     the JSPB instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.txs.Signatory} msg The msg instance to transform.
  * @return {!Object}
@@ -493,9 +508,12 @@ proto.txs.Signatory.prototype.getAddress_asU8 = function() {
 };
 
 
-/** @param {!(string|Uint8Array)} value */
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.txs.Signatory} returns this
+ */
 proto.txs.Signatory.prototype.setAddress = function(value) {
-  jspb.Message.setProto3BytesField(this, 1, value);
+  return jspb.Message.setProto3BytesField(this, 1, value);
 };
 
 
@@ -509,17 +527,21 @@ proto.txs.Signatory.prototype.getPublickey = function() {
 };
 
 
-/** @param {?proto.crypto.PublicKey|undefined} value */
+/**
+ * @param {?proto.crypto.PublicKey|undefined} value
+ * @return {!proto.txs.Signatory} returns this
+*/
 proto.txs.Signatory.prototype.setPublickey = function(value) {
-  jspb.Message.setWrapperField(this, 2, value);
+  return jspb.Message.setWrapperField(this, 2, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
+ * @return {!proto.txs.Signatory} returns this
  */
 proto.txs.Signatory.prototype.clearPublickey = function() {
-  this.setPublickey(undefined);
+  return this.setPublickey(undefined);
 };
 
 
@@ -542,17 +564,21 @@ proto.txs.Signatory.prototype.getSignature = function() {
 };
 
 
-/** @param {?proto.crypto.Signature|undefined} value */
+/**
+ * @param {?proto.crypto.Signature|undefined} value
+ * @return {!proto.txs.Signatory} returns this
+*/
 proto.txs.Signatory.prototype.setSignature = function(value) {
-  jspb.Message.setWrapperField(this, 4, value);
+  return jspb.Message.setWrapperField(this, 4, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
+ * @return {!proto.txs.Signatory} returns this
  */
 proto.txs.Signatory.prototype.clearSignature = function() {
-  this.setSignature(undefined);
+  return this.setSignature(undefined);
 };
 
 
@@ -570,13 +596,15 @@ proto.txs.Signatory.prototype.hasSignature = function() {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto suitable for use in Soy templates.
+ * Creates an object representation of this proto.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
+ * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
- * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
- *     for transitional soy proto support: http://goto/soy-param-migration
+ *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
+ * @param {boolean=} opt_includeInstance Deprecated. whether to include the
+ *     JSPB instance for transitional soy proto support:
+ *     http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.txs.Receipt.prototype.toObject = function(opt_includeInstance) {
@@ -586,8 +614,8 @@ proto.txs.Receipt.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Whether to include the JSPB
- *     instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Deprecated. Whether to include
+ *     the JSPB instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.txs.Receipt} msg The msg instance to transform.
  * @return {!Object}
@@ -597,7 +625,7 @@ proto.txs.Receipt.toObject = function(includeInstance, msg) {
   var f, obj = {
     txtype: jspb.Message.getFieldWithDefault(msg, 1, 0),
     txhash: msg.getTxhash_asB64(),
-    createscontract: jspb.Message.getFieldWithDefault(msg, 3, false),
+    createscontract: jspb.Message.getBooleanFieldWithDefault(msg, 3, false),
     contractaddress: msg.getContractaddress_asB64()
   };
 
@@ -720,9 +748,12 @@ proto.txs.Receipt.prototype.getTxtype = function() {
 };
 
 
-/** @param {number} value */
+/**
+ * @param {number} value
+ * @return {!proto.txs.Receipt} returns this
+ */
 proto.txs.Receipt.prototype.setTxtype = function(value) {
-  jspb.Message.setProto3IntField(this, 1, value);
+  return jspb.Message.setProto3IntField(this, 1, value);
 };
 
 
@@ -759,26 +790,30 @@ proto.txs.Receipt.prototype.getTxhash_asU8 = function() {
 };
 
 
-/** @param {!(string|Uint8Array)} value */
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.txs.Receipt} returns this
+ */
 proto.txs.Receipt.prototype.setTxhash = function(value) {
-  jspb.Message.setProto3BytesField(this, 2, value);
+  return jspb.Message.setProto3BytesField(this, 2, value);
 };
 
 
 /**
  * optional bool CreatesContract = 3;
- * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
- * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.txs.Receipt.prototype.getCreatescontract = function() {
-  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 3, false));
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 3, false));
 };
 
 
-/** @param {boolean} value */
+/**
+ * @param {boolean} value
+ * @return {!proto.txs.Receipt} returns this
+ */
 proto.txs.Receipt.prototype.setCreatescontract = function(value) {
-  jspb.Message.setProto3BooleanField(this, 3, value);
+  return jspb.Message.setProto3BooleanField(this, 3, value);
 };
 
 
@@ -815,9 +850,12 @@ proto.txs.Receipt.prototype.getContractaddress_asU8 = function() {
 };
 
 
-/** @param {!(string|Uint8Array)} value */
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.txs.Receipt} returns this
+ */
 proto.txs.Receipt.prototype.setContractaddress = function(value) {
-  jspb.Message.setProto3BytesField(this, 4, value);
+  return jspb.Message.setProto3BytesField(this, 4, value);
 };
 
 

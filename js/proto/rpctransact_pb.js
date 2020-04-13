@@ -1,3 +1,4 @@
+// source: rpctransact.proto
 /**
  * @fileoverview
  * @enhanceable
@@ -92,13 +93,15 @@ if (goog.DEBUG && !COMPILED) {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto suitable for use in Soy templates.
+ * Creates an object representation of this proto.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
+ * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
- * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
- *     for transitional soy proto support: http://goto/soy-param-migration
+ *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
+ * @param {boolean=} opt_includeInstance Deprecated. whether to include the
+ *     JSPB instance for transitional soy proto support:
+ *     http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.rpctransact.CallCodeParam.prototype.toObject = function(opt_includeInstance) {
@@ -108,8 +111,8 @@ proto.rpctransact.CallCodeParam.prototype.toObject = function(opt_includeInstanc
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Whether to include the JSPB
- *     instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Deprecated. Whether to include
+ *     the JSPB instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.rpctransact.CallCodeParam} msg The msg instance to transform.
  * @return {!Object}
@@ -254,9 +257,12 @@ proto.rpctransact.CallCodeParam.prototype.getFromaddress_asU8 = function() {
 };
 
 
-/** @param {!(string|Uint8Array)} value */
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.rpctransact.CallCodeParam} returns this
+ */
 proto.rpctransact.CallCodeParam.prototype.setFromaddress = function(value) {
-  jspb.Message.setProto3BytesField(this, 1, value);
+  return jspb.Message.setProto3BytesField(this, 1, value);
 };
 
 
@@ -293,9 +299,12 @@ proto.rpctransact.CallCodeParam.prototype.getCode_asU8 = function() {
 };
 
 
-/** @param {!(string|Uint8Array)} value */
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.rpctransact.CallCodeParam} returns this
+ */
 proto.rpctransact.CallCodeParam.prototype.setCode = function(value) {
-  jspb.Message.setProto3BytesField(this, 2, value);
+  return jspb.Message.setProto3BytesField(this, 2, value);
 };
 
 
@@ -332,9 +341,12 @@ proto.rpctransact.CallCodeParam.prototype.getData_asU8 = function() {
 };
 
 
-/** @param {!(string|Uint8Array)} value */
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.rpctransact.CallCodeParam} returns this
+ */
 proto.rpctransact.CallCodeParam.prototype.setData = function(value) {
-  jspb.Message.setProto3BytesField(this, 3, value);
+  return jspb.Message.setProto3BytesField(this, 3, value);
 };
 
 
@@ -343,13 +355,15 @@ proto.rpctransact.CallCodeParam.prototype.setData = function(value) {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto suitable for use in Soy templates.
+ * Creates an object representation of this proto.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
+ * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
- * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
- *     for transitional soy proto support: http://goto/soy-param-migration
+ *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
+ * @param {boolean=} opt_includeInstance Deprecated. whether to include the
+ *     JSPB instance for transitional soy proto support:
+ *     http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.rpctransact.TxEnvelope.prototype.toObject = function(opt_includeInstance) {
@@ -359,8 +373,8 @@ proto.rpctransact.TxEnvelope.prototype.toObject = function(opt_includeInstance) 
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Whether to include the JSPB
- *     instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Deprecated. Whether to include
+ *     the JSPB instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.rpctransact.TxEnvelope} msg The msg instance to transform.
  * @return {!Object}
@@ -460,17 +474,21 @@ proto.rpctransact.TxEnvelope.prototype.getEnvelope = function() {
 };
 
 
-/** @param {?proto.txs.Envelope|undefined} value */
+/**
+ * @param {?proto.txs.Envelope|undefined} value
+ * @return {!proto.rpctransact.TxEnvelope} returns this
+*/
 proto.rpctransact.TxEnvelope.prototype.setEnvelope = function(value) {
-  jspb.Message.setWrapperField(this, 1, value);
+  return jspb.Message.setWrapperField(this, 1, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
+ * @return {!proto.rpctransact.TxEnvelope} returns this
  */
 proto.rpctransact.TxEnvelope.prototype.clearEnvelope = function() {
-  this.setEnvelope(undefined);
+  return this.setEnvelope(undefined);
 };
 
 
@@ -488,13 +506,15 @@ proto.rpctransact.TxEnvelope.prototype.hasEnvelope = function() {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto suitable for use in Soy templates.
+ * Creates an object representation of this proto.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
+ * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
- * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
- *     for transitional soy proto support: http://goto/soy-param-migration
+ *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
+ * @param {boolean=} opt_includeInstance Deprecated. whether to include the
+ *     JSPB instance for transitional soy proto support:
+ *     http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.rpctransact.TxEnvelopeParam.prototype.toObject = function(opt_includeInstance) {
@@ -504,8 +524,8 @@ proto.rpctransact.TxEnvelopeParam.prototype.toObject = function(opt_includeInsta
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Whether to include the JSPB
- *     instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Deprecated. Whether to include
+ *     the JSPB instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.rpctransact.TxEnvelopeParam} msg The msg instance to transform.
  * @return {!Object}
@@ -633,17 +653,21 @@ proto.rpctransact.TxEnvelopeParam.prototype.getEnvelope = function() {
 };
 
 
-/** @param {?proto.txs.Envelope|undefined} value */
+/**
+ * @param {?proto.txs.Envelope|undefined} value
+ * @return {!proto.rpctransact.TxEnvelopeParam} returns this
+*/
 proto.rpctransact.TxEnvelopeParam.prototype.setEnvelope = function(value) {
-  jspb.Message.setWrapperField(this, 1, value);
+  return jspb.Message.setWrapperField(this, 1, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
+ * @return {!proto.rpctransact.TxEnvelopeParam} returns this
  */
 proto.rpctransact.TxEnvelopeParam.prototype.clearEnvelope = function() {
-  this.setEnvelope(undefined);
+  return this.setEnvelope(undefined);
 };
 
 
@@ -666,17 +690,21 @@ proto.rpctransact.TxEnvelopeParam.prototype.getPayload = function() {
 };
 
 
-/** @param {?proto.payload.Any|undefined} value */
+/**
+ * @param {?proto.payload.Any|undefined} value
+ * @return {!proto.rpctransact.TxEnvelopeParam} returns this
+*/
 proto.rpctransact.TxEnvelopeParam.prototype.setPayload = function(value) {
-  jspb.Message.setWrapperField(this, 2, value);
+  return jspb.Message.setWrapperField(this, 2, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
+ * @return {!proto.rpctransact.TxEnvelopeParam} returns this
  */
 proto.rpctransact.TxEnvelopeParam.prototype.clearPayload = function() {
-  this.setPayload(undefined);
+  return this.setPayload(undefined);
 };
 
 
@@ -699,17 +727,21 @@ proto.rpctransact.TxEnvelopeParam.prototype.getTimeout = function() {
 };
 
 
-/** @param {?proto.google.protobuf.Duration|undefined} value */
+/**
+ * @param {?proto.google.protobuf.Duration|undefined} value
+ * @return {!proto.rpctransact.TxEnvelopeParam} returns this
+*/
 proto.rpctransact.TxEnvelopeParam.prototype.setTimeout = function(value) {
-  jspb.Message.setWrapperField(this, 3, value);
+  return jspb.Message.setWrapperField(this, 3, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
+ * @return {!proto.rpctransact.TxEnvelopeParam} returns this
  */
 proto.rpctransact.TxEnvelopeParam.prototype.clearTimeout = function() {
-  this.setTimeout(undefined);
+  return this.setTimeout(undefined);
 };
 
 

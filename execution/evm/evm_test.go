@@ -925,7 +925,7 @@ func TestEVM(t *testing.T) {
 
 		// Not needed for this test (since contract code is passed as argument to vm), but this is what an execution
 		// framework must do
-		err = native.InitCode(st, account2, contractCode)
+		err = native.InitEVMCode(st, account2, contractCode)
 		require.NoError(t, err)
 
 		// Input is the function hash of `get()`
@@ -1273,9 +1273,9 @@ func TestEVM(t *testing.T) {
 		contractCode, err := vm.Execute(st, blockchain, eventSink, params, code)
 		require.NoError(t, err)
 
-		err = native.InitCode(st, account1, contractCode)
+		err = native.InitEVMCode(st, account1, contractCode)
 		require.NoError(t, err)
-		err = native.InitCode(st, account2, contractCode)
+		err = native.InitEVMCode(st, account2, contractCode)
 		require.NoError(t, err)
 
 		// keccak256 hash of 'callMeBack()'
@@ -1480,7 +1480,7 @@ func makeAccountWithCode(t testing.TB, st acmstate.ReaderWriter, name string, co
 	address := native.AddressFromName(name)
 	err := native.CreateAccount(st, address)
 	require.NoError(t, err)
-	err = native.InitCode(st, address, code)
+	err = native.InitEVMCode(st, address, code)
 	require.NoError(t, err)
 	addToBalance(t, st, address, 9999999)
 	return address
