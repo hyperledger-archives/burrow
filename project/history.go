@@ -47,7 +47,15 @@ func FullVersion() string {
 // To cut a new release add a release to the front of this slice then run the
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
-	MustDeclareReleases("0.30.3 - 2020-04-05",
+	MustDeclareReleases("0.30.4 - 2020-04-05",
+		`### Added
+- [Build] Added Helm chart
+- [State] Account now has OpcodeBitset field to support upcoming EVM fixes
+
+### Fixed
+- [JS] Github actions release of JS lib
+`,
+		"0.30.3 - 2020-04-05",
 		`### Added
 - [CLI] Made previously internal Solidity Go fixtures compilation available through 'burrow compile'
 - [TS] Default ts client interface implementation

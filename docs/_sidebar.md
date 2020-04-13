@@ -31,3 +31,4 @@
     - [Vent](reference/vent.md)
     - [WASM](reference/wasm.md)
     - [Web3](reference/web3.md)
+    - [Kubernetes](reference/kubernetes.md)

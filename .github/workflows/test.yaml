@@ -14,6 +14,7 @@ jobs:
         go-version: 1.13
       id: go
     - uses: actions/checkout@v2
+    - run: git fetch --unshallow --prune
     - run: make test
     - run: make build
     - uses: actions/upload-artifact@master
@@ -126,3 +127,15 @@ jobs:
         export PATH=${PATH}:$(pwd)/bin
         make npm_install
         make test_js
+
+  charts:
+    runs-on: ubuntu-latest
+    env:
+      CM_USERNAME: ${{ secrets.CM_USERNAME }}
+      CM_PASSWORD: ${{ secrets.CM_PASSWORD }}
+      CM_URL:  ${{ secrets.CM_URL }}
+    steps:
+    - uses: actions/checkout@v2
+    - run: git fetch --unshallow --prune
+    - run: make helm_deps
+    - run: make helm_package
