@@ -24,3 +24,5 @@ tests/keys/
 vendor/
 node_modules
 js/dist
+
+helm/package

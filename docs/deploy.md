@@ -76,4 +76,4 @@ specified. This must be the path to the contract bin file or abi file.
 
 ## Proposal
 
-This is described in the [proposal tutorial](../tutorials/8-proposals.md).
+This is described in the [proposal tutorial](tutorials/8-proposals.md).
