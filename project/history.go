@@ -50,7 +50,7 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 	MustDeclareReleases("0.30.4 - 2020-04-05",
 		`### Added
 - [Build] Added Helm chart
-- [State] Account now has OpcodeBitset field to support upcoming EVM fixes
+- [State] Account now has EVMOpcodeBitset field to support upcoming EVM fixes
 
 ### Fixed
 - [JS] Github actions release of JS lib

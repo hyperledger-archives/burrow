@@ -64,6 +64,13 @@ func (acc *Account) Code() []byte {
 	return nil
 }
 
+func (acc *Account) IsOpcodeAt(indexOfSymbolInCode uint) bool {
+	if indexOfSymbolInCode >= acc.EVMOpcodeBitset.Len() {
+		return false
+	}
+	return acc.EVMOpcodeBitset.IsSet(indexOfSymbolInCode)
+}
+
 // Conversions
 //
 // Using the naming convention is this package of 'As<Type>' being
