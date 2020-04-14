@@ -50,7 +50,7 @@ func initEVMCode(st acmstate.ReaderWriter, address crypto.Address, parent *crypt
 	}
 
 	acc.EVMCode = code
-	acc.OpcodeBitset = opcodeBitset(code)
+	acc.EVMOpcodeBitset = EVMOpcodeBitset(code)
 
 	// keccak256 hash of a contract's code
 	hash := sha3.NewLegacyKeccak256()
@@ -119,7 +119,7 @@ func codehashPermitted(codehash []byte, metamap []*acm.ContractMeta) bool {
 }
 
 // If code[i] is an opcode (rather than PUSH data) then bitset.IsSet(i) will be true
-func opcodeBitset(code []byte) bitset.Bitset {
+func EVMOpcodeBitset(code []byte) bitset.Bitset {
 	bs := bitset.New(uint(len(code)))
 	for i := 0; i < len(code); i++ {
 		bs.Set(uint(i))

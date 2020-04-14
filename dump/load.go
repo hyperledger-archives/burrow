@@ -9,6 +9,7 @@ import (
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/execution/native"
 	"github.com/hyperledger/burrow/execution/state"
 	"github.com/hyperledger/burrow/txs/payload"
 )
@@ -39,6 +40,9 @@ func Load(source Source, st *state.State) error {
 						}
 						m.MetadataHash = metahash.Bytes()
 						m.Metadata = ""
+					}
+					if row.Account.EVMOpcodeBitset.Len() != uint(len(row.Account.EVMCode)) {
+						row.Account.EVMOpcodeBitset = native.EVMOpcodeBitset(row.Account.EVMCode)
 					}
 					err := s.UpdateAccount(row.Account)
 					if err != nil {

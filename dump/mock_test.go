@@ -23,6 +23,5 @@ func TestMockReader(t *testing.T) {
 	loadDumpFromJSONString(t, st, dump)
 
 	dumpOut := normaliseDump(dumpToJSONString(t, st, mock))
-	require.True(t, dump == dumpOut)
 	require.Equal(t, dump, dumpOut)
 }
