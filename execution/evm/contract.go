@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/tmthrgd/go-bitset"
 	"io/ioutil"
 	"math/big"
 	"strings"
@@ -521,14 +522,16 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 
 		case JUMP: // 0x56
 			to := stack.Pop64()
-			maybe.PushError(c.jump(c.code, to, &pc))
+			opcodeBitset := mustGetAccount(st.CallFrame, maybe, params.Callee).OpcodeBitset
+			maybe.PushError(c.jump(c.code, to, &pc, opcodeBitset))
 			continue
 
 		case JUMPI: // 0x57
 			pos := stack.Pop64()
 			cond := stack.Pop()
 			if !cond.IsZero() {
-				maybe.PushError(c.jump(c.code, pos, &pc))
+				opcodeBitset := mustGetAccount(st.CallFrame, maybe, params.Callee).OpcodeBitset
+				maybe.PushError(c.jump(c.code, pos, &pc, opcodeBitset))
 				continue
 			} else {
 				c.debugf(" ~> false\n")
@@ -851,29 +854,15 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 	return nil, maybe.Error()
 }
 
-func (c *Contract) jump(code []byte, to uint64, pc *uint64) error {
+func (c *Contract) jump(code []byte, to uint64, pc *uint64, opcodeBitset bitset.Bitset) error {
 	dest := codeGetOp(code, to)
-	if dest != JUMPDEST || isInsidePushData(code, to) {
+	if dest != JUMPDEST || !opcodeBitset.IsSet(uint(to)) {
 		c.debugf(" ~> %v invalid jump dest %v\n", to, dest)
 		return errors.Codes.InvalidJumpDest
 	}
 	c.debugf(" ~> %v\n", to)
 	*pc = to
 	return nil
-}
-
-// isInsidePushData checks if the symbol at code(n) is inside push data i.e. is data for the stack and not an opcode.
-func isInsidePushData(code []byte, n uint64) bool {
-	if uint64(len(code)) <= n {
-		return false
-	}
-	i := uint64(0)
-	for ; i < n; i++ {
-		if op := OpCode(code[i]); op >= PUSH1 && op <= PUSH32 {
-			i += uint64(op - PUSH1 + 1)
-		}
-	}
-	return i > n
 }
 
 func createAccount(callFrame *engine.CallFrame, creator, address crypto.Address) error {

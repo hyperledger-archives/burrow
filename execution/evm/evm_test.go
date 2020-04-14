@@ -6,6 +6,7 @@ package evm
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"math/big"
 	"reflect"
 	"testing"
@@ -1645,7 +1646,6 @@ func TestEVM(t *testing.T) {
 		eventSink := exec.NewNoopEventSink()
 
 		account1 := newAccount(t, st, "1")
-		account2 := newAccount(t, st, "101")
 		var gas uint64 = 100000
 
 		tests := []struct {
@@ -1667,10 +1667,12 @@ func TestEVM(t *testing.T) {
 				expected_err: errors.Codes.InvalidJumpDest,
 			},
 		}
-		for _, tt := range tests {
+		for i, tt := range tests {
+			calleeName := fmt.Sprintf("callee%v", i);
+			callee := makeAccountWithCode(t, st, calleeName, tt.bytecode)
 			params := engine.CallParams{
 				Caller: account1,
-				Callee: account2,
+				Callee: callee,
 				Gas:    &gas,
 			}
 			if output, err := vm.Execute(st, blockchain, eventSink, params, tt.bytecode); errors.GetCode(err) != tt.expected_err {
