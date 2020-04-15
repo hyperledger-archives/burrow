@@ -56,11 +56,6 @@ export class Account extends jspb.Message {
   getForebear_asB64(): string;
   setForebear(value: Uint8Array | string): void;
 
-  getEvmopcodebitset(): Uint8Array | string;
-  getEvmopcodebitset_asU8(): Uint8Array;
-  getEvmopcodebitset_asB64(): string;
-  setEvmopcodebitset(value: Uint8Array | string): void;
-
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Account.AsObject;
   static toObject(includeInstance: boolean, msg: Account): Account.AsObject;
@@ -84,7 +79,6 @@ export namespace Account {
     codehash: Uint8Array | string,
     contractmetaList: Array<ContractMeta.AsObject>,
     forebear: Uint8Array | string,
-    evmopcodebitset: Uint8Array | string,
   }
 }
 

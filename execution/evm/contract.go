@@ -25,7 +25,7 @@ import (
 
 type Contract struct {
 	*EVM
-	code acm.Bytecode
+	*Code
 }
 
 func (c *Contract) Call(state engine.State, params engine.CallParams) ([]byte, error) {
@@ -35,14 +35,14 @@ func (c *Contract) Call(state engine.State, params engine.CallParams) ([]byte, e
 // Executes the EVM code passed in the appropriate context
 func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, error) {
 	c.debugf("(%d) (%s) %s (code=%d) gas: %v (d) %X\n",
-		st.CallFrame.CallStackDepth(), params.Caller, params.Callee, len(c.code), *params.Gas, params.Input)
+		st.CallFrame.CallStackDepth(), params.Caller, params.Callee, c.Length(), *params.Gas, params.Input)
 
-	if len(c.code) == 0 {
+	if c.Length() == 0 {
 		return nil, nil
 	}
 
 	if c.options.DumpTokens {
-		dumpTokens(c.options.Nonce, params.Caller, params.Callee, c.code)
+		dumpTokens(c.options.Nonce, params.Caller, params.Callee, c.GetBytecode())
 	}
 
 	// Program counter - the index into code that tracks current instruction
@@ -64,7 +64,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			return nil, maybe.Error()
 		}
 
-		var op = codeGetOp(c.code, pc)
+		var op = c.GetSymbol(pc)
 		c.debugf("(pc) %-3d (op) %-14s (st) %-4d (gas) %d", pc, op.String(), stack.Len(), *params.Gas)
 		// Use BaseOp gas.
 		maybe.PushError(useGasNegative(params.Gas, native.GasBaseOp))
@@ -371,7 +371,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			c.debugf(" => [%v, %v, %v] %X\n", memOff, inputOff, length, data)
 
 		case CODESIZE: // 0x38
-			l := uint64(len(c.code))
+			l := uint64(c.Length())
 			stack.Push64(l)
 			c.debugf(" => %d\n", l)
 
@@ -379,7 +379,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			memOff := stack.PopBigInt()
 			codeOff := stack.Pop64()
 			length := stack.Pop64()
-			data := maybe.Bytes(subslice(c.code, codeOff, length))
+			data := maybe.Bytes(subslice(c.GetBytecode(), codeOff, length))
 			memory.Write(memOff, data)
 			c.debugf(" => [%v, %v, %v] %X\n", memOff, codeOff, length, data)
 
@@ -521,14 +521,14 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 
 		case JUMP: // 0x56
 			to := stack.Pop64()
-			maybe.PushError(c.jump(c.code, to, &pc))
+			maybe.PushError(c.jump(to, &pc))
 			continue
 
 		case JUMPI: // 0x57
 			pos := stack.Pop64()
 			cond := stack.Pop()
 			if !cond.IsZero() {
-				maybe.PushError(c.jump(c.code, pos, &pc))
+				maybe.PushError(c.jump(pos, &pc))
 				continue
 			} else {
 				c.debugf(" ~> false\n")
@@ -555,7 +555,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 
 		case PUSH1, PUSH2, PUSH3, PUSH4, PUSH5, PUSH6, PUSH7, PUSH8, PUSH9, PUSH10, PUSH11, PUSH12, PUSH13, PUSH14, PUSH15, PUSH16, PUSH17, PUSH18, PUSH19, PUSH20, PUSH21, PUSH22, PUSH23, PUSH24, PUSH25, PUSH26, PUSH27, PUSH28, PUSH29, PUSH30, PUSH31, PUSH32:
 			a := uint64(op - PUSH1 + 1)
-			codeSegment := maybe.Bytes(subslice(c.code, pc+1, a))
+			codeSegment := maybe.Bytes(subslice(c.GetBytecode(), pc+1, a))
 			res := LeftPadWord256(codeSegment)
 			stack.Push(res)
 			pc += a
@@ -851,9 +851,9 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 	return nil, maybe.Error()
 }
 
-func (c *Contract) jump(code []byte, to uint64, pc *uint64) error {
-	dest := codeGetOp(code, to)
-	if dest != JUMPDEST {
+func (c *Contract) jump(to uint64, pc *uint64) error {
+	dest := c.GetSymbol(to)
+	if dest != JUMPDEST || c.IsPushData(to) {
 		c.debugf(" ~> %v invalid jump dest %v\n", to, dest)
 		return errors.Codes.InvalidJumpDest
 	}

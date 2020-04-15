@@ -42,8 +42,6 @@ message Account {
     // (from Solidity/EVM), they point to the original deployed account where the metadata is stored.
     // This original account is called the forebear.
     bytes Forebear = 10 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address"];
-    // A bitset of all the symbols in EVMCode that are opcodes (i.e. actual code not PUSH data)
-    bytes EVMOpcodeBitset = 12 [(gogoproto.casttype) = "github.com/tmthrgd/go-bitset.Bitset"];
 }
 
 message ContractMeta {

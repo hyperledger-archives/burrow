@@ -75,10 +75,3 @@ func TestAccountTags(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, qry.Matches(acc))
 }
-
-func TestAccount_IsOpcodeAt(t *testing.T) {
-	acc := Account{}
-	// Fail safe before initialised by initEVMCode
-	assert.False(t, acc.IsOpcodeAt(0))
-	assert.False(t, acc.IsOpcodeAt(100))
-}
