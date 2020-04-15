@@ -32,7 +32,7 @@ func (s *ReadState) GetAccount(address crypto.Address) (*acm.Account, error) {
 
 func (ws *writeState) statsAddAccount(acc *acm.Account) {
 	if acc != nil {
-		if len(acc.EVMCode) > 0 || len(acc.WASMCode) > 0 {
+		if acc.EVMCode != nil || len(acc.WASMCode) > 0 {
 			ws.accountStats.AccountsWithCode++
 		} else {
 			ws.accountStats.AccountsWithoutCode++
@@ -42,7 +42,7 @@ func (ws *writeState) statsAddAccount(acc *acm.Account) {
 
 func (ws *writeState) statsRemoveAccount(acc *acm.Account) {
 	if acc != nil {
-		if len(acc.EVMCode) > 0 || len(acc.WASMCode) > 0 {
+		if acc.EVMCode != nil || len(acc.WASMCode) > 0 {
 			ws.accountStats.AccountsWithCode--
 		} else {
 			ws.accountStats.AccountsWithoutCode--

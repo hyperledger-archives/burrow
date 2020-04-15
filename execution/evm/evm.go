@@ -73,7 +73,7 @@ func Default() *EVM {
 // input the CallData (readable by CALLDATALOAD), value the amount of native token to transfer with the call
 // an quantity metering the number of computational steps available to the execution according to the gas schedule.
 func (vm *EVM) Execute(st acmstate.ReaderWriter, blockchain engine.Blockchain, eventSink exec.EventSink,
-	params engine.CallParams, code []byte) ([]byte, error) {
+	params engine.CallParams, code *acm.EVMCode) ([]byte, error) {
 
 	// Make it appear as if natives are stored in state
 	st = native.NewState(vm.options.Natives, st)
@@ -118,7 +118,7 @@ func (vm *EVM) SetExternals(externals engine.Dispatcher) {
 	vm.externals = externals
 }
 
-func (vm *EVM) Contract(code []byte) *Contract {
+func (vm *EVM) Contract(code *acm.EVMCode) *Contract {
 	return &Contract{
 		EVM:  vm,
 		code: code,

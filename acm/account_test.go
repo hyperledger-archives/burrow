@@ -40,7 +40,7 @@ func TestAddress(t *testing.T) {
 
 func TestMarshalJSON(t *testing.T) {
 	acc := NewAccountFromSecret("Super Semi Secret")
-	acc.EVMCode = []byte{60, 23, 45}
+	acc.EVMCode = NewEVMCode([]byte{60, 23, 45})
 	acc.Permissions = permission.AccountPermissions{
 		Base: permission.BasePermissions{
 			Perms: permission.AllPermFlags,
@@ -50,9 +50,7 @@ func TestMarshalJSON(t *testing.T) {
 	acc.Balance = 10
 	bs, err := json.Marshal(acc)
 
-	expected := fmt.Sprintf(`{"Address":"%s","PublicKey":{"CurveType":"ed25519","PublicKey":"%s"},`+
-		`"Sequence":4,"Balance":10,"EVMCode":"3C172D",`+
-		`"Permissions":{"Base":{"Perms":"root | send | call | createContract | createAccount | bond | name | proposal | input | batch | identify | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole","SetBit":""}}}`,
+	expected := fmt.Sprintf(`{"Address":"%s","PublicKey":{"CurveType":"ed25519","PublicKey":"%s"},"Sequence":4,"Balance":10,"EVMCode":{"Bytecode":"3C172D","OpcodeBitset":"Bw=="},"Permissions":{"Base":{"Perms":"root | send | call | createContract | createAccount | bond | name | proposal | input | batch | identify | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole","SetBit":""}}}`,
 		acc.Address, acc.PublicKey)
 	assert.Equal(t, expected, string(bs))
 	assert.NoError(t, err)
@@ -63,7 +61,7 @@ func TestAccountTags(t *testing.T) {
 	perms.Roles = []string{"frogs", "dogs"}
 	acc := &Account{
 		Permissions: perms,
-		EVMCode:     solidity.Bytecode_StrangeLoop,
+		EVMCode:     NewEVMCode(solidity.Bytecode_StrangeLoop),
 	}
 	flag, _ := acc.Get("Permissions")
 	permString := permission.String(flag.(permission.PermFlag))
@@ -71,7 +69,7 @@ func TestAccountTags(t *testing.T) {
 	roles, _ := acc.Get("Roles")
 	assert.Equal(t, []string{"frogs", "dogs"}, roles)
 	acc.Get("EVMCode")
-	qry, err := query.New("EVMCode CONTAINS '0116002556001600360006101000A815'")
+	qry, err := query.New("EVMCode.Bytecode CONTAINS '0116002556001600360006101000A815'")
 	require.NoError(t, err)
 	assert.True(t, qry.Matches(acc))
 }
@@ -79,6 +77,6 @@ func TestAccountTags(t *testing.T) {
 func TestAccount_IsOpcodeAt(t *testing.T) {
 	acc := Account{}
 	// Fail safe before initialised by initEVMCode
-	assert.False(t, acc.IsOpcodeAt(0))
-	assert.False(t, acc.IsOpcodeAt(100))
+	assert.False(t, acc.EVMCode.IsOpcode(0))
+	assert.False(t, acc.EVMCode.IsOpcode(100))
 }

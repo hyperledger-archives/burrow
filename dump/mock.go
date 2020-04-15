@@ -11,7 +11,6 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
-	"github.com/hyperledger/burrow/execution/native"
 	"github.com/hyperledger/burrow/genesis"
 )
 
@@ -52,9 +51,9 @@ func (m *MockSource) Recv() (*Dump, error) {
 		}
 
 		if m.Accounts%2 > 0 {
-			row.Account.EVMCode = make([]byte, m.rand.Intn(10000))
-			m.rand.Read(row.Account.EVMCode)
-			row.Account.EVMOpcodeBitset = native.EVMOpcodeBitset(row.Account.EVMCode)
+			code := make([]byte, m.rand.Intn(10000))
+			m.rand.Read(code)
+			row.Account.EVMCode = acm.NewEVMCode(code)
 		} else {
 			row.Account.PublicKey = crypto.PublicKey{}
 		}

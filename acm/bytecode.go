@@ -5,16 +5,10 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/burrow/execution/evm/asm"
-	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	hex "github.com/tmthrgd/go-hex"
 )
 
 type Bytecode []byte
-
-// Builds new bytecode using the Splice helper to map byte-like and byte-slice-like types to a flat bytecode slice
-func NewBytecode(bytelikes ...interface{}) (Bytecode, error) {
-	return bc.Splice(bytelikes...)
-}
 
 func BytecodeFromHex(hexString string) (Bytecode, error) {
 	var bc Bytecode

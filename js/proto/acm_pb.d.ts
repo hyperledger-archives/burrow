@@ -23,10 +23,10 @@ export class Account extends jspb.Message {
   getBalance(): number;
   setBalance(value: number): void;
 
-  getEvmcode(): Uint8Array | string;
-  getEvmcode_asU8(): Uint8Array;
-  getEvmcode_asB64(): string;
-  setEvmcode(value: Uint8Array | string): void;
+  hasEvmcode(): boolean;
+  clearEvmcode(): void;
+  getEvmcode(): EVMCode | undefined;
+  setEvmcode(value?: EVMCode): void;
 
   hasPermissions(): boolean;
   clearPermissions(): void;
@@ -56,11 +56,6 @@ export class Account extends jspb.Message {
   getForebear_asB64(): string;
   setForebear(value: Uint8Array | string): void;
 
-  getEvmopcodebitset(): Uint8Array | string;
-  getEvmopcodebitset_asU8(): Uint8Array;
-  getEvmopcodebitset_asB64(): string;
-  setEvmopcodebitset(value: Uint8Array | string): void;
-
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Account.AsObject;
   static toObject(includeInstance: boolean, msg: Account): Account.AsObject;
@@ -77,14 +72,41 @@ export namespace Account {
     publickey?: crypto_pb.PublicKey.AsObject,
     sequence: number,
     balance: number,
-    evmcode: Uint8Array | string,
+    evmcode?: EVMCode.AsObject,
     permissions?: permission_pb.AccountPermissions.AsObject,
     wasmcode: Uint8Array | string,
     nativename: string,
     codehash: Uint8Array | string,
     contractmetaList: Array<ContractMeta.AsObject>,
     forebear: Uint8Array | string,
-    evmopcodebitset: Uint8Array | string,
+  }
+}
+
+export class EVMCode extends jspb.Message {
+  getBytecode(): Uint8Array | string;
+  getBytecode_asU8(): Uint8Array;
+  getBytecode_asB64(): string;
+  setBytecode(value: Uint8Array | string): void;
+
+  getOpcodebitset(): Uint8Array | string;
+  getOpcodebitset_asU8(): Uint8Array;
+  getOpcodebitset_asB64(): string;
+  setOpcodebitset(value: Uint8Array | string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): EVMCode.AsObject;
+  static toObject(includeInstance: boolean, msg: EVMCode): EVMCode.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: EVMCode, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): EVMCode;
+  static deserializeBinaryFromReader(message: EVMCode, reader: jspb.BinaryReader): EVMCode;
+}
+
+export namespace EVMCode {
+  export type AsObject = {
+    bytecode: Uint8Array | string,
+    opcodebitset: Uint8Array | string,
   }
 }
 

@@ -125,22 +125,22 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 	metaCache := acmstate.NewMetadataCache(ctx.MetadataState)
 
 	var callee crypto.Address
-	var code []byte
-	var wcode []byte
+	var evmCode *acm.EVMCode
+	var wasmCode []byte
 
 	// get or create callee
 	if createContract {
 		// We already checked for permission
 		callee = crypto.NewContractAddress(caller, ctx.txe.TxHash)
-		code = ctx.tx.Data
-		wcode = ctx.tx.WASM
+		evmCode = acm.NewEVMCode(ctx.tx.Data)
+		wasmCode = ctx.tx.WASM
 		err := native.CreateAccount(txCache, callee)
 		if err != nil {
 			return err
 		}
 		ctx.Logger.TraceMsg("Creating new contract",
 			"contract_address", callee,
-			"init_code", code)
+			"init_code", evmCode)
 
 		// store abis
 		err = native.UpdateContractMeta(txCache, metaCache, callee, ctx.tx.ContractMeta)
@@ -170,13 +170,13 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		if err != nil {
 			return err
 		}
-		code = acc.EVMCode
-		wcode = acc.WASMCode
+		evmCode = acc.EVMCode
+		wasmCode = acc.WASMCode
 		ctx.Logger.TraceMsg("Calling existing contract",
 			"contract_address", callee,
 			"input", ctx.tx.Data,
-			"evm_code", code,
-			"wasm_code", wcode)
+			"evm_code", evmCode,
+			"wasm_code", wasmCode)
 	}
 	ctx.Logger.Trace.Log("callee", callee)
 
@@ -184,8 +184,8 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 	var err error
 	txHash := ctx.txe.Envelope.Tx.Hash()
 	gas := ctx.tx.GasLimit
-	if len(wcode) != 0 {
-		ret, err = wasm.RunWASM(txCache, callee, createContract, wcode, ctx.tx.Data)
+	if len(wasmCode) != 0 {
+		ret, err = wasm.RunWASM(txCache, callee, createContract, wasmCode, ctx.tx.Data)
 		if err != nil {
 			// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
 			ctx.Logger.InfoMsg("Error on WASM execution",
@@ -219,7 +219,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 			Gas:    &gas,
 		}
 
-		ret, err = ctx.EVM.Execute(txCache, ctx.Blockchain, ctx.txe, params, code)
+		ret, err = ctx.EVM.Execute(txCache, ctx.Blockchain, ctx.txe, params, evmCode)
 
 		if err != nil {
 			// Failure. Charge the gas fee. The 'value' was otherwise not transferred.

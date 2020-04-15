@@ -54,21 +54,14 @@ func (acc *Account) SubtractFromBalance(amount uint64) error {
 // Return bytes of any code-type value that is set. EVM, WASM, or native name
 func (acc *Account) Code() []byte {
 	switch {
-	case len(acc.EVMCode) > 0:
-		return acc.EVMCode
+	case acc.EVMCode != nil:
+		return acc.EVMCode.Bytecode
 	case len(acc.WASMCode) > 0:
 		return acc.WASMCode
 	case acc.NativeName != "":
 		return []byte(acc.NativeName)
 	}
 	return nil
-}
-
-func (acc *Account) IsOpcodeAt(indexOfSymbolInCode uint) bool {
-	if indexOfSymbolInCode >= acc.EVMOpcodeBitset.Len() {
-		return false
-	}
-	return acc.EVMOpcodeBitset.IsSet(indexOfSymbolInCode)
 }
 
 // Conversions
@@ -82,8 +75,6 @@ func FromAddressable(addressable crypto.Addressable) *Account {
 	return &Account{
 		Address:   addressable.GetAddress(),
 		PublicKey: addressable.GetPublicKey(),
-		// Since nil slices and maps compare differently to empty ones
-		EVMCode: Bytecode{},
 		Permissions: permission.AccountPermissions{
 			Roles: []string{},
 		},
@@ -119,7 +110,7 @@ func (acc *Account) Equal(accOther *Account) bool {
 
 func (acc Account) String() string {
 	return fmt.Sprintf("Account{Address: %s; Sequence: %v; PublicKey: %v Balance: %v; CodeLength: %v; Permissions: %v}",
-		acc.Address, acc.Sequence, acc.PublicKey, acc.Balance, len(acc.EVMCode), acc.Permissions)
+		acc.Address, acc.Sequence, acc.PublicKey, acc.Balance, len(acc.Code()), acc.Permissions)
 }
 
 func (acc *Account) Get(key string) (interface{}, bool) {

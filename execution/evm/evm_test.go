@@ -58,7 +58,7 @@ func TestEVM(t *testing.T) {
 			Caller: account1,
 			Callee: account2,
 			Gas:    &gas,
-		}, bytecode)
+		}, acm.NewEVMCode(bytecode))
 		t.Logf("Output: %v Error: %v\n", output, err)
 		t.Logf("Call took: %v", time.Since(start))
 		require.NoError(t, err)
@@ -864,14 +864,14 @@ func TestEVM(t *testing.T) {
 		}
 		code := MustSplice(pushWord(word), storeAtEnd(), MLOAD, storeAtEnd(), returnAfterStore())
 
-		output, err := vm.Execute(st, blockchain, eventSink, params, code)
+		output, err := vm.Execute(st, blockchain, eventSink, params, acm.NewEVMCode(code))
 		assert.NoError(t, err)
 		assert.Equal(t, word.Bytes(), output)
 
 		// Same with number
 		word = Int64ToWord256(232234234432)
 		code = MustSplice(pushWord(word), storeAtEnd(), MLOAD, storeAtEnd(), returnAfterStore())
-		output, err = vm.Execute(st, blockchain, eventSink, params, code)
+		output, err = vm.Execute(st, blockchain, eventSink, params, acm.NewEVMCode(code))
 		assert.NoError(t, err)
 		assert.Equal(t, word.Bytes(), output)
 
@@ -881,7 +881,7 @@ func TestEVM(t *testing.T) {
 			code = MustSplice(code, storeAtEnd(), MLOAD)
 		}
 		code = MustSplice(code, storeAtEnd(), returnAfterStore())
-		output, err = vm.Execute(st, blockchain, eventSink, params, code)
+		output, err = vm.Execute(st, blockchain, eventSink, params, acm.NewEVMCode(code))
 		assert.NoError(t, err)
 		assert.Equal(t, word.Bytes(), output)
 
@@ -891,7 +891,7 @@ func TestEVM(t *testing.T) {
 			code = MustSplice(code, storeAtEnd(), MLOAD)
 		}
 		code = MustSplice(code, storeAtEnd(), returnAfterStore())
-		_, err = vm.Execute(st, blockchain, eventSink, params, code)
+		_, err = vm.Execute(st, blockchain, eventSink, params, acm.NewEVMCode(code))
 		assert.Error(t, err, "Should hit memory out of bounds")
 	})
 
@@ -1066,7 +1066,7 @@ func TestEVM(t *testing.T) {
 		}
 		// Non existing block
 		blockchain.blockHeight = 1
-		_, err := vm.Execute(st, blockchain, eventSink, params, bytecode)
+		_, err := vm.Execute(st, blockchain, eventSink, params, acm.NewEVMCode(bytecode))
 		require.Equal(t, errors.Codes.InvalidBlockNumber, errors.GetCode(err),
 			"attempt to get block hash of a non-existent block")
 
@@ -1074,7 +1074,7 @@ func TestEVM(t *testing.T) {
 		blockchain.blockHeight = 258
 		bytecode = MustSplice(PUSH1, 1, BLOCKHASH)
 
-		_, err = vm.Execute(st, blockchain, eventSink, params, bytecode)
+		_, err = vm.Execute(st, blockchain, eventSink, params, acm.NewEVMCode(bytecode))
 		require.Equal(t, errors.Codes.BlockNumberOutOfRange, errors.GetCode(err),
 			"attempt to get block hash of a block outside of allowed range")
 
@@ -1082,7 +1082,7 @@ func TestEVM(t *testing.T) {
 		blockchain.blockHeight = 257
 		bytecode = MustSplice(PUSH1, 2, BLOCKHASH, return1())
 
-		output, err := vm.Execute(st, blockchain, eventSink, params, bytecode)
+		output, err := vm.Execute(st, blockchain, eventSink, params, acm.NewEVMCode(bytecode))
 		assert.NoError(t, err)
 		assert.Equal(t, LeftPadWord256([]byte{2}), LeftPadWord256(output))
 
@@ -1090,7 +1090,7 @@ func TestEVM(t *testing.T) {
 		blockchain.blockHeight = 3
 		bytecode = MustSplice(PUSH1, 4, BLOCKHASH, return1())
 
-		_, err = vm.Execute(st, blockchain, eventSink, params, bytecode)
+		_, err = vm.Execute(st, blockchain, eventSink, params, acm.NewEVMCode(bytecode))
 		require.Equal(t, errors.Codes.InvalidBlockNumber, errors.GetCode(err),
 			"attempt to get block hash failed")
 	})
@@ -1213,14 +1213,14 @@ func TestEVM(t *testing.T) {
 			DataStackMaxDepth: 4,
 		})
 
-		code, err = vm.Execute(st, blockchain, eventSink, params, code)
+		code, err = vm.Execute(st, blockchain, eventSink, params, acm.NewEVMCode(code))
 		require.NoError(t, err)
 
 		// Input is the function hash of `get()`
 		params.Input, err = hex.DecodeString("6d4ce63c")
 		require.NoError(t, err)
 
-		_, ex := vm.Execute(st, blockchain, eventSink, params, code)
+		_, ex := vm.Execute(st, blockchain, eventSink, params, acm.NewEVMCode(code))
 		require.Equal(t, errors.Codes.DataStackOverflow, errors.GetCode(ex), "Should be stack overflow")
 	})
 
@@ -1270,7 +1270,7 @@ func TestEVM(t *testing.T) {
 		}
 		vm := New(options)
 		// Run the contract initialisation code to obtain the contract code that would be mounted at account2
-		contractCode, err := vm.Execute(st, blockchain, eventSink, params, code)
+		contractCode, err := vm.Execute(st, blockchain, eventSink, params, acm.NewEVMCode(code))
 		require.NoError(t, err)
 
 		err = native.InitEVMCode(st, account1, contractCode)
@@ -1282,7 +1282,7 @@ func TestEVM(t *testing.T) {
 		params.Input, err = hex.DecodeString("692c3b7c")
 		require.NoError(t, err)
 
-		_, err = vm.Execute(st, blockchain, txe, params, contractCode)
+		_, err = vm.Execute(st, blockchain, txe, params, acm.NewEVMCode(contractCode))
 		// The TxExecution must be an exception to get the callerror
 		txe.PushError(err)
 		require.Error(t, err)
@@ -1381,7 +1381,7 @@ func TestEVM(t *testing.T) {
 			Callee: address2,
 			Gas:    &gas,
 		}
-		_, err = vm.Execute(st, blockchain, txe, params, code)
+		_, err = vm.Execute(st, blockchain, txe, params, acm.NewEVMCode(code))
 		require.NoError(t, err)
 
 		for _, ev := range txe.Events {
@@ -1502,7 +1502,7 @@ func call(vm *EVM, st acmstate.ReaderWriter, origin, callee crypto.Address, code
 		Callee: callee,
 		Input:  input,
 		Gas:    gas,
-	}, code)
+	}, acm.NewEVMCode(code))
 
 	if err != nil {
 		return nil, &errors.CallError{
@@ -1554,7 +1554,7 @@ func runVM(st acmstate.ReaderWriter, caller, callee crypto.Address, code []byte,
 		Callee: callee,
 		Gas:    &gas,
 	}
-	output, err := vm.Execute(st, new(blockchain), txe, params, code)
+	output, err := vm.Execute(st, new(blockchain), txe, params, acm.NewEVMCode(code))
 	txe.PushError(err)
 	for _, ev := range txe.ExceptionalCalls() {
 		txe.PushError(ev.Header.Exception)

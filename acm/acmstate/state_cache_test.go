@@ -315,7 +315,7 @@ func testAccounts() *MemoryState {
 	acc2 := acm.NewAccountFromSecret("acc2")
 	acc2.Permissions.Base.Perms = permission.AddRole | permission.Send
 	acc2.Permissions.Base.SetBit = acc1.Permissions.Base.Perms
-	acc2.EVMCode, _ = acm.NewBytecode(asm.PUSH1, 0x20)
+	acc2.EVMCode = acm.MustEVMCodeFrom(asm.PUSH1, 0x20)
 
 	cache := combine(
 		account(acc1, "I AM A KEY", "NO YOU ARE A KEY"),

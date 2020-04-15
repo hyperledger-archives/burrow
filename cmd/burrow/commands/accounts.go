@@ -50,7 +50,7 @@ func Accounts(output Output) func(cmd *cli.Cmd) {
 				if acc.WASMCode != nil && len(acc.WASMCode) > 0 {
 					output.Printf("  WASM Code Hash: %s", acc.CodeHash.String())
 				}
-				if acc.EVMCode != nil && len(acc.EVMCode) > 0 {
+				if acc.EVMCode != nil && acc.EVMCode.Length() > 0 {
 					output.Printf("  EVM Code Hash: %s", acc.CodeHash.String())
 				}
 

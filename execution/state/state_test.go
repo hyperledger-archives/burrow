@@ -28,7 +28,7 @@ import (
 func TestState_UpdateAccount(t *testing.T) {
 	s := NewState(dbm.NewMemDB())
 	account := acm.NewAccountFromSecret("Foo")
-	account.EVMCode = acm.Bytecode{1, 2, 3}
+	account.EVMCode = acm.MustEVMCodeFrom(1, 2, 3)
 	account.Permissions.Base.Perms = permission.SetGlobal | permission.HasRole
 	_, _, err := s.Update(func(ws Updatable) error {
 		return ws.UpdateAccount(account)

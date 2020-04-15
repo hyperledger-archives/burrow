@@ -223,7 +223,7 @@ func LoadState(db dbm.DB, version int64) (*State, error) {
 
 func (s *State) loadAccountStats() error {
 	return s.IterateAccounts(func(acc *acm.Account) error {
-		if len(acc.EVMCode) > 0 || len(acc.WASMCode) > 0 {
+		if acc.EVMCode != nil || len(acc.WASMCode) > 0 {
 			s.writeState.accountStats.AccountsWithCode++
 		} else {
 			s.writeState.accountStats.AccountsWithoutCode++

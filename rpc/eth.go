@@ -289,7 +289,7 @@ func (srv *EthService) EthGetCode(req *web3.EthGetCodeParams) (*web3.EthGetCodeR
 	}
 
 	return &web3.EthGetCodeResult{
-		Bytes: x.EncodeBytes(acc.EVMCode),
+		Bytes: x.EncodeBytes(acc.EVMCode.GetBytecode()),
 	}, nil
 }
 

@@ -21,7 +21,6 @@ import (
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	. "github.com/hyperledger/burrow/execution/evm/asm"
-	"github.com/hyperledger/burrow/execution/evm/asm/bc"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/execution/native"
@@ -254,7 +253,7 @@ func TestCallPermission(t *testing.T) {
 	simpleAcc := &acm.Account{
 		Address:     simpleContractAddr,
 		Balance:     0,
-		EVMCode:     []byte{0x60},
+		EVMCode:     acm.MustEVMCodeFrom(0x60),
 		Sequence:    0,
 		Permissions: permission.ZeroAccountPermissions,
 	}
@@ -383,7 +382,7 @@ func TestCreatePermission(t *testing.T) {
 	if contractAcc == nil {
 		t.Fatalf("failed to create contract %s", contractAddr)
 	}
-	if !bytes.Equal(contractAcc.EVMCode, contractCode) {
+	if !bytes.Equal(contractAcc.EVMCode.GetBytecode(), contractCode) {
 		t.Fatalf("contract does not have correct code. Got %X, expected %X", contractAcc.EVMCode, contractCode)
 	}
 
@@ -408,7 +407,7 @@ func TestCreatePermission(t *testing.T) {
 	if contractAcc == nil {
 		t.Fatalf("failed to create contract %s", contractAddr)
 	}
-	if !bytes.Equal(contractAcc.EVMCode, factoryCode) {
+	if !bytes.Equal(contractAcc.EVMCode.GetBytecode(), factoryCode) {
 		t.Fatalf("contract does not have correct code. Got %X, expected %X", contractAcc.EVMCode, factoryCode)
 	}
 
@@ -463,7 +462,7 @@ func TestCreatePermission(t *testing.T) {
 	_, err = execTxWaitAccountCall(t, exe, txEnv, crypto.Address{}) //
 	require.NoError(t, err)
 	zeroAcc := getAccount(t, exe.stateCache, crypto.Address{})
-	if len(zeroAcc.EVMCode) != 0 {
+	if zeroAcc.EVMCode.Length() != 0 {
 		t.Fatal("the zero account was given code from a CALL!")
 	}
 }
@@ -1068,9 +1067,9 @@ func TestCreates(t *testing.T) {
 	exe := makeExecutor(st)
 
 	newAcc1 := getAccount(t, st, acc1.Address)
-	newAcc1.EVMCode = preFactoryCode
+	newAcc1.EVMCode = acm.NewEVMCode(preFactoryCode)
 	newAcc2 := getAccount(t, st, acc2.Address)
-	newAcc2.EVMCode = factoryCode
+	newAcc2.EVMCode = acm.NewEVMCode(factoryCode)
 
 	exe.updateAccounts(t, newAcc1, newAcc2)
 
@@ -1138,7 +1137,7 @@ func TestContractSend(t *testing.T) {
 	acc2 := getAccount(t, st, privAccounts[2].GetAddress())
 
 	newAcc1 := getAccount(t, st, acc1.Address)
-	newAcc1.EVMCode = callerCode
+	newAcc1.EVMCode = acm.MustEVMCodeFrom(callerCode)
 	_, _, err := st.Update(func(up state.Updatable) error {
 		return up.UpdateAccount(newAcc1)
 	})
@@ -1219,7 +1218,7 @@ func TestMerklePanic(t *testing.T) {
 	{
 		stateCallTx := makeExecutor(copyState(t, st))
 		newAcc1 := getAccount(t, stateCallTx, acc1.Address)
-		newAcc1.EVMCode = []byte{0x60}
+		newAcc1.EVMCode = acm.MustEVMCodeFrom(0x60)
 		err := stateCallTx.stateCache.UpdateAccount(newAcc1)
 		require.NoError(t, err)
 		tx := &payload.CallTx{
@@ -1248,7 +1247,7 @@ func TestOrigin(t *testing.T) {
 	// Set a contract that stores the origin address in storage at loc
 	loc := []byte{3}
 	err := native.UpdateAccount(exe.stateCache, calleeAddress, func(acc *acm.Account) error {
-		acc.EVMCode = bc.MustSplice(ORIGIN, PUSH1, loc, SSTORE)
+		acc.EVMCode = acm.MustEVMCodeFrom(ORIGIN, PUSH1, loc, SSTORE)
 		return nil
 	})
 	require.NoError(t, err)
@@ -1317,7 +1316,7 @@ func TestTxs(t *testing.T) {
 	{
 		stateCallTx := copyState(t, st)
 		newAcc1 := getAccount(t, stateCallTx, acc1.Address)
-		newAcc1.EVMCode = []byte{0x60}
+		newAcc1.EVMCode = acm.MustEVMCodeFrom(0x60)
 		_, _, err := stateCallTx.Update(func(up state.Updatable) error {
 			return up.UpdateAccount(newAcc1)
 		})
@@ -1420,7 +1419,7 @@ func TestSelfDestruct(t *testing.T) {
 	contractCode := []byte{0x60, 0x01, 0x60, 0x01, 0x55, 0x73}
 	contractCode = append(contractCode, acc2.Address.Bytes()...)
 	contractCode = append(contractCode, 0xff)
-	newAcc1.EVMCode = contractCode
+	newAcc1.EVMCode = acm.MustEVMCodeFrom(contractCode)
 	_, _, err := st.Update(func(up state.Updatable) error {
 		return up.UpdateAccount(newAcc1)
 	})
@@ -1793,7 +1792,7 @@ func snativeRoleTestInputTx(name string, user acm.AddressableSigner, role string
 }
 
 // convenience function for contract that calls a given address
-func callContractCode(contractAddr crypto.Address) []byte {
+func callContractCode(contractAddr crypto.Address) *acm.EVMCode {
 	// calldatacopy into mem and use as input to call
 	memOff, inputOff := byte(0x0), byte(0x0)
 	value := byte(0x0)
@@ -1801,7 +1800,7 @@ func callContractCode(contractAddr crypto.Address) []byte {
 	retOff, retSize := byte(0x0), byte(0x20)
 
 	// this is the code we want to run (call a contract and return)
-	return bc.MustSplice(CALLDATASIZE, PUSH1, inputOff, PUSH1, memOff,
+	return acm.MustEVMCodeFrom(CALLDATASIZE, PUSH1, inputOff, PUSH1, memOff,
 		CALLDATACOPY, PUSH1, retSize, PUSH1, retOff, CALLDATASIZE, PUSH1, inOff,
 		PUSH1, value, PUSH20, contractAddr,
 		// Zeno loves us - call with half of the available gas each time we CALL

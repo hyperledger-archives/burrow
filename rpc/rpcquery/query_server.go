@@ -95,7 +95,7 @@ func (qs *queryServer) GetMetadata(ctx context.Context, param *GetMetadataParam)
 			}
 
 			if contractMeta == nil {
-				deployCodehash := compile.GetDeployCodeHash(acc.EVMCode, *param.Address)
+				deployCodehash := compile.GetDeployCodeHash(acc.EVMCode.GetBytecode(), *param.Address)
 				for _, m := range acc.ContractMeta {
 					if bytes.Equal(m.CodeHash, deployCodehash) {
 						contractMeta = m
