@@ -8,9 +8,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/deploy/compile"
 	"github.com/hyperledger/burrow/execution/errors"
-	"github.com/hyperledger/burrow/execution/evm/asm"
 	"github.com/hyperledger/burrow/txs/payload"
-	bitset "github.com/tmthrgd/go-bitset"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -50,7 +48,6 @@ func initEVMCode(st acmstate.ReaderWriter, address crypto.Address, parent *crypt
 	}
 
 	acc.EVMCode = code
-	acc.EVMOpcodeBitset = EVMOpcodeBitset(code)
 
 	// keccak256 hash of a contract's code
 	hash := sha3.NewLegacyKeccak256()
@@ -116,19 +113,6 @@ func codehashPermitted(codehash []byte, metamap []*acm.ContractMeta) bool {
 	}
 
 	return false
-}
-
-// If code[i] is an opcode (rather than PUSH data) then bitset.IsSet(i) will be true
-func EVMOpcodeBitset(code []byte) bitset.Bitset {
-	bs := bitset.New(uint(len(code)))
-	for i := 0; i < len(code); i++ {
-		bs.Set(uint(i))
-		symbol := asm.OpCode(code[i])
-		if symbol >= asm.PUSH1 && symbol <= asm.PUSH32 {
-			i += int(symbol - asm.PUSH1 + 1)
-		}
-	}
-	return bs
 }
 
 func InitWASMCode(st acmstate.ReaderWriter, address crypto.Address, code []byte) error {
