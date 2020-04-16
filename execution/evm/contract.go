@@ -106,7 +106,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 				stack.Push(Zero256)
 				c.debugf(" %v / %v = %v\n", x, y, 0)
 			} else {
-				div := new(big.Int).Div(x, y)
+				div := new(big.Int).Quo(x, y)
 				res := stack.PushBigInt(div)
 				c.debugf(" %v / %v = %v (%v)\n", x, y, div, res)
 			}
@@ -128,7 +128,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 				stack.Push(Zero256)
 				c.debugf(" %v %% %v = %v\n", x, y, 0)
 			} else {
-				mod := new(big.Int).Mod(x, y)
+				mod := new(big.Int).Rem(x, y)
 				res := stack.PushBigInt(mod)
 				c.debugf(" %v %% %v = %v (%v)\n", x, y, mod, res)
 			}
@@ -164,9 +164,9 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			c.debugf(" %v ** %v = %v (%v)\n", x, y, pow, res)
 
 		case SIGNEXTEND: // 0x0B
-			back := stack.Pop64()
+			back := stack.PopBigInt().Uint64()
 			if back < Word256Bytes-1 {
-				bits := uint(back*8 + 7)
+				bits := uint((back + 1) * 8)
 				stack.PushBigInt(SignExtend(stack.PopBigInt(), bits))
 			}
 			// Continue leaving the sign extension argument on the stack. This makes sign-extending a no-op if embedded
@@ -502,7 +502,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 
 		case MSTORE8: // 0x53
 			offset := stack.PopBigInt()
-			val64 := stack.Pop64()
+			val64 := stack.PopBigInt().Uint64()
 			val := byte(val64 & 0xFF)
 			memory.Write(offset, []byte{val})
 			c.debugf(" => [%v] 0x%X\n", offset, val)
