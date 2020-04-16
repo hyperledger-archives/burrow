@@ -112,8 +112,7 @@ proto.acm.Account.toObject = function(includeInstance, msg) {
     codehash: msg.getCodehash_asB64(),
     contractmetaList: jspb.Message.toObjectList(msg.getContractmetaList(),
     proto.acm.ContractMeta.toObject, includeInstance),
-    forebear: msg.getForebear_asB64(),
-    evmopcodebitset: msg.getEvmopcodebitset_asB64()
+    forebear: msg.getForebear_asB64()
   };
 
   if (includeInstance) {
@@ -196,10 +195,6 @@ proto.acm.Account.deserializeBinaryFromReader = function(msg, reader) {
     case 10:
       var value = /** @type {!Uint8Array} */ (reader.readBytes());
       msg.setForebear(value);
-      break;
-    case 12:
-      var value = /** @type {!Uint8Array} */ (reader.readBytes());
-      msg.setEvmopcodebitset(value);
       break;
     default:
       reader.skipField();
@@ -307,13 +302,6 @@ proto.acm.Account.serializeBinaryToWriter = function(message, writer) {
   if (f.length > 0) {
     writer.writeBytes(
       10,
-      f
-    );
-  }
-  f = message.getEvmopcodebitset_asU8();
-  if (f.length > 0) {
-    writer.writeBytes(
-      12,
       f
     );
   }
@@ -693,48 +681,6 @@ proto.acm.Account.prototype.getForebear_asU8 = function() {
  */
 proto.acm.Account.prototype.setForebear = function(value) {
   return jspb.Message.setProto3BytesField(this, 10, value);
-};
-
-
-/**
- * optional bytes EVMOpcodeBitset = 12;
- * @return {!(string|Uint8Array)}
- */
-proto.acm.Account.prototype.getEvmopcodebitset = function() {
-  return /** @type {!(string|Uint8Array)} */ (jspb.Message.getFieldWithDefault(this, 12, ""));
-};
-
-
-/**
- * optional bytes EVMOpcodeBitset = 12;
- * This is a type-conversion wrapper around `getEvmopcodebitset()`
- * @return {string}
- */
-proto.acm.Account.prototype.getEvmopcodebitset_asB64 = function() {
-  return /** @type {string} */ (jspb.Message.bytesAsB64(
-      this.getEvmopcodebitset()));
-};
-
-
-/**
- * optional bytes EVMOpcodeBitset = 12;
- * Note that Uint8Array is not supported on all browsers.
- * @see http://caniuse.com/Uint8Array
- * This is a type-conversion wrapper around `getEvmopcodebitset()`
- * @return {!Uint8Array}
- */
-proto.acm.Account.prototype.getEvmopcodebitset_asU8 = function() {
-  return /** @type {!Uint8Array} */ (jspb.Message.bytesAsU8(
-      this.getEvmopcodebitset()));
-};
-
-
-/**
- * @param {!(string|Uint8Array)} value
- * @return {!proto.acm.Account} returns this
- */
-proto.acm.Account.prototype.setEvmopcodebitset = function(value) {
-  return jspb.Message.setProto3BytesField(this, 12, value);
 };
 
 

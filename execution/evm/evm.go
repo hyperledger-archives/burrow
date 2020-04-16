@@ -121,7 +121,7 @@ func (vm *EVM) SetExternals(externals engine.Dispatcher) {
 func (vm *EVM) Contract(code []byte) *Contract {
 	return &Contract{
 		EVM:  vm,
-		code: code,
+		Code: NewCode(code),
 	}
 }
 
