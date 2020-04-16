@@ -45,8 +45,8 @@ func (code *Code) IsPushData(indexOfSymbolInCode uint64) bool {
 }
 
 func (code *Code) GetSymbol(n uint64) asm.OpCode {
-	if uint64(code.Length()) <= n {
-		return asm.OpCode(0) // stop
+	if code.Length() <= n {
+		return asm.STOP
 	} else {
 		return asm.OpCode(code.Bytecode[n])
 	}
