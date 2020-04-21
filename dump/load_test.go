@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/bcm"
+	"github.com/hyperledger/burrow/storage"
 
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/state"
@@ -64,7 +65,7 @@ func TestLoadAndDump(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	err = st.IterateStreamEvents(nil, nil, func(se *exec.StreamEvent) error {
+	err = st.IterateStreamEvents(nil, nil, storage.AscendingSort, func(se *exec.StreamEvent) error {
 		if se.BeginTx != nil {
 			require.Equal(t, se.BeginTx.TxHeader.Origin.Height, uint64(5))
 			require.Equal(t, se.BeginTx.TxHeader.Origin.Index, uint64(2))

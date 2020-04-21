@@ -16,8 +16,8 @@ export class Envelope extends jspb.Message {
   getTx_asB64(): string;
   setTx(value: Uint8Array | string): void;
 
-  getEnc(): Envelope.EncodingMap[keyof Envelope.EncodingMap];
-  setEnc(value: Envelope.EncodingMap[keyof Envelope.EncodingMap]): void;
+  getEncoding(): Envelope.EncodingTypeMap[keyof Envelope.EncodingTypeMap];
+  setEncoding(value: Envelope.EncodingTypeMap[keyof Envelope.EncodingTypeMap]): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Envelope.AsObject;
@@ -33,15 +33,15 @@ export namespace Envelope {
   export type AsObject = {
     signatoriesList: Array<Signatory.AsObject>,
     tx: Uint8Array | string,
-    enc: Envelope.EncodingMap[keyof Envelope.EncodingMap],
+    encoding: Envelope.EncodingTypeMap[keyof Envelope.EncodingTypeMap],
   }
 
-  export interface EncodingMap {
+  export interface EncodingTypeMap {
     JSON: 0;
     RLP: 1;
   }
 
-  export const Encoding: EncodingMap;
+  export const EncodingType: EncodingTypeMap;
 }
 
 export class Signatory extends jspb.Message {

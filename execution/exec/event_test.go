@@ -56,8 +56,6 @@ func TestEventTagQueries(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, qry.Matches(ev))
 	require.NoError(t, qry.MatchError())
-
-	t.Logf("Query: %v", qry)
 }
 
 func BenchmarkMatching(b *testing.B) {

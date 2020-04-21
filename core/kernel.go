@@ -142,8 +142,15 @@ func (kern *Kernel) LoadState(genesisDoc *genesis.GenesisDoc) (err error) {
 	kern.Logger.InfoMsg("State loading successful")
 
 	params := execution.ParamsFromGenesis(genesisDoc)
-	kern.checker = execution.NewBatchChecker(kern.State, params, kern.Blockchain, kern.Logger)
-	kern.committer = execution.NewBatchCommitter(kern.State, params, kern.Blockchain, kern.Emitter, kern.Logger, kern.exeOptions...)
+	kern.checker, err = execution.NewBatchChecker(kern.State, params, kern.Blockchain, kern.Logger)
+	if err != nil {
+		return fmt.Errorf("could not create BatchChecker: %w", err)
+	}
+	kern.committer, err = execution.NewBatchCommitter(kern.State, params, kern.Blockchain, kern.Emitter, kern.Logger,
+		kern.exeOptions...)
+	if err != nil {
+		return fmt.Errorf("could not create BatchCommitter: %w", err)
+	}
 	return nil
 }
 

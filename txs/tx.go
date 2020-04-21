@@ -66,7 +66,7 @@ func (tx *Tx) MustSignBytes() []byte {
 }
 
 // Produces the canonical SignBytes (the Tx message that will be signed) for a Tx
-func (tx *Tx) SignBytes(enc Envelope_Encoding) ([]byte, error) {
+func (tx *Tx) SignBytes(enc Envelope_EncodingType) ([]byte, error) {
 	switch enc {
 	case Envelope_JSON:
 		bs, err := json.Marshal(tx)

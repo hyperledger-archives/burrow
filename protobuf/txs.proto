@@ -25,11 +25,11 @@ message Envelope {
     repeated Signatory Signatories = 1 [(gogoproto.nullable) = false];
     // Canonical bytes of the Tx ready to be signed
     bytes Tx = 2 [(gogoproto.customtype) = "Tx"];
-    enum Encoding {
+    enum EncodingType {
         JSON = 0;
         RLP = 1;
     }
-    Encoding Enc = 3;
+    EncodingType Encoding = 3;
 
 }
 

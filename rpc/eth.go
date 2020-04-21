@@ -622,7 +622,7 @@ func (srv *EthService) EthSendRawTransaction(req *web3.EthSendRawTransactionPara
 				Signature: signature,
 			},
 		},
-		Enc: txs.Envelope_RLP,
+		Encoding: txs.Envelope_RLP,
 		Tx: &txs.Tx{
 			ChainID: srv.blockchain.ChainID(),
 			Payload: &payload.CallTx{

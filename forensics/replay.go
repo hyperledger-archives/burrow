@@ -80,8 +80,11 @@ func NewSourceFromGenesis(genesisDoc *genesis.GenesisDoc) *Source {
 	}
 	src := NewSource(burrowDB, tmDB, genesisDoc)
 	src.State = burrowState
-	src.committer = execution.NewBatchCommitter(burrowState, execution.ParamsFromGenesis(genesisDoc),
+	src.committer, err = execution.NewBatchCommitter(burrowState, execution.ParamsFromGenesis(genesisDoc),
 		burrowChain, event.NewEmitter(), logging.NewNoopLogger())
+	if err != nil {
+		panic(err)
+	}
 	return src
 }
 
@@ -118,9 +121,9 @@ func (src *Source) LoadAt(height uint64) (err error) {
 	}
 
 	// Get our commit machinery
-	src.committer = execution.NewBatchCommitter(src.State, execution.ParamsFromGenesis(src.genesisDoc), src.blockchain,
+	src.committer, err = execution.NewBatchCommitter(src.State, execution.ParamsFromGenesis(src.genesisDoc), src.blockchain,
 		event.NewEmitter(), src.logger)
-	return nil
+	return err
 }
 
 func (src *Source) LatestHeight() (uint64, error) {

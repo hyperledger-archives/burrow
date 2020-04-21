@@ -2,10 +2,8 @@ package service
 
 import (
 	"io"
-	"reflect"
 
 	"github.com/hyperledger/burrow/event/query"
-	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
@@ -20,20 +18,22 @@ func NewBlockConsumer(projection *sqlsol.Projection, opt sqlsol.SpecOpt, getEven
 
 	logger = logger.WithScope("makeBlockConsumer")
 
+	var blockHeight uint64
+
 	return func(blockExecution *exec.BlockExecution) error {
 		if finished(doneCh) {
 			return io.EOF
 		}
 
 		// set new block number
-		fromBlock := blockExecution.Height
+		blockHeight = blockExecution.Height
 
 		logger.TraceMsg("Block received",
 			"height", blockExecution.Height,
 			"num_txs", len(blockExecution.TxExecutions))
 
 		// create a fresh new structure to store block data at this height
-		blockData := sqlsol.NewBlockData(fromBlock)
+		blockData := sqlsol.NewBlockData(blockHeight)
 
 		if opt.Enabled(sqlsol.Block) {
 			blkRawData, err := buildBlkData(projection.Tables, blockExecution)
@@ -127,18 +127,10 @@ func NewBlockConsumer(projection *sqlsol.Projection, opt sqlsol.SpecOpt, getEven
 		// upsert rows in specific SQL event tables and update block number
 		// store block data in SQL tables (if any)
 		for name, rows := range blockData.Data.Tables {
-			logger.InfoMsg("Upserting rows in SQL table", "height", fromBlock, "table", name, "action", "UPSERT", "rows", rows)
+			logger.InfoMsg("Upserting rows in SQL table", "height", blockHeight, "table", name, "action", "UPSERT", "rows", rows)
 		}
 
 		eventCh <- blockData.Data
 		return nil
 	}
-}
-
-type eventSpecTagged struct {
-	Event abi.EventSpec
-}
-
-func (e *eventSpecTagged) Get(key string) (value interface{}, ok bool) {
-	return query.GetReflect(reflect.ValueOf(e), key)
 }

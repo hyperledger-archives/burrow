@@ -65,7 +65,6 @@ func TestSendTx(t *testing.T) {
 }
 
 func TestCallTx(t *testing.T) {
-
 	toAddress := makePrivateAccount("contract1").GetAddress()
 	callTx := &payload.CallTx{
 		Input: &payload.TxInput{

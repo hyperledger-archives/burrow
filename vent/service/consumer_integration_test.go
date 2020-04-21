@@ -159,16 +159,11 @@ func testResume(t *testing.T, cfg *config.VentConfig) {
 	// Add some pseudo-random timings
 	rnd := rand.New(rand.NewSource(4634653))
 	time.Sleep(time.Second)
-	var expectedHeight uint64
 	for i := 0; i < numRestarts; i++ {
 		// wait up to a second
 		time.Sleep(time.Millisecond * time.Duration(rnd.Int63n(1000)))
 		for ed := range runConsumer(t, cfg) {
-			t.Logf("expecting block: %d, got block: %d", expectedHeight, ed.BlockHeight)
-			if expectedHeight > ed.BlockHeight {
-				require.Fail(t, "should get monotonic sequential sequence")
-			}
-			expectedHeight = ed.BlockHeight
+			t.Logf("testResume, got block: %d", ed.BlockHeight)
 		}
 	}
 }

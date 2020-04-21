@@ -83,8 +83,9 @@ func makeChain(t *testing.T, max uint64) (*genesis.GenesisDoc, dbm.DB, dbm.DB) {
 	burrowDB, burrowState, burrowChain, err := initBurrow(genesisDoc)
 	require.NoError(t, err)
 
-	committer := execution.NewBatchCommitter(burrowState, execution.ParamsFromGenesis(genesisDoc),
+	committer, err := execution.NewBatchCommitter(burrowState, execution.ParamsFromGenesis(genesisDoc),
 		burrowChain, event.NewEmitter(), logging.NewNoopLogger())
+	require.NoError(t, err)
 
 	var stateHash []byte
 	for i := uint64(1); i < max; i++ {

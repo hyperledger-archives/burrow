@@ -18,8 +18,10 @@ func (be *BlockExecution) StreamEvents() []*StreamEvent {
 	var ses []*StreamEvent
 	ses = append(ses, &StreamEvent{
 		BeginBlock: &BeginBlock{
-			Height: be.Height,
-			Header: be.Header,
+			Height:            be.Height,
+			PredecessorHeight: be.PredecessorHeight,
+			NumTxs:            uint64(len(be.TxExecutions)),
+			Header:            be.Header,
 		},
 	})
 	for _, txe := range be.TxExecutions {

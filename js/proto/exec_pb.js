@@ -1067,6 +1067,8 @@ proto.exec.BeginBlock.prototype.toObject = function(opt_includeInstance) {
 proto.exec.BeginBlock.toObject = function(includeInstance, msg) {
   var f, obj = {
     height: jspb.Message.getFieldWithDefault(msg, 1, 0),
+    numtxs: jspb.Message.getFieldWithDefault(msg, 3, 0),
+    predecessorheight: jspb.Message.getFieldWithDefault(msg, 4, 0),
     header: (f = msg.getHeader()) && github_com_tendermint_tendermint_abci_types_types_pb.Header.toObject(includeInstance, f)
   };
 
@@ -1107,6 +1109,14 @@ proto.exec.BeginBlock.deserializeBinaryFromReader = function(msg, reader) {
     case 1:
       var value = /** @type {number} */ (reader.readUint64());
       msg.setHeight(value);
+      break;
+    case 3:
+      var value = /** @type {number} */ (reader.readUint64());
+      msg.setNumtxs(value);
+      break;
+    case 4:
+      var value = /** @type {number} */ (reader.readUint64());
+      msg.setPredecessorheight(value);
       break;
     case 2:
       var value = new github_com_tendermint_tendermint_abci_types_types_pb.Header;
@@ -1149,6 +1159,20 @@ proto.exec.BeginBlock.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getNumtxs();
+  if (f !== 0) {
+    writer.writeUint64(
+      3,
+      f
+    );
+  }
+  f = message.getPredecessorheight();
+  if (f !== 0) {
+    writer.writeUint64(
+      4,
+      f
+    );
+  }
   f = message.getHeader();
   if (f != null) {
     writer.writeMessage(
@@ -1175,6 +1199,42 @@ proto.exec.BeginBlock.prototype.getHeight = function() {
  */
 proto.exec.BeginBlock.prototype.setHeight = function(value) {
   return jspb.Message.setProto3IntField(this, 1, value);
+};
+
+
+/**
+ * optional uint64 NumTxs = 3;
+ * @return {number}
+ */
+proto.exec.BeginBlock.prototype.getNumtxs = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.exec.BeginBlock} returns this
+ */
+proto.exec.BeginBlock.prototype.setNumtxs = function(value) {
+  return jspb.Message.setProto3IntField(this, 3, value);
+};
+
+
+/**
+ * optional uint64 PredecessorHeight = 4;
+ * @return {number}
+ */
+proto.exec.BeginBlock.prototype.getPredecessorheight = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 4, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.exec.BeginBlock} returns this
+ */
+proto.exec.BeginBlock.prototype.setPredecessorheight = function(value) {
+  return jspb.Message.setProto3IntField(this, 4, value);
 };
 
 
@@ -1378,6 +1438,7 @@ proto.exec.BeginTx.prototype.toObject = function(opt_includeInstance) {
 proto.exec.BeginTx.toObject = function(includeInstance, msg) {
   var f, obj = {
     txheader: (f = msg.getTxheader()) && proto.exec.TxHeader.toObject(includeInstance, f),
+    numevents: jspb.Message.getFieldWithDefault(msg, 5, 0),
     result: (f = msg.getResult()) && proto.exec.Result.toObject(includeInstance, f),
     exception: (f = msg.getException()) && errors_pb.Exception.toObject(includeInstance, f)
   };
@@ -1420,6 +1481,10 @@ proto.exec.BeginTx.deserializeBinaryFromReader = function(msg, reader) {
       var value = new proto.exec.TxHeader;
       reader.readMessage(value,proto.exec.TxHeader.deserializeBinaryFromReader);
       msg.setTxheader(value);
+      break;
+    case 5:
+      var value = /** @type {number} */ (reader.readUint64());
+      msg.setNumevents(value);
       break;
     case 2:
       var value = new proto.exec.Result;
@@ -1466,6 +1531,13 @@ proto.exec.BeginTx.serializeBinaryToWriter = function(message, writer) {
       1,
       f,
       proto.exec.TxHeader.serializeBinaryToWriter
+    );
+  }
+  f = message.getNumevents();
+  if (f !== 0) {
+    writer.writeUint64(
+      5,
+      f
     );
   }
   f = message.getResult();
@@ -1521,6 +1593,24 @@ proto.exec.BeginTx.prototype.clearTxheader = function() {
  */
 proto.exec.BeginTx.prototype.hasTxheader = function() {
   return jspb.Message.getField(this, 1) != null;
+};
+
+
+/**
+ * optional uint64 NumEvents = 5;
+ * @return {number}
+ */
+proto.exec.BeginTx.prototype.getNumevents = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 5, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.exec.BeginTx} returns this
+ */
+proto.exec.BeginTx.prototype.setNumevents = function(value) {
+  return jspb.Message.setProto3IntField(this, 5, value);
 };
 
 
@@ -2087,6 +2177,7 @@ proto.exec.BlockExecution.prototype.toObject = function(opt_includeInstance) {
 proto.exec.BlockExecution.toObject = function(includeInstance, msg) {
   var f, obj = {
     height: jspb.Message.getFieldWithDefault(msg, 1, 0),
+    predecessorheight: jspb.Message.getFieldWithDefault(msg, 4, 0),
     header: (f = msg.getHeader()) && github_com_tendermint_tendermint_abci_types_types_pb.Header.toObject(includeInstance, f),
     txexecutionsList: jspb.Message.toObjectList(msg.getTxexecutionsList(),
     proto.exec.TxExecution.toObject, includeInstance)
@@ -2129,6 +2220,10 @@ proto.exec.BlockExecution.deserializeBinaryFromReader = function(msg, reader) {
     case 1:
       var value = /** @type {number} */ (reader.readUint64());
       msg.setHeight(value);
+      break;
+    case 4:
+      var value = /** @type {number} */ (reader.readUint64());
+      msg.setPredecessorheight(value);
       break;
     case 2:
       var value = new github_com_tendermint_tendermint_abci_types_types_pb.Header;
@@ -2176,6 +2271,13 @@ proto.exec.BlockExecution.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getPredecessorheight();
+  if (f !== 0) {
+    writer.writeUint64(
+      4,
+      f
+    );
+  }
   f = message.getHeader();
   if (f != null) {
     writer.writeMessage(
@@ -2210,6 +2312,24 @@ proto.exec.BlockExecution.prototype.getHeight = function() {
  */
 proto.exec.BlockExecution.prototype.setHeight = function(value) {
   return jspb.Message.setProto3IntField(this, 1, value);
+};
+
+
+/**
+ * optional uint64 PredecessorHeight = 4;
+ * @return {number}
+ */
+proto.exec.BlockExecution.prototype.getPredecessorheight = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 4, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.exec.BlockExecution} returns this
+ */
+proto.exec.BlockExecution.prototype.setPredecessorheight = function(value) {
+  return jspb.Message.setProto3IntField(this, 4, value);
 };
 
 
