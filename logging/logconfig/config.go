@@ -101,7 +101,7 @@ func newLogger(loggingConfig *LoggingConfig) (log.Logger, channels.Channel, erro
 		return nil, nil, err
 	}
 	var errCh channels.Channel = channels.NewDeadChannel()
-	var logger log.Logger = loggers.BurrowFormatLogger(outputLogger)
+	var logger log.Logger = loggers.NewBurrowFormatLogger(outputLogger)
 	if loggingConfig.NonBlocking {
 		logger, errCh = loggers.NonBlockingLogger(logger)
 		return logger, errCh, nil

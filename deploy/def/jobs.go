@@ -1,6 +1,7 @@
 package def
 
 import (
+	"fmt"
 	"regexp"
 
 	validation "github.com/go-ozzo/ozzo-validation"
@@ -403,6 +404,11 @@ type Call struct {
 	Save string `mapstructure:"save" json:"save" yaml:"save" toml:"save"`
 	// (Optional) the call job's returned variables
 	Variables []*abi.Variable
+}
+
+// TODO: maybe do for others...
+func (job *Call) String() string {
+	return fmt.Sprintf("%#v", job)
 }
 
 func (job *Call) Validate() error {

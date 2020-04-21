@@ -10,7 +10,6 @@ import (
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/deploy/def"
 	"github.com/hyperledger/burrow/deploy/jobs"
-	"github.com/hyperledger/burrow/deploy/util"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs/payload"
 	cli "github.com/jawher/mow.cli"
@@ -217,7 +216,7 @@ func makeTx(client *def.Client, tx payload.Payload) (string, error) {
 		return "", err
 	}
 
-	util.ReadTxSignAndBroadcast(txe, err, logger)
+	jobs.LogTxExecution(txe, logger)
 	if err != nil {
 		return "", err
 	}

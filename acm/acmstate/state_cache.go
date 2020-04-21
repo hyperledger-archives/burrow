@@ -250,16 +250,6 @@ func (cache *Cache) Reset(backend Reader) {
 	cache.accounts = make(map[crypto.Address]*accountInfo, len(cache.accounts))
 }
 
-// Syncs the Cache to output and Resets it to use backend as Reader
-func (cache *Cache) Flush(output Writer, backend Reader) error {
-	err := cache.Sync(output)
-	if err != nil {
-		return err
-	}
-	cache.Reset(backend)
-	return nil
-}
-
 func (cache *Cache) String() string {
 	if cache.name == "" {
 		return fmt.Sprintf("StateCache{Length: %v}", len(cache.accounts))

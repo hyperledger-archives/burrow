@@ -1,8 +1,11 @@
+# Exclusive with app48
+no-parallel: true
+
 jobs:
 
 - name: power
   set:
-    val: 12345
+    val: 1234
 
 - name: Validator
   update-account:

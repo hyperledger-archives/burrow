@@ -291,12 +291,12 @@ func (exe *executor) validateInputsAndStorePublicKeys(txEnv *txs.Envelope) error
 				acc.GetAddress())
 		}
 		// Check sequences
-		if acc.Sequence+1 != uint64(in.Sequence) {
+		if acc.Sequence+1 != in.Sequence {
 			return errors.Errorf(errors.Codes.InvalidSequence, "Error invalid sequence in input %v: input has sequence %d, but account has sequence %d, "+
 				"so expected input to have sequence %d", in, in.Sequence, acc.Sequence, acc.Sequence+1)
 		}
 		// Check amount
-		if acc.Balance < uint64(in.Amount) {
+		if txEnv.Tx.Type() != payload.TypeUnbond && acc.Balance < in.Amount {
 			return errors.Codes.InsufficientFunds
 		}
 		// Check for Input permission
@@ -355,27 +355,27 @@ func (exe *executor) Commit(header *abciTypes.Header) (stateHash []byte, err err
 	// that nothing in the downstream commit process could have failed. At worst we go back one block.
 	hash, version, err := exe.state.Update(func(ws state.Updatable) error {
 		// flush the caches
-		err := exe.stateCache.Flush(ws, exe.state)
+		err := exe.stateCache.Sync(ws)
 		if err != nil {
 			return err
 		}
-		err = exe.metadataCache.Flush(ws, exe.state)
+		err = exe.metadataCache.Sync(ws)
 		if err != nil {
 			return err
 		}
-		err = exe.nameRegCache.Flush(ws, exe.state)
+		err = exe.nameRegCache.Sync(ws)
 		if err != nil {
 			return err
 		}
-		err = exe.nodeRegCache.Flush(ws, exe.state)
+		err = exe.nodeRegCache.Sync(ws)
 		if err != nil {
 			return err
 		}
-		err = exe.proposalRegCache.Flush(ws, exe.state)
+		err = exe.proposalRegCache.Sync(ws)
 		if err != nil {
 			return err
 		}
-		err = exe.validatorCache.Flush(ws, exe.state)
+		err = exe.validatorCache.Sync(ws)
 		if err != nil {
 			return err
 		}
@@ -388,6 +388,12 @@ func (exe *executor) Commit(header *abciTypes.Header) (stateHash []byte, err err
 	if err != nil {
 		return nil, err
 	}
+	// Complete flushing of caches by resetting them to the state we have just committed
+	err = exe.Reset()
+	if err != nil {
+		return nil, err
+	}
+
 	expectedHeight := HeightAtVersion(version)
 	if expectedHeight != height {
 		return nil, fmt.Errorf("expected height at state tree version %d is %d but actual height is %d",
@@ -401,7 +407,9 @@ func (exe *executor) Commit(header *abciTypes.Header) (stateHash []byte, err err
 func (exe *executor) Reset() error {
 	// As with Commit() we do not take the write lock here
 	exe.stateCache.Reset(exe.state)
+	exe.metadataCache.Reset(exe.state)
 	exe.nameRegCache.Reset(exe.state)
+	exe.nodeRegCache.Reset(exe.state)
 	exe.proposalRegCache.Reset(exe.state)
 	exe.validatorCache.Reset(exe.state)
 	return nil

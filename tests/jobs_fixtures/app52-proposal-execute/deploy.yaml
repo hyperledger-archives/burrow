@@ -10,7 +10,7 @@ jobs:
  - name: SystemAccount
    update-account:
      target: new()
-     native: 300
+     native: 3001234
      permissions: ["all"]
 
  - name: AssertSystemAccountCreated
@@ -22,7 +22,7 @@ jobs:
  - name: DeployerAccount
    update-account:
      target: new()
-     native: 300
+     native: 3001234
      permissions: ["all"]
 
  - name: AssertDeployerAccountCreated

@@ -1,3 +1,6 @@
+# Exclusive with app33
+no-parallel: true
+
 jobs:
 
 - name: perm
@@ -59,4 +62,4 @@ jobs:
   assert:
       key: $queryPerm2
       relation: eq
-      val: 16454
+      val: 32838

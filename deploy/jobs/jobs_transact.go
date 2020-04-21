@@ -7,11 +7,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs/payload"
+	"github.com/tmthrgd/go-hex"
 
 	"github.com/hyperledger/burrow/deploy/def"
-	"github.com/hyperledger/burrow/deploy/util"
 )
 
 func FormulateSendJob(send *def.Send, account string, client *def.Client, logger *logging.Logger) (*payload.SendTx, error) {
@@ -32,14 +33,14 @@ func FormulateSendJob(send *def.Send, account string, client *def.Client, logger
 	}, logger)
 }
 
-func SendJob(send *def.Send, tx *payload.SendTx, account string, client *def.Client, logger *logging.Logger) (string, error) {
+func SendJob(tx *payload.SendTx, client *def.Client, logger *logging.Logger) (string, error) {
 	// Sign, broadcast, display
 	txe, err := client.SignAndBroadcast(tx, logger)
 	if err != nil {
-		return "", util.ChainErrorHandler(account, err, logger)
+		return "", fmt.Errorf("error in SendJob with payload %v: %w", tx, err)
 	}
 
-	util.ReadTxSignAndBroadcast(txe, err, logger)
+	LogTxExecution(txe, logger)
 	if err != nil {
 		return "", err
 	}
@@ -155,17 +156,17 @@ func registerNameTx(name *def.RegisterName, do *def.DeployArgs, account string, 
 	}, logger)
 }
 
-func RegisterNameJob(name *def.RegisterName, do *def.DeployArgs, script *def.Playbook, txs []*payload.NameTx, client *def.Client, logger *logging.Logger) (string, error) {
+func RegisterNameJob(txs []*payload.NameTx, client *def.Client, logger *logging.Logger) (string, error) {
 	var result string
 
 	for _, tx := range txs {
 		// Sign, broadcast, display
 		txe, err := client.SignAndBroadcast(tx, logger)
 		if err != nil {
-			return "", util.ChainErrorHandler(script.Account, err, logger)
+			return "", fmt.Errorf("error in RegisterNameJob with payload %v: %w", tx, err)
 		}
 
-		util.ReadTxSignAndBroadcast(txe, err, logger)
+		LogTxExecution(txe, logger)
 		if err != nil {
 			return "", err
 		}
@@ -197,16 +198,16 @@ func FormulatePermissionJob(perm *def.Permission, account string, client *def.Cl
 	}, logger)
 }
 
-func PermissionJob(perm *def.Permission, account string, tx *payload.PermsTx, client *def.Client, logger *logging.Logger) (string, error) {
+func PermissionJob(tx *payload.PermsTx, client *def.Client, logger *logging.Logger) (string, error) {
 	logger.TraceMsg("Permissions returned in transaction: ", "args", tx.PermArgs)
 
 	// Sign, broadcast, display
 	txe, err := client.SignAndBroadcast(tx, logger)
 	if err != nil {
-		return "", util.ChainErrorHandler(account, err, logger)
+		return "", fmt.Errorf("error in PermissionJob with payload %v: %w", tx, err)
 	}
 
-	util.ReadTxSignAndBroadcast(txe, err, logger)
+	LogTxExecution(txe, logger)
 	if err != nil {
 		return "", err
 	}
@@ -233,14 +234,14 @@ func FormulateIdentifyJob(id *def.Identify, account string, client *def.Client, 
 	}, logger)
 }
 
-func IdentifyJob(id *def.Identify, tx *payload.IdentifyTx, account string, client *def.Client, logger *logging.Logger) (string, error) {
+func IdentifyJob(tx *payload.IdentifyTx, client *def.Client, logger *logging.Logger) (string, error) {
 	// Sign, broadcast, display
 	txe, err := client.SignAndBroadcast(tx, logger)
 	if err != nil {
-		return "", util.ChainErrorHandler(account, err, logger)
+		return "", fmt.Errorf("error in IdentifyJob with payload %v: %w", tx, err)
 	}
 
-	util.ReadTxSignAndBroadcast(txe, err, logger)
+	LogTxExecution(txe, logger)
 	if err != nil {
 		return "", err
 	}
@@ -255,4 +256,31 @@ func FirstOf(inputs ...string) string {
 		}
 	}
 	return ""
+}
+
+func LogTxExecution(txe *exec.TxExecution, logger *logging.Logger) {
+	// if there is nothing to unpack then just return.
+	if txe == nil {
+		return
+	}
+
+	// Unpack and display for the user.
+	height := fmt.Sprintf("%d", txe.Height)
+
+	if txe.Receipt.CreatesContract {
+		logger.InfoMsg("Tx Return",
+			"addr", txe.Receipt.ContractAddress.String(),
+			"Transaction Hash", hex.EncodeToString(txe.TxHash))
+	} else {
+		logger.InfoMsg("Tx Return",
+			"Transaction Hash", hex.EncodeToString(txe.TxHash),
+			"Block Height", height)
+
+		ret := txe.GetResult().GetReturn()
+		if len(ret) != 0 {
+			logger.InfoMsg("Return",
+				"Return Value", hex.EncodeUpperToString(ret),
+				"Exception", txe.Exception)
+		}
+	}
 }

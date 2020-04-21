@@ -242,8 +242,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playb
 
 	txe, err := client.SignAndBroadcast(proposalTx, logger)
 	if err != nil {
-		var err = util.ChainErrorHandler(proposalTx.Input.Address.String(), err, logger)
-		return "", err
+		return "", fmt.Errorf("error in ProposalJob with proposal %v: %w", prop, err)
 	}
 
 	result := fmt.Sprintf("%X", txe.Receipt.TxHash)

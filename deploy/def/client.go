@@ -359,7 +359,7 @@ func (c *Client) UpdateAccount(arg *GovArg, logger *logging.Logger) (*payload.Go
 	}
 	update := &spec.TemplateAccount{
 		Permissions: arg.Permissions,
-		Roles:       arg.Permissions,
+		Roles:       arg.Roles,
 	}
 	if arg.Address != "" {
 		addr, err := c.ParseAddress(arg.Address, logger)
@@ -369,7 +369,7 @@ func (c *Client) UpdateAccount(arg *GovArg, logger *logging.Logger) (*payload.Go
 		update.Address = &addr
 	}
 	if arg.PublicKey != "" {
-		pubKey, err := publicKeyFromString(arg.PublicKey)
+		pubKey, err := PublicKeyFromString(arg.PublicKey)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse publicKey: %v", err)
 		}
@@ -427,7 +427,7 @@ func (c *Client) PublicKeyFromAddress(address *crypto.Address) (*crypto.PublicKe
 	return &pubKey, nil
 }
 
-func publicKeyFromString(publicKey string) (crypto.PublicKey, error) {
+func PublicKeyFromString(publicKey string) (crypto.PublicKey, error) {
 	bs, err := hex.DecodeString(publicKey)
 	if err != nil {
 		return crypto.PublicKey{}, fmt.Errorf("could not parse public key string %s as hex: %v", publicKey, err)

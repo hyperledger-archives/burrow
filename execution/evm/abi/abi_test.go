@@ -26,6 +26,13 @@ func TestPacker(t *testing.T) {
 		name           string
 		expectedOutput []byte
 	}{
+		// Test string address
+		{
+			`[{"constant":false,"inputs":[{"internalType":"address payable","name":"friend","type":"address"}],"name":"sendToAFriend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"}]`,
+			[]interface{}{"C42DEED84BDF2CA695F2E91F4E6395D191CF35FC"},
+			"sendToAFriend",
+			pad([]byte{196, 45, 238, 216, 75, 223, 44, 166, 149, 242, 233, 31, 78, 99, 149, 209, 145, 207, 53, 252}, 32, true),
+		},
 		// From: https://github.com/hyperledger/burrow/issues/1326
 		{
 			`[{"constant":false,"inputs":[{"internalType":"address payable","name":"friend","type":"address"}],"name":"sendToAFriend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"}]`,

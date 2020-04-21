@@ -84,7 +84,7 @@ PROTO_GO_FILES_REAL = $(shell find . -type f -name '*.pb.go' -print)
 PROTO_TS_FILES = $(patsubst %.proto, %.pb.ts, $(PROTO_FILES))
 
 .PHONY: protobuf
-protobuf: $(PROTO_GO_FILES) ${PROTO_TS_FILES} fix
+protobuf: $(PROTO_GO_FILES) $(PROTO_TS_FILES) fix
 
 # Implicit compile rule for GRPC/proto files (note since pb.go files no longer generated
 # in same directory as proto file this just regenerates everything

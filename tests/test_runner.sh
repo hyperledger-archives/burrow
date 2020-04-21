@@ -25,8 +25,6 @@ export boot=${boot:-true}
 export debug=${debug:-false}
 export clean=${clean:-true}
 
-export failures="not supplied by test"
-
 export test_exit=0
 
 if [[ "$debug" = true ]]; then
@@ -114,11 +112,6 @@ test_teardown(){
     echo "Tests complete! Tests are Green. :)"
   else
     echo "Tests complete. Tests are Red. :("
-    echo "Failures in:"
-    for failure in "${failures[@]}"
-    do
-      echo "$failure"
-    done
    fi
   exit ${test_exit}
 }

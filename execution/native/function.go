@@ -23,6 +23,8 @@ type Function struct {
 	Comment string
 	// Permissions required to call function
 	PermFlag permission.PermFlag
+	// Whether this function writes to state
+	Pure bool
 	// Native function to which calls will be dispatched when a containing
 	F interface{}
 	// Following fields are for only for memoization
