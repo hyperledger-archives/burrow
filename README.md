@@ -35,7 +35,7 @@ Highlights include:
 - Just a virtual machine
 - A research project - we run it in production
 
-### Further introduction
+### Further introductory material
 
 See [Burrow - the Boring Blockchain](https://wiki.hyperledger.org/display/burrow/Burrow+-+The+Boring+Blockchain) for an introduction to Burrow and its motivating vision.
 
