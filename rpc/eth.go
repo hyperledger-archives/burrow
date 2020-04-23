@@ -11,7 +11,6 @@ import (
 	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/acm/validator"
 	bcm "github.com/hyperledger/burrow/bcm"
-	bin "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
 	x "github.com/hyperledger/burrow/encoding/hex"
@@ -46,7 +45,7 @@ type EthService struct {
 	nodeView   *tendermint.NodeView
 	trans      *execution.Transactor
 	keyClient  keys.KeyClient
-	keyStore   *keys.KeyStore
+	keyStore   *keys.FilesystemKeyStore
 	config     *tmConfig.Config
 	logger     *logging.Logger
 }
@@ -55,7 +54,7 @@ type EthService struct {
 func NewEthService(accounts acmstate.IterableStatsReader,
 	events EventsReader, blockchain bcm.BlockchainInfo,
 	validators validator.History, nodeView *tendermint.NodeView,
-	trans *execution.Transactor, keyStore *keys.KeyStore,
+	trans *execution.Transactor, keyStore *keys.FilesystemKeyStore,
 	logger *logging.Logger) *EthService {
 
 	keyClient := keys.NewLocalKeyClient(keyStore, logger)
@@ -847,15 +846,6 @@ func (srv *EthService) EthSendTransaction(req *web3.EthSendTransactionParams) (*
 		}
 	}
 
-	acc, err := srv.accounts.GetAccount(tx.Input.Address)
-	if err != nil {
-		return nil, err
-	} else if acc == nil {
-		return nil, fmt.Errorf("account %s does not exist", tx.Input.Address.String())
-	}
-
-	tx.Input.Sequence = acc.Sequence + 1
-
 	if to := req.Transaction.To; to != "" {
 		addr, err := x.DecodeToAddress(to)
 		if err != nil {
@@ -884,19 +874,10 @@ func (srv *EthService) EthSendTransaction(req *web3.EthSendTransactionParams) (*
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse data: %v", err)
 		}
-		tx.Data = bin.HexBytes(bs)
+		tx.Data = bs
 	}
 
 	txEnv := txs.Enclose(srv.blockchain.ChainID(), tx)
-
-	signer, err := keys.AddressableSigner(srv.keyClient, tx.Input.Address)
-	if err != nil {
-		return nil, err
-	}
-	err = txEnv.Sign(signer)
-	if err != nil {
-		return nil, err
-	}
 
 	ctx := context.Background()
 	txe, err := srv.trans.BroadcastTxSync(ctx, txEnv)

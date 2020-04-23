@@ -5,14 +5,15 @@ import (
 
 	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/keys/mock"
+	"github.com/hyperledger/burrow/keys"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGenesisSpec_GenesisDoc(t *testing.T) {
-	keyClient := mock.NewKeyClient()
+	keyClient := keys.NewLocalKeyClient(keys.NewMemoryKeyStore(), logging.NewNoopLogger())
 
 	// Try a spec with a single account/validator
 	amtBonded := uint64(100)

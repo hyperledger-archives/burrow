@@ -20,7 +20,7 @@ import (
 
 // LoadKeysFromConfig sets the keyClient & keyStore based on the given config
 func (kern *Kernel) LoadKeysFromConfig(conf *keys.KeysConfig) (err error) {
-	kern.keyStore = keys.NewKeyStore(conf.KeysDirectory, conf.AllowBadFilePermissions)
+	kern.keyStore = keys.NewFilesystemKeyStore(conf.KeysDirectory, conf.AllowBadFilePermissions)
 	if conf.RemoteAddress != "" {
 		kern.keyClient, err = keys.NewRemoteKeyClient(conf.RemoteAddress, kern.Logger)
 		if err != nil {

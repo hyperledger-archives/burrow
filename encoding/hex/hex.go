@@ -1,13 +1,13 @@
 package encoding
 
 import (
-	"encoding/hex"
-	fmt "fmt"
+	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
 
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/tmthrgd/go-hex"
 )
 
 const (

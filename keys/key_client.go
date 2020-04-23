@@ -34,7 +34,7 @@ var _ KeyClient = (*localKeyClient)(nil)
 var _ KeyClient = (*remoteKeyClient)(nil)
 
 type localKeyClient struct {
-	ks     *KeyStore
+	ks     KeyStore
 	logger *logging.Logger
 }
 
@@ -79,17 +79,7 @@ func (l *localKeyClient) GetAddressForKeyName(keyName string) (keyAddress crypto
 		return
 	}
 
-	all, err := l.ks.GetAllNames()
-
-	if err != nil {
-		return crypto.Address{}, err
-	}
-
-	if addr, ok := all[keyName]; ok {
-		return crypto.AddressFromHexString(addr)
-	}
-
-	return crypto.Address{}, fmt.Errorf("`%s` is neither an address or a known key name", keyName)
+	return l.ks.GetAddressForKeyName(keyName)
 }
 
 // Returns nil if the keys instance is healthy, error otherwise
@@ -185,7 +175,7 @@ func NewRemoteKeyClient(rpcAddress string, logger *logging.Logger) (KeyClient, e
 }
 
 // NewLocalKeyClient returns a new keys client, backed by the local filesystem
-func NewLocalKeyClient(ks *KeyStore, logger *logging.Logger) KeyClient {
+func NewLocalKeyClient(ks KeyStore, logger *logging.Logger) KeyClient {
 	logger = logger.WithScope("LocalKeyClient")
 	return &localKeyClient{ks: ks, logger: logger}
 }
