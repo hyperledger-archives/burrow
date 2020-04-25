@@ -1,15 +1,11 @@
 import * as assert from 'assert';
-import * as test from '../test';
+import {burrow, compile} from "../test";
 
-const Test = test.Test();
 
-describe('#17', function () {
+describe('Testing Per-contract handler overwriting', function () {
   // {handlers: {call: function (result) { return {super: result.values, man: result.raw} }}})
-  before(Test.before())
-  after(Test.after())
-  this.timeout(10 * 1000)
 
-  it('#17 Testing Per-contract handler overwriting', Test.it(async (burrow) => {
+  it('#17 Testing Per-contract handler overwriting', async () => {
     const source = `
       pragma solidity >=0.0.0;
       contract Test {
@@ -32,8 +28,12 @@ describe('#17', function () {
       }
     `
 
-    const {abi, bytecode} = test.compile(source, 'Test')
-    const contract: any = await burrow.contracts.deploy(abi, bytecode, { call: function (result_1) { return { values: result_1.values, raw: result_1.raw }; } });
+    const {abi, code} = compile(source, 'Test')
+    const contract: any = await burrow.contracts.deploy(abi, code, {
+      call: function (result_1) {
+        return {values: result_1.values, raw: result_1.raw};
+      }
+    });
     let address = contract.address;
     const returnObject = await contract.getCombination();
     const expected = {
@@ -45,6 +45,6 @@ describe('#17', function () {
       },
       raw: [100, address, 'hello moto', '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE']
     };
-    assert.deepEqual(returnObject, expected);
-  }))
+    assert.deepStrictEqual(returnObject, expected);
+  })
 })

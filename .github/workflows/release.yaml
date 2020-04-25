@@ -21,6 +21,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+# TODO: convert this to yarn equivalent publish
   js:
     name: npm
     runs-on: ubuntu-latest

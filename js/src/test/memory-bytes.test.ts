@@ -1,13 +1,11 @@
 import * as assert from 'assert';
-import * as test from '../test';
+import {burrow, compile} from "../test";
 
-const Test = test.Test();
 
 describe('issue #21', function () {
-  this.timeout(10 * 1000);
   let contract: any;
 
-  before(Test.before(function (burrow) {
+  before(async () => {
     const source = `
       pragma solidity >=0.0.0;
       contract c {
@@ -29,30 +27,26 @@ describe('issue #21', function () {
       }
     `
 
-    const {abi, bytecode} = test.compile(source, 'c')
-    return burrow.contracts.deploy(abi, bytecode).then((c) => {
+    const {abi, code} = compile(source, 'c')
+    return burrow.contracts.deploy(abi, code).then((c) => {
       contract = c
     })
-  }))
+  })
 
-  after(Test.after())
-
-  it('gets the static byte array decoded properly', Test.it(function () {
+  it('gets the static byte array decoded properly', async () => {
     return contract.getBytes()
       .then((bytes) => {
-        assert.deepEqual(
+        assert.deepStrictEqual(
           bytes,
           [['68', '65', '6C', '6C', '6F', '00', '00', '00', '00', 'FF']]
         )
       })
-  }))
+  })
 
-  it('returns multiple values correctly from a function',
-    Test.it(function () {
-      return contract.deeper()
-        .then((values) => {
-          assert.equal(Number(values[1]), 42)
-        })
-    })
-  )
+  it('returns multiple values correctly from a function', function () {
+    return contract.deeper()
+      .then((values) => {
+        assert.strictEqual(Number(values[1]), 42)
+      })
+  })
 })

@@ -1,15 +1,7 @@
 import * as assert from 'assert';
-import * as test from '../test';
+import {burrow, compile} from '../test';
 
-const Test = test.Test();
-
-describe('#50', function () {
-  before(Test.before())
-  after(Test.after())
-
-  this.timeout(10 * 1000)
-
-  it('#50', Test.it(function (burrow) {
+describe('#50', function () {it('#50', async () => {
     const source = `
       pragma solidity >=0.0.0;
       contract SimpleStorage {
@@ -24,12 +16,12 @@ describe('#50', function () {
           }
       }
     `
-    const {abi, bytecode} = test.compile(source, 'SimpleStorage')
-    return burrow.contracts.deploy(abi, bytecode)
+    const {abi, code} = compile(source, 'SimpleStorage')
+    return burrow.contracts.deploy(abi, code)
       .then((contract: any) => contract.set(42)
         .then(() => contract.get.call())
       ).then((value) => {
-        assert.equal(value, 42)
+        assert.deepStrictEqual(value, [42])
       })
-  }))
+  })
 })

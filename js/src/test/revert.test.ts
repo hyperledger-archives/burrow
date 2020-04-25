@@ -1,14 +1,11 @@
 import * as assert from 'assert';
-import * as test from '../test';
-import * as grpc from 'grpc';
-
-const Test = test.Test();
+import {burrow, compile} from '../test';
+import * as grpc from '@grpc/grpc-js';
 
 describe('REVERT constant', function () {
-  this.timeout(10 * 1000)
   let contract: any;
 
-  before(Test.before(function (burrow) {
+  before(async () => {
     const source = `
       pragma solidity >=0.0.0;
       contract c {
@@ -23,30 +20,26 @@ describe('REVERT constant', function () {
       }
     `
 
-    const {abi, bytecode} = test.compile(source, 'c')
-    return burrow.contracts.deploy(abi, bytecode).then((c) => {
-      contract = c
-    })
-  }))
+    const {abi, code} = compile(source, 'c')
+    contract = await burrow.contracts.deploy(abi, code)
+  })
 
-  after(Test.after())
 
-  it('gets the string when revert not called', Test.it(function () {
+  it('gets the string when revert not called', async () => {
     return contract.getString(42)
       .then((str) => {
-        assert.equal(str, 'secret')
+        assert.deepStrictEqual(str, ['secret'])
       })
-  }))
+  })
 
   it('It catches a revert with the revert string',
-    Test.it(function () {
+    async () => {
       return contract.getString(1)
         .then((str) => {
           throw new Error('Did not catch revert error')
         }).catch((err: grpc.ServiceError) => {
-          assert.equal(err.code, grpc.status.ABORTED)
-          assert.equal(err.message, 'Did not pass correct key')
+          assert.strictEqual(err.code, grpc.status.ABORTED)
+          assert.strictEqual(err.message, '10 ABORTED: Did not pass correct key')
         })
     })
-  )
 })

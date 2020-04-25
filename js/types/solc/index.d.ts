@@ -15,7 +15,7 @@ declare module 'solc' {
         inputs: Array<EventInput>
         anonymous: boolean
     };
-    
+
     export type FunctionInput = {
         name: string
         type: string
@@ -32,11 +32,12 @@ declare module 'solc' {
         opcodes: string
         sourceMap: string
     }
-    
+
     type Contract = {
         assembly: any
         evm: {
             bytecode: Bytecode
+            deployedBytecode: Bytecode
         }
         functionHashes: any
         gasEstimates: any
@@ -46,7 +47,7 @@ declare module 'solc' {
         srcmap: string
         srcmapRuntime: string
     }
-    
+
     type Source = {
         AST: any
     }
@@ -71,7 +72,7 @@ declare module 'solc' {
         message: string
         formattedMessage?: string
     }
-    
+
     export type OutputDescription = {
         contracts: Record<string, Record<string, Contract>>
         errors: Array<Error>

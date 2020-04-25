@@ -1,13 +1,17 @@
+import {Metadata} from "@grpc/grpc-js";
+import {callErrorFromStatus} from "@grpc/grpc-js/build/src/call";
+import {Keccak} from "sha3";
 import * as utils from '../utils/utils';
 import * as coder from 'ethereumjs-abi';
 import * as convert from '../utils/convert';
-import * as grpc from 'grpc';
+import * as grpc from '@grpc/grpc-js';
 import sha3 from '../utils/sha3';
-import { TxInput, CallTx } from '../../../proto/payload_pb';
-import { TxExecution, Result } from '../../../proto/exec_pb';
-import { Burrow, Error } from '../burrow';
-import { Envelope } from '../../../proto/txs_pb';
-import { Function, FunctionInput, FunctionOutput } from 'solc';
+import {TxInput, CallTx, ContractMeta} from '../../../proto/payload_pb';
+import {TxExecution, Result} from '../../../proto/exec_pb';
+import {Burrow, Error} from '../burrow';
+import {Envelope} from '../../../proto/txs_pb';
+import {Function, FunctionInput, FunctionOutput} from 'solc';
+import {ABI, Contract} from "./contract";
 
 type FunctionIO = FunctionInput & FunctionOutput;
 
@@ -38,7 +42,7 @@ function fnSignature(abi: Function) {
 
 const types = (args: Array<FunctionIO>) => args.map(arg => arg.type);
 
-function txPayload(data: string, account: string, address: string): CallTx {
+function txPayload(data: string, account: string, address: string, contract?: Contract): CallTx {
   const input = new TxInput();
   input.setAddress(Buffer.from(account, 'hex'));
   input.setAmount(0);
@@ -49,6 +53,15 @@ function txPayload(data: string, account: string, address: string): CallTx {
   payload.setGaslimit(DEFAULT_GAS);
   payload.setFee(0);
   payload.setData(Buffer.from(data, 'hex'));
+  // If address is null then we are creating a new contract, if we have the deployedBytecode then send it with the ABI
+  if (!address && contract.code.deployedBytecode) {
+    const meta = new ContractMeta()
+    // TODO: document/formalise the expected structure of the contract metadata
+    meta.setMeta(JSON.stringify({Abi: contract.abi}))
+    const codeHash = (new Keccak(256)).update(contract.code.deployedBytecode, "hex").digest()
+    meta.setCodehash(codeHash)
+    payload.setContractmetaList([meta])
+  }
 
   return payload
 }
@@ -75,7 +88,7 @@ const decodeF = function (abi: Function, output: Uint8Array): DecodedResult {
 
   let outputs = abi.outputs;
   let outputTypes = types(outputs);
-  
+
   // Decode raw bytes to arguments
   let raw = convert.abiToBurrow(outputTypes, coder.rawDecode(outputTypes, Buffer.from(output)));
   let result: DecodedResult = {raw: raw.slice()}
@@ -87,7 +100,7 @@ const decodeF = function (abi: Function, output: Uint8Array): DecodedResult {
     }
     return acc;
   }, {});
-  
+
   return result;
 }
 
@@ -108,19 +121,30 @@ export const SolidityFunction = function (abi: Function, burrow: Burrow) {
   // I want to keep them separate in the case that we want to move all the functional
   // components together and maybe even... write tests for them (gasp!)
   const encode = function () {
+    // Call should always be bound to a Contract
+    const contract: Contract = this;
     let args = Array.prototype.slice.call(arguments)
-    return encodeF(abi, args, isConstructor ? this.code : null)
+    return encodeF(abi, args, isConstructor ? contract.code.bytecode : null)
   }
 
   const decode = function (data) {
+    // Call should always be bound to a Contract
+    const contract: Contract = this;
     return decodeF(abi, data)
   }
 
   const call = async function (isSim: boolean, handler: Handler, address: string, ...args: any[]) {
-    handler = handler || function (result) { return result };
-    address = address || this.address;
-    if (isConstructor) { address = null };
-    const self = this;
+    // Call should always be bound to a Contract
+    const contract: Contract = this;
+
+    handler = handler || function (result) {
+      return result
+    };
+    address = address || contract.address;
+    if (isConstructor) {
+      address = null
+    }
+
 
     let P = new Promise<TransactionResult>(function (resolve, reject) {
       if (address == null && !isConstructor) reject(new Error('Address not provided to call'))
@@ -133,13 +157,19 @@ export const SolidityFunction = function (abi: Function, burrow: Burrow) {
         if (result.hasException()) {
           // Decode error message if there is one otherwise default
           if (result.getResult().getReturn().length === 0) {
-            error = new Error('Execution Reverted')
+            return reject(callErrorFromStatus({
+              code: grpc.status.ABORTED,
+              metadata: new Metadata(),
+              details: 'Execution Reverted',
+            }))
           } else {
             // Strip first 4 bytes(function signature) the decode as a string
-            error = new Error(coder.rawDecode(['string'], Buffer.from(result.getResult().getReturn_asU8().slice(4)))[0])
+            return reject(callErrorFromStatus({
+              code: grpc.status.ABORTED,
+              metadata: new Metadata(),
+              details: coder.rawDecode(['string'], Buffer.from(result.getResult().getReturn_asU8().slice(4)))[0],
+            }))
           }
-          error.code = grpc.status.ABORTED;
-          return reject(error)
         }
 
         // Meta Data (address, caller, height, etc)
@@ -173,8 +203,8 @@ export const SolidityFunction = function (abi: Function, burrow: Burrow) {
       // otherwise the coder will give an error with bignumber not a number
       // TODO investigate if other libs or an updated lib will fix this
       // let data = encodeF(abi, utils.burrowToWeb3(args), isCon ? self.code : null)
-      let data = encodeF(abi, args, isConstructor ? self.code : null)
-      let payload = txPayload(data, burrow.account, address)
+      let data = encodeF(abi, args, isConstructor ? contract.code.bytecode : null)
+      let payload = txPayload(data, burrow.account, address, contract)
 
       if (isSim) {
         burrow.pipe.call(payload, post)

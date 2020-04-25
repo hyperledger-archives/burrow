@@ -1,16 +1,8 @@
 import * as assert from 'assert';
-import * as test from '../test';
+import {burrow, compile} from '../test';
 import { Contract } from '..';
 
-const Test = test.Test();
-
-describe('Functional Contract Usage', function () {
-  before(Test.before())
-  after(Test.after())
-
-  this.timeout(10 * 1000)
-
-  it('#Constructor usage', Test.it(function (burrow) {
+describe('Functional Contract Usage', function () {it('#Constructor usage', async () => {
     const source = `
       pragma solidity >=0.0.0;
       contract Test {
@@ -37,20 +29,20 @@ describe('Functional Contract Usage', function () {
 
       }
     `
-    const {abi, bytecode} = test.compile(source, 'Test')
-    const contract: any = new Contract(abi, bytecode, null, burrow)
+    const {abi, code} = compile(source, 'Test')
+    const contract: any = new Contract(abi, code, null, burrow)
 
     let A1
     let A2
 
-    assert.equal(contract.address, null)
+    assert.strictEqual(contract.address, null)
 
     // Use the _contructor method to creat two contracts
     return Promise.all(
       [contract._constructor('88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F'),
         contract._constructor('ABCDEFABCDEFABCDEFABCDEFABCDEFABCDEF0123')])
       .then(([address1, address2]) => {
-        assert.equal(contract.address, null)
+        assert.strictEqual(contract.address, null)
         A1 = address1
         A2 = address2
 
@@ -64,5 +56,5 @@ describe('Functional Contract Usage', function () {
         assert.deepEqual(object1, expected1)
         assert.deepEqual(object2, expected2)
       })
-  }))
+  })
 })

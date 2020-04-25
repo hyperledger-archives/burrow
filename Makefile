@@ -75,8 +75,7 @@ megacheck:
 
 BURROW_TS_PATH = ./js
 PROTO_GEN_TS_PATH = ${BURROW_TS_PATH}/proto
-PROTOC_GEN_TS_PATH = ${BURROW_TS_PATH}/node_modules/.bin/protoc-gen-ts
-PROTOC_GEN_GRPC_PATH= ${BURROW_TS_PATH}/node_modules/.bin/grpc_tools_node_protoc_plugin
+NODE_BIN = ${BURROW_TS_PATH}/node_modules/.bin
 
 PROTO_FILES = $(shell find . -path $(BURROW_TS_PATH) -prune -o -path ./node_modules -prune -o -type f -name '*.proto' -print)
 PROTO_GO_FILES = $(patsubst %.proto, %.pb.go, $(PROTO_FILES))
@@ -91,18 +90,19 @@ protobuf: $(PROTO_GO_FILES) $(PROTO_TS_FILES) fix
 %.pb.go: %.proto
 	protoc -I ./protobuf $< --gogo_out=plugins=grpc:${GOPATH}/src
 
+# Using this: https://github.com/agreatfool/grpc_tools_node_protoc_ts
 %.pb.ts: %.proto
-	@protoc -I protobuf \
-		--plugin="protoc-gen-ts=${PROTOC_GEN_TS_PATH}" \
-		--plugin=protoc-gen-grpc=${PROTOC_GEN_GRPC_PATH} \
+	$(NODE_BIN)/grpc_tools_node_protoc -I protobuf \
+		--plugin="protoc-gen-ts=$(NODE_BIN)/protoc-gen-ts" \
 		--js_out="import_style=commonjs,binary:${PROTO_GEN_TS_PATH}" \
-		--ts_out="service=grpc-node:${PROTO_GEN_TS_PATH}" \
-		--grpc_out="${PROTO_GEN_TS_PATH}" $<
+		--ts_out="generate_package_definition:${PROTO_GEN_TS_PATH}" \
+		--grpc_out="generate_package_definition:${PROTO_GEN_TS_PATH}" \
+		$<
 
 .PHONY: protobuf_deps
 protobuf_deps:
 	@go get -u github.com/gogo/protobuf/protoc-gen-gogo
-	@cd ${BURROW_TS_PATH} && npm install --only=dev
+	@cd ${BURROW_TS_PATH} && yarn install --only=dev
 
 .PHONY: clean_protobuf
 clean_protobuf:
@@ -192,15 +192,15 @@ solang: $(patsubst %.solang, %.solang.go, $(wildcard ./execution/wasm/*.solang))
 	@burrow compile --wasm $^
 
 # node/js
-.PHONY: npm_install
-npm_install:
-	@cd ${BURROW_TS_PATH} && npm install
+.PHONY: yarn_install
+yarn_install:
+	@cd ${BURROW_TS_PATH} && yarn install
 
 # Test
 
 .PHONY: test_js
 test_js:
-	@cd ${BURROW_TS_PATH} && npm test
+	@cd ${BURROW_TS_PATH} && yarn test
 
 .PHONY: test
 test: check bin/solc

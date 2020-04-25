@@ -1,15 +1,7 @@
 import * as assert from 'assert';
-import * as test from '../test';
+import {burrow, compile} from '../test';
 
-const Test = test.Test();
-
-describe('#48', function () {
-  before(Test.before())
-  after(Test.after())
-
-  this.timeout(10 * 1000)
-
-  it('#48', Test.it(function (burrow) {
+describe('#48', function () {it('#48', async () => {
     const source = `
       pragma solidity >=0.0.0;
       contract Test {
@@ -29,12 +21,12 @@ describe('#48', function () {
 
       }
     `
-    const {abi, bytecode} = test.compile(source, 'Test')
-    return burrow.contracts.deploy(abi, bytecode)
+    const {abi, code} = compile(source, 'Test')
+    return burrow.contracts.deploy(abi, code)
       .then((contract: any) => contract.getCombination())
       .then(([number, address]) => {
-        assert.equal(number, 100)
-        assert.equal(address.length, 40)
+        assert.strictEqual(number, 100)
+        assert.strictEqual(address.length, 40)
       })
-  }))
+  })
 })

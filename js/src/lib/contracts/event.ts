@@ -1,3 +1,4 @@
+import {ServiceError} from "@grpc/grpc-js";
 import * as utils from '../utils/utils';
 import * as coder from 'ethereumjs-abi';
 import * as convert from '../utils/convert';

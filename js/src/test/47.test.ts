@@ -1,15 +1,7 @@
 import * as assert from 'assert';
-import * as test from '../test';
+import {burrow, compile} from '../test';
 
-const Test = test.Test();
-
-describe('#47', function () {
-  before(Test.before())
-  after(Test.after())
-
-  this.timeout(10 * 1000)
-
-  it('#47', Test.it(function (burrow) {
+describe('#47', function () {it('#47', async () => {
     const source = `
       pragma solidity >=0.0.0;
       contract Test{
@@ -25,12 +17,12 @@ describe('#47', function () {
         }
       }
     `
-    const {abi, bytecode} = test.compile(source, 'Test')
-    return burrow.contracts.deploy(abi, bytecode)
+    const {abi, code} = compile(source, 'Test')
+    return burrow.contracts.deploy(abi, code)
       .then((contract: any) => Promise.all([contract.getWithSpaceConstant(), contract.getWithoutSpaceConstant()]))
       .then(([withSpace, withoutSpace]) => {
-        assert.equal(withSpace, '  Pieter')
-        assert.equal(withoutSpace, 'Pieter')
+        assert.deepStrictEqual(withSpace, ['  Pieter'])
+        assert.deepStrictEqual(withoutSpace, ['Pieter'])
       })
-  }))
+  })
 })

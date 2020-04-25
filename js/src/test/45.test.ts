@@ -1,15 +1,9 @@
 import * as assert from 'assert';
-import * as test from '../test';
-
-const Test = test.Test();
+import {burrow, compile} from '../test';
 
 describe('#45', function () {
-  before(Test.before())
-  after(Test.after())
 
-  this.timeout(10 * 1000)
-
-  it('nottherealbatman', Test.it(function (burrow) {
+  it('nottherealbatman', async () => {
     const source = `
       pragma solidity >=0.0.0;
       contract Test {
@@ -28,16 +22,16 @@ describe('#45', function () {
           }
       }
     `
-    const {abi, bytecode} = test.compile(source, 'Test')
-    return burrow.contracts.deploy(abi, bytecode).then((contract: any) =>
+    const {abi, code} = compile(source, 'Test')
+    return burrow.contracts.deploy(abi, code).then((contract: any) =>
       contract.setName('Batman')
         .then(() => contract.getName())
     ).then((value) => {
-      assert.equal(value, 'Batman')
+      assert.deepStrictEqual(value, ['Batman'])
     })
-  }))
+  })
 
-  it('rguikers', Test.it(function (burrow) {
+  it('rguikers', async () => {
     const source = `
       pragma solidity >=0.0.0;
       contract Test {
@@ -53,13 +47,13 @@ describe('#45', function () {
       }
     `
 
-    const {abi, bytecode} = test.compile(source, 'Test')
-    return burrow.contracts.deploy(abi, bytecode).then((contract: any) =>
+    const {abi, code} = compile(source, 'Test')
+    return burrow.contracts.deploy(abi, code).then((contract: any) =>
       Promise.all([contract.getAddress(), contract.getNumber()])
         .then(([address, number]) => {
-          assert.equal(address[0].length, 40)
-          assert.equal(number[0], 100)
+          assert.strictEqual(address[0].length, 40)
+          assert.strictEqual(number[0], 100)
         })
     )
-  }))
+  })
 })
