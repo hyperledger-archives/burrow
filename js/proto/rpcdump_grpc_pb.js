@@ -1,7 +1,6 @@
 // GENERATED CODE -- DO NOT EDIT!
 
 'use strict';
-var grpc = require('grpc');
 var rpcdump_pb = require('./rpcdump_pb.js');
 var github_com_gogo_protobuf_gogoproto_gogo_pb = require('./github.com/gogo/protobuf/gogoproto/gogo_pb.js');
 var dump_pb = require('./dump_pb.js');
@@ -29,7 +28,7 @@ function deserialize_rpcdump_GetDumpParam(buffer_arg) {
 }
 
 
-var DumpService = exports.DumpService = {
+var DumpService = exports['rpcdump.Dump'] = {
   getDump: {
     path: '/rpcdump.Dump/GetDump',
     requestStream: false,
@@ -43,4 +42,3 @@ var DumpService = exports.DumpService = {
   },
 };
 
-exports.DumpClient = grpc.makeGenericClientConstructor(DumpService);
