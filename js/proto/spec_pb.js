@@ -1,4 +1,3 @@
-// source: spec.proto
 /**
  * @fileoverview
  * @enhanceable
@@ -52,15 +51,13 @@ proto.spec.TemplateAccount.repeatedFields_ = [4,5,6];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.spec.TemplateAccount.prototype.toObject = function(opt_includeInstance) {
@@ -70,8 +67,8 @@ proto.spec.TemplateAccount.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.spec.TemplateAccount} msg The msg instance to transform.
  * @return {!Object}
@@ -84,8 +81,8 @@ proto.spec.TemplateAccount.toObject = function(includeInstance, msg) {
     publickey: (f = msg.getPublickey()) && crypto_pb.PublicKey.toObject(includeInstance, f),
     amountsList: jspb.Message.toObjectList(msg.getAmountsList(),
     balance_pb.Balance.toObject, includeInstance),
-    permissionsList: (f = jspb.Message.getRepeatedField(msg, 5)) == null ? undefined : f,
-    rolesList: (f = jspb.Message.getRepeatedField(msg, 6)) == null ? undefined : f,
+    permissionsList: jspb.Message.getRepeatedField(msg, 5),
+    rolesList: jspb.Message.getRepeatedField(msg, 6),
     code: msg.getCode_asB64()
   };
 
@@ -245,12 +242,9 @@ proto.spec.TemplateAccount.prototype.getName = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.spec.TemplateAccount} returns this
- */
+/** @param {string} value */
 proto.spec.TemplateAccount.prototype.setName = function(value) {
-  return jspb.Message.setProto3StringField(this, 1, value);
+  jspb.Message.setProto3StringField(this, 1, value);
 };
 
 
@@ -287,12 +281,9 @@ proto.spec.TemplateAccount.prototype.getAddress_asU8 = function() {
 };
 
 
-/**
- * @param {!(string|Uint8Array)} value
- * @return {!proto.spec.TemplateAccount} returns this
- */
+/** @param {!(string|Uint8Array)} value */
 proto.spec.TemplateAccount.prototype.setAddress = function(value) {
-  return jspb.Message.setProto3BytesField(this, 2, value);
+  jspb.Message.setProto3BytesField(this, 2, value);
 };
 
 
@@ -306,21 +297,17 @@ proto.spec.TemplateAccount.prototype.getPublickey = function() {
 };
 
 
-/**
- * @param {?proto.crypto.PublicKey|undefined} value
- * @return {!proto.spec.TemplateAccount} returns this
-*/
+/** @param {?proto.crypto.PublicKey|undefined} value */
 proto.spec.TemplateAccount.prototype.setPublickey = function(value) {
-  return jspb.Message.setWrapperField(this, 3, value);
+  jspb.Message.setWrapperField(this, 3, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.spec.TemplateAccount} returns this
  */
 proto.spec.TemplateAccount.prototype.clearPublickey = function() {
-  return this.setPublickey(undefined);
+  this.setPublickey(undefined);
 };
 
 
@@ -343,12 +330,9 @@ proto.spec.TemplateAccount.prototype.getAmountsList = function() {
 };
 
 
-/**
- * @param {!Array<!proto.balance.Balance>} value
- * @return {!proto.spec.TemplateAccount} returns this
-*/
+/** @param {!Array<!proto.balance.Balance>} value */
 proto.spec.TemplateAccount.prototype.setAmountsList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 4, value);
+  jspb.Message.setRepeatedWrapperField(this, 4, value);
 };
 
 
@@ -364,10 +348,9 @@ proto.spec.TemplateAccount.prototype.addAmounts = function(opt_value, opt_index)
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.spec.TemplateAccount} returns this
  */
 proto.spec.TemplateAccount.prototype.clearAmountsList = function() {
-  return this.setAmountsList([]);
+  this.setAmountsList([]);
 };
 
 
@@ -380,31 +363,26 @@ proto.spec.TemplateAccount.prototype.getPermissionsList = function() {
 };
 
 
-/**
- * @param {!Array<string>} value
- * @return {!proto.spec.TemplateAccount} returns this
- */
+/** @param {!Array<string>} value */
 proto.spec.TemplateAccount.prototype.setPermissionsList = function(value) {
-  return jspb.Message.setField(this, 5, value || []);
+  jspb.Message.setField(this, 5, value || []);
 };
 
 
 /**
  * @param {string} value
  * @param {number=} opt_index
- * @return {!proto.spec.TemplateAccount} returns this
  */
 proto.spec.TemplateAccount.prototype.addPermissions = function(value, opt_index) {
-  return jspb.Message.addToRepeatedField(this, 5, value, opt_index);
+  jspb.Message.addToRepeatedField(this, 5, value, opt_index);
 };
 
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.spec.TemplateAccount} returns this
  */
 proto.spec.TemplateAccount.prototype.clearPermissionsList = function() {
-  return this.setPermissionsList([]);
+  this.setPermissionsList([]);
 };
 
 
@@ -417,31 +395,26 @@ proto.spec.TemplateAccount.prototype.getRolesList = function() {
 };
 
 
-/**
- * @param {!Array<string>} value
- * @return {!proto.spec.TemplateAccount} returns this
- */
+/** @param {!Array<string>} value */
 proto.spec.TemplateAccount.prototype.setRolesList = function(value) {
-  return jspb.Message.setField(this, 6, value || []);
+  jspb.Message.setField(this, 6, value || []);
 };
 
 
 /**
  * @param {string} value
  * @param {number=} opt_index
- * @return {!proto.spec.TemplateAccount} returns this
  */
 proto.spec.TemplateAccount.prototype.addRoles = function(value, opt_index) {
-  return jspb.Message.addToRepeatedField(this, 6, value, opt_index);
+  jspb.Message.addToRepeatedField(this, 6, value, opt_index);
 };
 
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.spec.TemplateAccount} returns this
  */
 proto.spec.TemplateAccount.prototype.clearRolesList = function() {
-  return this.setRolesList([]);
+  this.setRolesList([]);
 };
 
 
@@ -478,12 +451,9 @@ proto.spec.TemplateAccount.prototype.getCode_asU8 = function() {
 };
 
 
-/**
- * @param {!(string|Uint8Array)} value
- * @return {!proto.spec.TemplateAccount} returns this
- */
+/** @param {!(string|Uint8Array)} value */
 proto.spec.TemplateAccount.prototype.setCode = function(value) {
-  return jspb.Message.setProto3BytesField(this, 7, value);
+  jspb.Message.setProto3BytesField(this, 7, value);
 };
 
 

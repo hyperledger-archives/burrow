@@ -1,4 +1,3 @@
-// source: rpcdump.proto
 /**
  * @fileoverview
  * @enhanceable
@@ -43,15 +42,13 @@ if (goog.DEBUG && !COMPILED) {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.rpcdump.GetDumpParam.prototype.toObject = function(opt_includeInstance) {
@@ -61,8 +58,8 @@ proto.rpcdump.GetDumpParam.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.rpcdump.GetDumpParam} msg The msg instance to transform.
  * @return {!Object}
@@ -159,12 +156,9 @@ proto.rpcdump.GetDumpParam.prototype.getHeight = function() {
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.rpcdump.GetDumpParam} returns this
- */
+/** @param {number} value */
 proto.rpcdump.GetDumpParam.prototype.setHeight = function(value) {
-  return jspb.Message.setProto3IntField(this, 1, value);
+  jspb.Message.setProto3IntField(this, 1, value);
 };
 
 

@@ -475,23 +475,93 @@ export namespace Stats {
   }
 }
 
-export class GetBlockParam extends jspb.Message {
+export class GetTendermintBlockHeaderParam extends jspb.Message {
   getHeight(): number;
   setHeight(value: number): void;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): GetBlockParam.AsObject;
-  static toObject(includeInstance: boolean, msg: GetBlockParam): GetBlockParam.AsObject;
+  toObject(includeInstance?: boolean): GetTendermintBlockHeaderParam.AsObject;
+  static toObject(includeInstance: boolean, msg: GetTendermintBlockHeaderParam): GetTendermintBlockHeaderParam.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: GetBlockParam, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): GetBlockParam;
-  static deserializeBinaryFromReader(message: GetBlockParam, reader: jspb.BinaryReader): GetBlockParam;
+  static serializeBinaryToWriter(message: GetTendermintBlockHeaderParam, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetTendermintBlockHeaderParam;
+  static deserializeBinaryFromReader(message: GetTendermintBlockHeaderParam, reader: jspb.BinaryReader): GetTendermintBlockHeaderParam;
 }
 
-export namespace GetBlockParam {
+export namespace GetTendermintBlockHeaderParam {
   export type AsObject = {
     height: number,
+  }
+}
+
+export class GetTendermintValidatorSetParam extends jspb.Message {
+  getHeight(): number;
+  setHeight(value: number): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): GetTendermintValidatorSetParam.AsObject;
+  static toObject(includeInstance: boolean, msg: GetTendermintValidatorSetParam): GetTendermintValidatorSetParam.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: GetTendermintValidatorSetParam, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): GetTendermintValidatorSetParam;
+  static deserializeBinaryFromReader(message: GetTendermintValidatorSetParam, reader: jspb.BinaryReader): GetTendermintValidatorSetParam;
+}
+
+export namespace GetTendermintValidatorSetParam {
+  export type AsObject = {
+    height: number,
+  }
+}
+
+export class TendermintBlockHeader extends jspb.Message {
+  getHeader(): Uint8Array | string;
+  getHeader_asU8(): Uint8Array;
+  getHeader_asB64(): string;
+  setHeader(value: Uint8Array | string): void;
+
+  getCommit(): Uint8Array | string;
+  getCommit_asU8(): Uint8Array;
+  getCommit_asB64(): string;
+  setCommit(value: Uint8Array | string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): TendermintBlockHeader.AsObject;
+  static toObject(includeInstance: boolean, msg: TendermintBlockHeader): TendermintBlockHeader.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: TendermintBlockHeader, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): TendermintBlockHeader;
+  static deserializeBinaryFromReader(message: TendermintBlockHeader, reader: jspb.BinaryReader): TendermintBlockHeader;
+}
+
+export namespace TendermintBlockHeader {
+  export type AsObject = {
+    header: Uint8Array | string,
+    commit: Uint8Array | string,
+  }
+}
+
+export class TendermintValidatorSet extends jspb.Message {
+  getSet(): Uint8Array | string;
+  getSet_asU8(): Uint8Array;
+  getSet_asB64(): string;
+  setSet(value: Uint8Array | string): void;
+
+  serializeBinary(): Uint8Array;
+  toObject(includeInstance?: boolean): TendermintValidatorSet.AsObject;
+  static toObject(includeInstance: boolean, msg: TendermintValidatorSet): TendermintValidatorSet.AsObject;
+  static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+  static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+  static serializeBinaryToWriter(message: TendermintValidatorSet, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): TendermintValidatorSet;
+  static deserializeBinaryFromReader(message: TendermintValidatorSet, reader: jspb.BinaryReader): TendermintValidatorSet;
+}
+
+export namespace TendermintValidatorSet {
+  export type AsObject = {
+    set: Uint8Array | string,
   }
 }
 

@@ -1,4 +1,3 @@
-// source: dump.proto
 /**
  * @fileoverview
  * @enhanceable
@@ -115,15 +114,13 @@ if (goog.DEBUG && !COMPILED) {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.dump.Storage.prototype.toObject = function(opt_includeInstance) {
@@ -133,8 +130,8 @@ proto.dump.Storage.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.dump.Storage} msg The msg instance to transform.
  * @return {!Object}
@@ -267,12 +264,9 @@ proto.dump.Storage.prototype.getKey_asU8 = function() {
 };
 
 
-/**
- * @param {!(string|Uint8Array)} value
- * @return {!proto.dump.Storage} returns this
- */
+/** @param {!(string|Uint8Array)} value */
 proto.dump.Storage.prototype.setKey = function(value) {
-  return jspb.Message.setProto3BytesField(this, 1, value);
+  jspb.Message.setProto3BytesField(this, 1, value);
 };
 
 
@@ -309,12 +303,9 @@ proto.dump.Storage.prototype.getValue_asU8 = function() {
 };
 
 
-/**
- * @param {!(string|Uint8Array)} value
- * @return {!proto.dump.Storage} returns this
- */
+/** @param {!(string|Uint8Array)} value */
 proto.dump.Storage.prototype.setValue = function(value) {
-  return jspb.Message.setProto3BytesField(this, 2, value);
+  jspb.Message.setProto3BytesField(this, 2, value);
 };
 
 
@@ -330,15 +321,13 @@ proto.dump.AccountStorage.repeatedFields_ = [2];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.dump.AccountStorage.prototype.toObject = function(opt_includeInstance) {
@@ -348,8 +337,8 @@ proto.dump.AccountStorage.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.dump.AccountStorage} msg The msg instance to transform.
  * @return {!Object}
@@ -485,12 +474,9 @@ proto.dump.AccountStorage.prototype.getAddress_asU8 = function() {
 };
 
 
-/**
- * @param {!(string|Uint8Array)} value
- * @return {!proto.dump.AccountStorage} returns this
- */
+/** @param {!(string|Uint8Array)} value */
 proto.dump.AccountStorage.prototype.setAddress = function(value) {
-  return jspb.Message.setProto3BytesField(this, 1, value);
+  jspb.Message.setProto3BytesField(this, 1, value);
 };
 
 
@@ -504,12 +490,9 @@ proto.dump.AccountStorage.prototype.getStorageList = function() {
 };
 
 
-/**
- * @param {!Array<!proto.dump.Storage>} value
- * @return {!proto.dump.AccountStorage} returns this
-*/
+/** @param {!Array<!proto.dump.Storage>} value */
 proto.dump.AccountStorage.prototype.setStorageList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 2, value);
+  jspb.Message.setRepeatedWrapperField(this, 2, value);
 };
 
 
@@ -525,10 +508,9 @@ proto.dump.AccountStorage.prototype.addStorage = function(opt_value, opt_index) 
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.dump.AccountStorage} returns this
  */
 proto.dump.AccountStorage.prototype.clearStorageList = function() {
-  return this.setStorageList([]);
+  this.setStorageList([]);
 };
 
 
@@ -537,15 +519,13 @@ proto.dump.AccountStorage.prototype.clearStorageList = function() {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.dump.EVMEvent.prototype.toObject = function(opt_includeInstance) {
@@ -555,8 +535,8 @@ proto.dump.EVMEvent.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.dump.EVMEvent} msg The msg instance to transform.
  * @return {!Object}
@@ -693,12 +673,9 @@ proto.dump.EVMEvent.prototype.getChainid = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.dump.EVMEvent} returns this
- */
+/** @param {string} value */
 proto.dump.EVMEvent.prototype.setChainid = function(value) {
-  return jspb.Message.setProto3StringField(this, 1, value);
+  jspb.Message.setProto3StringField(this, 1, value);
 };
 
 
@@ -711,12 +688,9 @@ proto.dump.EVMEvent.prototype.getIndex = function() {
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.dump.EVMEvent} returns this
- */
+/** @param {number} value */
 proto.dump.EVMEvent.prototype.setIndex = function(value) {
-  return jspb.Message.setProto3IntField(this, 4, value);
+  jspb.Message.setProto3IntField(this, 4, value);
 };
 
 
@@ -730,21 +704,17 @@ proto.dump.EVMEvent.prototype.getTime = function() {
 };
 
 
-/**
- * @param {?proto.google.protobuf.Timestamp|undefined} value
- * @return {!proto.dump.EVMEvent} returns this
-*/
+/** @param {?proto.google.protobuf.Timestamp|undefined} value */
 proto.dump.EVMEvent.prototype.setTime = function(value) {
-  return jspb.Message.setWrapperField(this, 2, value);
+  jspb.Message.setWrapperField(this, 2, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.dump.EVMEvent} returns this
  */
 proto.dump.EVMEvent.prototype.clearTime = function() {
-  return this.setTime(undefined);
+  this.setTime(undefined);
 };
 
 
@@ -767,21 +737,17 @@ proto.dump.EVMEvent.prototype.getEvent = function() {
 };
 
 
-/**
- * @param {?proto.exec.LogEvent|undefined} value
- * @return {!proto.dump.EVMEvent} returns this
-*/
+/** @param {?proto.exec.LogEvent|undefined} value */
 proto.dump.EVMEvent.prototype.setEvent = function(value) {
-  return jspb.Message.setWrapperField(this, 3, value);
+  jspb.Message.setWrapperField(this, 3, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.dump.EVMEvent} returns this
  */
 proto.dump.EVMEvent.prototype.clearEvent = function() {
-  return this.setEvent(undefined);
+  this.setEvent(undefined);
 };
 
 
@@ -799,15 +765,13 @@ proto.dump.EVMEvent.prototype.hasEvent = function() {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.dump.Dump.prototype.toObject = function(opt_includeInstance) {
@@ -817,8 +781,8 @@ proto.dump.Dump.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.dump.Dump} msg The msg instance to transform.
  * @return {!Object}
@@ -971,12 +935,9 @@ proto.dump.Dump.prototype.getHeight = function() {
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.dump.Dump} returns this
- */
+/** @param {number} value */
 proto.dump.Dump.prototype.setHeight = function(value) {
-  return jspb.Message.setProto3IntField(this, 1, value);
+  jspb.Message.setProto3IntField(this, 1, value);
 };
 
 
@@ -990,21 +951,17 @@ proto.dump.Dump.prototype.getAccount = function() {
 };
 
 
-/**
- * @param {?proto.acm.Account|undefined} value
- * @return {!proto.dump.Dump} returns this
-*/
+/** @param {?proto.acm.Account|undefined} value */
 proto.dump.Dump.prototype.setAccount = function(value) {
-  return jspb.Message.setWrapperField(this, 2, value);
+  jspb.Message.setWrapperField(this, 2, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.dump.Dump} returns this
  */
 proto.dump.Dump.prototype.clearAccount = function() {
-  return this.setAccount(undefined);
+  this.setAccount(undefined);
 };
 
 
@@ -1027,21 +984,17 @@ proto.dump.Dump.prototype.getAccountstorage = function() {
 };
 
 
-/**
- * @param {?proto.dump.AccountStorage|undefined} value
- * @return {!proto.dump.Dump} returns this
-*/
+/** @param {?proto.dump.AccountStorage|undefined} value */
 proto.dump.Dump.prototype.setAccountstorage = function(value) {
-  return jspb.Message.setWrapperField(this, 3, value);
+  jspb.Message.setWrapperField(this, 3, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.dump.Dump} returns this
  */
 proto.dump.Dump.prototype.clearAccountstorage = function() {
-  return this.setAccountstorage(undefined);
+  this.setAccountstorage(undefined);
 };
 
 
@@ -1064,21 +1017,17 @@ proto.dump.Dump.prototype.getEvmevent = function() {
 };
 
 
-/**
- * @param {?proto.dump.EVMEvent|undefined} value
- * @return {!proto.dump.Dump} returns this
-*/
+/** @param {?proto.dump.EVMEvent|undefined} value */
 proto.dump.Dump.prototype.setEvmevent = function(value) {
-  return jspb.Message.setWrapperField(this, 4, value);
+  jspb.Message.setWrapperField(this, 4, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.dump.Dump} returns this
  */
 proto.dump.Dump.prototype.clearEvmevent = function() {
-  return this.setEvmevent(undefined);
+  this.setEvmevent(undefined);
 };
 
 
@@ -1101,21 +1050,17 @@ proto.dump.Dump.prototype.getName = function() {
 };
 
 
-/**
- * @param {?proto.names.Entry|undefined} value
- * @return {!proto.dump.Dump} returns this
-*/
+/** @param {?proto.names.Entry|undefined} value */
 proto.dump.Dump.prototype.setName = function(value) {
-  return jspb.Message.setWrapperField(this, 5, value);
+  jspb.Message.setWrapperField(this, 5, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.dump.Dump} returns this
  */
 proto.dump.Dump.prototype.clearName = function() {
-  return this.setName(undefined);
+  this.setName(undefined);
 };
 
 

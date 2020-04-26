@@ -67,17 +67,6 @@ function deserialize_rpcquery_GetAccountParam(buffer_arg) {
   return rpcquery_pb.GetAccountParam.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
-function serialize_rpcquery_GetBlockParam(arg) {
-  if (!(arg instanceof rpcquery_pb.GetBlockParam)) {
-    throw new Error('Expected argument of type rpcquery.GetBlockParam');
-  }
-  return Buffer.from(arg.serializeBinary());
-}
-
-function deserialize_rpcquery_GetBlockParam(buffer_arg) {
-  return rpcquery_pb.GetBlockParam.deserializeBinary(new Uint8Array(buffer_arg));
-}
-
 function serialize_rpcquery_GetMetadataParam(arg) {
   if (!(arg instanceof rpcquery_pb.GetMetadataParam)) {
     throw new Error('Expected argument of type rpcquery.GetMetadataParam');
@@ -142,6 +131,28 @@ function serialize_rpcquery_GetStorageParam(arg) {
 
 function deserialize_rpcquery_GetStorageParam(buffer_arg) {
   return rpcquery_pb.GetStorageParam.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_rpcquery_GetTendermintBlockHeaderParam(arg) {
+  if (!(arg instanceof rpcquery_pb.GetTendermintBlockHeaderParam)) {
+    throw new Error('Expected argument of type rpcquery.GetTendermintBlockHeaderParam');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_rpcquery_GetTendermintBlockHeaderParam(buffer_arg) {
+  return rpcquery_pb.GetTendermintBlockHeaderParam.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_rpcquery_GetTendermintValidatorSetParam(arg) {
+  if (!(arg instanceof rpcquery_pb.GetTendermintValidatorSetParam)) {
+    throw new Error('Expected argument of type rpcquery.GetTendermintValidatorSetParam');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_rpcquery_GetTendermintValidatorSetParam(buffer_arg) {
+  return rpcquery_pb.GetTendermintValidatorSetParam.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
 function serialize_rpcquery_GetValidatorSetHistoryParam(arg) {
@@ -265,6 +276,28 @@ function deserialize_rpcquery_StorageValue(buffer_arg) {
   return rpcquery_pb.StorageValue.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
+function serialize_rpcquery_TendermintBlockHeader(arg) {
+  if (!(arg instanceof rpcquery_pb.TendermintBlockHeader)) {
+    throw new Error('Expected argument of type rpcquery.TendermintBlockHeader');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_rpcquery_TendermintBlockHeader(buffer_arg) {
+  return rpcquery_pb.TendermintBlockHeader.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_rpcquery_TendermintValidatorSet(arg) {
+  if (!(arg instanceof rpcquery_pb.TendermintValidatorSet)) {
+    throw new Error('Expected argument of type rpcquery.TendermintValidatorSet');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_rpcquery_TendermintValidatorSet(buffer_arg) {
+  return rpcquery_pb.TendermintValidatorSet.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 function serialize_rpcquery_ValidatorSet(arg) {
   if (!(arg instanceof rpcquery_pb.ValidatorSet)) {
     throw new Error('Expected argument of type rpcquery.ValidatorSet');
@@ -285,17 +318,6 @@ function serialize_rpcquery_ValidatorSetHistory(arg) {
 
 function deserialize_rpcquery_ValidatorSetHistory(buffer_arg) {
   return rpcquery_pb.ValidatorSetHistory.deserializeBinary(new Uint8Array(buffer_arg));
-}
-
-function serialize_types_Header(arg) {
-  if (!(arg instanceof github_com_tendermint_tendermint_abci_types_types_pb.Header)) {
-    throw new Error('Expected argument of type types.Header');
-  }
-  return Buffer.from(arg.serializeBinary());
-}
-
-function deserialize_types_Header(buffer_arg) {
-  return github_com_tendermint_tendermint_abci_types_types_pb.Header.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
 
@@ -444,16 +466,27 @@ getNetworkRegistry: {
     responseSerialize: serialize_rpcquery_Stats,
     responseDeserialize: deserialize_rpcquery_Stats,
   },
-  getBlockHeader: {
-    path: '/rpcquery.Query/GetBlockHeader',
+  getTendermintBlockHeader: {
+    path: '/rpcquery.Query/GetTendermintBlockHeader',
     requestStream: false,
     responseStream: false,
-    requestType: rpcquery_pb.GetBlockParam,
-    responseType: github_com_tendermint_tendermint_abci_types_types_pb.Header,
-    requestSerialize: serialize_rpcquery_GetBlockParam,
-    requestDeserialize: deserialize_rpcquery_GetBlockParam,
-    responseSerialize: serialize_types_Header,
-    responseDeserialize: deserialize_types_Header,
+    requestType: rpcquery_pb.GetTendermintBlockHeaderParam,
+    responseType: rpcquery_pb.TendermintBlockHeader,
+    requestSerialize: serialize_rpcquery_GetTendermintBlockHeaderParam,
+    requestDeserialize: deserialize_rpcquery_GetTendermintBlockHeaderParam,
+    responseSerialize: serialize_rpcquery_TendermintBlockHeader,
+    responseDeserialize: deserialize_rpcquery_TendermintBlockHeader,
+  },
+  getTendermintValidatorSet: {
+    path: '/rpcquery.Query/GetTendermintValidatorSet',
+    requestStream: false,
+    responseStream: false,
+    requestType: rpcquery_pb.GetTendermintValidatorSetParam,
+    responseType: rpcquery_pb.TendermintValidatorSet,
+    requestSerialize: serialize_rpcquery_GetTendermintValidatorSetParam,
+    requestDeserialize: deserialize_rpcquery_GetTendermintValidatorSetParam,
+    responseSerialize: serialize_rpcquery_TendermintValidatorSet,
+    responseDeserialize: deserialize_rpcquery_TendermintValidatorSet,
   },
 };
 

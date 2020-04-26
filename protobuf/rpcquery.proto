@@ -40,7 +40,8 @@ service Query {
 
     rpc GetStats(GetStatsParam) returns (Stats);
 
-    rpc GetBlockHeader(GetBlockParam) returns (types.Header);
+    rpc GetTendermintBlockHeader(GetTendermintBlockHeaderParam) returns (TendermintBlockHeader);
+    rpc GetTendermintValidatorSet(GetTendermintValidatorSetParam) returns (TendermintValidatorSet);
 }
 
 message StatusParam {
@@ -135,6 +136,19 @@ message Stats {
     uint64 AccountsWithoutCode = 2;
 }
 
-message GetBlockParam {
-    uint64 Height = 1;
+message GetTendermintBlockHeaderParam {
+    int64 Height = 1;
+}
+
+message GetTendermintValidatorSetParam {
+    int64 Height = 1;
+}
+
+message TendermintBlockHeader {
+    bytes Header = 1 [(gogoproto.customtype) = "Header"];
+    bytes Commit = 2 [(gogoproto.customtype) = "Commit"];
+}
+
+message TendermintValidatorSet {
+    bytes Set = 1 [(gogoproto.customtype) = "Validators"];
 }

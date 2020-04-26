@@ -1,4 +1,3 @@
-// source: crypto.proto
 /**
  * @fileoverview
  * @enhanceable
@@ -85,15 +84,13 @@ if (goog.DEBUG && !COMPILED) {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.crypto.PublicKey.prototype.toObject = function(opt_includeInstance) {
@@ -103,8 +100,8 @@ proto.crypto.PublicKey.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.crypto.PublicKey} msg The msg instance to transform.
  * @return {!Object}
@@ -213,12 +210,9 @@ proto.crypto.PublicKey.prototype.getCurvetype = function() {
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.crypto.PublicKey} returns this
- */
+/** @param {number} value */
 proto.crypto.PublicKey.prototype.setCurvetype = function(value) {
-  return jspb.Message.setProto3IntField(this, 1, value);
+  jspb.Message.setProto3IntField(this, 1, value);
 };
 
 
@@ -255,12 +249,9 @@ proto.crypto.PublicKey.prototype.getPublickey_asU8 = function() {
 };
 
 
-/**
- * @param {!(string|Uint8Array)} value
- * @return {!proto.crypto.PublicKey} returns this
- */
+/** @param {!(string|Uint8Array)} value */
 proto.crypto.PublicKey.prototype.setPublickey = function(value) {
-  return jspb.Message.setProto3BytesField(this, 2, value);
+  jspb.Message.setProto3BytesField(this, 2, value);
 };
 
 
@@ -269,15 +260,13 @@ proto.crypto.PublicKey.prototype.setPublickey = function(value) {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.crypto.PrivateKey.prototype.toObject = function(opt_includeInstance) {
@@ -287,8 +276,8 @@ proto.crypto.PrivateKey.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.crypto.PrivateKey} msg The msg instance to transform.
  * @return {!Object}
@@ -409,12 +398,9 @@ proto.crypto.PrivateKey.prototype.getCurvetype = function() {
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.crypto.PrivateKey} returns this
- */
+/** @param {number} value */
 proto.crypto.PrivateKey.prototype.setCurvetype = function(value) {
-  return jspb.Message.setProto3IntField(this, 1, value);
+  jspb.Message.setProto3IntField(this, 1, value);
 };
 
 
@@ -451,12 +437,9 @@ proto.crypto.PrivateKey.prototype.getPublickey_asU8 = function() {
 };
 
 
-/**
- * @param {!(string|Uint8Array)} value
- * @return {!proto.crypto.PrivateKey} returns this
- */
+/** @param {!(string|Uint8Array)} value */
 proto.crypto.PrivateKey.prototype.setPublickey = function(value) {
-  return jspb.Message.setProto3BytesField(this, 2, value);
+  jspb.Message.setProto3BytesField(this, 2, value);
 };
 
 
@@ -493,12 +476,9 @@ proto.crypto.PrivateKey.prototype.getPrivatekey_asU8 = function() {
 };
 
 
-/**
- * @param {!(string|Uint8Array)} value
- * @return {!proto.crypto.PrivateKey} returns this
- */
+/** @param {!(string|Uint8Array)} value */
 proto.crypto.PrivateKey.prototype.setPrivatekey = function(value) {
-  return jspb.Message.setProto3BytesField(this, 3, value);
+  jspb.Message.setProto3BytesField(this, 3, value);
 };
 
 
@@ -507,15 +487,13 @@ proto.crypto.PrivateKey.prototype.setPrivatekey = function(value) {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.crypto.Signature.prototype.toObject = function(opt_includeInstance) {
@@ -525,8 +503,8 @@ proto.crypto.Signature.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.crypto.Signature} msg The msg instance to transform.
  * @return {!Object}
@@ -635,12 +613,9 @@ proto.crypto.Signature.prototype.getCurvetype = function() {
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.crypto.Signature} returns this
- */
+/** @param {number} value */
 proto.crypto.Signature.prototype.setCurvetype = function(value) {
-  return jspb.Message.setProto3IntField(this, 1, value);
+  jspb.Message.setProto3IntField(this, 1, value);
 };
 
 
@@ -677,12 +652,9 @@ proto.crypto.Signature.prototype.getSignature_asU8 = function() {
 };
 
 
-/**
- * @param {!(string|Uint8Array)} value
- * @return {!proto.crypto.Signature} returns this
- */
+/** @param {!(string|Uint8Array)} value */
 proto.crypto.Signature.prototype.setSignature = function(value) {
-  return jspb.Message.setProto3BytesField(this, 2, value);
+  jspb.Message.setProto3BytesField(this, 2, value);
 };
 
 

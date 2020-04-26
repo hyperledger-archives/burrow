@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
@@ -20,13 +21,13 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/txs/payload"
-	"github.com/tendermint/tendermint/abci/types"
-	tmtypes "github.com/tendermint/tendermint/types"
+	"github.com/tendermint/tendermint/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type queryServer struct {
+	lock       sync.Mutex
 	state      QueryState
 	blockchain bcm.BlockchainInfo
 	nodeView   *tendermint.NodeView
@@ -46,6 +47,7 @@ type QueryState interface {
 
 func NewQueryServer(state QueryState, blockchain bcm.BlockchainInfo, nodeView *tendermint.NodeView, logger *logging.Logger) *queryServer {
 	return &queryServer{
+		lock:       sync.Mutex{},
 		state:      state,
 		blockchain: blockchain,
 		nodeView:   nodeView,
@@ -257,11 +259,25 @@ func (qs *queryServer) GetStats(ctx context.Context, param *GetStatsParam) (*Sta
 
 // Tendermint and blocks
 
-func (qs *queryServer) GetBlockHeader(ctx context.Context, param *GetBlockParam) (*types.Header, error) {
-	header, err := qs.blockchain.GetBlockHeader(param.Height)
-	if err != nil {
-		return nil, err
-	}
-	abciHeader := tmtypes.TM2PB.Header(header)
-	return &abciHeader, nil
+func (qs *queryServer) GetTendermintBlockHeader(ctx context.Context, param *GetTendermintBlockHeaderParam) (*TendermintBlockHeader, error) {
+	block := qs.nodeView.BlockStore().LoadBlock(param.Height)
+
+	return &TendermintBlockHeader{
+		Header: &Header{block.Header},
+		Commit: &Commit{block.LastCommit},
+	}, nil
+}
+
+func (qs *queryServer) GetTendermintValidatorSet(ctx context.Context, param *GetTendermintValidatorSetParam) (*TendermintValidatorSet, error) {
+	block := qs.nodeView.BlockStore().LoadBlock(param.Height)
+
+	return &TendermintValidatorSet{
+		Set: &Validators{
+			&types.ValidatorSet{
+				Proposer: &types.Validator{
+					Address: block.ProposerAddress,
+				},
+			},
+		},
+	}, nil
 }

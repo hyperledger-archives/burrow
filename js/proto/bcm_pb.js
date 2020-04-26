@@ -1,4 +1,3 @@
-// source: bcm.proto
 /**
  * @fileoverview
  * @enhanceable
@@ -67,15 +66,13 @@ if (goog.DEBUG && !COMPILED) {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.bcm.SyncInfo.prototype.toObject = function(opt_includeInstance) {
@@ -85,8 +82,8 @@ proto.bcm.SyncInfo.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.bcm.SyncInfo} msg The msg instance to transform.
  * @return {!Object}
@@ -249,12 +246,9 @@ proto.bcm.SyncInfo.prototype.getLatestblockheight = function() {
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.bcm.SyncInfo} returns this
- */
+/** @param {number} value */
 proto.bcm.SyncInfo.prototype.setLatestblockheight = function(value) {
-  return jspb.Message.setProto3IntField(this, 1, value);
+  jspb.Message.setProto3IntField(this, 1, value);
 };
 
 
@@ -291,12 +285,9 @@ proto.bcm.SyncInfo.prototype.getLatestblockhash_asU8 = function() {
 };
 
 
-/**
- * @param {!(string|Uint8Array)} value
- * @return {!proto.bcm.SyncInfo} returns this
- */
+/** @param {!(string|Uint8Array)} value */
 proto.bcm.SyncInfo.prototype.setLatestblockhash = function(value) {
-  return jspb.Message.setProto3BytesField(this, 2, value);
+  jspb.Message.setProto3BytesField(this, 2, value);
 };
 
 
@@ -333,12 +324,9 @@ proto.bcm.SyncInfo.prototype.getLatestapphash_asU8 = function() {
 };
 
 
-/**
- * @param {!(string|Uint8Array)} value
- * @return {!proto.bcm.SyncInfo} returns this
- */
+/** @param {!(string|Uint8Array)} value */
 proto.bcm.SyncInfo.prototype.setLatestapphash = function(value) {
-  return jspb.Message.setProto3BytesField(this, 3, value);
+  jspb.Message.setProto3BytesField(this, 3, value);
 };
 
 
@@ -352,21 +340,17 @@ proto.bcm.SyncInfo.prototype.getLatestblocktime = function() {
 };
 
 
-/**
- * @param {?proto.google.protobuf.Timestamp|undefined} value
- * @return {!proto.bcm.SyncInfo} returns this
-*/
+/** @param {?proto.google.protobuf.Timestamp|undefined} value */
 proto.bcm.SyncInfo.prototype.setLatestblocktime = function(value) {
-  return jspb.Message.setWrapperField(this, 4, value);
+  jspb.Message.setWrapperField(this, 4, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.bcm.SyncInfo} returns this
  */
 proto.bcm.SyncInfo.prototype.clearLatestblocktime = function() {
-  return this.setLatestblocktime(undefined);
+  this.setLatestblocktime(undefined);
 };
 
 
@@ -389,21 +373,17 @@ proto.bcm.SyncInfo.prototype.getLatestblockseentime = function() {
 };
 
 
-/**
- * @param {?proto.google.protobuf.Timestamp|undefined} value
- * @return {!proto.bcm.SyncInfo} returns this
-*/
+/** @param {?proto.google.protobuf.Timestamp|undefined} value */
 proto.bcm.SyncInfo.prototype.setLatestblockseentime = function(value) {
-  return jspb.Message.setWrapperField(this, 5, value);
+  jspb.Message.setWrapperField(this, 5, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.bcm.SyncInfo} returns this
  */
 proto.bcm.SyncInfo.prototype.clearLatestblockseentime = function() {
-  return this.setLatestblockseentime(undefined);
+  this.setLatestblockseentime(undefined);
 };
 
 
@@ -426,21 +406,17 @@ proto.bcm.SyncInfo.prototype.getLatestblockduration = function() {
 };
 
 
-/**
- * @param {?proto.google.protobuf.Duration|undefined} value
- * @return {!proto.bcm.SyncInfo} returns this
-*/
+/** @param {?proto.google.protobuf.Duration|undefined} value */
 proto.bcm.SyncInfo.prototype.setLatestblockduration = function(value) {
-  return jspb.Message.setWrapperField(this, 6, value);
+  jspb.Message.setWrapperField(this, 6, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.bcm.SyncInfo} returns this
  */
 proto.bcm.SyncInfo.prototype.clearLatestblockduration = function() {
-  return this.setLatestblockduration(undefined);
+  this.setLatestblockduration(undefined);
 };
 
 
@@ -458,15 +434,13 @@ proto.bcm.SyncInfo.prototype.hasLatestblockduration = function() {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.bcm.PersistedState.prototype.toObject = function(opt_includeInstance) {
@@ -476,8 +450,8 @@ proto.bcm.PersistedState.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.bcm.PersistedState} msg The msg instance to transform.
  * @return {!Object}
@@ -636,12 +610,9 @@ proto.bcm.PersistedState.prototype.getApphashafterlastblock_asU8 = function() {
 };
 
 
-/**
- * @param {!(string|Uint8Array)} value
- * @return {!proto.bcm.PersistedState} returns this
- */
+/** @param {!(string|Uint8Array)} value */
 proto.bcm.PersistedState.prototype.setApphashafterlastblock = function(value) {
-  return jspb.Message.setProto3BytesField(this, 1, value);
+  jspb.Message.setProto3BytesField(this, 1, value);
 };
 
 
@@ -655,21 +626,17 @@ proto.bcm.PersistedState.prototype.getLastblocktime = function() {
 };
 
 
-/**
- * @param {?proto.google.protobuf.Timestamp|undefined} value
- * @return {!proto.bcm.PersistedState} returns this
-*/
+/** @param {?proto.google.protobuf.Timestamp|undefined} value */
 proto.bcm.PersistedState.prototype.setLastblocktime = function(value) {
-  return jspb.Message.setWrapperField(this, 2, value);
+  jspb.Message.setWrapperField(this, 2, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.bcm.PersistedState} returns this
  */
 proto.bcm.PersistedState.prototype.clearLastblocktime = function() {
-  return this.setLastblocktime(undefined);
+  this.setLastblocktime(undefined);
 };
 
 
@@ -691,12 +658,9 @@ proto.bcm.PersistedState.prototype.getLastblockheight = function() {
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.bcm.PersistedState} returns this
- */
+/** @param {number} value */
 proto.bcm.PersistedState.prototype.setLastblockheight = function(value) {
-  return jspb.Message.setProto3IntField(this, 3, value);
+  jspb.Message.setProto3IntField(this, 3, value);
 };
 
 
@@ -733,12 +697,9 @@ proto.bcm.PersistedState.prototype.getGenesishash_asU8 = function() {
 };
 
 
-/**
- * @param {!(string|Uint8Array)} value
- * @return {!proto.bcm.PersistedState} returns this
- */
+/** @param {!(string|Uint8Array)} value */
 proto.bcm.PersistedState.prototype.setGenesishash = function(value) {
-  return jspb.Message.setProto3BytesField(this, 4, value);
+  jspb.Message.setProto3BytesField(this, 4, value);
 };
 
 

@@ -1,4 +1,3 @@
-// source: google/protobuf/descriptor.proto
 /**
  * @fileoverview
  * @enhanceable
@@ -894,15 +893,13 @@ proto.google.protobuf.FileDescriptorSet.repeatedFields_ = [1];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.FileDescriptorSet.prototype.toObject = function(opt_includeInstance) {
@@ -912,8 +909,8 @@ proto.google.protobuf.FileDescriptorSet.prototype.toObject = function(opt_includ
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.FileDescriptorSet} msg The msg instance to transform.
  * @return {!Object}
@@ -1014,12 +1011,9 @@ proto.google.protobuf.FileDescriptorSet.prototype.getFileList = function() {
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.FileDescriptorProto>} value
- * @return {!proto.google.protobuf.FileDescriptorSet} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.FileDescriptorProto>} value */
 proto.google.protobuf.FileDescriptorSet.prototype.setFileList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 1, value);
+  jspb.Message.setRepeatedWrapperField(this, 1, value);
 };
 
 
@@ -1035,10 +1029,9 @@ proto.google.protobuf.FileDescriptorSet.prototype.addFile = function(opt_value, 
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.FileDescriptorSet} returns this
  */
 proto.google.protobuf.FileDescriptorSet.prototype.clearFileList = function() {
-  return this.setFileList([]);
+  this.setFileList([]);
 };
 
 
@@ -1054,15 +1047,13 @@ proto.google.protobuf.FileDescriptorProto.repeatedFields_ = [3,10,11,4,5,6,7];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.FileDescriptorProto.prototype.toObject = function(opt_includeInstance) {
@@ -1072,8 +1063,8 @@ proto.google.protobuf.FileDescriptorProto.prototype.toObject = function(opt_incl
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.FileDescriptorProto} msg The msg instance to transform.
  * @return {!Object}
@@ -1081,11 +1072,11 @@ proto.google.protobuf.FileDescriptorProto.prototype.toObject = function(opt_incl
  */
 proto.google.protobuf.FileDescriptorProto.toObject = function(includeInstance, msg) {
   var f, obj = {
-    name: (f = jspb.Message.getField(msg, 1)) == null ? undefined : f,
-    pb_package: (f = jspb.Message.getField(msg, 2)) == null ? undefined : f,
-    dependencyList: (f = jspb.Message.getRepeatedField(msg, 3)) == null ? undefined : f,
-    publicDependencyList: (f = jspb.Message.getRepeatedField(msg, 10)) == null ? undefined : f,
-    weakDependencyList: (f = jspb.Message.getRepeatedField(msg, 11)) == null ? undefined : f,
+    name: jspb.Message.getField(msg, 1),
+    pb_package: jspb.Message.getField(msg, 2),
+    dependencyList: jspb.Message.getRepeatedField(msg, 3),
+    publicDependencyList: jspb.Message.getRepeatedField(msg, 10),
+    weakDependencyList: jspb.Message.getRepeatedField(msg, 11),
     messageTypeList: jspb.Message.toObjectList(msg.getMessageTypeList(),
     proto.google.protobuf.DescriptorProto.toObject, includeInstance),
     enumTypeList: jspb.Message.toObjectList(msg.getEnumTypeList(),
@@ -1096,7 +1087,7 @@ proto.google.protobuf.FileDescriptorProto.toObject = function(includeInstance, m
     proto.google.protobuf.FieldDescriptorProto.toObject, includeInstance),
     options: (f = msg.getOptions()) && proto.google.protobuf.FileOptions.toObject(includeInstance, f),
     sourceCodeInfo: (f = msg.getSourceCodeInfo()) && proto.google.protobuf.SourceCodeInfo.toObject(includeInstance, f),
-    syntax: (f = jspb.Message.getField(msg, 12)) == null ? undefined : f
+    syntax: jspb.Message.getField(msg, 12)
   };
 
   if (includeInstance) {
@@ -1318,21 +1309,17 @@ proto.google.protobuf.FileDescriptorProto.prototype.getName = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FileDescriptorProto.prototype.setName = function(value) {
-  return jspb.Message.setField(this, 1, value);
+  jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
  */
 proto.google.protobuf.FileDescriptorProto.prototype.clearName = function() {
-  return jspb.Message.setField(this, 1, undefined);
+  jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -1354,21 +1341,17 @@ proto.google.protobuf.FileDescriptorProto.prototype.getPackage = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FileDescriptorProto.prototype.setPackage = function(value) {
-  return jspb.Message.setField(this, 2, value);
+  jspb.Message.setField(this, 2, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
  */
 proto.google.protobuf.FileDescriptorProto.prototype.clearPackage = function() {
-  return jspb.Message.setField(this, 2, undefined);
+  jspb.Message.setField(this, 2, undefined);
 };
 
 
@@ -1390,31 +1373,26 @@ proto.google.protobuf.FileDescriptorProto.prototype.getDependencyList = function
 };
 
 
-/**
- * @param {!Array<string>} value
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
- */
+/** @param {!Array<string>} value */
 proto.google.protobuf.FileDescriptorProto.prototype.setDependencyList = function(value) {
-  return jspb.Message.setField(this, 3, value || []);
+  jspb.Message.setField(this, 3, value || []);
 };
 
 
 /**
  * @param {string} value
  * @param {number=} opt_index
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
  */
 proto.google.protobuf.FileDescriptorProto.prototype.addDependency = function(value, opt_index) {
-  return jspb.Message.addToRepeatedField(this, 3, value, opt_index);
+  jspb.Message.addToRepeatedField(this, 3, value, opt_index);
 };
 
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
  */
 proto.google.protobuf.FileDescriptorProto.prototype.clearDependencyList = function() {
-  return this.setDependencyList([]);
+  this.setDependencyList([]);
 };
 
 
@@ -1427,31 +1405,26 @@ proto.google.protobuf.FileDescriptorProto.prototype.getPublicDependencyList = fu
 };
 
 
-/**
- * @param {!Array<number>} value
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
- */
+/** @param {!Array<number>} value */
 proto.google.protobuf.FileDescriptorProto.prototype.setPublicDependencyList = function(value) {
-  return jspb.Message.setField(this, 10, value || []);
+  jspb.Message.setField(this, 10, value || []);
 };
 
 
 /**
  * @param {number} value
  * @param {number=} opt_index
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
  */
 proto.google.protobuf.FileDescriptorProto.prototype.addPublicDependency = function(value, opt_index) {
-  return jspb.Message.addToRepeatedField(this, 10, value, opt_index);
+  jspb.Message.addToRepeatedField(this, 10, value, opt_index);
 };
 
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
  */
 proto.google.protobuf.FileDescriptorProto.prototype.clearPublicDependencyList = function() {
-  return this.setPublicDependencyList([]);
+  this.setPublicDependencyList([]);
 };
 
 
@@ -1464,31 +1437,26 @@ proto.google.protobuf.FileDescriptorProto.prototype.getWeakDependencyList = func
 };
 
 
-/**
- * @param {!Array<number>} value
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
- */
+/** @param {!Array<number>} value */
 proto.google.protobuf.FileDescriptorProto.prototype.setWeakDependencyList = function(value) {
-  return jspb.Message.setField(this, 11, value || []);
+  jspb.Message.setField(this, 11, value || []);
 };
 
 
 /**
  * @param {number} value
  * @param {number=} opt_index
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
  */
 proto.google.protobuf.FileDescriptorProto.prototype.addWeakDependency = function(value, opt_index) {
-  return jspb.Message.addToRepeatedField(this, 11, value, opt_index);
+  jspb.Message.addToRepeatedField(this, 11, value, opt_index);
 };
 
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
  */
 proto.google.protobuf.FileDescriptorProto.prototype.clearWeakDependencyList = function() {
-  return this.setWeakDependencyList([]);
+  this.setWeakDependencyList([]);
 };
 
 
@@ -1502,12 +1470,9 @@ proto.google.protobuf.FileDescriptorProto.prototype.getMessageTypeList = functio
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.DescriptorProto>} value
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.DescriptorProto>} value */
 proto.google.protobuf.FileDescriptorProto.prototype.setMessageTypeList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 4, value);
+  jspb.Message.setRepeatedWrapperField(this, 4, value);
 };
 
 
@@ -1523,10 +1488,9 @@ proto.google.protobuf.FileDescriptorProto.prototype.addMessageType = function(op
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
  */
 proto.google.protobuf.FileDescriptorProto.prototype.clearMessageTypeList = function() {
-  return this.setMessageTypeList([]);
+  this.setMessageTypeList([]);
 };
 
 
@@ -1540,12 +1504,9 @@ proto.google.protobuf.FileDescriptorProto.prototype.getEnumTypeList = function()
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.EnumDescriptorProto>} value
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.EnumDescriptorProto>} value */
 proto.google.protobuf.FileDescriptorProto.prototype.setEnumTypeList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 5, value);
+  jspb.Message.setRepeatedWrapperField(this, 5, value);
 };
 
 
@@ -1561,10 +1522,9 @@ proto.google.protobuf.FileDescriptorProto.prototype.addEnumType = function(opt_v
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
  */
 proto.google.protobuf.FileDescriptorProto.prototype.clearEnumTypeList = function() {
-  return this.setEnumTypeList([]);
+  this.setEnumTypeList([]);
 };
 
 
@@ -1578,12 +1538,9 @@ proto.google.protobuf.FileDescriptorProto.prototype.getServiceList = function() 
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.ServiceDescriptorProto>} value
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.ServiceDescriptorProto>} value */
 proto.google.protobuf.FileDescriptorProto.prototype.setServiceList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 6, value);
+  jspb.Message.setRepeatedWrapperField(this, 6, value);
 };
 
 
@@ -1599,10 +1556,9 @@ proto.google.protobuf.FileDescriptorProto.prototype.addService = function(opt_va
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
  */
 proto.google.protobuf.FileDescriptorProto.prototype.clearServiceList = function() {
-  return this.setServiceList([]);
+  this.setServiceList([]);
 };
 
 
@@ -1616,12 +1572,9 @@ proto.google.protobuf.FileDescriptorProto.prototype.getExtensionList = function(
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.FieldDescriptorProto>} value
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.FieldDescriptorProto>} value */
 proto.google.protobuf.FileDescriptorProto.prototype.setExtensionList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 7, value);
+  jspb.Message.setRepeatedWrapperField(this, 7, value);
 };
 
 
@@ -1637,10 +1590,9 @@ proto.google.protobuf.FileDescriptorProto.prototype.addExtension$ = function(opt
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
  */
 proto.google.protobuf.FileDescriptorProto.prototype.clearExtensionList = function() {
-  return this.setExtensionList([]);
+  this.setExtensionList([]);
 };
 
 
@@ -1654,21 +1606,17 @@ proto.google.protobuf.FileDescriptorProto.prototype.getOptions = function() {
 };
 
 
-/**
- * @param {?proto.google.protobuf.FileOptions|undefined} value
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
-*/
+/** @param {?proto.google.protobuf.FileOptions|undefined} value */
 proto.google.protobuf.FileDescriptorProto.prototype.setOptions = function(value) {
-  return jspb.Message.setWrapperField(this, 8, value);
+  jspb.Message.setWrapperField(this, 8, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
  */
 proto.google.protobuf.FileDescriptorProto.prototype.clearOptions = function() {
-  return this.setOptions(undefined);
+  this.setOptions(undefined);
 };
 
 
@@ -1691,21 +1639,17 @@ proto.google.protobuf.FileDescriptorProto.prototype.getSourceCodeInfo = function
 };
 
 
-/**
- * @param {?proto.google.protobuf.SourceCodeInfo|undefined} value
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
-*/
+/** @param {?proto.google.protobuf.SourceCodeInfo|undefined} value */
 proto.google.protobuf.FileDescriptorProto.prototype.setSourceCodeInfo = function(value) {
-  return jspb.Message.setWrapperField(this, 9, value);
+  jspb.Message.setWrapperField(this, 9, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
  */
 proto.google.protobuf.FileDescriptorProto.prototype.clearSourceCodeInfo = function() {
-  return this.setSourceCodeInfo(undefined);
+  this.setSourceCodeInfo(undefined);
 };
 
 
@@ -1727,21 +1671,17 @@ proto.google.protobuf.FileDescriptorProto.prototype.getSyntax = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FileDescriptorProto.prototype.setSyntax = function(value) {
-  return jspb.Message.setField(this, 12, value);
+  jspb.Message.setField(this, 12, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileDescriptorProto} returns this
  */
 proto.google.protobuf.FileDescriptorProto.prototype.clearSyntax = function() {
-  return jspb.Message.setField(this, 12, undefined);
+  jspb.Message.setField(this, 12, undefined);
 };
 
 
@@ -1766,15 +1706,13 @@ proto.google.protobuf.DescriptorProto.repeatedFields_ = [2,6,3,4,5,8,9,10];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.DescriptorProto.prototype.toObject = function(opt_includeInstance) {
@@ -1784,8 +1722,8 @@ proto.google.protobuf.DescriptorProto.prototype.toObject = function(opt_includeI
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.DescriptorProto} msg The msg instance to transform.
  * @return {!Object}
@@ -1793,7 +1731,7 @@ proto.google.protobuf.DescriptorProto.prototype.toObject = function(opt_includeI
  */
 proto.google.protobuf.DescriptorProto.toObject = function(includeInstance, msg) {
   var f, obj = {
-    name: (f = jspb.Message.getField(msg, 1)) == null ? undefined : f,
+    name: jspb.Message.getField(msg, 1),
     fieldList: jspb.Message.toObjectList(msg.getFieldList(),
     proto.google.protobuf.FieldDescriptorProto.toObject, includeInstance),
     extensionList: jspb.Message.toObjectList(msg.getExtensionList(),
@@ -1809,7 +1747,7 @@ proto.google.protobuf.DescriptorProto.toObject = function(includeInstance, msg) 
     options: (f = msg.getOptions()) && proto.google.protobuf.MessageOptions.toObject(includeInstance, f),
     reservedRangeList: jspb.Message.toObjectList(msg.getReservedRangeList(),
     proto.google.protobuf.DescriptorProto.ReservedRange.toObject, includeInstance),
-    reservedNameList: (f = jspb.Message.getRepeatedField(msg, 10)) == null ? undefined : f
+    reservedNameList: jspb.Message.getRepeatedField(msg, 10)
   };
 
   if (includeInstance) {
@@ -2009,15 +1947,13 @@ proto.google.protobuf.DescriptorProto.serializeBinaryToWriter = function(message
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.DescriptorProto.ExtensionRange.prototype.toObject = function(opt_includeInstance) {
@@ -2027,8 +1963,8 @@ proto.google.protobuf.DescriptorProto.ExtensionRange.prototype.toObject = functi
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.DescriptorProto.ExtensionRange} msg The msg instance to transform.
  * @return {!Object}
@@ -2036,8 +1972,8 @@ proto.google.protobuf.DescriptorProto.ExtensionRange.prototype.toObject = functi
  */
 proto.google.protobuf.DescriptorProto.ExtensionRange.toObject = function(includeInstance, msg) {
   var f, obj = {
-    start: (f = jspb.Message.getField(msg, 1)) == null ? undefined : f,
-    end: (f = jspb.Message.getField(msg, 2)) == null ? undefined : f,
+    start: jspb.Message.getField(msg, 1),
+    end: jspb.Message.getField(msg, 2),
     options: (f = msg.getOptions()) && proto.google.protobuf.ExtensionRangeOptions.toObject(includeInstance, f)
   };
 
@@ -2151,21 +2087,17 @@ proto.google.protobuf.DescriptorProto.ExtensionRange.prototype.getStart = functi
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.google.protobuf.DescriptorProto.ExtensionRange} returns this
- */
+/** @param {number} value */
 proto.google.protobuf.DescriptorProto.ExtensionRange.prototype.setStart = function(value) {
-  return jspb.Message.setField(this, 1, value);
+  jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.DescriptorProto.ExtensionRange} returns this
  */
 proto.google.protobuf.DescriptorProto.ExtensionRange.prototype.clearStart = function() {
-  return jspb.Message.setField(this, 1, undefined);
+  jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -2187,21 +2119,17 @@ proto.google.protobuf.DescriptorProto.ExtensionRange.prototype.getEnd = function
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.google.protobuf.DescriptorProto.ExtensionRange} returns this
- */
+/** @param {number} value */
 proto.google.protobuf.DescriptorProto.ExtensionRange.prototype.setEnd = function(value) {
-  return jspb.Message.setField(this, 2, value);
+  jspb.Message.setField(this, 2, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.DescriptorProto.ExtensionRange} returns this
  */
 proto.google.protobuf.DescriptorProto.ExtensionRange.prototype.clearEnd = function() {
-  return jspb.Message.setField(this, 2, undefined);
+  jspb.Message.setField(this, 2, undefined);
 };
 
 
@@ -2224,21 +2152,17 @@ proto.google.protobuf.DescriptorProto.ExtensionRange.prototype.getOptions = func
 };
 
 
-/**
- * @param {?proto.google.protobuf.ExtensionRangeOptions|undefined} value
- * @return {!proto.google.protobuf.DescriptorProto.ExtensionRange} returns this
-*/
+/** @param {?proto.google.protobuf.ExtensionRangeOptions|undefined} value */
 proto.google.protobuf.DescriptorProto.ExtensionRange.prototype.setOptions = function(value) {
-  return jspb.Message.setWrapperField(this, 3, value);
+  jspb.Message.setWrapperField(this, 3, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.google.protobuf.DescriptorProto.ExtensionRange} returns this
  */
 proto.google.protobuf.DescriptorProto.ExtensionRange.prototype.clearOptions = function() {
-  return this.setOptions(undefined);
+  this.setOptions(undefined);
 };
 
 
@@ -2256,15 +2180,13 @@ proto.google.protobuf.DescriptorProto.ExtensionRange.prototype.hasOptions = func
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.DescriptorProto.ReservedRange.prototype.toObject = function(opt_includeInstance) {
@@ -2274,8 +2196,8 @@ proto.google.protobuf.DescriptorProto.ReservedRange.prototype.toObject = functio
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.DescriptorProto.ReservedRange} msg The msg instance to transform.
  * @return {!Object}
@@ -2283,8 +2205,8 @@ proto.google.protobuf.DescriptorProto.ReservedRange.prototype.toObject = functio
  */
 proto.google.protobuf.DescriptorProto.ReservedRange.toObject = function(includeInstance, msg) {
   var f, obj = {
-    start: (f = jspb.Message.getField(msg, 1)) == null ? undefined : f,
-    end: (f = jspb.Message.getField(msg, 2)) == null ? undefined : f
+    start: jspb.Message.getField(msg, 1),
+    end: jspb.Message.getField(msg, 2)
   };
 
   if (includeInstance) {
@@ -2384,21 +2306,17 @@ proto.google.protobuf.DescriptorProto.ReservedRange.prototype.getStart = functio
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.google.protobuf.DescriptorProto.ReservedRange} returns this
- */
+/** @param {number} value */
 proto.google.protobuf.DescriptorProto.ReservedRange.prototype.setStart = function(value) {
-  return jspb.Message.setField(this, 1, value);
+  jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.DescriptorProto.ReservedRange} returns this
  */
 proto.google.protobuf.DescriptorProto.ReservedRange.prototype.clearStart = function() {
-  return jspb.Message.setField(this, 1, undefined);
+  jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -2420,21 +2338,17 @@ proto.google.protobuf.DescriptorProto.ReservedRange.prototype.getEnd = function(
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.google.protobuf.DescriptorProto.ReservedRange} returns this
- */
+/** @param {number} value */
 proto.google.protobuf.DescriptorProto.ReservedRange.prototype.setEnd = function(value) {
-  return jspb.Message.setField(this, 2, value);
+  jspb.Message.setField(this, 2, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.DescriptorProto.ReservedRange} returns this
  */
 proto.google.protobuf.DescriptorProto.ReservedRange.prototype.clearEnd = function() {
-  return jspb.Message.setField(this, 2, undefined);
+  jspb.Message.setField(this, 2, undefined);
 };
 
 
@@ -2456,21 +2370,17 @@ proto.google.protobuf.DescriptorProto.prototype.getName = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.DescriptorProto} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.DescriptorProto.prototype.setName = function(value) {
-  return jspb.Message.setField(this, 1, value);
+  jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.DescriptorProto} returns this
  */
 proto.google.protobuf.DescriptorProto.prototype.clearName = function() {
-  return jspb.Message.setField(this, 1, undefined);
+  jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -2493,12 +2403,9 @@ proto.google.protobuf.DescriptorProto.prototype.getFieldList = function() {
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.FieldDescriptorProto>} value
- * @return {!proto.google.protobuf.DescriptorProto} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.FieldDescriptorProto>} value */
 proto.google.protobuf.DescriptorProto.prototype.setFieldList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 2, value);
+  jspb.Message.setRepeatedWrapperField(this, 2, value);
 };
 
 
@@ -2514,10 +2421,9 @@ proto.google.protobuf.DescriptorProto.prototype.addField = function(opt_value, o
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.DescriptorProto} returns this
  */
 proto.google.protobuf.DescriptorProto.prototype.clearFieldList = function() {
-  return this.setFieldList([]);
+  this.setFieldList([]);
 };
 
 
@@ -2531,12 +2437,9 @@ proto.google.protobuf.DescriptorProto.prototype.getExtensionList = function() {
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.FieldDescriptorProto>} value
- * @return {!proto.google.protobuf.DescriptorProto} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.FieldDescriptorProto>} value */
 proto.google.protobuf.DescriptorProto.prototype.setExtensionList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 6, value);
+  jspb.Message.setRepeatedWrapperField(this, 6, value);
 };
 
 
@@ -2552,10 +2455,9 @@ proto.google.protobuf.DescriptorProto.prototype.addExtension$ = function(opt_val
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.DescriptorProto} returns this
  */
 proto.google.protobuf.DescriptorProto.prototype.clearExtensionList = function() {
-  return this.setExtensionList([]);
+  this.setExtensionList([]);
 };
 
 
@@ -2569,12 +2471,9 @@ proto.google.protobuf.DescriptorProto.prototype.getNestedTypeList = function() {
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.DescriptorProto>} value
- * @return {!proto.google.protobuf.DescriptorProto} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.DescriptorProto>} value */
 proto.google.protobuf.DescriptorProto.prototype.setNestedTypeList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 3, value);
+  jspb.Message.setRepeatedWrapperField(this, 3, value);
 };
 
 
@@ -2590,10 +2489,9 @@ proto.google.protobuf.DescriptorProto.prototype.addNestedType = function(opt_val
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.DescriptorProto} returns this
  */
 proto.google.protobuf.DescriptorProto.prototype.clearNestedTypeList = function() {
-  return this.setNestedTypeList([]);
+  this.setNestedTypeList([]);
 };
 
 
@@ -2607,12 +2505,9 @@ proto.google.protobuf.DescriptorProto.prototype.getEnumTypeList = function() {
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.EnumDescriptorProto>} value
- * @return {!proto.google.protobuf.DescriptorProto} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.EnumDescriptorProto>} value */
 proto.google.protobuf.DescriptorProto.prototype.setEnumTypeList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 4, value);
+  jspb.Message.setRepeatedWrapperField(this, 4, value);
 };
 
 
@@ -2628,10 +2523,9 @@ proto.google.protobuf.DescriptorProto.prototype.addEnumType = function(opt_value
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.DescriptorProto} returns this
  */
 proto.google.protobuf.DescriptorProto.prototype.clearEnumTypeList = function() {
-  return this.setEnumTypeList([]);
+  this.setEnumTypeList([]);
 };
 
 
@@ -2645,12 +2539,9 @@ proto.google.protobuf.DescriptorProto.prototype.getExtensionRangeList = function
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.DescriptorProto.ExtensionRange>} value
- * @return {!proto.google.protobuf.DescriptorProto} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.DescriptorProto.ExtensionRange>} value */
 proto.google.protobuf.DescriptorProto.prototype.setExtensionRangeList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 5, value);
+  jspb.Message.setRepeatedWrapperField(this, 5, value);
 };
 
 
@@ -2666,10 +2557,9 @@ proto.google.protobuf.DescriptorProto.prototype.addExtensionRange = function(opt
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.DescriptorProto} returns this
  */
 proto.google.protobuf.DescriptorProto.prototype.clearExtensionRangeList = function() {
-  return this.setExtensionRangeList([]);
+  this.setExtensionRangeList([]);
 };
 
 
@@ -2683,12 +2573,9 @@ proto.google.protobuf.DescriptorProto.prototype.getOneofDeclList = function() {
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.OneofDescriptorProto>} value
- * @return {!proto.google.protobuf.DescriptorProto} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.OneofDescriptorProto>} value */
 proto.google.protobuf.DescriptorProto.prototype.setOneofDeclList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 8, value);
+  jspb.Message.setRepeatedWrapperField(this, 8, value);
 };
 
 
@@ -2704,10 +2591,9 @@ proto.google.protobuf.DescriptorProto.prototype.addOneofDecl = function(opt_valu
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.DescriptorProto} returns this
  */
 proto.google.protobuf.DescriptorProto.prototype.clearOneofDeclList = function() {
-  return this.setOneofDeclList([]);
+  this.setOneofDeclList([]);
 };
 
 
@@ -2721,21 +2607,17 @@ proto.google.protobuf.DescriptorProto.prototype.getOptions = function() {
 };
 
 
-/**
- * @param {?proto.google.protobuf.MessageOptions|undefined} value
- * @return {!proto.google.protobuf.DescriptorProto} returns this
-*/
+/** @param {?proto.google.protobuf.MessageOptions|undefined} value */
 proto.google.protobuf.DescriptorProto.prototype.setOptions = function(value) {
-  return jspb.Message.setWrapperField(this, 7, value);
+  jspb.Message.setWrapperField(this, 7, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.google.protobuf.DescriptorProto} returns this
  */
 proto.google.protobuf.DescriptorProto.prototype.clearOptions = function() {
-  return this.setOptions(undefined);
+  this.setOptions(undefined);
 };
 
 
@@ -2758,12 +2640,9 @@ proto.google.protobuf.DescriptorProto.prototype.getReservedRangeList = function(
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.DescriptorProto.ReservedRange>} value
- * @return {!proto.google.protobuf.DescriptorProto} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.DescriptorProto.ReservedRange>} value */
 proto.google.protobuf.DescriptorProto.prototype.setReservedRangeList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 9, value);
+  jspb.Message.setRepeatedWrapperField(this, 9, value);
 };
 
 
@@ -2779,10 +2658,9 @@ proto.google.protobuf.DescriptorProto.prototype.addReservedRange = function(opt_
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.DescriptorProto} returns this
  */
 proto.google.protobuf.DescriptorProto.prototype.clearReservedRangeList = function() {
-  return this.setReservedRangeList([]);
+  this.setReservedRangeList([]);
 };
 
 
@@ -2795,31 +2673,26 @@ proto.google.protobuf.DescriptorProto.prototype.getReservedNameList = function()
 };
 
 
-/**
- * @param {!Array<string>} value
- * @return {!proto.google.protobuf.DescriptorProto} returns this
- */
+/** @param {!Array<string>} value */
 proto.google.protobuf.DescriptorProto.prototype.setReservedNameList = function(value) {
-  return jspb.Message.setField(this, 10, value || []);
+  jspb.Message.setField(this, 10, value || []);
 };
 
 
 /**
  * @param {string} value
  * @param {number=} opt_index
- * @return {!proto.google.protobuf.DescriptorProto} returns this
  */
 proto.google.protobuf.DescriptorProto.prototype.addReservedName = function(value, opt_index) {
-  return jspb.Message.addToRepeatedField(this, 10, value, opt_index);
+  jspb.Message.addToRepeatedField(this, 10, value, opt_index);
 };
 
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.DescriptorProto} returns this
  */
 proto.google.protobuf.DescriptorProto.prototype.clearReservedNameList = function() {
-  return this.setReservedNameList([]);
+  this.setReservedNameList([]);
 };
 
 
@@ -2835,15 +2708,13 @@ proto.google.protobuf.ExtensionRangeOptions.repeatedFields_ = [999];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.ExtensionRangeOptions.prototype.toObject = function(opt_includeInstance) {
@@ -2853,8 +2724,8 @@ proto.google.protobuf.ExtensionRangeOptions.prototype.toObject = function(opt_in
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.ExtensionRangeOptions} msg The msg instance to transform.
  * @return {!Object}
@@ -2963,12 +2834,9 @@ proto.google.protobuf.ExtensionRangeOptions.prototype.getUninterpretedOptionList
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.UninterpretedOption>} value
- * @return {!proto.google.protobuf.ExtensionRangeOptions} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.UninterpretedOption>} value */
 proto.google.protobuf.ExtensionRangeOptions.prototype.setUninterpretedOptionList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 999, value);
+  jspb.Message.setRepeatedWrapperField(this, 999, value);
 };
 
 
@@ -2984,10 +2852,9 @@ proto.google.protobuf.ExtensionRangeOptions.prototype.addUninterpretedOption = f
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.ExtensionRangeOptions} returns this
  */
 proto.google.protobuf.ExtensionRangeOptions.prototype.clearUninterpretedOptionList = function() {
-  return this.setUninterpretedOptionList([]);
+  this.setUninterpretedOptionList([]);
 };
 
 
@@ -2996,15 +2863,13 @@ proto.google.protobuf.ExtensionRangeOptions.prototype.clearUninterpretedOptionLi
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.FieldDescriptorProto.prototype.toObject = function(opt_includeInstance) {
@@ -3014,8 +2879,8 @@ proto.google.protobuf.FieldDescriptorProto.prototype.toObject = function(opt_inc
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.FieldDescriptorProto} msg The msg instance to transform.
  * @return {!Object}
@@ -3023,15 +2888,15 @@ proto.google.protobuf.FieldDescriptorProto.prototype.toObject = function(opt_inc
  */
 proto.google.protobuf.FieldDescriptorProto.toObject = function(includeInstance, msg) {
   var f, obj = {
-    name: (f = jspb.Message.getField(msg, 1)) == null ? undefined : f,
-    number: (f = jspb.Message.getField(msg, 3)) == null ? undefined : f,
-    label: (f = jspb.Message.getField(msg, 4)) == null ? undefined : f,
-    type: (f = jspb.Message.getField(msg, 5)) == null ? undefined : f,
-    typeName: (f = jspb.Message.getField(msg, 6)) == null ? undefined : f,
-    extendee: (f = jspb.Message.getField(msg, 2)) == null ? undefined : f,
-    defaultValue: (f = jspb.Message.getField(msg, 7)) == null ? undefined : f,
-    oneofIndex: (f = jspb.Message.getField(msg, 9)) == null ? undefined : f,
-    jsonName: (f = jspb.Message.getField(msg, 10)) == null ? undefined : f,
+    name: jspb.Message.getField(msg, 1),
+    number: jspb.Message.getField(msg, 3),
+    label: jspb.Message.getField(msg, 4),
+    type: jspb.Message.getField(msg, 5),
+    typeName: jspb.Message.getField(msg, 6),
+    extendee: jspb.Message.getField(msg, 2),
+    defaultValue: jspb.Message.getField(msg, 7),
+    oneofIndex: jspb.Message.getField(msg, 9),
+    jsonName: jspb.Message.getField(msg, 10),
     options: (f = msg.getOptions()) && proto.google.protobuf.FieldOptions.toObject(includeInstance, f)
   };
 
@@ -3255,21 +3120,17 @@ proto.google.protobuf.FieldDescriptorProto.prototype.getName = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FieldDescriptorProto.prototype.setName = function(value) {
-  return jspb.Message.setField(this, 1, value);
+  jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
  */
 proto.google.protobuf.FieldDescriptorProto.prototype.clearName = function() {
-  return jspb.Message.setField(this, 1, undefined);
+  jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -3291,21 +3152,17 @@ proto.google.protobuf.FieldDescriptorProto.prototype.getNumber = function() {
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
- */
+/** @param {number} value */
 proto.google.protobuf.FieldDescriptorProto.prototype.setNumber = function(value) {
-  return jspb.Message.setField(this, 3, value);
+  jspb.Message.setField(this, 3, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
  */
 proto.google.protobuf.FieldDescriptorProto.prototype.clearNumber = function() {
-  return jspb.Message.setField(this, 3, undefined);
+  jspb.Message.setField(this, 3, undefined);
 };
 
 
@@ -3327,21 +3184,17 @@ proto.google.protobuf.FieldDescriptorProto.prototype.getLabel = function() {
 };
 
 
-/**
- * @param {!proto.google.protobuf.FieldDescriptorProto.Label} value
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
- */
+/** @param {!proto.google.protobuf.FieldDescriptorProto.Label} value */
 proto.google.protobuf.FieldDescriptorProto.prototype.setLabel = function(value) {
-  return jspb.Message.setField(this, 4, value);
+  jspb.Message.setField(this, 4, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
  */
 proto.google.protobuf.FieldDescriptorProto.prototype.clearLabel = function() {
-  return jspb.Message.setField(this, 4, undefined);
+  jspb.Message.setField(this, 4, undefined);
 };
 
 
@@ -3363,21 +3216,17 @@ proto.google.protobuf.FieldDescriptorProto.prototype.getType = function() {
 };
 
 
-/**
- * @param {!proto.google.protobuf.FieldDescriptorProto.Type} value
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
- */
+/** @param {!proto.google.protobuf.FieldDescriptorProto.Type} value */
 proto.google.protobuf.FieldDescriptorProto.prototype.setType = function(value) {
-  return jspb.Message.setField(this, 5, value);
+  jspb.Message.setField(this, 5, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
  */
 proto.google.protobuf.FieldDescriptorProto.prototype.clearType = function() {
-  return jspb.Message.setField(this, 5, undefined);
+  jspb.Message.setField(this, 5, undefined);
 };
 
 
@@ -3399,21 +3248,17 @@ proto.google.protobuf.FieldDescriptorProto.prototype.getTypeName = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FieldDescriptorProto.prototype.setTypeName = function(value) {
-  return jspb.Message.setField(this, 6, value);
+  jspb.Message.setField(this, 6, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
  */
 proto.google.protobuf.FieldDescriptorProto.prototype.clearTypeName = function() {
-  return jspb.Message.setField(this, 6, undefined);
+  jspb.Message.setField(this, 6, undefined);
 };
 
 
@@ -3435,21 +3280,17 @@ proto.google.protobuf.FieldDescriptorProto.prototype.getExtendee = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FieldDescriptorProto.prototype.setExtendee = function(value) {
-  return jspb.Message.setField(this, 2, value);
+  jspb.Message.setField(this, 2, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
  */
 proto.google.protobuf.FieldDescriptorProto.prototype.clearExtendee = function() {
-  return jspb.Message.setField(this, 2, undefined);
+  jspb.Message.setField(this, 2, undefined);
 };
 
 
@@ -3471,21 +3312,17 @@ proto.google.protobuf.FieldDescriptorProto.prototype.getDefaultValue = function(
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FieldDescriptorProto.prototype.setDefaultValue = function(value) {
-  return jspb.Message.setField(this, 7, value);
+  jspb.Message.setField(this, 7, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
  */
 proto.google.protobuf.FieldDescriptorProto.prototype.clearDefaultValue = function() {
-  return jspb.Message.setField(this, 7, undefined);
+  jspb.Message.setField(this, 7, undefined);
 };
 
 
@@ -3507,21 +3344,17 @@ proto.google.protobuf.FieldDescriptorProto.prototype.getOneofIndex = function() 
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
- */
+/** @param {number} value */
 proto.google.protobuf.FieldDescriptorProto.prototype.setOneofIndex = function(value) {
-  return jspb.Message.setField(this, 9, value);
+  jspb.Message.setField(this, 9, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
  */
 proto.google.protobuf.FieldDescriptorProto.prototype.clearOneofIndex = function() {
-  return jspb.Message.setField(this, 9, undefined);
+  jspb.Message.setField(this, 9, undefined);
 };
 
 
@@ -3543,21 +3376,17 @@ proto.google.protobuf.FieldDescriptorProto.prototype.getJsonName = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FieldDescriptorProto.prototype.setJsonName = function(value) {
-  return jspb.Message.setField(this, 10, value);
+  jspb.Message.setField(this, 10, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
  */
 proto.google.protobuf.FieldDescriptorProto.prototype.clearJsonName = function() {
-  return jspb.Message.setField(this, 10, undefined);
+  jspb.Message.setField(this, 10, undefined);
 };
 
 
@@ -3580,21 +3409,17 @@ proto.google.protobuf.FieldDescriptorProto.prototype.getOptions = function() {
 };
 
 
-/**
- * @param {?proto.google.protobuf.FieldOptions|undefined} value
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
-*/
+/** @param {?proto.google.protobuf.FieldOptions|undefined} value */
 proto.google.protobuf.FieldDescriptorProto.prototype.setOptions = function(value) {
-  return jspb.Message.setWrapperField(this, 8, value);
+  jspb.Message.setWrapperField(this, 8, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.google.protobuf.FieldDescriptorProto} returns this
  */
 proto.google.protobuf.FieldDescriptorProto.prototype.clearOptions = function() {
-  return this.setOptions(undefined);
+  this.setOptions(undefined);
 };
 
 
@@ -3612,15 +3437,13 @@ proto.google.protobuf.FieldDescriptorProto.prototype.hasOptions = function() {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.OneofDescriptorProto.prototype.toObject = function(opt_includeInstance) {
@@ -3630,8 +3453,8 @@ proto.google.protobuf.OneofDescriptorProto.prototype.toObject = function(opt_inc
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.OneofDescriptorProto} msg The msg instance to transform.
  * @return {!Object}
@@ -3639,7 +3462,7 @@ proto.google.protobuf.OneofDescriptorProto.prototype.toObject = function(opt_inc
  */
 proto.google.protobuf.OneofDescriptorProto.toObject = function(includeInstance, msg) {
   var f, obj = {
-    name: (f = jspb.Message.getField(msg, 1)) == null ? undefined : f,
+    name: jspb.Message.getField(msg, 1),
     options: (f = msg.getOptions()) && proto.google.protobuf.OneofOptions.toObject(includeInstance, f)
   };
 
@@ -3742,21 +3565,17 @@ proto.google.protobuf.OneofDescriptorProto.prototype.getName = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.OneofDescriptorProto} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.OneofDescriptorProto.prototype.setName = function(value) {
-  return jspb.Message.setField(this, 1, value);
+  jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.OneofDescriptorProto} returns this
  */
 proto.google.protobuf.OneofDescriptorProto.prototype.clearName = function() {
-  return jspb.Message.setField(this, 1, undefined);
+  jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -3779,21 +3598,17 @@ proto.google.protobuf.OneofDescriptorProto.prototype.getOptions = function() {
 };
 
 
-/**
- * @param {?proto.google.protobuf.OneofOptions|undefined} value
- * @return {!proto.google.protobuf.OneofDescriptorProto} returns this
-*/
+/** @param {?proto.google.protobuf.OneofOptions|undefined} value */
 proto.google.protobuf.OneofDescriptorProto.prototype.setOptions = function(value) {
-  return jspb.Message.setWrapperField(this, 2, value);
+  jspb.Message.setWrapperField(this, 2, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.google.protobuf.OneofDescriptorProto} returns this
  */
 proto.google.protobuf.OneofDescriptorProto.prototype.clearOptions = function() {
-  return this.setOptions(undefined);
+  this.setOptions(undefined);
 };
 
 
@@ -3818,15 +3633,13 @@ proto.google.protobuf.EnumDescriptorProto.repeatedFields_ = [2,4,5];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.EnumDescriptorProto.prototype.toObject = function(opt_includeInstance) {
@@ -3836,8 +3649,8 @@ proto.google.protobuf.EnumDescriptorProto.prototype.toObject = function(opt_incl
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.EnumDescriptorProto} msg The msg instance to transform.
  * @return {!Object}
@@ -3845,13 +3658,13 @@ proto.google.protobuf.EnumDescriptorProto.prototype.toObject = function(opt_incl
  */
 proto.google.protobuf.EnumDescriptorProto.toObject = function(includeInstance, msg) {
   var f, obj = {
-    name: (f = jspb.Message.getField(msg, 1)) == null ? undefined : f,
+    name: jspb.Message.getField(msg, 1),
     valueList: jspb.Message.toObjectList(msg.getValueList(),
     proto.google.protobuf.EnumValueDescriptorProto.toObject, includeInstance),
     options: (f = msg.getOptions()) && proto.google.protobuf.EnumOptions.toObject(includeInstance, f),
     reservedRangeList: jspb.Message.toObjectList(msg.getReservedRangeList(),
     proto.google.protobuf.EnumDescriptorProto.EnumReservedRange.toObject, includeInstance),
-    reservedNameList: (f = jspb.Message.getRepeatedField(msg, 5)) == null ? undefined : f
+    reservedNameList: jspb.Message.getRepeatedField(msg, 5)
   };
 
   if (includeInstance) {
@@ -3986,15 +3799,13 @@ proto.google.protobuf.EnumDescriptorProto.serializeBinaryToWriter = function(mes
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.EnumDescriptorProto.EnumReservedRange.prototype.toObject = function(opt_includeInstance) {
@@ -4004,8 +3815,8 @@ proto.google.protobuf.EnumDescriptorProto.EnumReservedRange.prototype.toObject =
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.EnumDescriptorProto.EnumReservedRange} msg The msg instance to transform.
  * @return {!Object}
@@ -4013,8 +3824,8 @@ proto.google.protobuf.EnumDescriptorProto.EnumReservedRange.prototype.toObject =
  */
 proto.google.protobuf.EnumDescriptorProto.EnumReservedRange.toObject = function(includeInstance, msg) {
   var f, obj = {
-    start: (f = jspb.Message.getField(msg, 1)) == null ? undefined : f,
-    end: (f = jspb.Message.getField(msg, 2)) == null ? undefined : f
+    start: jspb.Message.getField(msg, 1),
+    end: jspb.Message.getField(msg, 2)
   };
 
   if (includeInstance) {
@@ -4114,21 +3925,17 @@ proto.google.protobuf.EnumDescriptorProto.EnumReservedRange.prototype.getStart =
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.google.protobuf.EnumDescriptorProto.EnumReservedRange} returns this
- */
+/** @param {number} value */
 proto.google.protobuf.EnumDescriptorProto.EnumReservedRange.prototype.setStart = function(value) {
-  return jspb.Message.setField(this, 1, value);
+  jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.EnumDescriptorProto.EnumReservedRange} returns this
  */
 proto.google.protobuf.EnumDescriptorProto.EnumReservedRange.prototype.clearStart = function() {
-  return jspb.Message.setField(this, 1, undefined);
+  jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -4150,21 +3957,17 @@ proto.google.protobuf.EnumDescriptorProto.EnumReservedRange.prototype.getEnd = f
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.google.protobuf.EnumDescriptorProto.EnumReservedRange} returns this
- */
+/** @param {number} value */
 proto.google.protobuf.EnumDescriptorProto.EnumReservedRange.prototype.setEnd = function(value) {
-  return jspb.Message.setField(this, 2, value);
+  jspb.Message.setField(this, 2, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.EnumDescriptorProto.EnumReservedRange} returns this
  */
 proto.google.protobuf.EnumDescriptorProto.EnumReservedRange.prototype.clearEnd = function() {
-  return jspb.Message.setField(this, 2, undefined);
+  jspb.Message.setField(this, 2, undefined);
 };
 
 
@@ -4186,21 +3989,17 @@ proto.google.protobuf.EnumDescriptorProto.prototype.getName = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.EnumDescriptorProto} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.EnumDescriptorProto.prototype.setName = function(value) {
-  return jspb.Message.setField(this, 1, value);
+  jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.EnumDescriptorProto} returns this
  */
 proto.google.protobuf.EnumDescriptorProto.prototype.clearName = function() {
-  return jspb.Message.setField(this, 1, undefined);
+  jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -4223,12 +4022,9 @@ proto.google.protobuf.EnumDescriptorProto.prototype.getValueList = function() {
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.EnumValueDescriptorProto>} value
- * @return {!proto.google.protobuf.EnumDescriptorProto} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.EnumValueDescriptorProto>} value */
 proto.google.protobuf.EnumDescriptorProto.prototype.setValueList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 2, value);
+  jspb.Message.setRepeatedWrapperField(this, 2, value);
 };
 
 
@@ -4244,10 +4040,9 @@ proto.google.protobuf.EnumDescriptorProto.prototype.addValue = function(opt_valu
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.EnumDescriptorProto} returns this
  */
 proto.google.protobuf.EnumDescriptorProto.prototype.clearValueList = function() {
-  return this.setValueList([]);
+  this.setValueList([]);
 };
 
 
@@ -4261,21 +4056,17 @@ proto.google.protobuf.EnumDescriptorProto.prototype.getOptions = function() {
 };
 
 
-/**
- * @param {?proto.google.protobuf.EnumOptions|undefined} value
- * @return {!proto.google.protobuf.EnumDescriptorProto} returns this
-*/
+/** @param {?proto.google.protobuf.EnumOptions|undefined} value */
 proto.google.protobuf.EnumDescriptorProto.prototype.setOptions = function(value) {
-  return jspb.Message.setWrapperField(this, 3, value);
+  jspb.Message.setWrapperField(this, 3, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.google.protobuf.EnumDescriptorProto} returns this
  */
 proto.google.protobuf.EnumDescriptorProto.prototype.clearOptions = function() {
-  return this.setOptions(undefined);
+  this.setOptions(undefined);
 };
 
 
@@ -4298,12 +4089,9 @@ proto.google.protobuf.EnumDescriptorProto.prototype.getReservedRangeList = funct
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.EnumDescriptorProto.EnumReservedRange>} value
- * @return {!proto.google.protobuf.EnumDescriptorProto} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.EnumDescriptorProto.EnumReservedRange>} value */
 proto.google.protobuf.EnumDescriptorProto.prototype.setReservedRangeList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 4, value);
+  jspb.Message.setRepeatedWrapperField(this, 4, value);
 };
 
 
@@ -4319,10 +4107,9 @@ proto.google.protobuf.EnumDescriptorProto.prototype.addReservedRange = function(
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.EnumDescriptorProto} returns this
  */
 proto.google.protobuf.EnumDescriptorProto.prototype.clearReservedRangeList = function() {
-  return this.setReservedRangeList([]);
+  this.setReservedRangeList([]);
 };
 
 
@@ -4335,31 +4122,26 @@ proto.google.protobuf.EnumDescriptorProto.prototype.getReservedNameList = functi
 };
 
 
-/**
- * @param {!Array<string>} value
- * @return {!proto.google.protobuf.EnumDescriptorProto} returns this
- */
+/** @param {!Array<string>} value */
 proto.google.protobuf.EnumDescriptorProto.prototype.setReservedNameList = function(value) {
-  return jspb.Message.setField(this, 5, value || []);
+  jspb.Message.setField(this, 5, value || []);
 };
 
 
 /**
  * @param {string} value
  * @param {number=} opt_index
- * @return {!proto.google.protobuf.EnumDescriptorProto} returns this
  */
 proto.google.protobuf.EnumDescriptorProto.prototype.addReservedName = function(value, opt_index) {
-  return jspb.Message.addToRepeatedField(this, 5, value, opt_index);
+  jspb.Message.addToRepeatedField(this, 5, value, opt_index);
 };
 
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.EnumDescriptorProto} returns this
  */
 proto.google.protobuf.EnumDescriptorProto.prototype.clearReservedNameList = function() {
-  return this.setReservedNameList([]);
+  this.setReservedNameList([]);
 };
 
 
@@ -4368,15 +4150,13 @@ proto.google.protobuf.EnumDescriptorProto.prototype.clearReservedNameList = func
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.EnumValueDescriptorProto.prototype.toObject = function(opt_includeInstance) {
@@ -4386,8 +4166,8 @@ proto.google.protobuf.EnumValueDescriptorProto.prototype.toObject = function(opt
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.EnumValueDescriptorProto} msg The msg instance to transform.
  * @return {!Object}
@@ -4395,8 +4175,8 @@ proto.google.protobuf.EnumValueDescriptorProto.prototype.toObject = function(opt
  */
 proto.google.protobuf.EnumValueDescriptorProto.toObject = function(includeInstance, msg) {
   var f, obj = {
-    name: (f = jspb.Message.getField(msg, 1)) == null ? undefined : f,
-    number: (f = jspb.Message.getField(msg, 2)) == null ? undefined : f,
+    name: jspb.Message.getField(msg, 1),
+    number: jspb.Message.getField(msg, 2),
     options: (f = msg.getOptions()) && proto.google.protobuf.EnumValueOptions.toObject(includeInstance, f)
   };
 
@@ -4510,21 +4290,17 @@ proto.google.protobuf.EnumValueDescriptorProto.prototype.getName = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.EnumValueDescriptorProto} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.EnumValueDescriptorProto.prototype.setName = function(value) {
-  return jspb.Message.setField(this, 1, value);
+  jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.EnumValueDescriptorProto} returns this
  */
 proto.google.protobuf.EnumValueDescriptorProto.prototype.clearName = function() {
-  return jspb.Message.setField(this, 1, undefined);
+  jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -4546,21 +4322,17 @@ proto.google.protobuf.EnumValueDescriptorProto.prototype.getNumber = function() 
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.google.protobuf.EnumValueDescriptorProto} returns this
- */
+/** @param {number} value */
 proto.google.protobuf.EnumValueDescriptorProto.prototype.setNumber = function(value) {
-  return jspb.Message.setField(this, 2, value);
+  jspb.Message.setField(this, 2, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.EnumValueDescriptorProto} returns this
  */
 proto.google.protobuf.EnumValueDescriptorProto.prototype.clearNumber = function() {
-  return jspb.Message.setField(this, 2, undefined);
+  jspb.Message.setField(this, 2, undefined);
 };
 
 
@@ -4583,21 +4355,17 @@ proto.google.protobuf.EnumValueDescriptorProto.prototype.getOptions = function()
 };
 
 
-/**
- * @param {?proto.google.protobuf.EnumValueOptions|undefined} value
- * @return {!proto.google.protobuf.EnumValueDescriptorProto} returns this
-*/
+/** @param {?proto.google.protobuf.EnumValueOptions|undefined} value */
 proto.google.protobuf.EnumValueDescriptorProto.prototype.setOptions = function(value) {
-  return jspb.Message.setWrapperField(this, 3, value);
+  jspb.Message.setWrapperField(this, 3, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.google.protobuf.EnumValueDescriptorProto} returns this
  */
 proto.google.protobuf.EnumValueDescriptorProto.prototype.clearOptions = function() {
-  return this.setOptions(undefined);
+  this.setOptions(undefined);
 };
 
 
@@ -4622,15 +4390,13 @@ proto.google.protobuf.ServiceDescriptorProto.repeatedFields_ = [2];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.ServiceDescriptorProto.prototype.toObject = function(opt_includeInstance) {
@@ -4640,8 +4406,8 @@ proto.google.protobuf.ServiceDescriptorProto.prototype.toObject = function(opt_i
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.ServiceDescriptorProto} msg The msg instance to transform.
  * @return {!Object}
@@ -4649,7 +4415,7 @@ proto.google.protobuf.ServiceDescriptorProto.prototype.toObject = function(opt_i
  */
 proto.google.protobuf.ServiceDescriptorProto.toObject = function(includeInstance, msg) {
   var f, obj = {
-    name: (f = jspb.Message.getField(msg, 1)) == null ? undefined : f,
+    name: jspb.Message.getField(msg, 1),
     methodList: jspb.Message.toObjectList(msg.getMethodList(),
     proto.google.protobuf.MethodDescriptorProto.toObject, includeInstance),
     options: (f = msg.getOptions()) && proto.google.protobuf.ServiceOptions.toObject(includeInstance, f)
@@ -4767,21 +4533,17 @@ proto.google.protobuf.ServiceDescriptorProto.prototype.getName = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.ServiceDescriptorProto} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.ServiceDescriptorProto.prototype.setName = function(value) {
-  return jspb.Message.setField(this, 1, value);
+  jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.ServiceDescriptorProto} returns this
  */
 proto.google.protobuf.ServiceDescriptorProto.prototype.clearName = function() {
-  return jspb.Message.setField(this, 1, undefined);
+  jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -4804,12 +4566,9 @@ proto.google.protobuf.ServiceDescriptorProto.prototype.getMethodList = function(
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.MethodDescriptorProto>} value
- * @return {!proto.google.protobuf.ServiceDescriptorProto} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.MethodDescriptorProto>} value */
 proto.google.protobuf.ServiceDescriptorProto.prototype.setMethodList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 2, value);
+  jspb.Message.setRepeatedWrapperField(this, 2, value);
 };
 
 
@@ -4825,10 +4584,9 @@ proto.google.protobuf.ServiceDescriptorProto.prototype.addMethod = function(opt_
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.ServiceDescriptorProto} returns this
  */
 proto.google.protobuf.ServiceDescriptorProto.prototype.clearMethodList = function() {
-  return this.setMethodList([]);
+  this.setMethodList([]);
 };
 
 
@@ -4842,21 +4600,17 @@ proto.google.protobuf.ServiceDescriptorProto.prototype.getOptions = function() {
 };
 
 
-/**
- * @param {?proto.google.protobuf.ServiceOptions|undefined} value
- * @return {!proto.google.protobuf.ServiceDescriptorProto} returns this
-*/
+/** @param {?proto.google.protobuf.ServiceOptions|undefined} value */
 proto.google.protobuf.ServiceDescriptorProto.prototype.setOptions = function(value) {
-  return jspb.Message.setWrapperField(this, 3, value);
+  jspb.Message.setWrapperField(this, 3, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.google.protobuf.ServiceDescriptorProto} returns this
  */
 proto.google.protobuf.ServiceDescriptorProto.prototype.clearOptions = function() {
-  return this.setOptions(undefined);
+  this.setOptions(undefined);
 };
 
 
@@ -4874,15 +4628,13 @@ proto.google.protobuf.ServiceDescriptorProto.prototype.hasOptions = function() {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.MethodDescriptorProto.prototype.toObject = function(opt_includeInstance) {
@@ -4892,8 +4644,8 @@ proto.google.protobuf.MethodDescriptorProto.prototype.toObject = function(opt_in
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.MethodDescriptorProto} msg The msg instance to transform.
  * @return {!Object}
@@ -4901,12 +4653,12 @@ proto.google.protobuf.MethodDescriptorProto.prototype.toObject = function(opt_in
  */
 proto.google.protobuf.MethodDescriptorProto.toObject = function(includeInstance, msg) {
   var f, obj = {
-    name: (f = jspb.Message.getField(msg, 1)) == null ? undefined : f,
-    inputType: (f = jspb.Message.getField(msg, 2)) == null ? undefined : f,
-    outputType: (f = jspb.Message.getField(msg, 3)) == null ? undefined : f,
+    name: jspb.Message.getField(msg, 1),
+    inputType: jspb.Message.getField(msg, 2),
+    outputType: jspb.Message.getField(msg, 3),
     options: (f = msg.getOptions()) && proto.google.protobuf.MethodOptions.toObject(includeInstance, f),
-    clientStreaming: jspb.Message.getBooleanFieldWithDefault(msg, 5, false),
-    serverStreaming: jspb.Message.getBooleanFieldWithDefault(msg, 6, false)
+    clientStreaming: jspb.Message.getFieldWithDefault(msg, 5, false),
+    serverStreaming: jspb.Message.getFieldWithDefault(msg, 6, false)
   };
 
   if (includeInstance) {
@@ -5052,21 +4804,17 @@ proto.google.protobuf.MethodDescriptorProto.prototype.getName = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.MethodDescriptorProto} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.MethodDescriptorProto.prototype.setName = function(value) {
-  return jspb.Message.setField(this, 1, value);
+  jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.MethodDescriptorProto} returns this
  */
 proto.google.protobuf.MethodDescriptorProto.prototype.clearName = function() {
-  return jspb.Message.setField(this, 1, undefined);
+  jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -5088,21 +4836,17 @@ proto.google.protobuf.MethodDescriptorProto.prototype.getInputType = function() 
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.MethodDescriptorProto} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.MethodDescriptorProto.prototype.setInputType = function(value) {
-  return jspb.Message.setField(this, 2, value);
+  jspb.Message.setField(this, 2, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.MethodDescriptorProto} returns this
  */
 proto.google.protobuf.MethodDescriptorProto.prototype.clearInputType = function() {
-  return jspb.Message.setField(this, 2, undefined);
+  jspb.Message.setField(this, 2, undefined);
 };
 
 
@@ -5124,21 +4868,17 @@ proto.google.protobuf.MethodDescriptorProto.prototype.getOutputType = function()
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.MethodDescriptorProto} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.MethodDescriptorProto.prototype.setOutputType = function(value) {
-  return jspb.Message.setField(this, 3, value);
+  jspb.Message.setField(this, 3, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.MethodDescriptorProto} returns this
  */
 proto.google.protobuf.MethodDescriptorProto.prototype.clearOutputType = function() {
-  return jspb.Message.setField(this, 3, undefined);
+  jspb.Message.setField(this, 3, undefined);
 };
 
 
@@ -5161,21 +4901,17 @@ proto.google.protobuf.MethodDescriptorProto.prototype.getOptions = function() {
 };
 
 
-/**
- * @param {?proto.google.protobuf.MethodOptions|undefined} value
- * @return {!proto.google.protobuf.MethodDescriptorProto} returns this
-*/
+/** @param {?proto.google.protobuf.MethodOptions|undefined} value */
 proto.google.protobuf.MethodDescriptorProto.prototype.setOptions = function(value) {
-  return jspb.Message.setWrapperField(this, 4, value);
+  jspb.Message.setWrapperField(this, 4, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.google.protobuf.MethodDescriptorProto} returns this
  */
 proto.google.protobuf.MethodDescriptorProto.prototype.clearOptions = function() {
-  return this.setOptions(undefined);
+  this.setOptions(undefined);
 };
 
 
@@ -5190,28 +4926,26 @@ proto.google.protobuf.MethodDescriptorProto.prototype.hasOptions = function() {
 
 /**
  * optional bool client_streaming = 5;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.MethodDescriptorProto.prototype.getClientStreaming = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 5, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 5, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.MethodDescriptorProto} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.MethodDescriptorProto.prototype.setClientStreaming = function(value) {
-  return jspb.Message.setField(this, 5, value);
+  jspb.Message.setField(this, 5, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.MethodDescriptorProto} returns this
  */
 proto.google.protobuf.MethodDescriptorProto.prototype.clearClientStreaming = function() {
-  return jspb.Message.setField(this, 5, undefined);
+  jspb.Message.setField(this, 5, undefined);
 };
 
 
@@ -5226,28 +4960,26 @@ proto.google.protobuf.MethodDescriptorProto.prototype.hasClientStreaming = funct
 
 /**
  * optional bool server_streaming = 6;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.MethodDescriptorProto.prototype.getServerStreaming = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 6, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 6, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.MethodDescriptorProto} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.MethodDescriptorProto.prototype.setServerStreaming = function(value) {
-  return jspb.Message.setField(this, 6, value);
+  jspb.Message.setField(this, 6, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.MethodDescriptorProto} returns this
  */
 proto.google.protobuf.MethodDescriptorProto.prototype.clearServerStreaming = function() {
-  return jspb.Message.setField(this, 6, undefined);
+  jspb.Message.setField(this, 6, undefined);
 };
 
 
@@ -5272,15 +5004,13 @@ proto.google.protobuf.FileOptions.repeatedFields_ = [999];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.FileOptions.prototype.toObject = function(opt_includeInstance) {
@@ -5290,8 +5020,8 @@ proto.google.protobuf.FileOptions.prototype.toObject = function(opt_includeInsta
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.FileOptions} msg The msg instance to transform.
  * @return {!Object}
@@ -5299,26 +5029,26 @@ proto.google.protobuf.FileOptions.prototype.toObject = function(opt_includeInsta
  */
 proto.google.protobuf.FileOptions.toObject = function(includeInstance, msg) {
   var f, obj = {
-    javaPackage: (f = jspb.Message.getField(msg, 1)) == null ? undefined : f,
-    javaOuterClassname: (f = jspb.Message.getField(msg, 8)) == null ? undefined : f,
-    javaMultipleFiles: jspb.Message.getBooleanFieldWithDefault(msg, 10, false),
-    javaGenerateEqualsAndHash: (f = jspb.Message.getBooleanField(msg, 20)) == null ? undefined : f,
-    javaStringCheckUtf8: jspb.Message.getBooleanFieldWithDefault(msg, 27, false),
+    javaPackage: jspb.Message.getField(msg, 1),
+    javaOuterClassname: jspb.Message.getField(msg, 8),
+    javaMultipleFiles: jspb.Message.getFieldWithDefault(msg, 10, false),
+    javaGenerateEqualsAndHash: jspb.Message.getField(msg, 20),
+    javaStringCheckUtf8: jspb.Message.getFieldWithDefault(msg, 27, false),
     optimizeFor: jspb.Message.getFieldWithDefault(msg, 9, 1),
-    goPackage: (f = jspb.Message.getField(msg, 11)) == null ? undefined : f,
-    ccGenericServices: jspb.Message.getBooleanFieldWithDefault(msg, 16, false),
-    javaGenericServices: jspb.Message.getBooleanFieldWithDefault(msg, 17, false),
-    pyGenericServices: jspb.Message.getBooleanFieldWithDefault(msg, 18, false),
-    phpGenericServices: jspb.Message.getBooleanFieldWithDefault(msg, 42, false),
-    deprecated: jspb.Message.getBooleanFieldWithDefault(msg, 23, false),
-    ccEnableArenas: jspb.Message.getBooleanFieldWithDefault(msg, 31, false),
-    objcClassPrefix: (f = jspb.Message.getField(msg, 36)) == null ? undefined : f,
-    csharpNamespace: (f = jspb.Message.getField(msg, 37)) == null ? undefined : f,
-    swiftPrefix: (f = jspb.Message.getField(msg, 39)) == null ? undefined : f,
-    phpClassPrefix: (f = jspb.Message.getField(msg, 40)) == null ? undefined : f,
-    phpNamespace: (f = jspb.Message.getField(msg, 41)) == null ? undefined : f,
-    phpMetadataNamespace: (f = jspb.Message.getField(msg, 44)) == null ? undefined : f,
-    rubyPackage: (f = jspb.Message.getField(msg, 45)) == null ? undefined : f,
+    goPackage: jspb.Message.getField(msg, 11),
+    ccGenericServices: jspb.Message.getFieldWithDefault(msg, 16, false),
+    javaGenericServices: jspb.Message.getFieldWithDefault(msg, 17, false),
+    pyGenericServices: jspb.Message.getFieldWithDefault(msg, 18, false),
+    phpGenericServices: jspb.Message.getFieldWithDefault(msg, 42, false),
+    deprecated: jspb.Message.getFieldWithDefault(msg, 23, false),
+    ccEnableArenas: jspb.Message.getFieldWithDefault(msg, 31, false),
+    objcClassPrefix: jspb.Message.getField(msg, 36),
+    csharpNamespace: jspb.Message.getField(msg, 37),
+    swiftPrefix: jspb.Message.getField(msg, 39),
+    phpClassPrefix: jspb.Message.getField(msg, 40),
+    phpNamespace: jspb.Message.getField(msg, 41),
+    phpMetadataNamespace: jspb.Message.getField(msg, 44),
+    rubyPackage: jspb.Message.getField(msg, 45),
     uninterpretedOptionList: jspb.Message.toObjectList(msg.getUninterpretedOptionList(),
     proto.google.protobuf.UninterpretedOption.toObject, includeInstance)
   };
@@ -5648,21 +5378,17 @@ proto.google.protobuf.FileOptions.prototype.getJavaPackage = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FileOptions.prototype.setJavaPackage = function(value) {
-  return jspb.Message.setField(this, 1, value);
+  jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearJavaPackage = function() {
-  return jspb.Message.setField(this, 1, undefined);
+  jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -5684,21 +5410,17 @@ proto.google.protobuf.FileOptions.prototype.getJavaOuterClassname = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FileOptions.prototype.setJavaOuterClassname = function(value) {
-  return jspb.Message.setField(this, 8, value);
+  jspb.Message.setField(this, 8, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearJavaOuterClassname = function() {
-  return jspb.Message.setField(this, 8, undefined);
+  jspb.Message.setField(this, 8, undefined);
 };
 
 
@@ -5713,28 +5435,26 @@ proto.google.protobuf.FileOptions.prototype.hasJavaOuterClassname = function() {
 
 /**
  * optional bool java_multiple_files = 10;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.FileOptions.prototype.getJavaMultipleFiles = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 10, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 10, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.FileOptions.prototype.setJavaMultipleFiles = function(value) {
-  return jspb.Message.setField(this, 10, value);
+  jspb.Message.setField(this, 10, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearJavaMultipleFiles = function() {
-  return jspb.Message.setField(this, 10, undefined);
+  jspb.Message.setField(this, 10, undefined);
 };
 
 
@@ -5749,28 +5469,26 @@ proto.google.protobuf.FileOptions.prototype.hasJavaMultipleFiles = function() {
 
 /**
  * optional bool java_generate_equals_and_hash = 20;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.FileOptions.prototype.getJavaGenerateEqualsAndHash = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 20, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 20, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.FileOptions.prototype.setJavaGenerateEqualsAndHash = function(value) {
-  return jspb.Message.setField(this, 20, value);
+  jspb.Message.setField(this, 20, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearJavaGenerateEqualsAndHash = function() {
-  return jspb.Message.setField(this, 20, undefined);
+  jspb.Message.setField(this, 20, undefined);
 };
 
 
@@ -5785,28 +5503,26 @@ proto.google.protobuf.FileOptions.prototype.hasJavaGenerateEqualsAndHash = funct
 
 /**
  * optional bool java_string_check_utf8 = 27;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.FileOptions.prototype.getJavaStringCheckUtf8 = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 27, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 27, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.FileOptions.prototype.setJavaStringCheckUtf8 = function(value) {
-  return jspb.Message.setField(this, 27, value);
+  jspb.Message.setField(this, 27, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearJavaStringCheckUtf8 = function() {
-  return jspb.Message.setField(this, 27, undefined);
+  jspb.Message.setField(this, 27, undefined);
 };
 
 
@@ -5828,21 +5544,17 @@ proto.google.protobuf.FileOptions.prototype.getOptimizeFor = function() {
 };
 
 
-/**
- * @param {!proto.google.protobuf.FileOptions.OptimizeMode} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {!proto.google.protobuf.FileOptions.OptimizeMode} value */
 proto.google.protobuf.FileOptions.prototype.setOptimizeFor = function(value) {
-  return jspb.Message.setField(this, 9, value);
+  jspb.Message.setField(this, 9, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearOptimizeFor = function() {
-  return jspb.Message.setField(this, 9, undefined);
+  jspb.Message.setField(this, 9, undefined);
 };
 
 
@@ -5864,21 +5576,17 @@ proto.google.protobuf.FileOptions.prototype.getGoPackage = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FileOptions.prototype.setGoPackage = function(value) {
-  return jspb.Message.setField(this, 11, value);
+  jspb.Message.setField(this, 11, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearGoPackage = function() {
-  return jspb.Message.setField(this, 11, undefined);
+  jspb.Message.setField(this, 11, undefined);
 };
 
 
@@ -5893,28 +5601,26 @@ proto.google.protobuf.FileOptions.prototype.hasGoPackage = function() {
 
 /**
  * optional bool cc_generic_services = 16;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.FileOptions.prototype.getCcGenericServices = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 16, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 16, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.FileOptions.prototype.setCcGenericServices = function(value) {
-  return jspb.Message.setField(this, 16, value);
+  jspb.Message.setField(this, 16, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearCcGenericServices = function() {
-  return jspb.Message.setField(this, 16, undefined);
+  jspb.Message.setField(this, 16, undefined);
 };
 
 
@@ -5929,28 +5635,26 @@ proto.google.protobuf.FileOptions.prototype.hasCcGenericServices = function() {
 
 /**
  * optional bool java_generic_services = 17;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.FileOptions.prototype.getJavaGenericServices = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 17, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 17, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.FileOptions.prototype.setJavaGenericServices = function(value) {
-  return jspb.Message.setField(this, 17, value);
+  jspb.Message.setField(this, 17, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearJavaGenericServices = function() {
-  return jspb.Message.setField(this, 17, undefined);
+  jspb.Message.setField(this, 17, undefined);
 };
 
 
@@ -5965,28 +5669,26 @@ proto.google.protobuf.FileOptions.prototype.hasJavaGenericServices = function() 
 
 /**
  * optional bool py_generic_services = 18;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.FileOptions.prototype.getPyGenericServices = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 18, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 18, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.FileOptions.prototype.setPyGenericServices = function(value) {
-  return jspb.Message.setField(this, 18, value);
+  jspb.Message.setField(this, 18, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearPyGenericServices = function() {
-  return jspb.Message.setField(this, 18, undefined);
+  jspb.Message.setField(this, 18, undefined);
 };
 
 
@@ -6001,28 +5703,26 @@ proto.google.protobuf.FileOptions.prototype.hasPyGenericServices = function() {
 
 /**
  * optional bool php_generic_services = 42;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.FileOptions.prototype.getPhpGenericServices = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 42, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 42, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.FileOptions.prototype.setPhpGenericServices = function(value) {
-  return jspb.Message.setField(this, 42, value);
+  jspb.Message.setField(this, 42, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearPhpGenericServices = function() {
-  return jspb.Message.setField(this, 42, undefined);
+  jspb.Message.setField(this, 42, undefined);
 };
 
 
@@ -6037,28 +5737,26 @@ proto.google.protobuf.FileOptions.prototype.hasPhpGenericServices = function() {
 
 /**
  * optional bool deprecated = 23;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.FileOptions.prototype.getDeprecated = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 23, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 23, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.FileOptions.prototype.setDeprecated = function(value) {
-  return jspb.Message.setField(this, 23, value);
+  jspb.Message.setField(this, 23, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearDeprecated = function() {
-  return jspb.Message.setField(this, 23, undefined);
+  jspb.Message.setField(this, 23, undefined);
 };
 
 
@@ -6073,28 +5771,26 @@ proto.google.protobuf.FileOptions.prototype.hasDeprecated = function() {
 
 /**
  * optional bool cc_enable_arenas = 31;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.FileOptions.prototype.getCcEnableArenas = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 31, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 31, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.FileOptions.prototype.setCcEnableArenas = function(value) {
-  return jspb.Message.setField(this, 31, value);
+  jspb.Message.setField(this, 31, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearCcEnableArenas = function() {
-  return jspb.Message.setField(this, 31, undefined);
+  jspb.Message.setField(this, 31, undefined);
 };
 
 
@@ -6116,21 +5812,17 @@ proto.google.protobuf.FileOptions.prototype.getObjcClassPrefix = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FileOptions.prototype.setObjcClassPrefix = function(value) {
-  return jspb.Message.setField(this, 36, value);
+  jspb.Message.setField(this, 36, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearObjcClassPrefix = function() {
-  return jspb.Message.setField(this, 36, undefined);
+  jspb.Message.setField(this, 36, undefined);
 };
 
 
@@ -6152,21 +5844,17 @@ proto.google.protobuf.FileOptions.prototype.getCsharpNamespace = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FileOptions.prototype.setCsharpNamespace = function(value) {
-  return jspb.Message.setField(this, 37, value);
+  jspb.Message.setField(this, 37, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearCsharpNamespace = function() {
-  return jspb.Message.setField(this, 37, undefined);
+  jspb.Message.setField(this, 37, undefined);
 };
 
 
@@ -6188,21 +5876,17 @@ proto.google.protobuf.FileOptions.prototype.getSwiftPrefix = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FileOptions.prototype.setSwiftPrefix = function(value) {
-  return jspb.Message.setField(this, 39, value);
+  jspb.Message.setField(this, 39, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearSwiftPrefix = function() {
-  return jspb.Message.setField(this, 39, undefined);
+  jspb.Message.setField(this, 39, undefined);
 };
 
 
@@ -6224,21 +5908,17 @@ proto.google.protobuf.FileOptions.prototype.getPhpClassPrefix = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FileOptions.prototype.setPhpClassPrefix = function(value) {
-  return jspb.Message.setField(this, 40, value);
+  jspb.Message.setField(this, 40, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearPhpClassPrefix = function() {
-  return jspb.Message.setField(this, 40, undefined);
+  jspb.Message.setField(this, 40, undefined);
 };
 
 
@@ -6260,21 +5940,17 @@ proto.google.protobuf.FileOptions.prototype.getPhpNamespace = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FileOptions.prototype.setPhpNamespace = function(value) {
-  return jspb.Message.setField(this, 41, value);
+  jspb.Message.setField(this, 41, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearPhpNamespace = function() {
-  return jspb.Message.setField(this, 41, undefined);
+  jspb.Message.setField(this, 41, undefined);
 };
 
 
@@ -6296,21 +5972,17 @@ proto.google.protobuf.FileOptions.prototype.getPhpMetadataNamespace = function()
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FileOptions.prototype.setPhpMetadataNamespace = function(value) {
-  return jspb.Message.setField(this, 44, value);
+  jspb.Message.setField(this, 44, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearPhpMetadataNamespace = function() {
-  return jspb.Message.setField(this, 44, undefined);
+  jspb.Message.setField(this, 44, undefined);
 };
 
 
@@ -6332,21 +6004,17 @@ proto.google.protobuf.FileOptions.prototype.getRubyPackage = function() {
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.FileOptions} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.FileOptions.prototype.setRubyPackage = function(value) {
-  return jspb.Message.setField(this, 45, value);
+  jspb.Message.setField(this, 45, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearRubyPackage = function() {
-  return jspb.Message.setField(this, 45, undefined);
+  jspb.Message.setField(this, 45, undefined);
 };
 
 
@@ -6369,12 +6037,9 @@ proto.google.protobuf.FileOptions.prototype.getUninterpretedOptionList = functio
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.UninterpretedOption>} value
- * @return {!proto.google.protobuf.FileOptions} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.UninterpretedOption>} value */
 proto.google.protobuf.FileOptions.prototype.setUninterpretedOptionList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 999, value);
+  jspb.Message.setRepeatedWrapperField(this, 999, value);
 };
 
 
@@ -6390,10 +6055,9 @@ proto.google.protobuf.FileOptions.prototype.addUninterpretedOption = function(op
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.FileOptions} returns this
  */
 proto.google.protobuf.FileOptions.prototype.clearUninterpretedOptionList = function() {
-  return this.setUninterpretedOptionList([]);
+  this.setUninterpretedOptionList([]);
 };
 
 
@@ -6409,15 +6073,13 @@ proto.google.protobuf.MessageOptions.repeatedFields_ = [999];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.MessageOptions.prototype.toObject = function(opt_includeInstance) {
@@ -6427,8 +6089,8 @@ proto.google.protobuf.MessageOptions.prototype.toObject = function(opt_includeIn
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.MessageOptions} msg The msg instance to transform.
  * @return {!Object}
@@ -6436,10 +6098,10 @@ proto.google.protobuf.MessageOptions.prototype.toObject = function(opt_includeIn
  */
 proto.google.protobuf.MessageOptions.toObject = function(includeInstance, msg) {
   var f, obj = {
-    messageSetWireFormat: jspb.Message.getBooleanFieldWithDefault(msg, 1, false),
-    noStandardDescriptorAccessor: jspb.Message.getBooleanFieldWithDefault(msg, 2, false),
-    deprecated: jspb.Message.getBooleanFieldWithDefault(msg, 3, false),
-    mapEntry: (f = jspb.Message.getBooleanField(msg, 7)) == null ? undefined : f,
+    messageSetWireFormat: jspb.Message.getFieldWithDefault(msg, 1, false),
+    noStandardDescriptorAccessor: jspb.Message.getFieldWithDefault(msg, 2, false),
+    deprecated: jspb.Message.getFieldWithDefault(msg, 3, false),
+    mapEntry: jspb.Message.getField(msg, 7),
     uninterpretedOptionList: jspb.Message.toObjectList(msg.getUninterpretedOptionList(),
     proto.google.protobuf.UninterpretedOption.toObject, includeInstance)
   };
@@ -6577,28 +6239,26 @@ proto.google.protobuf.MessageOptions.serializeBinaryToWriter = function(message,
 
 /**
  * optional bool message_set_wire_format = 1;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.MessageOptions.prototype.getMessageSetWireFormat = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 1, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 1, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.MessageOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.MessageOptions.prototype.setMessageSetWireFormat = function(value) {
-  return jspb.Message.setField(this, 1, value);
+  jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.MessageOptions} returns this
  */
 proto.google.protobuf.MessageOptions.prototype.clearMessageSetWireFormat = function() {
-  return jspb.Message.setField(this, 1, undefined);
+  jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -6613,28 +6273,26 @@ proto.google.protobuf.MessageOptions.prototype.hasMessageSetWireFormat = functio
 
 /**
  * optional bool no_standard_descriptor_accessor = 2;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.MessageOptions.prototype.getNoStandardDescriptorAccessor = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 2, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 2, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.MessageOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.MessageOptions.prototype.setNoStandardDescriptorAccessor = function(value) {
-  return jspb.Message.setField(this, 2, value);
+  jspb.Message.setField(this, 2, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.MessageOptions} returns this
  */
 proto.google.protobuf.MessageOptions.prototype.clearNoStandardDescriptorAccessor = function() {
-  return jspb.Message.setField(this, 2, undefined);
+  jspb.Message.setField(this, 2, undefined);
 };
 
 
@@ -6649,28 +6307,26 @@ proto.google.protobuf.MessageOptions.prototype.hasNoStandardDescriptorAccessor =
 
 /**
  * optional bool deprecated = 3;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.MessageOptions.prototype.getDeprecated = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 3, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 3, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.MessageOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.MessageOptions.prototype.setDeprecated = function(value) {
-  return jspb.Message.setField(this, 3, value);
+  jspb.Message.setField(this, 3, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.MessageOptions} returns this
  */
 proto.google.protobuf.MessageOptions.prototype.clearDeprecated = function() {
-  return jspb.Message.setField(this, 3, undefined);
+  jspb.Message.setField(this, 3, undefined);
 };
 
 
@@ -6685,28 +6341,26 @@ proto.google.protobuf.MessageOptions.prototype.hasDeprecated = function() {
 
 /**
  * optional bool map_entry = 7;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.MessageOptions.prototype.getMapEntry = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 7, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 7, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.MessageOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.MessageOptions.prototype.setMapEntry = function(value) {
-  return jspb.Message.setField(this, 7, value);
+  jspb.Message.setField(this, 7, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.MessageOptions} returns this
  */
 proto.google.protobuf.MessageOptions.prototype.clearMapEntry = function() {
-  return jspb.Message.setField(this, 7, undefined);
+  jspb.Message.setField(this, 7, undefined);
 };
 
 
@@ -6729,12 +6383,9 @@ proto.google.protobuf.MessageOptions.prototype.getUninterpretedOptionList = func
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.UninterpretedOption>} value
- * @return {!proto.google.protobuf.MessageOptions} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.UninterpretedOption>} value */
 proto.google.protobuf.MessageOptions.prototype.setUninterpretedOptionList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 999, value);
+  jspb.Message.setRepeatedWrapperField(this, 999, value);
 };
 
 
@@ -6750,10 +6401,9 @@ proto.google.protobuf.MessageOptions.prototype.addUninterpretedOption = function
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.MessageOptions} returns this
  */
 proto.google.protobuf.MessageOptions.prototype.clearUninterpretedOptionList = function() {
-  return this.setUninterpretedOptionList([]);
+  this.setUninterpretedOptionList([]);
 };
 
 
@@ -6769,15 +6419,13 @@ proto.google.protobuf.FieldOptions.repeatedFields_ = [999];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.FieldOptions.prototype.toObject = function(opt_includeInstance) {
@@ -6787,8 +6435,8 @@ proto.google.protobuf.FieldOptions.prototype.toObject = function(opt_includeInst
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.FieldOptions} msg The msg instance to transform.
  * @return {!Object}
@@ -6797,11 +6445,11 @@ proto.google.protobuf.FieldOptions.prototype.toObject = function(opt_includeInst
 proto.google.protobuf.FieldOptions.toObject = function(includeInstance, msg) {
   var f, obj = {
     ctype: jspb.Message.getFieldWithDefault(msg, 1, 0),
-    packed: (f = jspb.Message.getBooleanField(msg, 2)) == null ? undefined : f,
+    packed: jspb.Message.getField(msg, 2),
     jstype: jspb.Message.getFieldWithDefault(msg, 6, 0),
-    lazy: jspb.Message.getBooleanFieldWithDefault(msg, 5, false),
-    deprecated: jspb.Message.getBooleanFieldWithDefault(msg, 3, false),
-    weak: jspb.Message.getBooleanFieldWithDefault(msg, 10, false),
+    lazy: jspb.Message.getFieldWithDefault(msg, 5, false),
+    deprecated: jspb.Message.getFieldWithDefault(msg, 3, false),
+    weak: jspb.Message.getFieldWithDefault(msg, 10, false),
     uninterpretedOptionList: jspb.Message.toObjectList(msg.getUninterpretedOptionList(),
     proto.google.protobuf.UninterpretedOption.toObject, includeInstance)
   };
@@ -6986,21 +6634,17 @@ proto.google.protobuf.FieldOptions.prototype.getCtype = function() {
 };
 
 
-/**
- * @param {!proto.google.protobuf.FieldOptions.CType} value
- * @return {!proto.google.protobuf.FieldOptions} returns this
- */
+/** @param {!proto.google.protobuf.FieldOptions.CType} value */
 proto.google.protobuf.FieldOptions.prototype.setCtype = function(value) {
-  return jspb.Message.setField(this, 1, value);
+  jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FieldOptions} returns this
  */
 proto.google.protobuf.FieldOptions.prototype.clearCtype = function() {
-  return jspb.Message.setField(this, 1, undefined);
+  jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -7015,28 +6659,26 @@ proto.google.protobuf.FieldOptions.prototype.hasCtype = function() {
 
 /**
  * optional bool packed = 2;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.FieldOptions.prototype.getPacked = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 2, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 2, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.FieldOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.FieldOptions.prototype.setPacked = function(value) {
-  return jspb.Message.setField(this, 2, value);
+  jspb.Message.setField(this, 2, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FieldOptions} returns this
  */
 proto.google.protobuf.FieldOptions.prototype.clearPacked = function() {
-  return jspb.Message.setField(this, 2, undefined);
+  jspb.Message.setField(this, 2, undefined);
 };
 
 
@@ -7058,21 +6700,17 @@ proto.google.protobuf.FieldOptions.prototype.getJstype = function() {
 };
 
 
-/**
- * @param {!proto.google.protobuf.FieldOptions.JSType} value
- * @return {!proto.google.protobuf.FieldOptions} returns this
- */
+/** @param {!proto.google.protobuf.FieldOptions.JSType} value */
 proto.google.protobuf.FieldOptions.prototype.setJstype = function(value) {
-  return jspb.Message.setField(this, 6, value);
+  jspb.Message.setField(this, 6, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FieldOptions} returns this
  */
 proto.google.protobuf.FieldOptions.prototype.clearJstype = function() {
-  return jspb.Message.setField(this, 6, undefined);
+  jspb.Message.setField(this, 6, undefined);
 };
 
 
@@ -7087,28 +6725,26 @@ proto.google.protobuf.FieldOptions.prototype.hasJstype = function() {
 
 /**
  * optional bool lazy = 5;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.FieldOptions.prototype.getLazy = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 5, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 5, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.FieldOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.FieldOptions.prototype.setLazy = function(value) {
-  return jspb.Message.setField(this, 5, value);
+  jspb.Message.setField(this, 5, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FieldOptions} returns this
  */
 proto.google.protobuf.FieldOptions.prototype.clearLazy = function() {
-  return jspb.Message.setField(this, 5, undefined);
+  jspb.Message.setField(this, 5, undefined);
 };
 
 
@@ -7123,28 +6759,26 @@ proto.google.protobuf.FieldOptions.prototype.hasLazy = function() {
 
 /**
  * optional bool deprecated = 3;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.FieldOptions.prototype.getDeprecated = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 3, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 3, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.FieldOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.FieldOptions.prototype.setDeprecated = function(value) {
-  return jspb.Message.setField(this, 3, value);
+  jspb.Message.setField(this, 3, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FieldOptions} returns this
  */
 proto.google.protobuf.FieldOptions.prototype.clearDeprecated = function() {
-  return jspb.Message.setField(this, 3, undefined);
+  jspb.Message.setField(this, 3, undefined);
 };
 
 
@@ -7159,28 +6793,26 @@ proto.google.protobuf.FieldOptions.prototype.hasDeprecated = function() {
 
 /**
  * optional bool weak = 10;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.FieldOptions.prototype.getWeak = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 10, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 10, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.FieldOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.FieldOptions.prototype.setWeak = function(value) {
-  return jspb.Message.setField(this, 10, value);
+  jspb.Message.setField(this, 10, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.FieldOptions} returns this
  */
 proto.google.protobuf.FieldOptions.prototype.clearWeak = function() {
-  return jspb.Message.setField(this, 10, undefined);
+  jspb.Message.setField(this, 10, undefined);
 };
 
 
@@ -7203,12 +6835,9 @@ proto.google.protobuf.FieldOptions.prototype.getUninterpretedOptionList = functi
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.UninterpretedOption>} value
- * @return {!proto.google.protobuf.FieldOptions} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.UninterpretedOption>} value */
 proto.google.protobuf.FieldOptions.prototype.setUninterpretedOptionList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 999, value);
+  jspb.Message.setRepeatedWrapperField(this, 999, value);
 };
 
 
@@ -7224,10 +6853,9 @@ proto.google.protobuf.FieldOptions.prototype.addUninterpretedOption = function(o
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.FieldOptions} returns this
  */
 proto.google.protobuf.FieldOptions.prototype.clearUninterpretedOptionList = function() {
-  return this.setUninterpretedOptionList([]);
+  this.setUninterpretedOptionList([]);
 };
 
 
@@ -7243,15 +6871,13 @@ proto.google.protobuf.OneofOptions.repeatedFields_ = [999];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.OneofOptions.prototype.toObject = function(opt_includeInstance) {
@@ -7261,8 +6887,8 @@ proto.google.protobuf.OneofOptions.prototype.toObject = function(opt_includeInst
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.OneofOptions} msg The msg instance to transform.
  * @return {!Object}
@@ -7371,12 +6997,9 @@ proto.google.protobuf.OneofOptions.prototype.getUninterpretedOptionList = functi
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.UninterpretedOption>} value
- * @return {!proto.google.protobuf.OneofOptions} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.UninterpretedOption>} value */
 proto.google.protobuf.OneofOptions.prototype.setUninterpretedOptionList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 999, value);
+  jspb.Message.setRepeatedWrapperField(this, 999, value);
 };
 
 
@@ -7392,10 +7015,9 @@ proto.google.protobuf.OneofOptions.prototype.addUninterpretedOption = function(o
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.OneofOptions} returns this
  */
 proto.google.protobuf.OneofOptions.prototype.clearUninterpretedOptionList = function() {
-  return this.setUninterpretedOptionList([]);
+  this.setUninterpretedOptionList([]);
 };
 
 
@@ -7411,15 +7033,13 @@ proto.google.protobuf.EnumOptions.repeatedFields_ = [999];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.EnumOptions.prototype.toObject = function(opt_includeInstance) {
@@ -7429,8 +7049,8 @@ proto.google.protobuf.EnumOptions.prototype.toObject = function(opt_includeInsta
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.EnumOptions} msg The msg instance to transform.
  * @return {!Object}
@@ -7438,8 +7058,8 @@ proto.google.protobuf.EnumOptions.prototype.toObject = function(opt_includeInsta
  */
 proto.google.protobuf.EnumOptions.toObject = function(includeInstance, msg) {
   var f, obj = {
-    allowAlias: (f = jspb.Message.getBooleanField(msg, 2)) == null ? undefined : f,
-    deprecated: jspb.Message.getBooleanFieldWithDefault(msg, 3, false),
+    allowAlias: jspb.Message.getField(msg, 2),
+    deprecated: jspb.Message.getFieldWithDefault(msg, 3, false),
     uninterpretedOptionList: jspb.Message.toObjectList(msg.getUninterpretedOptionList(),
     proto.google.protobuf.UninterpretedOption.toObject, includeInstance)
   };
@@ -7555,28 +7175,26 @@ proto.google.protobuf.EnumOptions.serializeBinaryToWriter = function(message, wr
 
 /**
  * optional bool allow_alias = 2;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.EnumOptions.prototype.getAllowAlias = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 2, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 2, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.EnumOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.EnumOptions.prototype.setAllowAlias = function(value) {
-  return jspb.Message.setField(this, 2, value);
+  jspb.Message.setField(this, 2, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.EnumOptions} returns this
  */
 proto.google.protobuf.EnumOptions.prototype.clearAllowAlias = function() {
-  return jspb.Message.setField(this, 2, undefined);
+  jspb.Message.setField(this, 2, undefined);
 };
 
 
@@ -7591,28 +7209,26 @@ proto.google.protobuf.EnumOptions.prototype.hasAllowAlias = function() {
 
 /**
  * optional bool deprecated = 3;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.EnumOptions.prototype.getDeprecated = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 3, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 3, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.EnumOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.EnumOptions.prototype.setDeprecated = function(value) {
-  return jspb.Message.setField(this, 3, value);
+  jspb.Message.setField(this, 3, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.EnumOptions} returns this
  */
 proto.google.protobuf.EnumOptions.prototype.clearDeprecated = function() {
-  return jspb.Message.setField(this, 3, undefined);
+  jspb.Message.setField(this, 3, undefined);
 };
 
 
@@ -7635,12 +7251,9 @@ proto.google.protobuf.EnumOptions.prototype.getUninterpretedOptionList = functio
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.UninterpretedOption>} value
- * @return {!proto.google.protobuf.EnumOptions} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.UninterpretedOption>} value */
 proto.google.protobuf.EnumOptions.prototype.setUninterpretedOptionList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 999, value);
+  jspb.Message.setRepeatedWrapperField(this, 999, value);
 };
 
 
@@ -7656,10 +7269,9 @@ proto.google.protobuf.EnumOptions.prototype.addUninterpretedOption = function(op
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.EnumOptions} returns this
  */
 proto.google.protobuf.EnumOptions.prototype.clearUninterpretedOptionList = function() {
-  return this.setUninterpretedOptionList([]);
+  this.setUninterpretedOptionList([]);
 };
 
 
@@ -7675,15 +7287,13 @@ proto.google.protobuf.EnumValueOptions.repeatedFields_ = [999];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.EnumValueOptions.prototype.toObject = function(opt_includeInstance) {
@@ -7693,8 +7303,8 @@ proto.google.protobuf.EnumValueOptions.prototype.toObject = function(opt_include
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.EnumValueOptions} msg The msg instance to transform.
  * @return {!Object}
@@ -7702,7 +7312,7 @@ proto.google.protobuf.EnumValueOptions.prototype.toObject = function(opt_include
  */
 proto.google.protobuf.EnumValueOptions.toObject = function(includeInstance, msg) {
   var f, obj = {
-    deprecated: jspb.Message.getBooleanFieldWithDefault(msg, 1, false),
+    deprecated: jspb.Message.getFieldWithDefault(msg, 1, false),
     uninterpretedOptionList: jspb.Message.toObjectList(msg.getUninterpretedOptionList(),
     proto.google.protobuf.UninterpretedOption.toObject, includeInstance)
   };
@@ -7807,28 +7417,26 @@ proto.google.protobuf.EnumValueOptions.serializeBinaryToWriter = function(messag
 
 /**
  * optional bool deprecated = 1;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.EnumValueOptions.prototype.getDeprecated = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 1, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 1, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.EnumValueOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.EnumValueOptions.prototype.setDeprecated = function(value) {
-  return jspb.Message.setField(this, 1, value);
+  jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.EnumValueOptions} returns this
  */
 proto.google.protobuf.EnumValueOptions.prototype.clearDeprecated = function() {
-  return jspb.Message.setField(this, 1, undefined);
+  jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -7851,12 +7459,9 @@ proto.google.protobuf.EnumValueOptions.prototype.getUninterpretedOptionList = fu
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.UninterpretedOption>} value
- * @return {!proto.google.protobuf.EnumValueOptions} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.UninterpretedOption>} value */
 proto.google.protobuf.EnumValueOptions.prototype.setUninterpretedOptionList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 999, value);
+  jspb.Message.setRepeatedWrapperField(this, 999, value);
 };
 
 
@@ -7872,10 +7477,9 @@ proto.google.protobuf.EnumValueOptions.prototype.addUninterpretedOption = functi
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.EnumValueOptions} returns this
  */
 proto.google.protobuf.EnumValueOptions.prototype.clearUninterpretedOptionList = function() {
-  return this.setUninterpretedOptionList([]);
+  this.setUninterpretedOptionList([]);
 };
 
 
@@ -7891,15 +7495,13 @@ proto.google.protobuf.ServiceOptions.repeatedFields_ = [999];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.ServiceOptions.prototype.toObject = function(opt_includeInstance) {
@@ -7909,8 +7511,8 @@ proto.google.protobuf.ServiceOptions.prototype.toObject = function(opt_includeIn
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.ServiceOptions} msg The msg instance to transform.
  * @return {!Object}
@@ -7918,7 +7520,7 @@ proto.google.protobuf.ServiceOptions.prototype.toObject = function(opt_includeIn
  */
 proto.google.protobuf.ServiceOptions.toObject = function(includeInstance, msg) {
   var f, obj = {
-    deprecated: jspb.Message.getBooleanFieldWithDefault(msg, 33, false),
+    deprecated: jspb.Message.getFieldWithDefault(msg, 33, false),
     uninterpretedOptionList: jspb.Message.toObjectList(msg.getUninterpretedOptionList(),
     proto.google.protobuf.UninterpretedOption.toObject, includeInstance)
   };
@@ -8023,28 +7625,26 @@ proto.google.protobuf.ServiceOptions.serializeBinaryToWriter = function(message,
 
 /**
  * optional bool deprecated = 33;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.ServiceOptions.prototype.getDeprecated = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 33, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 33, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.ServiceOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.ServiceOptions.prototype.setDeprecated = function(value) {
-  return jspb.Message.setField(this, 33, value);
+  jspb.Message.setField(this, 33, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.ServiceOptions} returns this
  */
 proto.google.protobuf.ServiceOptions.prototype.clearDeprecated = function() {
-  return jspb.Message.setField(this, 33, undefined);
+  jspb.Message.setField(this, 33, undefined);
 };
 
 
@@ -8067,12 +7667,9 @@ proto.google.protobuf.ServiceOptions.prototype.getUninterpretedOptionList = func
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.UninterpretedOption>} value
- * @return {!proto.google.protobuf.ServiceOptions} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.UninterpretedOption>} value */
 proto.google.protobuf.ServiceOptions.prototype.setUninterpretedOptionList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 999, value);
+  jspb.Message.setRepeatedWrapperField(this, 999, value);
 };
 
 
@@ -8088,10 +7685,9 @@ proto.google.protobuf.ServiceOptions.prototype.addUninterpretedOption = function
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.ServiceOptions} returns this
  */
 proto.google.protobuf.ServiceOptions.prototype.clearUninterpretedOptionList = function() {
-  return this.setUninterpretedOptionList([]);
+  this.setUninterpretedOptionList([]);
 };
 
 
@@ -8107,15 +7703,13 @@ proto.google.protobuf.MethodOptions.repeatedFields_ = [999];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.MethodOptions.prototype.toObject = function(opt_includeInstance) {
@@ -8125,8 +7719,8 @@ proto.google.protobuf.MethodOptions.prototype.toObject = function(opt_includeIns
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.MethodOptions} msg The msg instance to transform.
  * @return {!Object}
@@ -8134,7 +7728,7 @@ proto.google.protobuf.MethodOptions.prototype.toObject = function(opt_includeIns
  */
 proto.google.protobuf.MethodOptions.toObject = function(includeInstance, msg) {
   var f, obj = {
-    deprecated: jspb.Message.getBooleanFieldWithDefault(msg, 33, false),
+    deprecated: jspb.Message.getFieldWithDefault(msg, 33, false),
     idempotencyLevel: jspb.Message.getFieldWithDefault(msg, 34, 0),
     uninterpretedOptionList: jspb.Message.toObjectList(msg.getUninterpretedOptionList(),
     proto.google.protobuf.UninterpretedOption.toObject, includeInstance)
@@ -8260,28 +7854,26 @@ proto.google.protobuf.MethodOptions.IdempotencyLevel = {
 
 /**
  * optional bool deprecated = 33;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.MethodOptions.prototype.getDeprecated = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 33, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 33, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.MethodOptions} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.MethodOptions.prototype.setDeprecated = function(value) {
-  return jspb.Message.setField(this, 33, value);
+  jspb.Message.setField(this, 33, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.MethodOptions} returns this
  */
 proto.google.protobuf.MethodOptions.prototype.clearDeprecated = function() {
-  return jspb.Message.setField(this, 33, undefined);
+  jspb.Message.setField(this, 33, undefined);
 };
 
 
@@ -8303,21 +7895,17 @@ proto.google.protobuf.MethodOptions.prototype.getIdempotencyLevel = function() {
 };
 
 
-/**
- * @param {!proto.google.protobuf.MethodOptions.IdempotencyLevel} value
- * @return {!proto.google.protobuf.MethodOptions} returns this
- */
+/** @param {!proto.google.protobuf.MethodOptions.IdempotencyLevel} value */
 proto.google.protobuf.MethodOptions.prototype.setIdempotencyLevel = function(value) {
-  return jspb.Message.setField(this, 34, value);
+  jspb.Message.setField(this, 34, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.MethodOptions} returns this
  */
 proto.google.protobuf.MethodOptions.prototype.clearIdempotencyLevel = function() {
-  return jspb.Message.setField(this, 34, undefined);
+  jspb.Message.setField(this, 34, undefined);
 };
 
 
@@ -8340,12 +7928,9 @@ proto.google.protobuf.MethodOptions.prototype.getUninterpretedOptionList = funct
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.UninterpretedOption>} value
- * @return {!proto.google.protobuf.MethodOptions} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.UninterpretedOption>} value */
 proto.google.protobuf.MethodOptions.prototype.setUninterpretedOptionList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 999, value);
+  jspb.Message.setRepeatedWrapperField(this, 999, value);
 };
 
 
@@ -8361,10 +7946,9 @@ proto.google.protobuf.MethodOptions.prototype.addUninterpretedOption = function(
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.MethodOptions} returns this
  */
 proto.google.protobuf.MethodOptions.prototype.clearUninterpretedOptionList = function() {
-  return this.setUninterpretedOptionList([]);
+  this.setUninterpretedOptionList([]);
 };
 
 
@@ -8380,15 +7964,13 @@ proto.google.protobuf.UninterpretedOption.repeatedFields_ = [2];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.UninterpretedOption.prototype.toObject = function(opt_includeInstance) {
@@ -8398,8 +7980,8 @@ proto.google.protobuf.UninterpretedOption.prototype.toObject = function(opt_incl
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.UninterpretedOption} msg The msg instance to transform.
  * @return {!Object}
@@ -8409,12 +7991,12 @@ proto.google.protobuf.UninterpretedOption.toObject = function(includeInstance, m
   var f, obj = {
     nameList: jspb.Message.toObjectList(msg.getNameList(),
     proto.google.protobuf.UninterpretedOption.NamePart.toObject, includeInstance),
-    identifierValue: (f = jspb.Message.getField(msg, 3)) == null ? undefined : f,
-    positiveIntValue: (f = jspb.Message.getField(msg, 4)) == null ? undefined : f,
-    negativeIntValue: (f = jspb.Message.getField(msg, 5)) == null ? undefined : f,
-    doubleValue: (f = jspb.Message.getOptionalFloatingPointField(msg, 6)) == null ? undefined : f,
+    identifierValue: jspb.Message.getField(msg, 3),
+    positiveIntValue: jspb.Message.getField(msg, 4),
+    negativeIntValue: jspb.Message.getField(msg, 5),
+    doubleValue: jspb.Message.getOptionalFloatingPointField(msg, 6),
     stringValue: msg.getStringValue_asB64(),
-    aggregateValue: (f = jspb.Message.getField(msg, 8)) == null ? undefined : f
+    aggregateValue: jspb.Message.getField(msg, 8)
   };
 
   if (includeInstance) {
@@ -8567,15 +8149,13 @@ proto.google.protobuf.UninterpretedOption.serializeBinaryToWriter = function(mes
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.UninterpretedOption.NamePart.prototype.toObject = function(opt_includeInstance) {
@@ -8585,8 +8165,8 @@ proto.google.protobuf.UninterpretedOption.NamePart.prototype.toObject = function
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.UninterpretedOption.NamePart} msg The msg instance to transform.
  * @return {!Object}
@@ -8594,8 +8174,8 @@ proto.google.protobuf.UninterpretedOption.NamePart.prototype.toObject = function
  */
 proto.google.protobuf.UninterpretedOption.NamePart.toObject = function(includeInstance, msg) {
   var f, obj = {
-    namePart: (f = jspb.Message.getField(msg, 1)) == null ? undefined : f,
-    isExtension: (f = jspb.Message.getBooleanField(msg, 2)) == null ? undefined : f
+    namePart: jspb.Message.getField(msg, 1),
+    isExtension: jspb.Message.getField(msg, 2)
   };
 
   if (includeInstance) {
@@ -8695,21 +8275,17 @@ proto.google.protobuf.UninterpretedOption.NamePart.prototype.getNamePart = funct
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.UninterpretedOption.NamePart} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.UninterpretedOption.NamePart.prototype.setNamePart = function(value) {
-  return jspb.Message.setField(this, 1, value);
+  jspb.Message.setField(this, 1, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.UninterpretedOption.NamePart} returns this
  */
 proto.google.protobuf.UninterpretedOption.NamePart.prototype.clearNamePart = function() {
-  return jspb.Message.setField(this, 1, undefined);
+  jspb.Message.setField(this, 1, undefined);
 };
 
 
@@ -8724,28 +8300,26 @@ proto.google.protobuf.UninterpretedOption.NamePart.prototype.hasNamePart = funct
 
 /**
  * required bool is_extension = 2;
+ * Note that Boolean fields may be set to 0/1 when serialized from a Java server.
+ * You should avoid comparisons like {@code val === true/false} in those cases.
  * @return {boolean}
  */
 proto.google.protobuf.UninterpretedOption.NamePart.prototype.getIsExtension = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 2, false));
+  return /** @type {boolean} */ (jspb.Message.getFieldWithDefault(this, 2, false));
 };
 
 
-/**
- * @param {boolean} value
- * @return {!proto.google.protobuf.UninterpretedOption.NamePart} returns this
- */
+/** @param {boolean} value */
 proto.google.protobuf.UninterpretedOption.NamePart.prototype.setIsExtension = function(value) {
-  return jspb.Message.setField(this, 2, value);
+  jspb.Message.setField(this, 2, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.UninterpretedOption.NamePart} returns this
  */
 proto.google.protobuf.UninterpretedOption.NamePart.prototype.clearIsExtension = function() {
-  return jspb.Message.setField(this, 2, undefined);
+  jspb.Message.setField(this, 2, undefined);
 };
 
 
@@ -8768,12 +8342,9 @@ proto.google.protobuf.UninterpretedOption.prototype.getNameList = function() {
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.UninterpretedOption.NamePart>} value
- * @return {!proto.google.protobuf.UninterpretedOption} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.UninterpretedOption.NamePart>} value */
 proto.google.protobuf.UninterpretedOption.prototype.setNameList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 2, value);
+  jspb.Message.setRepeatedWrapperField(this, 2, value);
 };
 
 
@@ -8789,10 +8360,9 @@ proto.google.protobuf.UninterpretedOption.prototype.addName = function(opt_value
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.UninterpretedOption} returns this
  */
 proto.google.protobuf.UninterpretedOption.prototype.clearNameList = function() {
-  return this.setNameList([]);
+  this.setNameList([]);
 };
 
 
@@ -8805,21 +8375,17 @@ proto.google.protobuf.UninterpretedOption.prototype.getIdentifierValue = functio
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.UninterpretedOption} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.UninterpretedOption.prototype.setIdentifierValue = function(value) {
-  return jspb.Message.setField(this, 3, value);
+  jspb.Message.setField(this, 3, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.UninterpretedOption} returns this
  */
 proto.google.protobuf.UninterpretedOption.prototype.clearIdentifierValue = function() {
-  return jspb.Message.setField(this, 3, undefined);
+  jspb.Message.setField(this, 3, undefined);
 };
 
 
@@ -8841,21 +8407,17 @@ proto.google.protobuf.UninterpretedOption.prototype.getPositiveIntValue = functi
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.google.protobuf.UninterpretedOption} returns this
- */
+/** @param {number} value */
 proto.google.protobuf.UninterpretedOption.prototype.setPositiveIntValue = function(value) {
-  return jspb.Message.setField(this, 4, value);
+  jspb.Message.setField(this, 4, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.UninterpretedOption} returns this
  */
 proto.google.protobuf.UninterpretedOption.prototype.clearPositiveIntValue = function() {
-  return jspb.Message.setField(this, 4, undefined);
+  jspb.Message.setField(this, 4, undefined);
 };
 
 
@@ -8877,21 +8439,17 @@ proto.google.protobuf.UninterpretedOption.prototype.getNegativeIntValue = functi
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.google.protobuf.UninterpretedOption} returns this
- */
+/** @param {number} value */
 proto.google.protobuf.UninterpretedOption.prototype.setNegativeIntValue = function(value) {
-  return jspb.Message.setField(this, 5, value);
+  jspb.Message.setField(this, 5, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.UninterpretedOption} returns this
  */
 proto.google.protobuf.UninterpretedOption.prototype.clearNegativeIntValue = function() {
-  return jspb.Message.setField(this, 5, undefined);
+  jspb.Message.setField(this, 5, undefined);
 };
 
 
@@ -8909,25 +8467,21 @@ proto.google.protobuf.UninterpretedOption.prototype.hasNegativeIntValue = functi
  * @return {number}
  */
 proto.google.protobuf.UninterpretedOption.prototype.getDoubleValue = function() {
-  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 6, 0.0));
+  return /** @type {number} */ (+jspb.Message.getFieldWithDefault(this, 6, 0.0));
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.google.protobuf.UninterpretedOption} returns this
- */
+/** @param {number} value */
 proto.google.protobuf.UninterpretedOption.prototype.setDoubleValue = function(value) {
-  return jspb.Message.setField(this, 6, value);
+  jspb.Message.setField(this, 6, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.UninterpretedOption} returns this
  */
 proto.google.protobuf.UninterpretedOption.prototype.clearDoubleValue = function() {
-  return jspb.Message.setField(this, 6, undefined);
+  jspb.Message.setField(this, 6, undefined);
 };
 
 
@@ -8973,21 +8527,17 @@ proto.google.protobuf.UninterpretedOption.prototype.getStringValue_asU8 = functi
 };
 
 
-/**
- * @param {!(string|Uint8Array)} value
- * @return {!proto.google.protobuf.UninterpretedOption} returns this
- */
+/** @param {!(string|Uint8Array)} value */
 proto.google.protobuf.UninterpretedOption.prototype.setStringValue = function(value) {
-  return jspb.Message.setField(this, 7, value);
+  jspb.Message.setField(this, 7, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.UninterpretedOption} returns this
  */
 proto.google.protobuf.UninterpretedOption.prototype.clearStringValue = function() {
-  return jspb.Message.setField(this, 7, undefined);
+  jspb.Message.setField(this, 7, undefined);
 };
 
 
@@ -9009,21 +8559,17 @@ proto.google.protobuf.UninterpretedOption.prototype.getAggregateValue = function
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.UninterpretedOption} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.UninterpretedOption.prototype.setAggregateValue = function(value) {
-  return jspb.Message.setField(this, 8, value);
+  jspb.Message.setField(this, 8, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.UninterpretedOption} returns this
  */
 proto.google.protobuf.UninterpretedOption.prototype.clearAggregateValue = function() {
-  return jspb.Message.setField(this, 8, undefined);
+  jspb.Message.setField(this, 8, undefined);
 };
 
 
@@ -9048,15 +8594,13 @@ proto.google.protobuf.SourceCodeInfo.repeatedFields_ = [1];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.SourceCodeInfo.prototype.toObject = function(opt_includeInstance) {
@@ -9066,8 +8610,8 @@ proto.google.protobuf.SourceCodeInfo.prototype.toObject = function(opt_includeIn
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.SourceCodeInfo} msg The msg instance to transform.
  * @return {!Object}
@@ -9170,15 +8714,13 @@ proto.google.protobuf.SourceCodeInfo.Location.repeatedFields_ = [1,2,6];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.SourceCodeInfo.Location.prototype.toObject = function(opt_includeInstance) {
@@ -9188,8 +8730,8 @@ proto.google.protobuf.SourceCodeInfo.Location.prototype.toObject = function(opt_
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.SourceCodeInfo.Location} msg The msg instance to transform.
  * @return {!Object}
@@ -9197,11 +8739,11 @@ proto.google.protobuf.SourceCodeInfo.Location.prototype.toObject = function(opt_
  */
 proto.google.protobuf.SourceCodeInfo.Location.toObject = function(includeInstance, msg) {
   var f, obj = {
-    pathList: (f = jspb.Message.getRepeatedField(msg, 1)) == null ? undefined : f,
-    spanList: (f = jspb.Message.getRepeatedField(msg, 2)) == null ? undefined : f,
-    leadingComments: (f = jspb.Message.getField(msg, 3)) == null ? undefined : f,
-    trailingComments: (f = jspb.Message.getField(msg, 4)) == null ? undefined : f,
-    leadingDetachedCommentsList: (f = jspb.Message.getRepeatedField(msg, 6)) == null ? undefined : f
+    pathList: jspb.Message.getRepeatedField(msg, 1),
+    spanList: jspb.Message.getRepeatedField(msg, 2),
+    leadingComments: jspb.Message.getField(msg, 3),
+    trailingComments: jspb.Message.getField(msg, 4),
+    leadingDetachedCommentsList: jspb.Message.getRepeatedField(msg, 6)
   };
 
   if (includeInstance) {
@@ -9334,31 +8876,26 @@ proto.google.protobuf.SourceCodeInfo.Location.prototype.getPathList = function()
 };
 
 
-/**
- * @param {!Array<number>} value
- * @return {!proto.google.protobuf.SourceCodeInfo.Location} returns this
- */
+/** @param {!Array<number>} value */
 proto.google.protobuf.SourceCodeInfo.Location.prototype.setPathList = function(value) {
-  return jspb.Message.setField(this, 1, value || []);
+  jspb.Message.setField(this, 1, value || []);
 };
 
 
 /**
  * @param {number} value
  * @param {number=} opt_index
- * @return {!proto.google.protobuf.SourceCodeInfo.Location} returns this
  */
 proto.google.protobuf.SourceCodeInfo.Location.prototype.addPath = function(value, opt_index) {
-  return jspb.Message.addToRepeatedField(this, 1, value, opt_index);
+  jspb.Message.addToRepeatedField(this, 1, value, opt_index);
 };
 
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.SourceCodeInfo.Location} returns this
  */
 proto.google.protobuf.SourceCodeInfo.Location.prototype.clearPathList = function() {
-  return this.setPathList([]);
+  this.setPathList([]);
 };
 
 
@@ -9371,31 +8908,26 @@ proto.google.protobuf.SourceCodeInfo.Location.prototype.getSpanList = function()
 };
 
 
-/**
- * @param {!Array<number>} value
- * @return {!proto.google.protobuf.SourceCodeInfo.Location} returns this
- */
+/** @param {!Array<number>} value */
 proto.google.protobuf.SourceCodeInfo.Location.prototype.setSpanList = function(value) {
-  return jspb.Message.setField(this, 2, value || []);
+  jspb.Message.setField(this, 2, value || []);
 };
 
 
 /**
  * @param {number} value
  * @param {number=} opt_index
- * @return {!proto.google.protobuf.SourceCodeInfo.Location} returns this
  */
 proto.google.protobuf.SourceCodeInfo.Location.prototype.addSpan = function(value, opt_index) {
-  return jspb.Message.addToRepeatedField(this, 2, value, opt_index);
+  jspb.Message.addToRepeatedField(this, 2, value, opt_index);
 };
 
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.SourceCodeInfo.Location} returns this
  */
 proto.google.protobuf.SourceCodeInfo.Location.prototype.clearSpanList = function() {
-  return this.setSpanList([]);
+  this.setSpanList([]);
 };
 
 
@@ -9408,21 +8940,17 @@ proto.google.protobuf.SourceCodeInfo.Location.prototype.getLeadingComments = fun
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.SourceCodeInfo.Location} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.SourceCodeInfo.Location.prototype.setLeadingComments = function(value) {
-  return jspb.Message.setField(this, 3, value);
+  jspb.Message.setField(this, 3, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.SourceCodeInfo.Location} returns this
  */
 proto.google.protobuf.SourceCodeInfo.Location.prototype.clearLeadingComments = function() {
-  return jspb.Message.setField(this, 3, undefined);
+  jspb.Message.setField(this, 3, undefined);
 };
 
 
@@ -9444,21 +8972,17 @@ proto.google.protobuf.SourceCodeInfo.Location.prototype.getTrailingComments = fu
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.SourceCodeInfo.Location} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.SourceCodeInfo.Location.prototype.setTrailingComments = function(value) {
-  return jspb.Message.setField(this, 4, value);
+  jspb.Message.setField(this, 4, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.SourceCodeInfo.Location} returns this
  */
 proto.google.protobuf.SourceCodeInfo.Location.prototype.clearTrailingComments = function() {
-  return jspb.Message.setField(this, 4, undefined);
+  jspb.Message.setField(this, 4, undefined);
 };
 
 
@@ -9480,31 +9004,26 @@ proto.google.protobuf.SourceCodeInfo.Location.prototype.getLeadingDetachedCommen
 };
 
 
-/**
- * @param {!Array<string>} value
- * @return {!proto.google.protobuf.SourceCodeInfo.Location} returns this
- */
+/** @param {!Array<string>} value */
 proto.google.protobuf.SourceCodeInfo.Location.prototype.setLeadingDetachedCommentsList = function(value) {
-  return jspb.Message.setField(this, 6, value || []);
+  jspb.Message.setField(this, 6, value || []);
 };
 
 
 /**
  * @param {string} value
  * @param {number=} opt_index
- * @return {!proto.google.protobuf.SourceCodeInfo.Location} returns this
  */
 proto.google.protobuf.SourceCodeInfo.Location.prototype.addLeadingDetachedComments = function(value, opt_index) {
-  return jspb.Message.addToRepeatedField(this, 6, value, opt_index);
+  jspb.Message.addToRepeatedField(this, 6, value, opt_index);
 };
 
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.SourceCodeInfo.Location} returns this
  */
 proto.google.protobuf.SourceCodeInfo.Location.prototype.clearLeadingDetachedCommentsList = function() {
-  return this.setLeadingDetachedCommentsList([]);
+  this.setLeadingDetachedCommentsList([]);
 };
 
 
@@ -9518,12 +9037,9 @@ proto.google.protobuf.SourceCodeInfo.prototype.getLocationList = function() {
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.SourceCodeInfo.Location>} value
- * @return {!proto.google.protobuf.SourceCodeInfo} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.SourceCodeInfo.Location>} value */
 proto.google.protobuf.SourceCodeInfo.prototype.setLocationList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 1, value);
+  jspb.Message.setRepeatedWrapperField(this, 1, value);
 };
 
 
@@ -9539,10 +9055,9 @@ proto.google.protobuf.SourceCodeInfo.prototype.addLocation = function(opt_value,
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.SourceCodeInfo} returns this
  */
 proto.google.protobuf.SourceCodeInfo.prototype.clearLocationList = function() {
-  return this.setLocationList([]);
+  this.setLocationList([]);
 };
 
 
@@ -9558,15 +9073,13 @@ proto.google.protobuf.GeneratedCodeInfo.repeatedFields_ = [1];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.GeneratedCodeInfo.prototype.toObject = function(opt_includeInstance) {
@@ -9576,8 +9089,8 @@ proto.google.protobuf.GeneratedCodeInfo.prototype.toObject = function(opt_includ
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.GeneratedCodeInfo} msg The msg instance to transform.
  * @return {!Object}
@@ -9680,15 +9193,13 @@ proto.google.protobuf.GeneratedCodeInfo.Annotation.repeatedFields_ = [1];
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.google.protobuf.GeneratedCodeInfo.Annotation.prototype.toObject = function(opt_includeInstance) {
@@ -9698,8 +9209,8 @@ proto.google.protobuf.GeneratedCodeInfo.Annotation.prototype.toObject = function
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.google.protobuf.GeneratedCodeInfo.Annotation} msg The msg instance to transform.
  * @return {!Object}
@@ -9707,10 +9218,10 @@ proto.google.protobuf.GeneratedCodeInfo.Annotation.prototype.toObject = function
  */
 proto.google.protobuf.GeneratedCodeInfo.Annotation.toObject = function(includeInstance, msg) {
   var f, obj = {
-    pathList: (f = jspb.Message.getRepeatedField(msg, 1)) == null ? undefined : f,
-    sourceFile: (f = jspb.Message.getField(msg, 2)) == null ? undefined : f,
-    begin: (f = jspb.Message.getField(msg, 3)) == null ? undefined : f,
-    end: (f = jspb.Message.getField(msg, 4)) == null ? undefined : f
+    pathList: jspb.Message.getRepeatedField(msg, 1),
+    sourceFile: jspb.Message.getField(msg, 2),
+    begin: jspb.Message.getField(msg, 3),
+    end: jspb.Message.getField(msg, 4)
   };
 
   if (includeInstance) {
@@ -9832,31 +9343,26 @@ proto.google.protobuf.GeneratedCodeInfo.Annotation.prototype.getPathList = funct
 };
 
 
-/**
- * @param {!Array<number>} value
- * @return {!proto.google.protobuf.GeneratedCodeInfo.Annotation} returns this
- */
+/** @param {!Array<number>} value */
 proto.google.protobuf.GeneratedCodeInfo.Annotation.prototype.setPathList = function(value) {
-  return jspb.Message.setField(this, 1, value || []);
+  jspb.Message.setField(this, 1, value || []);
 };
 
 
 /**
  * @param {number} value
  * @param {number=} opt_index
- * @return {!proto.google.protobuf.GeneratedCodeInfo.Annotation} returns this
  */
 proto.google.protobuf.GeneratedCodeInfo.Annotation.prototype.addPath = function(value, opt_index) {
-  return jspb.Message.addToRepeatedField(this, 1, value, opt_index);
+  jspb.Message.addToRepeatedField(this, 1, value, opt_index);
 };
 
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.GeneratedCodeInfo.Annotation} returns this
  */
 proto.google.protobuf.GeneratedCodeInfo.Annotation.prototype.clearPathList = function() {
-  return this.setPathList([]);
+  this.setPathList([]);
 };
 
 
@@ -9869,21 +9375,17 @@ proto.google.protobuf.GeneratedCodeInfo.Annotation.prototype.getSourceFile = fun
 };
 
 
-/**
- * @param {string} value
- * @return {!proto.google.protobuf.GeneratedCodeInfo.Annotation} returns this
- */
+/** @param {string} value */
 proto.google.protobuf.GeneratedCodeInfo.Annotation.prototype.setSourceFile = function(value) {
-  return jspb.Message.setField(this, 2, value);
+  jspb.Message.setField(this, 2, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.GeneratedCodeInfo.Annotation} returns this
  */
 proto.google.protobuf.GeneratedCodeInfo.Annotation.prototype.clearSourceFile = function() {
-  return jspb.Message.setField(this, 2, undefined);
+  jspb.Message.setField(this, 2, undefined);
 };
 
 
@@ -9905,21 +9407,17 @@ proto.google.protobuf.GeneratedCodeInfo.Annotation.prototype.getBegin = function
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.google.protobuf.GeneratedCodeInfo.Annotation} returns this
- */
+/** @param {number} value */
 proto.google.protobuf.GeneratedCodeInfo.Annotation.prototype.setBegin = function(value) {
-  return jspb.Message.setField(this, 3, value);
+  jspb.Message.setField(this, 3, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.GeneratedCodeInfo.Annotation} returns this
  */
 proto.google.protobuf.GeneratedCodeInfo.Annotation.prototype.clearBegin = function() {
-  return jspb.Message.setField(this, 3, undefined);
+  jspb.Message.setField(this, 3, undefined);
 };
 
 
@@ -9941,21 +9439,17 @@ proto.google.protobuf.GeneratedCodeInfo.Annotation.prototype.getEnd = function()
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.google.protobuf.GeneratedCodeInfo.Annotation} returns this
- */
+/** @param {number} value */
 proto.google.protobuf.GeneratedCodeInfo.Annotation.prototype.setEnd = function(value) {
-  return jspb.Message.setField(this, 4, value);
+  jspb.Message.setField(this, 4, value);
 };
 
 
 /**
  * Clears the field making it undefined.
- * @return {!proto.google.protobuf.GeneratedCodeInfo.Annotation} returns this
  */
 proto.google.protobuf.GeneratedCodeInfo.Annotation.prototype.clearEnd = function() {
-  return jspb.Message.setField(this, 4, undefined);
+  jspb.Message.setField(this, 4, undefined);
 };
 
 
@@ -9978,12 +9472,9 @@ proto.google.protobuf.GeneratedCodeInfo.prototype.getAnnotationList = function()
 };
 
 
-/**
- * @param {!Array<!proto.google.protobuf.GeneratedCodeInfo.Annotation>} value
- * @return {!proto.google.protobuf.GeneratedCodeInfo} returns this
-*/
+/** @param {!Array<!proto.google.protobuf.GeneratedCodeInfo.Annotation>} value */
 proto.google.protobuf.GeneratedCodeInfo.prototype.setAnnotationList = function(value) {
-  return jspb.Message.setRepeatedWrapperField(this, 1, value);
+  jspb.Message.setRepeatedWrapperField(this, 1, value);
 };
 
 
@@ -9999,10 +9490,9 @@ proto.google.protobuf.GeneratedCodeInfo.prototype.addAnnotation = function(opt_v
 
 /**
  * Clears the list making it empty but non-null.
- * @return {!proto.google.protobuf.GeneratedCodeInfo} returns this
  */
 proto.google.protobuf.GeneratedCodeInfo.prototype.clearAnnotationList = function() {
-  return this.setAnnotationList([]);
+  this.setAnnotationList([]);
 };
 
 

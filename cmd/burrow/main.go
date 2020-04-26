@@ -87,6 +87,9 @@ func burrow(output commands.Output) *cli.Cli {
 	app.Command("compile", "Compile solidity files embedding the compilation results as a fixture in a Go file",
 		commands.Compile(output))
 
+	app.Command("lite", "Start a light client to read and verify block headers",
+		commands.Lite(output))
+
 	return app
 }
 

@@ -4,7 +4,6 @@
 // file: rpcquery.proto
 
 import * as rpcquery_pb from "./rpcquery_pb";
-import * as github_com_tendermint_tendermint_abci_types_types_pb from "./github.com/tendermint/tendermint/abci/types/types_pb";
 import * as names_pb from "./names_pb";
 import * as acm_pb from "./acm_pb";
 import * as rpc_pb from "./rpc_pb";
@@ -25,7 +24,8 @@ interface IQueryService extends grpc.ServiceDefinition<grpc.UntypedServiceImplem
   getProposal: grpc.MethodDefinition<rpcquery_pb.GetProposalParam, payload_pb.Ballot>;
   listProposals: grpc.MethodDefinition<rpcquery_pb.ListProposalsParam, rpcquery_pb.ProposalResult>;
   getStats: grpc.MethodDefinition<rpcquery_pb.GetStatsParam, rpcquery_pb.Stats>;
-  getBlockHeader: grpc.MethodDefinition<rpcquery_pb.GetBlockParam, github_com_tendermint_tendermint_abci_types_types_pb.Header>;
+  getTendermintBlockHeader: grpc.MethodDefinition<rpcquery_pb.GetTendermintBlockHeaderParam, rpcquery_pb.TendermintBlockHeader>;
+  getTendermintValidatorSet: grpc.MethodDefinition<rpcquery_pb.GetTendermintValidatorSetParam, rpcquery_pb.TendermintValidatorSet>;
 }
 
 export const QueryService: IQueryService;
@@ -68,7 +68,10 @@ export class QueryClient extends grpc.Client {
   getStats(argument: rpcquery_pb.GetStatsParam, callback: grpc.requestCallback<rpcquery_pb.Stats>): grpc.ClientUnaryCall;
   getStats(argument: rpcquery_pb.GetStatsParam, metadataOrOptions: grpc.Metadata | grpc.CallOptions | null, callback: grpc.requestCallback<rpcquery_pb.Stats>): grpc.ClientUnaryCall;
   getStats(argument: rpcquery_pb.GetStatsParam, metadata: grpc.Metadata | null, options: grpc.CallOptions | null, callback: grpc.requestCallback<rpcquery_pb.Stats>): grpc.ClientUnaryCall;
-  getBlockHeader(argument: rpcquery_pb.GetBlockParam, callback: grpc.requestCallback<github_com_tendermint_tendermint_abci_types_types_pb.Header>): grpc.ClientUnaryCall;
-  getBlockHeader(argument: rpcquery_pb.GetBlockParam, metadataOrOptions: grpc.Metadata | grpc.CallOptions | null, callback: grpc.requestCallback<github_com_tendermint_tendermint_abci_types_types_pb.Header>): grpc.ClientUnaryCall;
-  getBlockHeader(argument: rpcquery_pb.GetBlockParam, metadata: grpc.Metadata | null, options: grpc.CallOptions | null, callback: grpc.requestCallback<github_com_tendermint_tendermint_abci_types_types_pb.Header>): grpc.ClientUnaryCall;
+  getTendermintBlockHeader(argument: rpcquery_pb.GetTendermintBlockHeaderParam, callback: grpc.requestCallback<rpcquery_pb.TendermintBlockHeader>): grpc.ClientUnaryCall;
+  getTendermintBlockHeader(argument: rpcquery_pb.GetTendermintBlockHeaderParam, metadataOrOptions: grpc.Metadata | grpc.CallOptions | null, callback: grpc.requestCallback<rpcquery_pb.TendermintBlockHeader>): grpc.ClientUnaryCall;
+  getTendermintBlockHeader(argument: rpcquery_pb.GetTendermintBlockHeaderParam, metadata: grpc.Metadata | null, options: grpc.CallOptions | null, callback: grpc.requestCallback<rpcquery_pb.TendermintBlockHeader>): grpc.ClientUnaryCall;
+  getTendermintValidatorSet(argument: rpcquery_pb.GetTendermintValidatorSetParam, callback: grpc.requestCallback<rpcquery_pb.TendermintValidatorSet>): grpc.ClientUnaryCall;
+  getTendermintValidatorSet(argument: rpcquery_pb.GetTendermintValidatorSetParam, metadataOrOptions: grpc.Metadata | grpc.CallOptions | null, callback: grpc.requestCallback<rpcquery_pb.TendermintValidatorSet>): grpc.ClientUnaryCall;
+  getTendermintValidatorSet(argument: rpcquery_pb.GetTendermintValidatorSetParam, metadata: grpc.Metadata | null, options: grpc.CallOptions | null, callback: grpc.requestCallback<rpcquery_pb.TendermintValidatorSet>): grpc.ClientUnaryCall;
 }

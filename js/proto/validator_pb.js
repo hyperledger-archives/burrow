@@ -1,4 +1,3 @@
-// source: validator.proto
 /**
  * @fileoverview
  * @enhanceable
@@ -43,15 +42,13 @@ if (goog.DEBUG && !COMPILED) {
 
 if (jspb.Message.GENERATE_TO_OBJECT) {
 /**
- * Creates an object representation of this proto.
+ * Creates an object representation of this proto suitable for use in Soy templates.
  * Field names that are reserved in JavaScript and will be renamed to pb_name.
- * Optional fields that are not set will be set to undefined.
  * To access a reserved field use, foo.pb_<name>, eg, foo.pb_default.
  * For the list of reserved names please see:
- *     net/proto2/compiler/js/internal/generator.cc#kKeyword.
- * @param {boolean=} opt_includeInstance Deprecated. whether to include the
- *     JSPB instance for transitional soy proto support:
- *     http://goto/soy-param-migration
+ *     com.google.apps.jspb.JsClassTemplate.JS_RESERVED_WORDS.
+ * @param {boolean=} opt_includeInstance Whether to include the JSPB instance
+ *     for transitional soy proto support: http://goto/soy-param-migration
  * @return {!Object}
  */
 proto.validator.Validator.prototype.toObject = function(opt_includeInstance) {
@@ -61,8 +58,8 @@ proto.validator.Validator.prototype.toObject = function(opt_includeInstance) {
 
 /**
  * Static version of the {@see toObject} method.
- * @param {boolean|undefined} includeInstance Deprecated. Whether to include
- *     the JSPB instance for transitional soy proto support:
+ * @param {boolean|undefined} includeInstance Whether to include the JSPB
+ *     instance for transitional soy proto support:
  *     http://goto/soy-param-migration
  * @param {!proto.validator.Validator} msg The msg instance to transform.
  * @return {!Object}
@@ -209,12 +206,9 @@ proto.validator.Validator.prototype.getAddress_asU8 = function() {
 };
 
 
-/**
- * @param {!(string|Uint8Array)} value
- * @return {!proto.validator.Validator} returns this
- */
+/** @param {!(string|Uint8Array)} value */
 proto.validator.Validator.prototype.setAddress = function(value) {
-  return jspb.Message.setProto3BytesField(this, 1, value);
+  jspb.Message.setProto3BytesField(this, 1, value);
 };
 
 
@@ -228,21 +222,17 @@ proto.validator.Validator.prototype.getPublickey = function() {
 };
 
 
-/**
- * @param {?proto.crypto.PublicKey|undefined} value
- * @return {!proto.validator.Validator} returns this
-*/
+/** @param {?proto.crypto.PublicKey|undefined} value */
 proto.validator.Validator.prototype.setPublickey = function(value) {
-  return jspb.Message.setWrapperField(this, 2, value);
+  jspb.Message.setWrapperField(this, 2, value);
 };
 
 
 /**
  * Clears the message field making it undefined.
- * @return {!proto.validator.Validator} returns this
  */
 proto.validator.Validator.prototype.clearPublickey = function() {
-  return this.setPublickey(undefined);
+  this.setPublickey(undefined);
 };
 
 
@@ -264,12 +254,9 @@ proto.validator.Validator.prototype.getPower = function() {
 };
 
 
-/**
- * @param {number} value
- * @return {!proto.validator.Validator} returns this
- */
+/** @param {number} value */
 proto.validator.Validator.prototype.setPower = function(value) {
-  return jspb.Message.setProto3IntField(this, 3, value);
+  jspb.Message.setProto3IntField(this, 3, value);
 };
 
 
