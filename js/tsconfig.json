@@ -12,6 +12,6 @@
     "node_modules",
     "dist",
     "types",
-    "src/test/"
+    "test/"
   ]
 }
