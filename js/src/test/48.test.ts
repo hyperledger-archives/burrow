@@ -1,7 +1,9 @@
 import * as assert from 'assert';
-import {burrow, compile} from '../test';
+import { compile } from '../contracts/compile';
+import { burrow } from './test';
 
-describe('#48', function () {it('#48', async () => {
+describe('#48', function () {
+  it('#48', async () => {
     const source = `
       pragma solidity >=0.0.0;
       contract Test {
@@ -20,13 +22,14 @@ describe('#48', function () {it('#48', async () => {
           }
 
       }
-    `
-    const {abi, code} = compile(source, 'Test')
-    return burrow.contracts.deploy(abi, code)
-      .then((contract: any) => contract.getCombination())
+    `;
+    const contract = compile(source, 'Test');
+    return contract
+      .deploy(burrow)
+      .then((instance: any) => instance.getCombination())
       .then(([number, address]) => {
-        assert.strictEqual(number, 100)
-        assert.strictEqual(address.length, 40)
-      })
-  })
-})
+        assert.strictEqual(number, 100);
+        assert.strictEqual(address.length, 40);
+      });
+  });
+});

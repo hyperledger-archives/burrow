@@ -1,5 +1,6 @@
-import * as assert from "assert";
-import {burrow, compile} from "../test";
+import * as assert from 'assert';
+import { compile } from '../contracts/compile';
+import { burrow } from './test';
 
 describe('Setting and Getting Values:', function () {
   const source = `
@@ -56,41 +57,41 @@ contract GetSet {
 		return output;
 	}
 }
-`
+`;
 
-  const testUint = 42
-  const testBytes = 'DEADBEEF00000000000000000000000000000000000000000000000000000000'
-  const testString = 'Hello World!'
-  const testBool = true
+  const testUint = 42;
+  const testBytes = 'DEADBEEF00000000000000000000000000000000000000000000000000000000';
+  const testString = 'Hello World!';
+  const testBool = true;
 
-  let TestContract
+  let TestContract: any;
 
   before(async () => {
-    const {abi, code} = compile(source, 'GetSet')
-    TestContract = await burrow.contracts.deploy(abi, code)
-  })
+    const contract = compile(source, 'GetSet');
+    TestContract = await contract.deploy(burrow);
+  });
 
   it('Uint', async () => {
-    await TestContract.setUint(testUint)
-    const output = await TestContract.getUint()
-    assert.strictEqual(output[0], testUint)
-  })
+    await TestContract.setUint(testUint);
+    const output = await TestContract.getUint();
+    assert.strictEqual(output[0], testUint);
+  });
 
   it('Bool', async () => {
-    await TestContract.setBool(testBool)
-    const output = await TestContract.getBool()
-    assert.strictEqual(output[0], testBool)
-  })
+    await TestContract.setBool(testBool);
+    const output = await TestContract.getBool();
+    assert.strictEqual(output[0], testBool);
+  });
 
   it('Bytes', async () => {
-    await TestContract.setBytes(testBytes)
-    const output = await TestContract.getBytes()
-    assert.strictEqual(output[0], testBytes)
-  })
+    await TestContract.setBytes(testBytes);
+    const output = await TestContract.getBytes();
+    assert.strictEqual(output[0], testBytes);
+  });
 
   it('String', async () => {
-    await TestContract.setString(testString)
-    const output = await TestContract.getString()
-    assert.strictEqual(output[0], testString)
-  })
-})
+    await TestContract.setString(testString);
+    const output = await TestContract.getString();
+    assert.strictEqual(output[0], testString);
+  });
+});

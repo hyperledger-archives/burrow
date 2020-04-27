@@ -16,12 +16,10 @@ export class Storage extends jspb.Message {
     getKey_asU8(): Uint8Array;
     getKey_asB64(): string;
     setKey(value: Uint8Array | string): Storage;
-
     getValue(): Uint8Array | string;
     getValue_asU8(): Uint8Array;
     getValue_asB64(): string;
     setValue(value: Uint8Array | string): Storage;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Storage.AsObject;
@@ -45,12 +43,10 @@ export class AccountStorage extends jspb.Message {
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
     setAddress(value: Uint8Array | string): AccountStorage;
-
     clearStorageList(): void;
     getStorageList(): Array<Storage>;
     setStorageList(value: Array<Storage>): AccountStorage;
     addStorage(value?: Storage, index?: number): Storage;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): AccountStorage.AsObject;
@@ -72,22 +68,18 @@ export namespace AccountStorage {
 export class EVMEvent extends jspb.Message { 
     getChainid(): string;
     setChainid(value: string): EVMEvent;
-
     getIndex(): number;
     setIndex(value: number): EVMEvent;
-
 
     hasTime(): boolean;
     clearTime(): void;
     getTime(): google_protobuf_timestamp_pb.Timestamp | undefined;
     setTime(value?: google_protobuf_timestamp_pb.Timestamp): EVMEvent;
 
-
     hasEvent(): boolean;
     clearEvent(): void;
     getEvent(): exec_pb.LogEvent | undefined;
     setEvent(value?: exec_pb.LogEvent): EVMEvent;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): EVMEvent.AsObject;
@@ -112,30 +104,25 @@ export class Dump extends jspb.Message {
     getHeight(): number;
     setHeight(value: number): Dump;
 
-
     hasAccount(): boolean;
     clearAccount(): void;
     getAccount(): acm_pb.Account | undefined;
     setAccount(value?: acm_pb.Account): Dump;
-
 
     hasAccountstorage(): boolean;
     clearAccountstorage(): void;
     getAccountstorage(): AccountStorage | undefined;
     setAccountstorage(value?: AccountStorage): Dump;
 
-
     hasEvmevent(): boolean;
     clearEvmevent(): void;
     getEvmevent(): EVMEvent | undefined;
     setEvmevent(value?: EVMEvent): Dump;
 
-
     hasName(): boolean;
     clearName(): void;
     getName(): names_pb.Entry | undefined;
     setName(value?: names_pb.Entry): Dump;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Dump.AsObject;

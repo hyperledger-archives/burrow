@@ -1,6 +1,10 @@
 import * as assert from 'assert';
-import {burrow, compile} from "../test";
-
+import { Result } from 'ethers/lib/utils';
+import { CallResult } from '../contracts/call';
+import { compile } from '../contracts/compile';
+import { getMetadata } from '../contracts/contract';
+import { withoutArrayElements } from "../convert";
+import { burrow } from './test';
 
 describe('Testing Per-contract handler overwriting', function () {
   // {handlers: {call: function (result) { return {super: result.values, man: result.raw} }}})
@@ -26,25 +30,28 @@ describe('Testing Per-contract handler overwriting', function () {
           }
 
       }
-    `
+    `;
 
-    const {abi, code} = compile(source, 'Test')
-    const contract: any = await burrow.contracts.deploy(abi, code, {
-      call: function (result_1) {
-        return {values: result_1.values, raw: result_1.raw};
-      }
+    const instance: any = await compile(source, 'Test').deployWith(burrow, {
+      handler: function ({ result }: CallResult) {
+        return {
+          values: withoutArrayElements(result),
+          raw: [...result],
+        };
+      },
     });
-    let address = contract.address;
-    const returnObject = await contract.getCombination();
+    const address = getMetadata(instance).address;
+    const returnObject = await instance.getCombination();
     const expected = {
       values: {
         _number: 100,
         _address: address,
         _saying: 'hello moto',
-        _randomBytes: '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE'
+        _randomBytes: '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE',
       },
-      raw: [100, address, 'hello moto', '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE']
+      raw: [100, address, 'hello moto', '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE'],
     };
     assert.deepStrictEqual(returnObject, expected);
-  })
-})
+  });
+});
+

@@ -1,5 +1,6 @@
 import * as assert from 'assert';
-import {burrow, compile} from "../test";
+import { compile } from '../contracts/compile';
+import { burrow } from './test';
 
 describe('#44', function () {
   it('#44', async () => {
@@ -16,12 +17,12 @@ describe('#44', function () {
               return storedData;
           }
       }
-    `
-    const {abi, code} = compile(source, 'SimpleStorage');
-    const contract: any = await burrow.contracts.deploy(abi, code);
-    await contract.set('88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F');
+    `;
+    const contract = compile(source, 'SimpleStorage');
+    const instance: any = await contract.deploy(burrow);
+    await instance.set('88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F');
 
-    const data = await contract.get();
-    assert.deepStrictEqual(data,[ '88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F']);
-  })
-})
+    const data = await instance.get();
+    assert.deepStrictEqual([...data], ['88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F']);
+  });
+});

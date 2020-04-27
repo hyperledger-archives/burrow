@@ -9,12 +9,10 @@ import * as jspb from "google-protobuf";
 export class BitArray extends jspb.Message { 
     getBits(): number;
     setBits(value: number): BitArray;
-
     clearElemsList(): void;
     getElemsList(): Array<number>;
     setElemsList(value: Array<number>): BitArray;
     addElems(value: number, index?: number): number;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): BitArray.AsObject;

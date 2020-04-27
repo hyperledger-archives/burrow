@@ -12,7 +12,6 @@ export class GetDumpParam extends jspb.Message {
     getHeight(): number;
     setHeight(value: number): GetDumpParam;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): GetDumpParam.AsObject;
     static toObject(includeInstance: boolean, msg: GetDumpParam): GetDumpParam.AsObject;

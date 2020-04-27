@@ -10,10 +10,8 @@ import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 export class Exception extends jspb.Message { 
     getCode(): number;
     setCode(value: number): Exception;
-
     getException(): string;
     setException(value: string): Exception;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Exception.AsObject;

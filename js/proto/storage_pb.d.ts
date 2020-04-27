@@ -10,12 +10,10 @@ import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 export class CommitID extends jspb.Message { 
     getVersion(): number;
     setVersion(value: number): CommitID;
-
     getHash(): Uint8Array | string;
     getHash_asU8(): Uint8Array;
     getHash_asB64(): string;
     setHash(value: Uint8Array | string): CommitID;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): CommitID.AsObject;

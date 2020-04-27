@@ -1,5 +1,7 @@
 import * as assert from 'assert';
-import {burrow, compile} from '../test';
+import { compile } from '../contracts/compile';
+import { ContractEvent } from '../contracts/contract';
+import { burrow } from './test';
 
 describe('event', function () {
   it('listens to an event from a contract', async () => {
@@ -14,26 +16,27 @@ describe('event', function () {
               emit Event(msg.sender);
           }
       }
-    `
-    const {abi, code} = compile(source, 'Contract')
-    const contract: any = await burrow.contracts.deploy(abi, code)
+    `;
+    const contract = compile(source, 'Contract');
+    const instance: any = await contract.deploy(burrow);
     let count = 0;
 
-    const stream = contract.Event((error, event) => {
+    const event = instance.Event as ContractEvent;
+    const stream = event((error, event) => {
       if (error) {
-        throw(error)
+        throw error;
       } else {
-        assert.strictEqual(event.args.from.length, 40)
+        assert.strictEqual(event?.args?.from?.length, 40);
 
-        count++
+        count++;
 
         if (count === 2) {
-          stream.cancel()
+          stream.cancel();
         }
       }
-    })
+    });
 
-    contract.announce()
-    contract.announce()
-  })
-})
+    instance.announce();
+    instance.announce();
+  });
+});

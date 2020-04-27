@@ -17,10 +17,8 @@ import * as payload_pb from "./payload_pb";
 export class StatusParam extends jspb.Message { 
     getBlocktimewithin(): string;
     setBlocktimewithin(value: string): StatusParam;
-
     getBlockseentimewithin(): string;
     setBlockseentimewithin(value: string): StatusParam;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): StatusParam.AsObject;
@@ -45,7 +43,6 @@ export class GetAccountParam extends jspb.Message {
     getAddress_asB64(): string;
     setAddress(value: Uint8Array | string): GetAccountParam;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): GetAccountParam.AsObject;
     static toObject(includeInstance: boolean, msg: GetAccountParam): GetAccountParam.AsObject;
@@ -67,12 +64,10 @@ export class GetMetadataParam extends jspb.Message {
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
     setAddress(value: Uint8Array | string): GetMetadataParam;
-
     getMetadatahash(): Uint8Array | string;
     getMetadatahash_asU8(): Uint8Array;
     getMetadatahash_asB64(): string;
     setMetadatahash(value: Uint8Array | string): GetMetadataParam;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): GetMetadataParam.AsObject;
@@ -95,7 +90,6 @@ export class MetadataResult extends jspb.Message {
     getMetadata(): string;
     setMetadata(value: string): MetadataResult;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): MetadataResult.AsObject;
     static toObject(includeInstance: boolean, msg: MetadataResult): MetadataResult.AsObject;
@@ -117,12 +111,10 @@ export class GetStorageParam extends jspb.Message {
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
     setAddress(value: Uint8Array | string): GetStorageParam;
-
     getKey(): Uint8Array | string;
     getKey_asU8(): Uint8Array;
     getKey_asB64(): string;
     setKey(value: Uint8Array | string): GetStorageParam;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): GetStorageParam.AsObject;
@@ -147,7 +139,6 @@ export class StorageValue extends jspb.Message {
     getValue_asB64(): string;
     setValue(value: Uint8Array | string): StorageValue;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): StorageValue.AsObject;
     static toObject(includeInstance: boolean, msg: StorageValue): StorageValue.AsObject;
@@ -167,7 +158,6 @@ export namespace StorageValue {
 export class ListAccountsParam extends jspb.Message { 
     getQuery(): string;
     setQuery(value: string): ListAccountsParam;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ListAccountsParam.AsObject;
@@ -189,7 +179,6 @@ export class GetNameParam extends jspb.Message {
     getName(): string;
     setName(value: string): GetNameParam;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): GetNameParam.AsObject;
     static toObject(includeInstance: boolean, msg: GetNameParam): GetNameParam.AsObject;
@@ -209,7 +198,6 @@ export namespace GetNameParam {
 export class ListNamesParam extends jspb.Message { 
     getQuery(): string;
     setQuery(value: string): ListNamesParam;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ListNamesParam.AsObject;
@@ -265,7 +253,6 @@ export class GetValidatorSetHistoryParam extends jspb.Message {
     getIncludeprevious(): number;
     setIncludeprevious(value: number): GetValidatorSetHistoryParam;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): GetValidatorSetHistoryParam.AsObject;
     static toObject(includeInstance: boolean, msg: GetValidatorSetHistoryParam): GetValidatorSetHistoryParam.AsObject;
@@ -287,7 +274,6 @@ export class NetworkRegistry extends jspb.Message {
     getSetList(): Array<RegisteredValidator>;
     setSetList(value: Array<RegisteredValidator>): NetworkRegistry;
     addSet(value?: RegisteredValidator, index?: number): RegisteredValidator;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): NetworkRegistry.AsObject;
@@ -311,12 +297,10 @@ export class RegisteredValidator extends jspb.Message {
     getAddress_asB64(): string;
     setAddress(value: Uint8Array | string): RegisteredValidator;
 
-
     hasNode(): boolean;
     clearNode(): void;
     getNode(): registry_pb.NodeIdentity | undefined;
     setNode(value?: registry_pb.NodeIdentity): RegisteredValidator;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RegisteredValidator.AsObject;
@@ -341,7 +325,6 @@ export class ValidatorSetHistory extends jspb.Message {
     setHistoryList(value: Array<ValidatorSet>): ValidatorSetHistory;
     addHistory(value?: ValidatorSet, index?: number): ValidatorSet;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ValidatorSetHistory.AsObject;
     static toObject(includeInstance: boolean, msg: ValidatorSetHistory): ValidatorSetHistory.AsObject;
@@ -361,12 +344,10 @@ export namespace ValidatorSetHistory {
 export class ValidatorSet extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): ValidatorSet;
-
     clearSetList(): void;
     getSetList(): Array<validator_pb.Validator>;
     setSetList(value: Array<validator_pb.Validator>): ValidatorSet;
     addSet(value?: validator_pb.Validator, index?: number): validator_pb.Validator;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ValidatorSet.AsObject;
@@ -391,7 +372,6 @@ export class GetProposalParam extends jspb.Message {
     getHash_asB64(): string;
     setHash(value: Uint8Array | string): GetProposalParam;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): GetProposalParam.AsObject;
     static toObject(includeInstance: boolean, msg: GetProposalParam): GetProposalParam.AsObject;
@@ -411,7 +391,6 @@ export namespace GetProposalParam {
 export class ListProposalsParam extends jspb.Message { 
     getProposed(): boolean;
     setProposed(value: boolean): ListProposalsParam;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ListProposalsParam.AsObject;
@@ -435,12 +414,10 @@ export class ProposalResult extends jspb.Message {
     getHash_asB64(): string;
     setHash(value: Uint8Array | string): ProposalResult;
 
-
     hasBallot(): boolean;
     clearBallot(): void;
     getBallot(): payload_pb.Ballot | undefined;
     setBallot(value?: payload_pb.Ballot): ProposalResult;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ProposalResult.AsObject;
@@ -479,10 +456,8 @@ export namespace GetStatsParam {
 export class Stats extends jspb.Message { 
     getAccountswithcode(): number;
     setAccountswithcode(value: number): Stats;
-
     getAccountswithoutcode(): number;
     setAccountswithoutcode(value: number): Stats;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Stats.AsObject;
@@ -504,7 +479,6 @@ export namespace Stats {
 export class GetBlockParam extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): GetBlockParam;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): GetBlockParam.AsObject;

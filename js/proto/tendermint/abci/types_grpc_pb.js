@@ -1,6 +1,7 @@
 // GENERATED CODE -- DO NOT EDIT!
 
 'use strict';
+var grpc = require('@grpc/grpc-js');
 var tendermint_abci_types_pb = require('../../tendermint/abci/types_pb.js');
 var tendermint_crypto_proof_pb = require('../../tendermint/crypto/proof_pb.js');
 var tendermint_types_types_pb = require('../../tendermint/types/types_pb.js');
@@ -343,7 +344,7 @@ function deserialize_tendermint_abci_ResponseSetOption(buffer_arg) {
 // ----------------------------------------
 // Service Definition
 //
-var ABCIApplicationService = exports['tendermint.abci.ABCIApplication'] = {
+var ABCIApplicationService = exports.ABCIApplicationService = {
   echo: {
     path: '/tendermint.abci.ABCIApplication/Echo',
     requestStream: false,
@@ -511,3 +512,4 @@ var ABCIApplicationService = exports['tendermint.abci.ABCIApplication'] = {
   },
 };
 
+exports.ABCIApplicationClient = grpc.makeGenericClientConstructor(ABCIApplicationService);

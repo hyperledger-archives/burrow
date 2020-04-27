@@ -1,9 +1,10 @@
-import * as assert from 'assert';
-import {burrow, compile} from '../test';
 import * as grpc from '@grpc/grpc-js';
+import * as assert from 'assert';
+import { compile } from '../contracts/compile';
+import { burrow } from './test';
 
 describe('REVERT non-constant', function () {
-  let contract
+  let instance: any;
 
   before(async () => {
     const source = `
@@ -20,21 +21,19 @@ describe('REVERT non-constant', function () {
           }
         }
       }
-    `
+    `;
 
-    const {abi, code} = compile(source, 'c')
-    return burrow.contracts.deploy(abi, code).then((c) => {
-      contract = c
-    })
-  })
+    instance = await compile(source, 'c').deploy(burrow);
+  });
 
-  it('It catches a revert with the revert string',
-    async () => {
-      return contract.getString(1)
-        .then((str) => {
-          throw new Error('Did not catch revert error')
-        }).catch((err: grpc.ServiceError) => {
-          assert.strictEqual(err.code, grpc.status.ABORTED)
-        })
-    })
-})
+  it('It catches a revert with the revert string', async () => {
+    return instance
+      .getString(1)
+      .then((str: any) => {
+        throw new Error('Did not catch revert error');
+      })
+      .catch((err: grpc.ServiceError) => {
+        assert.strictEqual(err.code, grpc.status.ABORTED);
+      });
+  });
+});

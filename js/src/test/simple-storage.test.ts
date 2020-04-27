@@ -1,5 +1,6 @@
 import * as assert from 'assert';
-import {burrow, compile} from '../test';
+import { compile } from '../contracts/compile';
+import { burrow } from './test';
 
 describe('Simple storage', function () {
   it('sets and gets a value from a contract', async () => {
@@ -16,13 +17,13 @@ describe('Simple storage', function () {
               return storedData;
           }
       }
-    `
-    const {abi, code} = compile(source, 'SimpleStorage')
-    return burrow.contracts.deploy(abi, code)
-      .then((contract: any) => contract.set(42)
-        .then(() => contract.get())
-      ).then((value) => {
-        assert.deepStrictEqual(value, [42])
-      })
-  })
-})
+    `;
+    const contract = compile(source, 'SimpleStorage');
+    return contract
+      .deploy(burrow)
+      .then((instance: any) => instance.set(42).then(() => instance.get()))
+      .then((value) => {
+        assert.deepStrictEqual([...value], [42]);
+      });
+  });
+});

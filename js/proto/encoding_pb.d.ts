@@ -10,10 +10,8 @@ import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 export class TestMessage extends jspb.Message { 
     getType(): number;
     setType(value: number): TestMessage;
-
     getAmount(): number;
     setAmount(value: number): TestMessage;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TestMessage.AsObject;

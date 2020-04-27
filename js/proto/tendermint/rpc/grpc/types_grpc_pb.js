@@ -1,6 +1,7 @@
 // GENERATED CODE -- DO NOT EDIT!
 
 'use strict';
+var grpc = require('@grpc/grpc-js');
 var tendermint_rpc_grpc_types_pb = require('../../../tendermint/rpc/grpc/types_pb.js');
 var tendermint_abci_types_pb = require('../../../tendermint/abci/types_pb.js');
 
@@ -52,7 +53,7 @@ function deserialize_tendermint_rpc_grpc_ResponsePing(buffer_arg) {
 // ----------------------------------------
 // Service Definition
 //
-var BroadcastAPIService = exports['tendermint.rpc.grpc.BroadcastAPI'] = {
+var BroadcastAPIService = exports.BroadcastAPIService = {
   ping: {
     path: '/tendermint.rpc.grpc.BroadcastAPI/Ping',
     requestStream: false,
@@ -77,3 +78,4 @@ var BroadcastAPIService = exports['tendermint.rpc.grpc.BroadcastAPI'] = {
   },
 };
 
+exports.BroadcastAPIClient = grpc.makeGenericClientConstructor(BroadcastAPIService);

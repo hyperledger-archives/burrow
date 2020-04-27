@@ -9,10 +9,8 @@ import * as jspb from "google-protobuf";
 export class BlockStoreState extends jspb.Message { 
     getBase(): number;
     setBase(value: number): BlockStoreState;
-
     getHeight(): number;
     setHeight(value: number): BlockStoreState;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): BlockStoreState.AsObject;

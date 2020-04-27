@@ -1,8 +1,11 @@
 import * as assert from 'assert';
-import {burrow, compile} from "../test";
+import { compile } from '../contracts/compile';
+import { getAddress } from '../contracts/contract';
+import { withoutArrayElements } from '../convert';
+import { burrow } from './test';
 
 describe('Multiple return types', function () {
-  it('#42', async () => {
+  it('can decode multiple returns', async () => {
     const source = `
       pragma solidity >=0.0.0;
       contract Test {
@@ -23,23 +26,31 @@ describe('Multiple return types', function () {
           }
 
       }
-    `
-    const {abi, code} = compile(source, 'Test')
-    const contract: any = await burrow.contracts.deploy(abi, code, {
-      call: function (result) {
-        return {values: result.values, raw: result.raw}
-      }
-    })
+    `;
+    const contract = compile(source, 'Test');
+    const instance: any = await contract.deployWith(burrow, {
+      handler: function ({ result }) {
+        return {
+          values: withoutArrayElements(result),
+          raw: [...result],
+        };
+      },
+    });
     const expected = {
       values: {
         _number: 100,
-        _address: contract.address,
+        _address: getAddress(instance),
         _saying: 'hello moto',
-        _randomBytes: '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE'
+        _randomBytes: '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE',
       },
-      raw: [100, contract.address, 'hello moto', '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE']
-    }
-    const result = await contract.getCombination();
-    assert.deepStrictEqual(result, expected)
-  })
-})
+      raw: [
+        100,
+        getAddress(instance),
+        'hello moto',
+        '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE',
+      ],
+    };
+    const result = await instance.getCombination();
+    assert.deepStrictEqual(result, expected);
+  });
+});

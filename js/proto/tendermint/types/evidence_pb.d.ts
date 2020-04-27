@@ -17,12 +17,10 @@ export class Evidence extends jspb.Message {
     getDuplicateVoteEvidence(): DuplicateVoteEvidence | undefined;
     setDuplicateVoteEvidence(value?: DuplicateVoteEvidence): Evidence;
 
-
     hasLightClientAttackEvidence(): boolean;
     clearLightClientAttackEvidence(): void;
     getLightClientAttackEvidence(): LightClientAttackEvidence | undefined;
     setLightClientAttackEvidence(value?: LightClientAttackEvidence): Evidence;
-
 
     getSumCase(): Evidence.SumCase;
 
@@ -44,11 +42,8 @@ export namespace Evidence {
 
     export enum SumCase {
         SUM_NOT_SET = 0,
-    
-    DUPLICATE_VOTE_EVIDENCE = 1,
-
-    LIGHT_CLIENT_ATTACK_EVIDENCE = 2,
-
+        DUPLICATE_VOTE_EVIDENCE = 1,
+        LIGHT_CLIENT_ATTACK_EVIDENCE = 2,
     }
 
 }
@@ -60,24 +55,19 @@ export class DuplicateVoteEvidence extends jspb.Message {
     getVoteA(): tendermint_types_types_pb.Vote | undefined;
     setVoteA(value?: tendermint_types_types_pb.Vote): DuplicateVoteEvidence;
 
-
     hasVoteB(): boolean;
     clearVoteB(): void;
     getVoteB(): tendermint_types_types_pb.Vote | undefined;
     setVoteB(value?: tendermint_types_types_pb.Vote): DuplicateVoteEvidence;
-
     getTotalVotingPower(): number;
     setTotalVotingPower(value: number): DuplicateVoteEvidence;
-
     getValidatorPower(): number;
     setValidatorPower(value: number): DuplicateVoteEvidence;
-
 
     hasTimestamp(): boolean;
     clearTimestamp(): void;
     getTimestamp(): google_protobuf_timestamp_pb.Timestamp | undefined;
     setTimestamp(value?: google_protobuf_timestamp_pb.Timestamp): DuplicateVoteEvidence;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): DuplicateVoteEvidence.AsObject;
@@ -105,24 +95,19 @@ export class LightClientAttackEvidence extends jspb.Message {
     clearConflictingBlock(): void;
     getConflictingBlock(): tendermint_types_types_pb.LightBlock | undefined;
     setConflictingBlock(value?: tendermint_types_types_pb.LightBlock): LightClientAttackEvidence;
-
     getCommonHeight(): number;
     setCommonHeight(value: number): LightClientAttackEvidence;
-
     clearByzantineValidatorsList(): void;
     getByzantineValidatorsList(): Array<tendermint_types_validator_pb.Validator>;
     setByzantineValidatorsList(value: Array<tendermint_types_validator_pb.Validator>): LightClientAttackEvidence;
     addByzantineValidators(value?: tendermint_types_validator_pb.Validator, index?: number): tendermint_types_validator_pb.Validator;
-
     getTotalVotingPower(): number;
     setTotalVotingPower(value: number): LightClientAttackEvidence;
-
 
     hasTimestamp(): boolean;
     clearTimestamp(): void;
     getTimestamp(): google_protobuf_timestamp_pb.Timestamp | undefined;
     setTimestamp(value?: google_protobuf_timestamp_pb.Timestamp): LightClientAttackEvidence;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): LightClientAttackEvidence.AsObject;
@@ -149,7 +134,6 @@ export class EvidenceList extends jspb.Message {
     getEvidenceList(): Array<Evidence>;
     setEvidenceList(value: Array<Evidence>): EvidenceList;
     addEvidence(value?: Evidence, index?: number): Evidence;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): EvidenceList.AsObject;

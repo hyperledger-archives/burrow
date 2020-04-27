@@ -1,9 +1,9 @@
-import {IQueryClient} from '../../proto/rpcquery_grpc_pb';
-import {GetNameParam} from '../../proto/rpcquery_pb';
-import {Entry} from '../../proto/names_pb';
-import {ITransactClient} from '../../proto/rpctransact_grpc_pb';
-import {TxInput, NameTx} from '../../proto/payload_pb';
-import {TxExecution} from '../../proto/exec_pb';
+import {IQueryClient} from '../proto/rpcquery_grpc_pb';
+import {GetNameParam} from '../proto/rpcquery_pb';
+import {Entry} from '../proto/names_pb';
+import {ITransactClient} from '../proto/rpctransact_grpc_pb';
+import {TxInput, NameTx} from '../proto/payload_pb';
+import {TxExecution} from '../proto/exec_pb';
 import * as grpc from '@grpc/grpc-js';
 
 export class Namereg {

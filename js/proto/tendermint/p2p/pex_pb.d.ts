@@ -31,7 +31,6 @@ export class PexAddrs extends jspb.Message {
     setAddrsList(value: Array<tendermint_p2p_types_pb.NetAddress>): PexAddrs;
     addAddrs(value?: tendermint_p2p_types_pb.NetAddress, index?: number): tendermint_p2p_types_pb.NetAddress;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): PexAddrs.AsObject;
     static toObject(includeInstance: boolean, msg: PexAddrs): PexAddrs.AsObject;
@@ -55,12 +54,10 @@ export class Message extends jspb.Message {
     getPexRequest(): PexRequest | undefined;
     setPexRequest(value?: PexRequest): Message;
 
-
     hasPexAddrs(): boolean;
     clearPexAddrs(): void;
     getPexAddrs(): PexAddrs | undefined;
     setPexAddrs(value?: PexAddrs): Message;
-
 
     getSumCase(): Message.SumCase;
 
@@ -82,11 +79,8 @@ export namespace Message {
 
     export enum SumCase {
         SUM_NOT_SET = 0,
-    
-    PEX_REQUEST = 1,
-
-    PEX_ADDRS = 2,
-
+        PEX_REQUEST = 1,
+        PEX_ADDRS = 2,
     }
 
 }

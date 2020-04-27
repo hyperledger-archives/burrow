@@ -1,10 +1,11 @@
 import * as assert from 'assert';
-import { burrow, compile } from '../test';
-import BN from 'bn.js';
+import { BigNumber } from 'ethers/lib/ethers';
+import { compile } from '../contracts/compile';
+import { burrow } from './test';
 
 describe('BN', function () {
-    it('BN', async () => {
-        const source = `
+  it('BN', async () => {
+    const source = `
       pragma solidity >=0.0.0;
       contract Test {
           function mul(int a, int b) public pure returns (int) {
@@ -15,23 +16,20 @@ describe('BN', function () {
             return 1e19;
           }
       }
-    `
-        const { abi, code } = compile(source, 'Test')
-        let contract: any = await burrow.contracts.deploy(abi, code);
+    `;
+    const contract = compile(source, 'Test');
+    const instance = await contract.deploy(burrow);
 
-        await contract.getNumber()
-            .then(([number]) => {
-                assert.strictEqual(new BN('10000000000000000000').cmp(number), 0)
-            })
+    const [number] = await instance.getNumber();
+    const expected = BigNumber.from('10000000000000000000');
+    assert.ok(expected.eq(number));
 
-        await contract.mul(100, -300)
-            .then(([number]) => {
-                assert.strictEqual(number, -30000)
-            })
+    await instance.mul(100, -300).then(([number]: any) => {
+      assert.strictEqual(number, -30000);
+    });
 
-        await contract.mul(new BN('18446744073709551616'), 102)
-            .then(([number]) => {
-                assert.strictEqual(new BN('1881567895518374264832').cmp(number), 0)
-            })
-    })
-})
+    await instance.mul(BigNumber.from('18446744073709551616'), 102).then(([number]: any) => {
+      assert.ok(BigNumber.from('1881567895518374264832').eq(number));
+    });
+  });
+});

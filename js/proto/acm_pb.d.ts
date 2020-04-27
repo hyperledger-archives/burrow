@@ -15,52 +15,41 @@ export class Account extends jspb.Message {
     getAddress_asB64(): string;
     setAddress(value: Uint8Array | string): Account;
 
-
     hasPublickey(): boolean;
     clearPublickey(): void;
     getPublickey(): crypto_pb.PublicKey | undefined;
     setPublickey(value?: crypto_pb.PublicKey): Account;
-
     getSequence(): number;
     setSequence(value: number): Account;
-
     getBalance(): number;
     setBalance(value: number): Account;
-
     getEvmcode(): Uint8Array | string;
     getEvmcode_asU8(): Uint8Array;
     getEvmcode_asB64(): string;
     setEvmcode(value: Uint8Array | string): Account;
 
-
     hasPermissions(): boolean;
     clearPermissions(): void;
     getPermissions(): permission_pb.AccountPermissions | undefined;
     setPermissions(value?: permission_pb.AccountPermissions): Account;
-
     getWasmcode(): Uint8Array | string;
     getWasmcode_asU8(): Uint8Array;
     getWasmcode_asB64(): string;
     setWasmcode(value: Uint8Array | string): Account;
-
     getNativename(): string;
     setNativename(value: string): Account;
-
     getCodehash(): Uint8Array | string;
     getCodehash_asU8(): Uint8Array;
     getCodehash_asB64(): string;
     setCodehash(value: Uint8Array | string): Account;
-
     clearContractmetaList(): void;
     getContractmetaList(): Array<ContractMeta>;
     setContractmetaList(value: Array<ContractMeta>): Account;
     addContractmeta(value?: ContractMeta, index?: number): ContractMeta;
-
     getForebear(): Uint8Array | string;
     getForebear_asU8(): Uint8Array;
     getForebear_asB64(): string;
     setForebear(value: Uint8Array | string): Account;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Account.AsObject;
@@ -93,15 +82,12 @@ export class ContractMeta extends jspb.Message {
     getCodehash_asU8(): Uint8Array;
     getCodehash_asB64(): string;
     setCodehash(value: Uint8Array | string): ContractMeta;
-
     getMetadatahash(): Uint8Array | string;
     getMetadatahash_asU8(): Uint8Array;
     getMetadatahash_asB64(): string;
     setMetadatahash(value: Uint8Array | string): ContractMeta;
-
     getMetadata(): string;
     setMetadata(value: string): ContractMeta;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ContractMeta.AsObject;

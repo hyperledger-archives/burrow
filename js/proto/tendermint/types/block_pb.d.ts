@@ -16,24 +16,20 @@ export class Block extends jspb.Message {
     getHeader(): tendermint_types_types_pb.Header | undefined;
     setHeader(value?: tendermint_types_types_pb.Header): Block;
 
-
     hasData(): boolean;
     clearData(): void;
     getData(): tendermint_types_types_pb.Data | undefined;
     setData(value?: tendermint_types_types_pb.Data): Block;
-
 
     hasEvidence(): boolean;
     clearEvidence(): void;
     getEvidence(): tendermint_types_evidence_pb.EvidenceList | undefined;
     setEvidence(value?: tendermint_types_evidence_pb.EvidenceList): Block;
 
-
     hasLastCommit(): boolean;
     clearLastCommit(): void;
     getLastCommit(): tendermint_types_types_pb.Commit | undefined;
     setLastCommit(value?: tendermint_types_types_pb.Commit): Block;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Block.AsObject;

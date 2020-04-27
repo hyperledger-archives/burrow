@@ -4,14 +4,22 @@
     "outDir": "dist",
     "preserveSymlinks": true,
     "esModuleInterop": true,
+    "alwaysStrict": true,
     "sourceMap": true,
     "declaration": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "lib": ["ES2020", "DOM"],
     "typeRoots": [ "./types", "./node_modules/@types"]
   },
   "exclude": [
     "node_modules",
     "dist",
     "types",
-    "src/test/"
+    "test/"
   ]
 }

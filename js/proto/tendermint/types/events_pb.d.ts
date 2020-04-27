@@ -9,13 +9,10 @@ import * as jspb from "google-protobuf";
 export class EventDataRoundState extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): EventDataRoundState;
-
     getRound(): number;
     setRound(value: number): EventDataRoundState;
-
     getStep(): string;
     setStep(value: string): EventDataRoundState;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): EventDataRoundState.AsObject;

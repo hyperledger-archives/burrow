@@ -9,10 +9,8 @@ import * as jspb from "google-protobuf";
 export class Timestamp extends jspb.Message { 
     getSeconds(): number;
     setSeconds(value: number): Timestamp;
-
     getNanos(): number;
     setNanos(value: number): Timestamp;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Timestamp.AsObject;

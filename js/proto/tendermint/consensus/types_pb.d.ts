@@ -12,19 +12,14 @@ import * as tendermint_libs_bits_types_pb from "../../tendermint/libs/bits/types
 export class NewRoundStep extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): NewRoundStep;
-
     getRound(): number;
     setRound(value: number): NewRoundStep;
-
     getStep(): number;
     setStep(value: number): NewRoundStep;
-
     getSecondsSinceStartTime(): number;
     setSecondsSinceStartTime(value: number): NewRoundStep;
-
     getLastCommitRound(): number;
     setLastCommitRound(value: number): NewRoundStep;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): NewRoundStep.AsObject;
@@ -49,25 +44,20 @@ export namespace NewRoundStep {
 export class NewValidBlock extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): NewValidBlock;
-
     getRound(): number;
     setRound(value: number): NewValidBlock;
-
 
     hasBlockPartSetHeader(): boolean;
     clearBlockPartSetHeader(): void;
     getBlockPartSetHeader(): tendermint_types_types_pb.PartSetHeader | undefined;
     setBlockPartSetHeader(value?: tendermint_types_types_pb.PartSetHeader): NewValidBlock;
 
-
     hasBlockParts(): boolean;
     clearBlockParts(): void;
     getBlockParts(): tendermint_libs_bits_types_pb.BitArray | undefined;
     setBlockParts(value?: tendermint_libs_bits_types_pb.BitArray): NewValidBlock;
-
     getIsCommit(): boolean;
     setIsCommit(value: boolean): NewValidBlock;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): NewValidBlock.AsObject;
@@ -96,7 +86,6 @@ export class Proposal extends jspb.Message {
     getProposal(): tendermint_types_types_pb.Proposal | undefined;
     setProposal(value?: tendermint_types_types_pb.Proposal): Proposal;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Proposal.AsObject;
     static toObject(includeInstance: boolean, msg: Proposal): Proposal.AsObject;
@@ -116,16 +105,13 @@ export namespace Proposal {
 export class ProposalPOL extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): ProposalPOL;
-
     getProposalPolRound(): number;
     setProposalPolRound(value: number): ProposalPOL;
-
 
     hasProposalPol(): boolean;
     clearProposalPol(): void;
     getProposalPol(): tendermint_libs_bits_types_pb.BitArray | undefined;
     setProposalPol(value?: tendermint_libs_bits_types_pb.BitArray): ProposalPOL;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ProposalPOL.AsObject;
@@ -148,16 +134,13 @@ export namespace ProposalPOL {
 export class BlockPart extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): BlockPart;
-
     getRound(): number;
     setRound(value: number): BlockPart;
-
 
     hasPart(): boolean;
     clearPart(): void;
     getPart(): tendermint_types_types_pb.Part | undefined;
     setPart(value?: tendermint_types_types_pb.Part): BlockPart;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): BlockPart.AsObject;
@@ -184,7 +167,6 @@ export class Vote extends jspb.Message {
     getVote(): tendermint_types_types_pb.Vote | undefined;
     setVote(value?: tendermint_types_types_pb.Vote): Vote;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Vote.AsObject;
     static toObject(includeInstance: boolean, msg: Vote): Vote.AsObject;
@@ -204,16 +186,12 @@ export namespace Vote {
 export class HasVote extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): HasVote;
-
     getRound(): number;
     setRound(value: number): HasVote;
-
     getType(): tendermint_types_types_pb.SignedMsgType;
     setType(value: tendermint_types_types_pb.SignedMsgType): HasVote;
-
     getIndex(): number;
     setIndex(value: number): HasVote;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): HasVote.AsObject;
@@ -237,19 +215,15 @@ export namespace HasVote {
 export class VoteSetMaj23 extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): VoteSetMaj23;
-
     getRound(): number;
     setRound(value: number): VoteSetMaj23;
-
     getType(): tendermint_types_types_pb.SignedMsgType;
     setType(value: tendermint_types_types_pb.SignedMsgType): VoteSetMaj23;
-
 
     hasBlockId(): boolean;
     clearBlockId(): void;
     getBlockId(): tendermint_types_types_pb.BlockID | undefined;
     setBlockId(value?: tendermint_types_types_pb.BlockID): VoteSetMaj23;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): VoteSetMaj23.AsObject;
@@ -273,25 +247,20 @@ export namespace VoteSetMaj23 {
 export class VoteSetBits extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): VoteSetBits;
-
     getRound(): number;
     setRound(value: number): VoteSetBits;
-
     getType(): tendermint_types_types_pb.SignedMsgType;
     setType(value: tendermint_types_types_pb.SignedMsgType): VoteSetBits;
-
 
     hasBlockId(): boolean;
     clearBlockId(): void;
     getBlockId(): tendermint_types_types_pb.BlockID | undefined;
     setBlockId(value?: tendermint_types_types_pb.BlockID): VoteSetBits;
 
-
     hasVotes(): boolean;
     clearVotes(): void;
     getVotes(): tendermint_libs_bits_types_pb.BitArray | undefined;
     setVotes(value?: tendermint_libs_bits_types_pb.BitArray): VoteSetBits;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): VoteSetBits.AsObject;
@@ -320,54 +289,45 @@ export class Message extends jspb.Message {
     getNewRoundStep(): NewRoundStep | undefined;
     setNewRoundStep(value?: NewRoundStep): Message;
 
-
     hasNewValidBlock(): boolean;
     clearNewValidBlock(): void;
     getNewValidBlock(): NewValidBlock | undefined;
     setNewValidBlock(value?: NewValidBlock): Message;
-
 
     hasProposal(): boolean;
     clearProposal(): void;
     getProposal(): Proposal | undefined;
     setProposal(value?: Proposal): Message;
 
-
     hasProposalPol(): boolean;
     clearProposalPol(): void;
     getProposalPol(): ProposalPOL | undefined;
     setProposalPol(value?: ProposalPOL): Message;
-
 
     hasBlockPart(): boolean;
     clearBlockPart(): void;
     getBlockPart(): BlockPart | undefined;
     setBlockPart(value?: BlockPart): Message;
 
-
     hasVote(): boolean;
     clearVote(): void;
     getVote(): Vote | undefined;
     setVote(value?: Vote): Message;
-
 
     hasHasVote(): boolean;
     clearHasVote(): void;
     getHasVote(): HasVote | undefined;
     setHasVote(value?: HasVote): Message;
 
-
     hasVoteSetMaj23(): boolean;
     clearVoteSetMaj23(): void;
     getVoteSetMaj23(): VoteSetMaj23 | undefined;
     setVoteSetMaj23(value?: VoteSetMaj23): Message;
 
-
     hasVoteSetBits(): boolean;
     clearVoteSetBits(): void;
     getVoteSetBits(): VoteSetBits | undefined;
     setVoteSetBits(value?: VoteSetBits): Message;
-
 
     getSumCase(): Message.SumCase;
 
@@ -396,25 +356,15 @@ export namespace Message {
 
     export enum SumCase {
         SUM_NOT_SET = 0,
-    
-    NEW_ROUND_STEP = 1,
-
-    NEW_VALID_BLOCK = 2,
-
-    PROPOSAL = 3,
-
-    PROPOSAL_POL = 4,
-
-    BLOCK_PART = 5,
-
-    VOTE = 6,
-
-    HAS_VOTE = 7,
-
-    VOTE_SET_MAJ23 = 8,
-
-    VOTE_SET_BITS = 9,
-
+        NEW_ROUND_STEP = 1,
+        NEW_VALID_BLOCK = 2,
+        PROPOSAL = 3,
+        PROPOSAL_POL = 4,
+        BLOCK_PART = 5,
+        VOTE = 6,
+        HAS_VOTE = 7,
+        VOTE_SET_MAJ23 = 8,
+        VOTE_SET_BITS = 9,
     }
 
 }

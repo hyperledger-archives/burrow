@@ -1,2 +1,4 @@
 *.pb.go linguist-generated
+*_pb.d.ts linguist-generated
+*_pb.js linguist-generated
 yarn.lock linguist-generated

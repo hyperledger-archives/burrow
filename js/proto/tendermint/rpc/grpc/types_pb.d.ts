@@ -30,7 +30,6 @@ export class RequestBroadcastTx extends jspb.Message {
     getTx_asB64(): string;
     setTx(value: Uint8Array | string): RequestBroadcastTx;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RequestBroadcastTx.AsObject;
     static toObject(includeInstance: boolean, msg: RequestBroadcastTx): RequestBroadcastTx.AsObject;
@@ -71,12 +70,10 @@ export class ResponseBroadcastTx extends jspb.Message {
     getCheckTx(): tendermint_abci_types_pb.ResponseCheckTx | undefined;
     setCheckTx(value?: tendermint_abci_types_pb.ResponseCheckTx): ResponseBroadcastTx;
 
-
     hasDeliverTx(): boolean;
     clearDeliverTx(): void;
     getDeliverTx(): tendermint_abci_types_pb.ResponseDeliverTx | undefined;
     setDeliverTx(value?: tendermint_abci_types_pb.ResponseDeliverTx): ResponseBroadcastTx;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResponseBroadcastTx.AsObject;
