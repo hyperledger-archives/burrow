@@ -20,52 +20,72 @@ contract foo {
 }
 `
 
-const abiConst = [{
-  "inputs": [
-    {"internalType": "uint256", "name": "n", "type": "uint256"},
-    {"internalType": "bool", "name": "b", "type": "bool"}
-  ], "name": "addFoobar", "outputs": [], "stateMutability": "nonpayable", "type": "function"
-}, {
-  "inputs": [],
-  "name": "getFoobar",
-  "outputs": [{"internalType": "uint256", "name": "n", "type": "uint256"}],
-  "stateMutability": "view",
-  "type": "function"
-}] as const;
+const abiConst = [
+  {
+    "name": "addFoobar",
+    "inputs": [
+      {"internalType": "uint256", "name": "n", "type": "uint256"},
+      {"internalType": "bool", "name": "b", "type": "bool"}
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "name": "getFoobar",
+    "inputs": [
+      {"internalType": "address", "name": "addr", "type": "address"}
+    ],
+    "outputs": [{"internalType": "uint256", "name": "n", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+] as const;
 
 type abi = typeof abiConst
-type Func = abi[number]
 
-type PickFunctionByName<T extends string> = Func & { name: T }
+type Function = abi[number]
 
-type FunctionsByName = {
-  [key in abi[number]['name']]: PickFunctionByName<key>
-}
+type FunctionName = abi[number]['name']
 
-type FunctionNames = keyof FunctionsByName
+type PickFunctionByName<name extends FunctionName> = {
+  [i in keyof abi]: abi[i] extends { name: name; type: 'function' } ? abi[i] : never
+}[keyof abi]
 
-type FunctionInputs = {
-  [key in keyof FunctionsByName]: FunctionsByName[key]['inputs']
-}
+type Address = string
 
-type FunctionInput<Name extends FunctionNames, Index extends number> = FunctionInputs[Name][Index] & { index: Index }
+type Type<T> =
+  T extends 'uint256' ? number :
+    T extends 'bool' ? boolean :
+      T extends 'address' ? Address :
+        never
 
-type TypeMapping = {
-  'uint256': number;
-  'bool': boolean;
-}
+type Arr1 = [
+  { type: 'uint256' },
+  { type: 'bool' }
+]
 
-type InputTypes = FunctionInputs[FunctionNames]
+// **mumble** something about distribution
+type PickValue<T, U> = U extends keyof T ? Pick<T, U>[keyof Pick<T, U>] : never;
 
+type TypesOf<T> = { -readonly [k in keyof T]: Type<PickValue<T[k], 'type'>> }
 
-type ff<name extends FunctionNames> = {
-  [i in number]: FunctionInput<name, i>['type'] 
-}
+type FunctionInputs<T extends FunctionName> = PickFunctionByName<T>["inputs"]
 
+type FunctionOutputs<T extends FunctionName> = PickFunctionByName<T>["outputs"]
+
+type ProjType<T> = { [k in keyof T]: PickValue<T[k], 'type'> }
+
+type Arr<T> = { [k in keyof T] }
+
+type Mutable<T> =  { -readonly [K in keyof T]: T[K] };
+
+type FunctionType<T extends FunctionName>= (...args: TypesOf<PickFunctionByName<T>['inputs']>) => boolean
 
 type Contract = {
-  [key in FunctionNames]: FunctionInputs[key]
+  [name in FunctionName]: (...args: TypesOf<FunctionInputs<name>>) => TypesOf<FunctionOutputs<name>>
 }
+
 
 describe('ABI helpers', () => {
   it('Can extract correct names from ABI', () => {
@@ -73,41 +93,41 @@ describe('ABI helpers', () => {
     console.log(JSON.stringify(abi))
     assert.strictEqual(transformToFullName(abi[0]), "addFoobar(uint256,bool)")
   })
+  const b: PickFunctionByName<'getFoobar'> =
+    {
+      "name": "getFoobar",
+      "inputs": [
+        {"internalType": "address", "name": "addr", "type": "address"}
+      ],
+      "outputs": [{"internalType": "uint256", "name": "n", "type": "uint256"}],
+      "stateMutability": "view",
+      "type": "function"
+    }
 
+  const a: FunctionInputs<'addFoobar'> = [
+    {"internalType": "uint256", "name": "n", "type": "uint256"},
+    {"internalType": "bool", "name": "b", "type": "bool"},
+  ]
+
+  const d: ProjType<FunctionInputs<'addFoobar'>> = ["uint256", "bool"]
+
+  const dd: TypesOf<FunctionInputs<'addFoobar'>> = [1, true]
+  const ddd: TypesOf<FunctionInputs<'getFoobar'>> = ["adwa"]
+
+  const sss: [number, boolean] = dd
+
+  // const e: []
   it('Function names', () => {
 
-    const input: ff<'addFoobar'> = ["uint256", "bool", "bool"]
-    const input2: FunctionInput<'addFoobar', 0> = {index: 0, "internalType": "uint256", "name": "n", "type": "uint256"}
+    const aaa: PickValue<Arr1[1], 'type'> = 'bool'
+
+    const mpfoo: TypesOf<Arr1> = [1, true]
+
 
     const contract: Contract = {
-      addFoobar: 'bool',
-      getFoobar: undefined,
-    }
-    const fs: FunctionsByName = {
-      addFoobar: {
-        "inputs": [
-          {"internalType": "uint256", "name": "n", "type": "uint256"},
-          {"internalType": "bool", "name": "b", "type": "bool"}
-        ],
-        "name": "addFoobar",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-      },
-      getFoobar: {
-        "inputs": [],
-        "name": "getFoobar",
-        "outputs": [{"internalType": "uint256", "name": "n", "type": "uint256"}],
-        "stateMutability": "view",
-        "type": "function"
-      },
-    }
-    const ins: FunctionInputs = {
-      addFoobar: [
-        {"internalType": "uint256", "name": "n", "type": "uint256"},
-        {"internalType": "bool", "name": "b", "type": "bool"}
-      ],
-      getFoobar: [],
+      addFoobar: (n: number, b: boolean) => [],
+      // addFoobar: ["uint256", "bool"],
+      getFoobar: (n: Address) => [2],
     }
 
   })
