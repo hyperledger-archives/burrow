@@ -1,9 +1,10 @@
 import * as assert from 'assert';
 import { Contract } from '../src';
-import { compile } from '..src/con'
+import { compile } from "../src/contracts/compile"
 import { burrow } from './test';
 
-describe('Functional Contract Usage', function () {it('#Constructor usage', async () => {
+describe('Functional Contract Usage', function () {
+  it('#Constructor usage', async () => {
     const source = `
       pragma solidity >=0.0.0;
       contract Test {
@@ -31,7 +32,7 @@ describe('Functional Contract Usage', function () {it('#Constructor usage', asyn
       }
     `
     const {abi, code} = compile(source, 'Test')
-    const contract: any = new Contract(abi, code, burrow)
+    const contract: any = new Contract(abi, code)
 
     let A1
     let A2

@@ -1,5 +1,6 @@
-import {Contract} from '../src';
-import {burrow, compile} from "./test";
+import { Contract } from '../src';
+import { burrow } from "./test";
+import { compile } from '../src/contracts/compile'
 
 describe('Nested contract event emission', function () {
 
@@ -16,7 +17,7 @@ describe('Nested contract event emission', function () {
     `
     const {abi, code} = compile(source, 'Contract')
     const contract: any = await burrow.contracts.deploy(abi, code)
-    const secondContract: any = new Contract(abi, null, burrow)
+    const secondContract: any = new Contract(abi, null)
     const stream = secondContract.Event.at(contract.address, function (error, event) {
       if (error) {
         throw error

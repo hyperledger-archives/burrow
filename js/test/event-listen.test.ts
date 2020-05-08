@@ -1,5 +1,6 @@
 import * as assert from 'assert';
-import {burrow, compile} from '../test';
+import { compile } from '../src/contracts/compile'
+import { burrow } from "./test";
 
 describe('Event listening', function () {
 

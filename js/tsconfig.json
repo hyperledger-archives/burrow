@@ -4,6 +4,7 @@
     "outDir": "dist",
     "preserveSymlinks": true,
     "esModuleInterop": true,
+    "alwaysStrict": true,
     "sourceMap": true,
     "declaration": true,
     "typeRoots": [ "./types", "./node_modules/@types"]

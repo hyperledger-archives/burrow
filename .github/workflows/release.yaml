@@ -21,7 +21,6 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# TODO: convert this to yarn equivalent publish
   js:
     name: npm
     runs-on: ubuntu-latest
@@ -39,11 +38,11 @@ jobs:
         git config --global user.email "${GITHUB_ACTOR}"
         git config --global user.name "${GITHUB_ACTOR}"
         cd js
-        npm install
-        npm run build
-        npm version $RELEASE_VERSION
-        npm config set '//registry.npmjs.org/:_authToken' "${NPM_TOKEN}"
-        npm publish --access public .
+        yarn install
+        yarn run build
+        yarn version --no-git-tag-version --new-version $RELEASE_VERSION
+        yarn config set '//registry.npmjs.org/:_authToken' "${NPM_TOKEN}"
+        yarn publish --access public .
 
   docker:
     name: docker

@@ -1,5 +1,6 @@
 import * as assert from 'assert';
-import {burrow, compile} from "./test";
+import { burrow } from "./test";
+import { compile } from "../src/contracts/compile"
 
 
 describe('issue #21', function () {
