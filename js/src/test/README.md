@@ -51,7 +51,7 @@ after(function () {
 
 it(`description of the test`, function () {
   // Compute results.
-  assert.equal(results, expectations)
+  assert.strictEqual(results, expectations)
 })
 ```
 
@@ -67,12 +67,8 @@ const test = require('../../lib/test')
 const vector = test.Vector()
 
 describe('HTTP', function () {
-  before(vector.before(__dirname, {protocol: 'http:'}))
-  after(vector.after())
-
-  this.timeout(10 * 1000)
-
-  it('sets and gets a value from a contract', vector.it(function (manager) {
+  before(vector.before(__dirname, {protocol: 'http:'})
+  after(vector.after())it('sets and gets a value from a contract', vector.it(function (manager) {
     const source = `
       contract SimpleStorage {
           uint storedData;
@@ -87,7 +83,7 @@ describe('HTTP', function () {
       }
     `
 
-    return test.compile(manager, source, 'SimpleStorage').then((contract) =>
+    return compile(manager, source, 'SimpleStorage').then((contract) =>
       Promise.fromCallback((callback) =>
         contract.set(42, callback)
       ).then(() =>
@@ -96,9 +92,9 @@ describe('HTTP', function () {
         )
       )
     ).then((value) => {
-      assert.equal(value, 42)
+      assert.strictEqual(value, 42)
     })
-  }))
+  })
 })
 ```
 
@@ -111,17 +107,17 @@ Tests written like this can then be used by the following commands:
 To test the library against pre-recorded vectors:
 
 ```
-npm test
+yarn test
 ```
 
 To test the library against Burrow while automatically recording vectors:
 
 ```
-TEST=record npm test
+TEST=record yarn test
 ```
 
 To test Burrow against pre-recorded vectors without exercising the client:
 
 ```
-TEST=server npm test
+TEST=server yarn test
 ```

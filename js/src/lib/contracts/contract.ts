@@ -1,9 +1,15 @@
-import { SolidityEvent } from './event';
-import { SolidityFunction, Handler } from './function';
-import { Burrow } from '../burrow';
-import { Function, Event } from 'solc';
+import {SolidityEvent} from './event';
+import {SolidityFunction, Handler} from './function';
+import {Burrow} from '../burrow';
+import {Function, Event} from 'solc';
 
-type FunctionOrEvent = Function | Event;
+
+export type FunctionOrEvent = Function | Event;
+
+export type ABI = Array<FunctionOrEvent>
+
+export type Bytecode = { bytecode: string, deployedBytecode?: string }
+
 
 export interface Handlers {
   call?: Handler
@@ -11,30 +17,35 @@ export interface Handlers {
 }
 
 const defaultHandlers: Handlers = {
-  call: function (result) { return result.raw },
-  deploy: function (result) { return result.contractAddress }
+  call: function (result) {
+    return result.raw
+  },
+  deploy: function (result) {
+    return result.contractAddress
+  }
 }
 
 export class Contract {
-  abi: Array<FunctionOrEvent>;
+  abi: ABI;
   address: string;
-  code: string;
+  code: Bytecode;
   burrow: Burrow;
   handlers: Handlers;
 
   _constructor: any;
 
-  constructor(abi: Array<FunctionOrEvent>, code: string, address: string, burrow: Burrow, handlers?: Handlers) {
+  constructor(abi: Array<FunctionOrEvent>, code: string | Bytecode, address: string, burrow: Burrow, handlers?: Handlers) {
     handlers = Object.assign({}, defaultHandlers, handlers);
 
     this.address = address;
     this.abi = abi;
-    this.code = code;
+    this.code = typeof (code) === 'string' ? {bytecode: code} : code;
     this.burrow = burrow;
     this.handlers = handlers;
     addFunctionsToContract(this);
     addEventsToContract(this);
   }
+
 }
 
 const addFunctionsToContract = function (contract: Contract) {

@@ -60,7 +60,7 @@ func CreateContract(cli rpctransact.TransactClient, inputAddress crypto.Address,
 		meta = make([]*payload.ContractMeta, len(metamap))
 		for i, m := range metamap {
 			hash := sha3.NewLegacyKeccak256()
-			hash.Write([]byte(m.DeployedCode))
+			hash.Write(m.DeployedCode)
 			meta[i] = &payload.ContractMeta{
 				CodeHash: hash.Sum(nil),
 				Meta:     string(m.Abi),

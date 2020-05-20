@@ -1,44 +1,45 @@
-import { Contract, Handlers } from './contract';
-import { Burrow } from '../burrow';
-import { GetMetadataParam } from '../../../proto/rpcquery_pb';
-import { Function, Event } from 'solc';
+import {Event, Function} from 'solc';
+import {GetMetadataParam} from '../../../proto/rpcquery_pb';
+import {Burrow} from '../burrow';
+import {Contract, Handlers} from './contract';
 
 type FunctionOrEvent = Function | Event;
 
 export class ContractManager {
   burrow: Burrow;
-  
+
   constructor(burrow: Burrow) {
     this.burrow = burrow;
   }
 
-  deploy(abi: Array<FunctionOrEvent>, byteCode: string, handlers?: Handlers, ...args: any[]): Promise<Contract> {
-    return new Promise((resolve, reject) => {
-      let contract = new Contract(abi, byteCode, null, this.burrow, handlers)
-      contract._constructor.apply(contract, args).then((address: string) => { 
-        contract.address = address;
-        resolve(contract);
-      });
-    });
+  async deploy(abi: Array<FunctionOrEvent>, byteCode: string | { bytecode: string, deployedBytecode: string },
+               handlers?: Handlers, ...args: any[]): Promise<Contract> {
+    const contract = new Contract(abi, byteCode, null, this.burrow, handlers)
+    contract.address = await contract._constructor.apply(contract, args);
+    return contract;
   }
 
   /**
-   * Creates a contract object interface from an address without ABI.
-   * The contract must be deployed using a recent burrow deploy which registers
-   * metadata.
+   * Looks up the ABI for a deployed contract from Burrow's contract metadata store.
+   * Contract metadata is only stored when provided by the contract deployer so is not guaranteed to exist.
    *
    * @method address
-   * @param {string} address - default contract address [can be null]
-   * @returns {Contract} returns contract interface object
+   * @param {string} address
+   * @throws an error if no metadata found and contract could not be instantiated
+   * @returns {Contract} interface object
    */
-  address(address: string, handlers?: Handlers): Promise<Contract> {
+  fromAddress(address: string, handlers?: Handlers): Promise<Contract> {
     const msg = new GetMetadataParam();
     msg.setAddress(Buffer.from(address, 'hex'));
 
     return new Promise((resolve, reject) =>
       this.burrow.qc.getMetadata(msg, (err, res) => {
         if (err) reject(err);
-        const abi = JSON.parse(res.getMetadata()).Abi;
+        const metadata = res.getMetadata();
+        if (!metadata) {
+          throw new Error(`could not find any metadata for account ${address}`)
+        }
+        const abi = JSON.parse(metadata).Abi;
         resolve(new Contract(abi, null, address, this.burrow, handlers));
       }))
   }

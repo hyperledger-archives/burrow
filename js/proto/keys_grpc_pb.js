@@ -1,7 +1,6 @@
 // GENERATED CODE -- DO NOT EDIT!
 
 'use strict';
-var grpc = require('grpc');
 var keys_pb = require('./keys_pb.js');
 var github_com_gogo_protobuf_gogoproto_gogo_pb = require('./github.com/gogo/protobuf/gogoproto/gogo_pb.js');
 var crypto_pb = require('./crypto_pb.js');
@@ -238,7 +237,7 @@ function deserialize_keys_VerifyResponse(buffer_arg) {
 }
 
 
-var KeysService = exports.KeysService = {
+var KeysService = exports['keys.Keys'] = {
   generateKey: {
     path: '/keys.Keys/GenerateKey',
     requestStream: false,
@@ -362,4 +361,3 @@ var KeysService = exports.KeysService = {
   },
 };
 
-exports.KeysClient = grpc.makeGenericClientConstructor(KeysService);

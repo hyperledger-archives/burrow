@@ -1,7 +1,6 @@
 // GENERATED CODE -- DO NOT EDIT!
 
 'use strict';
-var grpc = require('grpc');
 var github_com_tendermint_tendermint_abci_types_types_pb = require('../../../../../github.com/tendermint/tendermint/abci/types/types_pb.js');
 var github_com_gogo_protobuf_gogoproto_gogo_pb = require('../../../../../github.com/gogo/protobuf/gogoproto/gogo_pb.js');
 var google_protobuf_timestamp_pb = require('google-protobuf/google/protobuf/timestamp_pb.js');
@@ -253,7 +252,7 @@ function deserialize_types_ResponseSetOption(buffer_arg) {
 // ----------------------------------------
 // Service Definition
 //
-var ABCIApplicationService = exports.ABCIApplicationService = {
+var ABCIApplicationService = exports['types.ABCIApplication'] = {
   echo: {
     path: '/types.ABCIApplication/Echo',
     requestStream: false,
@@ -377,4 +376,3 @@ var ABCIApplicationService = exports.ABCIApplicationService = {
   },
 };
 
-exports.ABCIApplicationClient = grpc.makeGenericClientConstructor(ABCIApplicationService);

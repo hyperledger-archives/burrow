@@ -1,13 +1,11 @@
 import * as assert from 'assert';
-import * as test from '../test';
-
-const Test = test.Test();
+import {burrow, compile} from '../test';
 
 describe.skip('Really Long Loop', function () {
-  this.timeout(10 * 1000)
   let contract
+  this.timeout(1000000)
 
-  before(Test.before(async function (burrow) {
+  before(async () => {
     const source = `
       pragma solidity >=0.0.0;
       contract main {
@@ -28,21 +26,17 @@ describe.skip('Really Long Loop', function () {
       }
     `
 
-    const {abi, bytecode} = test.compile(source, 'main')
-    const c = await burrow.contracts.deploy(abi, bytecode);
+    const {abi, code} = compile(source, 'main')
+    const c = await burrow.contracts.deploy(abi, code.bytecode);
     contract = c;
-  }))
+  })
 
-  after(Test.after())
-
-  it('It catches a revert when gas runs out',
-    Test.it(function () {
-      return contract.test()
-        .then((str) => {
-          throw new Error('Did not catch revert error')
-        }).catch((err) => {
-          assert.equal(err.message, 'ERR_EXECUTION_REVERT')
-        })
-    })
-  )
+  it('It catches a revert when gas runs out', async () => {
+    return contract.test()
+      .then((str) => {
+        throw new Error('Did not catch revert error')
+      }).catch((err) => {
+        assert.strictEqual(err.message, 'ERR_EXECUTION_REVERT')
+      })
+  })
 })

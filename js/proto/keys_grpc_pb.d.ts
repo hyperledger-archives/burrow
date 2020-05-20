@@ -1,60 +1,214 @@
-// GENERATED CODE -- DO NOT EDIT!
-
 // package: keys
 // file: keys.proto
 
+/* tslint:disable */
+/* eslint-disable */
+
+import * as grpc from "@grpc/grpc-js";
+import {handleClientStreamingCall} from "@grpc/grpc-js/build/src/server-call";
 import * as keys_pb from "./keys_pb";
-import * as grpc from "grpc";
+import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as crypto_pb from "./crypto_pb";
 
 interface IKeysService extends grpc.ServiceDefinition<grpc.UntypedServiceImplementation> {
-  generateKey: grpc.MethodDefinition<keys_pb.GenRequest, keys_pb.GenResponse>;
-  publicKey: grpc.MethodDefinition<keys_pb.PubRequest, keys_pb.PubResponse>;
-  sign: grpc.MethodDefinition<keys_pb.SignRequest, keys_pb.SignResponse>;
-  verify: grpc.MethodDefinition<keys_pb.VerifyRequest, keys_pb.VerifyResponse>;
-  import: grpc.MethodDefinition<keys_pb.ImportRequest, keys_pb.ImportResponse>;
-  importJSON: grpc.MethodDefinition<keys_pb.ImportJSONRequest, keys_pb.ImportResponse>;
-  export: grpc.MethodDefinition<keys_pb.ExportRequest, keys_pb.ExportResponse>;
-  hash: grpc.MethodDefinition<keys_pb.HashRequest, keys_pb.HashResponse>;
-  removeName: grpc.MethodDefinition<keys_pb.RemoveNameRequest, keys_pb.RemoveNameResponse>;
-  list: grpc.MethodDefinition<keys_pb.ListRequest, keys_pb.ListResponse>;
-  addName: grpc.MethodDefinition<keys_pb.AddNameRequest, keys_pb.AddNameResponse>;
+    generateKey: IKeysService_IGenerateKey;
+    publicKey: IKeysService_IPublicKey;
+    sign: IKeysService_ISign;
+    verify: IKeysService_IVerify;
+    import: IKeysService_IImport;
+    importJSON: IKeysService_IImportJSON;
+    export: IKeysService_IExport;
+    hash: IKeysService_IHash;
+    removeName: IKeysService_IRemoveName;
+    list: IKeysService_IList;
+    addName: IKeysService_IAddName;
+}
+
+interface IKeysService_IGenerateKey extends grpc.MethodDefinition<keys_pb.GenRequest, keys_pb.GenResponse> {
+    path: string; // "/keys.Keys/GenerateKey"
+    requestStream: boolean; // false
+    responseStream: boolean; // false
+    requestSerialize: grpc.serialize<keys_pb.GenRequest>;
+    requestDeserialize: grpc.deserialize<keys_pb.GenRequest>;
+    responseSerialize: grpc.serialize<keys_pb.GenResponse>;
+    responseDeserialize: grpc.deserialize<keys_pb.GenResponse>;
+}
+interface IKeysService_IPublicKey extends grpc.MethodDefinition<keys_pb.PubRequest, keys_pb.PubResponse> {
+    path: string; // "/keys.Keys/PublicKey"
+    requestStream: boolean; // false
+    responseStream: boolean; // false
+    requestSerialize: grpc.serialize<keys_pb.PubRequest>;
+    requestDeserialize: grpc.deserialize<keys_pb.PubRequest>;
+    responseSerialize: grpc.serialize<keys_pb.PubResponse>;
+    responseDeserialize: grpc.deserialize<keys_pb.PubResponse>;
+}
+interface IKeysService_ISign extends grpc.MethodDefinition<keys_pb.SignRequest, keys_pb.SignResponse> {
+    path: string; // "/keys.Keys/Sign"
+    requestStream: boolean; // false
+    responseStream: boolean; // false
+    requestSerialize: grpc.serialize<keys_pb.SignRequest>;
+    requestDeserialize: grpc.deserialize<keys_pb.SignRequest>;
+    responseSerialize: grpc.serialize<keys_pb.SignResponse>;
+    responseDeserialize: grpc.deserialize<keys_pb.SignResponse>;
+}
+interface IKeysService_IVerify extends grpc.MethodDefinition<keys_pb.VerifyRequest, keys_pb.VerifyResponse> {
+    path: string; // "/keys.Keys/Verify"
+    requestStream: boolean; // false
+    responseStream: boolean; // false
+    requestSerialize: grpc.serialize<keys_pb.VerifyRequest>;
+    requestDeserialize: grpc.deserialize<keys_pb.VerifyRequest>;
+    responseSerialize: grpc.serialize<keys_pb.VerifyResponse>;
+    responseDeserialize: grpc.deserialize<keys_pb.VerifyResponse>;
+}
+interface IKeysService_IImport extends grpc.MethodDefinition<keys_pb.ImportRequest, keys_pb.ImportResponse> {
+    path: string; // "/keys.Keys/Import"
+    requestStream: boolean; // false
+    responseStream: boolean; // false
+    requestSerialize: grpc.serialize<keys_pb.ImportRequest>;
+    requestDeserialize: grpc.deserialize<keys_pb.ImportRequest>;
+    responseSerialize: grpc.serialize<keys_pb.ImportResponse>;
+    responseDeserialize: grpc.deserialize<keys_pb.ImportResponse>;
+}
+interface IKeysService_IImportJSON extends grpc.MethodDefinition<keys_pb.ImportJSONRequest, keys_pb.ImportResponse> {
+    path: string; // "/keys.Keys/ImportJSON"
+    requestStream: boolean; // false
+    responseStream: boolean; // false
+    requestSerialize: grpc.serialize<keys_pb.ImportJSONRequest>;
+    requestDeserialize: grpc.deserialize<keys_pb.ImportJSONRequest>;
+    responseSerialize: grpc.serialize<keys_pb.ImportResponse>;
+    responseDeserialize: grpc.deserialize<keys_pb.ImportResponse>;
+}
+interface IKeysService_IExport extends grpc.MethodDefinition<keys_pb.ExportRequest, keys_pb.ExportResponse> {
+    path: string; // "/keys.Keys/Export"
+    requestStream: boolean; // false
+    responseStream: boolean; // false
+    requestSerialize: grpc.serialize<keys_pb.ExportRequest>;
+    requestDeserialize: grpc.deserialize<keys_pb.ExportRequest>;
+    responseSerialize: grpc.serialize<keys_pb.ExportResponse>;
+    responseDeserialize: grpc.deserialize<keys_pb.ExportResponse>;
+}
+interface IKeysService_IHash extends grpc.MethodDefinition<keys_pb.HashRequest, keys_pb.HashResponse> {
+    path: string; // "/keys.Keys/Hash"
+    requestStream: boolean; // false
+    responseStream: boolean; // false
+    requestSerialize: grpc.serialize<keys_pb.HashRequest>;
+    requestDeserialize: grpc.deserialize<keys_pb.HashRequest>;
+    responseSerialize: grpc.serialize<keys_pb.HashResponse>;
+    responseDeserialize: grpc.deserialize<keys_pb.HashResponse>;
+}
+interface IKeysService_IRemoveName extends grpc.MethodDefinition<keys_pb.RemoveNameRequest, keys_pb.RemoveNameResponse> {
+    path: string; // "/keys.Keys/RemoveName"
+    requestStream: boolean; // false
+    responseStream: boolean; // false
+    requestSerialize: grpc.serialize<keys_pb.RemoveNameRequest>;
+    requestDeserialize: grpc.deserialize<keys_pb.RemoveNameRequest>;
+    responseSerialize: grpc.serialize<keys_pb.RemoveNameResponse>;
+    responseDeserialize: grpc.deserialize<keys_pb.RemoveNameResponse>;
+}
+interface IKeysService_IList extends grpc.MethodDefinition<keys_pb.ListRequest, keys_pb.ListResponse> {
+    path: string; // "/keys.Keys/List"
+    requestStream: boolean; // false
+    responseStream: boolean; // false
+    requestSerialize: grpc.serialize<keys_pb.ListRequest>;
+    requestDeserialize: grpc.deserialize<keys_pb.ListRequest>;
+    responseSerialize: grpc.serialize<keys_pb.ListResponse>;
+    responseDeserialize: grpc.deserialize<keys_pb.ListResponse>;
+}
+interface IKeysService_IAddName extends grpc.MethodDefinition<keys_pb.AddNameRequest, keys_pb.AddNameResponse> {
+    path: string; // "/keys.Keys/AddName"
+    requestStream: boolean; // false
+    responseStream: boolean; // false
+    requestSerialize: grpc.serialize<keys_pb.AddNameRequest>;
+    requestDeserialize: grpc.deserialize<keys_pb.AddNameRequest>;
+    responseSerialize: grpc.serialize<keys_pb.AddNameResponse>;
+    responseDeserialize: grpc.deserialize<keys_pb.AddNameResponse>;
 }
 
 export const KeysService: IKeysService;
 
-export class KeysClient extends grpc.Client {
-  constructor(address: string, credentials: grpc.ChannelCredentials, options?: object);
-  generateKey(argument: keys_pb.GenRequest, callback: grpc.requestCallback<keys_pb.GenResponse>): grpc.ClientUnaryCall;
-  generateKey(argument: keys_pb.GenRequest, metadataOrOptions: grpc.Metadata | grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.GenResponse>): grpc.ClientUnaryCall;
-  generateKey(argument: keys_pb.GenRequest, metadata: grpc.Metadata | null, options: grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.GenResponse>): grpc.ClientUnaryCall;
-  publicKey(argument: keys_pb.PubRequest, callback: grpc.requestCallback<keys_pb.PubResponse>): grpc.ClientUnaryCall;
-  publicKey(argument: keys_pb.PubRequest, metadataOrOptions: grpc.Metadata | grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.PubResponse>): grpc.ClientUnaryCall;
-  publicKey(argument: keys_pb.PubRequest, metadata: grpc.Metadata | null, options: grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.PubResponse>): grpc.ClientUnaryCall;
-  sign(argument: keys_pb.SignRequest, callback: grpc.requestCallback<keys_pb.SignResponse>): grpc.ClientUnaryCall;
-  sign(argument: keys_pb.SignRequest, metadataOrOptions: grpc.Metadata | grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.SignResponse>): grpc.ClientUnaryCall;
-  sign(argument: keys_pb.SignRequest, metadata: grpc.Metadata | null, options: grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.SignResponse>): grpc.ClientUnaryCall;
-  verify(argument: keys_pb.VerifyRequest, callback: grpc.requestCallback<keys_pb.VerifyResponse>): grpc.ClientUnaryCall;
-  verify(argument: keys_pb.VerifyRequest, metadataOrOptions: grpc.Metadata | grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.VerifyResponse>): grpc.ClientUnaryCall;
-  verify(argument: keys_pb.VerifyRequest, metadata: grpc.Metadata | null, options: grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.VerifyResponse>): grpc.ClientUnaryCall;
-  import(argument: keys_pb.ImportRequest, callback: grpc.requestCallback<keys_pb.ImportResponse>): grpc.ClientUnaryCall;
-  import(argument: keys_pb.ImportRequest, metadataOrOptions: grpc.Metadata | grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.ImportResponse>): grpc.ClientUnaryCall;
-  import(argument: keys_pb.ImportRequest, metadata: grpc.Metadata | null, options: grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.ImportResponse>): grpc.ClientUnaryCall;
-  importJSON(argument: keys_pb.ImportJSONRequest, callback: grpc.requestCallback<keys_pb.ImportResponse>): grpc.ClientUnaryCall;
-  importJSON(argument: keys_pb.ImportJSONRequest, metadataOrOptions: grpc.Metadata | grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.ImportResponse>): grpc.ClientUnaryCall;
-  importJSON(argument: keys_pb.ImportJSONRequest, metadata: grpc.Metadata | null, options: grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.ImportResponse>): grpc.ClientUnaryCall;
-  export(argument: keys_pb.ExportRequest, callback: grpc.requestCallback<keys_pb.ExportResponse>): grpc.ClientUnaryCall;
-  export(argument: keys_pb.ExportRequest, metadataOrOptions: grpc.Metadata | grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.ExportResponse>): grpc.ClientUnaryCall;
-  export(argument: keys_pb.ExportRequest, metadata: grpc.Metadata | null, options: grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.ExportResponse>): grpc.ClientUnaryCall;
-  hash(argument: keys_pb.HashRequest, callback: grpc.requestCallback<keys_pb.HashResponse>): grpc.ClientUnaryCall;
-  hash(argument: keys_pb.HashRequest, metadataOrOptions: grpc.Metadata | grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.HashResponse>): grpc.ClientUnaryCall;
-  hash(argument: keys_pb.HashRequest, metadata: grpc.Metadata | null, options: grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.HashResponse>): grpc.ClientUnaryCall;
-  removeName(argument: keys_pb.RemoveNameRequest, callback: grpc.requestCallback<keys_pb.RemoveNameResponse>): grpc.ClientUnaryCall;
-  removeName(argument: keys_pb.RemoveNameRequest, metadataOrOptions: grpc.Metadata | grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.RemoveNameResponse>): grpc.ClientUnaryCall;
-  removeName(argument: keys_pb.RemoveNameRequest, metadata: grpc.Metadata | null, options: grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.RemoveNameResponse>): grpc.ClientUnaryCall;
-  list(argument: keys_pb.ListRequest, callback: grpc.requestCallback<keys_pb.ListResponse>): grpc.ClientUnaryCall;
-  list(argument: keys_pb.ListRequest, metadataOrOptions: grpc.Metadata | grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.ListResponse>): grpc.ClientUnaryCall;
-  list(argument: keys_pb.ListRequest, metadata: grpc.Metadata | null, options: grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.ListResponse>): grpc.ClientUnaryCall;
-  addName(argument: keys_pb.AddNameRequest, callback: grpc.requestCallback<keys_pb.AddNameResponse>): grpc.ClientUnaryCall;
-  addName(argument: keys_pb.AddNameRequest, metadataOrOptions: grpc.Metadata | grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.AddNameResponse>): grpc.ClientUnaryCall;
-  addName(argument: keys_pb.AddNameRequest, metadata: grpc.Metadata | null, options: grpc.CallOptions | null, callback: grpc.requestCallback<keys_pb.AddNameResponse>): grpc.ClientUnaryCall;
+export interface IKeysServer {
+    generateKey: grpc.handleUnaryCall<keys_pb.GenRequest, keys_pb.GenResponse>;
+    publicKey: grpc.handleUnaryCall<keys_pb.PubRequest, keys_pb.PubResponse>;
+    sign: grpc.handleUnaryCall<keys_pb.SignRequest, keys_pb.SignResponse>;
+    verify: grpc.handleUnaryCall<keys_pb.VerifyRequest, keys_pb.VerifyResponse>;
+    import: grpc.handleUnaryCall<keys_pb.ImportRequest, keys_pb.ImportResponse>;
+    importJSON: grpc.handleUnaryCall<keys_pb.ImportJSONRequest, keys_pb.ImportResponse>;
+    export: grpc.handleUnaryCall<keys_pb.ExportRequest, keys_pb.ExportResponse>;
+    hash: grpc.handleUnaryCall<keys_pb.HashRequest, keys_pb.HashResponse>;
+    removeName: grpc.handleUnaryCall<keys_pb.RemoveNameRequest, keys_pb.RemoveNameResponse>;
+    list: grpc.handleUnaryCall<keys_pb.ListRequest, keys_pb.ListResponse>;
+    addName: grpc.handleUnaryCall<keys_pb.AddNameRequest, keys_pb.AddNameResponse>;
+}
+
+export interface IKeysClient {
+    generateKey(request: keys_pb.GenRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.GenResponse) => void): grpc.ClientUnaryCall;
+    generateKey(request: keys_pb.GenRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.GenResponse) => void): grpc.ClientUnaryCall;
+    generateKey(request: keys_pb.GenRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.GenResponse) => void): grpc.ClientUnaryCall;
+    publicKey(request: keys_pb.PubRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.PubResponse) => void): grpc.ClientUnaryCall;
+    publicKey(request: keys_pb.PubRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.PubResponse) => void): grpc.ClientUnaryCall;
+    publicKey(request: keys_pb.PubRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.PubResponse) => void): grpc.ClientUnaryCall;
+    sign(request: keys_pb.SignRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.SignResponse) => void): grpc.ClientUnaryCall;
+    sign(request: keys_pb.SignRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.SignResponse) => void): grpc.ClientUnaryCall;
+    sign(request: keys_pb.SignRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.SignResponse) => void): grpc.ClientUnaryCall;
+    verify(request: keys_pb.VerifyRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.VerifyResponse) => void): grpc.ClientUnaryCall;
+    verify(request: keys_pb.VerifyRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.VerifyResponse) => void): grpc.ClientUnaryCall;
+    verify(request: keys_pb.VerifyRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.VerifyResponse) => void): grpc.ClientUnaryCall;
+    import(request: keys_pb.ImportRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.ImportResponse) => void): grpc.ClientUnaryCall;
+    import(request: keys_pb.ImportRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.ImportResponse) => void): grpc.ClientUnaryCall;
+    import(request: keys_pb.ImportRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.ImportResponse) => void): grpc.ClientUnaryCall;
+    importJSON(request: keys_pb.ImportJSONRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.ImportResponse) => void): grpc.ClientUnaryCall;
+    importJSON(request: keys_pb.ImportJSONRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.ImportResponse) => void): grpc.ClientUnaryCall;
+    importJSON(request: keys_pb.ImportJSONRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.ImportResponse) => void): grpc.ClientUnaryCall;
+    export(request: keys_pb.ExportRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.ExportResponse) => void): grpc.ClientUnaryCall;
+    export(request: keys_pb.ExportRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.ExportResponse) => void): grpc.ClientUnaryCall;
+    export(request: keys_pb.ExportRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.ExportResponse) => void): grpc.ClientUnaryCall;
+    hash(request: keys_pb.HashRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.HashResponse) => void): grpc.ClientUnaryCall;
+    hash(request: keys_pb.HashRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.HashResponse) => void): grpc.ClientUnaryCall;
+    hash(request: keys_pb.HashRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.HashResponse) => void): grpc.ClientUnaryCall;
+    removeName(request: keys_pb.RemoveNameRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.RemoveNameResponse) => void): grpc.ClientUnaryCall;
+    removeName(request: keys_pb.RemoveNameRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.RemoveNameResponse) => void): grpc.ClientUnaryCall;
+    removeName(request: keys_pb.RemoveNameRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.RemoveNameResponse) => void): grpc.ClientUnaryCall;
+    list(request: keys_pb.ListRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.ListResponse) => void): grpc.ClientUnaryCall;
+    list(request: keys_pb.ListRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.ListResponse) => void): grpc.ClientUnaryCall;
+    list(request: keys_pb.ListRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.ListResponse) => void): grpc.ClientUnaryCall;
+    addName(request: keys_pb.AddNameRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.AddNameResponse) => void): grpc.ClientUnaryCall;
+    addName(request: keys_pb.AddNameRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.AddNameResponse) => void): grpc.ClientUnaryCall;
+    addName(request: keys_pb.AddNameRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.AddNameResponse) => void): grpc.ClientUnaryCall;
+}
+
+export class KeysClient extends grpc.Client implements IKeysClient {
+    constructor(address: string, credentials: grpc.ChannelCredentials, options?: object);
+    public generateKey(request: keys_pb.GenRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.GenResponse) => void): grpc.ClientUnaryCall;
+    public generateKey(request: keys_pb.GenRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.GenResponse) => void): grpc.ClientUnaryCall;
+    public generateKey(request: keys_pb.GenRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.GenResponse) => void): grpc.ClientUnaryCall;
+    public publicKey(request: keys_pb.PubRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.PubResponse) => void): grpc.ClientUnaryCall;
+    public publicKey(request: keys_pb.PubRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.PubResponse) => void): grpc.ClientUnaryCall;
+    public publicKey(request: keys_pb.PubRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.PubResponse) => void): grpc.ClientUnaryCall;
+    public sign(request: keys_pb.SignRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.SignResponse) => void): grpc.ClientUnaryCall;
+    public sign(request: keys_pb.SignRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.SignResponse) => void): grpc.ClientUnaryCall;
+    public sign(request: keys_pb.SignRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.SignResponse) => void): grpc.ClientUnaryCall;
+    public verify(request: keys_pb.VerifyRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.VerifyResponse) => void): grpc.ClientUnaryCall;
+    public verify(request: keys_pb.VerifyRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.VerifyResponse) => void): grpc.ClientUnaryCall;
+    public verify(request: keys_pb.VerifyRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.VerifyResponse) => void): grpc.ClientUnaryCall;
+    public import(request: keys_pb.ImportRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.ImportResponse) => void): grpc.ClientUnaryCall;
+    public import(request: keys_pb.ImportRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.ImportResponse) => void): grpc.ClientUnaryCall;
+    public import(request: keys_pb.ImportRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.ImportResponse) => void): grpc.ClientUnaryCall;
+    public importJSON(request: keys_pb.ImportJSONRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.ImportResponse) => void): grpc.ClientUnaryCall;
+    public importJSON(request: keys_pb.ImportJSONRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.ImportResponse) => void): grpc.ClientUnaryCall;
+    public importJSON(request: keys_pb.ImportJSONRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.ImportResponse) => void): grpc.ClientUnaryCall;
+    public export(request: keys_pb.ExportRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.ExportResponse) => void): grpc.ClientUnaryCall;
+    public export(request: keys_pb.ExportRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.ExportResponse) => void): grpc.ClientUnaryCall;
+    public export(request: keys_pb.ExportRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.ExportResponse) => void): grpc.ClientUnaryCall;
+    public hash(request: keys_pb.HashRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.HashResponse) => void): grpc.ClientUnaryCall;
+    public hash(request: keys_pb.HashRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.HashResponse) => void): grpc.ClientUnaryCall;
+    public hash(request: keys_pb.HashRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.HashResponse) => void): grpc.ClientUnaryCall;
+    public removeName(request: keys_pb.RemoveNameRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.RemoveNameResponse) => void): grpc.ClientUnaryCall;
+    public removeName(request: keys_pb.RemoveNameRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.RemoveNameResponse) => void): grpc.ClientUnaryCall;
+    public removeName(request: keys_pb.RemoveNameRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.RemoveNameResponse) => void): grpc.ClientUnaryCall;
+    public list(request: keys_pb.ListRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.ListResponse) => void): grpc.ClientUnaryCall;
+    public list(request: keys_pb.ListRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.ListResponse) => void): grpc.ClientUnaryCall;
+    public list(request: keys_pb.ListRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.ListResponse) => void): grpc.ClientUnaryCall;
+    public addName(request: keys_pb.AddNameRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.AddNameResponse) => void): grpc.ClientUnaryCall;
+    public addName(request: keys_pb.AddNameRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.AddNameResponse) => void): grpc.ClientUnaryCall;
+    public addName(request: keys_pb.AddNameRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.AddNameResponse) => void): grpc.ClientUnaryCall;
 }

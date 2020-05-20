@@ -1,25 +1,13 @@
 import * as assert from 'assert';
-import * as test from '../test';
-import { Burrow } from '..';
+import {burrow} from "../test";
 
-const Test = test.Test();
 
 describe('Namereg', function () {
   this.timeout(10 * 1000)
-  let burrow: Burrow;
 
-  before(Test.before(function (_burrow) {
-    burrow = _burrow
-  }))
-
-  after(Test.after())
-
-  it('Sets and gets a name correctly', Test.it(function () {
-    return burrow.namereg.set('DOUG', 'ABCDEF0123456789', 5000, 100, (err, exec) => {
-      
-      return burrow.namereg.get('DOUG', (err, exec) => {
-        assert.equal(exec.getData(), 'ABCDEF0123456789')
-      })
-    })
-  }));
+  it('Sets and gets a name correctly', async () => {
+    await burrow.namereg.set('DOUG', 'ABCDEF0123456789', 5000, 100)
+    const entry = await burrow.namereg.get('DOUG')
+    assert.strictEqual(entry.getData(), 'ABCDEF0123456789')
+  });
 })

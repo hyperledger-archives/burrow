@@ -1,31 +1,20 @@
-import { Burrow } from './index';
+import {Burrow} from './index';
 import * as solc from 'solc';
 
 // convenience function to compile solidity in tests
 export const compile = (source: string, name: string) => {
-  let desc: solc.InputDescription = { language: 'Solidity', sources: {} };
-  desc.sources[name] = { content: source };
-  desc.settings = { outputSelection: { '*': { '*': ['*'] }}};
+  let desc: solc.InputDescription = {language: 'Solidity', sources: {}};
+  desc.sources[name] = {content: source};
+  desc.settings = {outputSelection: {'*': {'*': ['*']}}};
 
-  const compiled: solc.OutputDescription = JSON.parse(solc.compile(JSON.stringify(desc)));
+  const json = solc.compile(JSON.stringify(desc));
+  const compiled: solc.OutputDescription = JSON.parse(json);
   if (compiled.errors) throw new Error(compiled.errors.map(err => err.formattedMessage).toString());
   const contract = compiled.contracts[name][name];
-  return { abi: contract.abi, bytecode: contract.evm.bytecode.object };
+  return {abi: contract.abi, code: {bytecode: contract.evm.bytecode.object, deployedBytecode: contract.evm.deployedBytecode.object} };
 }
 
-// contract manager test harness
-export const Test = () => {
-  let burrow: Burrow;
+const url = process.env.BURROW_URL || 'localhost:20997';
+const addr = process.env.SIGNING_ADDRESS || 'C9F239591C593CB8EE192B0009C6A0F2C9F8D768';
+export const burrow = new Burrow(url, addr);
 
-  return {
-    before: (callback?: (app: Burrow) => void) => () => {
-      const url = process.env.BURROW_URL || 'localhost:10997';
-      const addr = process.env.SIGNING_ADDRESS;
-      if (!addr) throw new Error("SIGNING_ADDRESS not set.");
-      burrow = new Burrow(url, addr);
-      if (callback) return callback(burrow);
-    },
-    it: (callback: (app: Burrow) => void) => () => callback(burrow),
-    after: () => () => {},
-  }
-}

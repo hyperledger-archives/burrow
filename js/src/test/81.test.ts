@@ -1,16 +1,10 @@
 import * as assert from 'assert';
-import * as test from '../test';
+import {burrow, compile} from '../test';
 
-const Test = test.Test();
+describe('Event listening', function () {
 
-describe('#81', function () {
-  before(Test.before())
-  after(Test.after())
-
-  this.timeout(10 * 1000)
-
-  it('listens to an event from a contract', Test.it(function (burrow) {
-    const source = `
+  it('listens to an event from a contract', async () => {
+      const source = `
       pragma solidity >=0.0.0;
       contract Contract {
         event Pay(
@@ -37,48 +31,40 @@ describe('#81', function () {
       }
     `
 
-    const {abi, bytecode} = test.compile(source, 'Contract')
-    return burrow.contracts.deploy(abi, bytecode)
-      .then((contract: any) => {
-        return new Promise((resolve, reject) => {
-          const stream = contract.Pay((error, result) => {
-            if (error) {
-              reject(error)
-            } else {
-              try {
-                const actual = Object.assign(
-                  {},
-                  result.args,
-                  {amount: Number(result.args.amount)}
-                )
+      const {abi, code} = compile(source, 'Contract')
+      const contract: any = await burrow.contracts.deploy(abi, code)
+      const stream = contract.Pay((error, result) => {
+        if (error) {
+          throw error;
+        } else {
+          const actual = Object.assign(
+            {},
+            result.args,
+            {amount: Number(result.args.amount)}
+          )
 
-                assert.deepEqual(
-                  actual,
-                  {
-                    originator: '88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F',
-                    beneficiary: '721584FA4F1B9F51950018073A8E5ECF47F2D3B8',
-                    amount: 1,
+          assert.deepStrictEqual(
+            actual,
+            {
+              originator: '88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F',
+              beneficiary: '721584FA4F1B9F51950018073A8E5ECF47F2D3B8',
+              amount: 1,
 
-                    servicename: 'Energy',
+              servicename: 'Energy',
 
-                    nickname: 'wasmachine',
+              nickname: 'wasmachine',
 
-                    providername: 'Eneco',
+              providername: 'Eneco',
 
-                    randomBytes: '000000000000000000000000000000000000000000000000DEADFEEDBEEFFACE'
-                  }
-                )
-              } catch (exception) {
-                reject(exception)
-              }
-
-              stream.cancel()
-              resolve()
+              randomBytes: '000000000000000000000000000000000000000000000000DEADFEEDBEEFFACE'
             }
-          })
+          )
 
-          contract.announce()
-        })
-      })
-  }))
-})
+          stream.cancel()
+        }
+      });
+
+      contract.announce()
+    })
+});
+

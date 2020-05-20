@@ -18,7 +18,7 @@ If your distribution of Linux has a version older than 6 then you can update it.
 ## Install
 
 ``` bash
-$ npm install @hyperledger/burrow
+$ yarn install @hyperledger/burrow
 ```
 
 ## Usage
@@ -495,26 +495,26 @@ return Promise.all(								// Deployment of two contracts
 
 ## Documentation
 
-Generate documentation using the command `npm run doc`.
+Generate documentation using the command `yarn run doc`.
 
 ## Testing
 
 To test the library against pre-recorded vectors:
 
 ```
-npm test
+yarn test
 ```
 
 To test the library against Burrow while recording vectors:
 
 ```
-TEST=record npm test
+TEST=record yarn test
 ```
 
 To test Burrow against pre-recorded vectors without exercising the library:
 
 ```
-TEST=server npm test
+TEST=server yarn test
 ```
 
 ## Debugging

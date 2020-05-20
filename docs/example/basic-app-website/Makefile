@@ -71,10 +71,10 @@ redeploy: | delete_deploy deploy.output.json
 # Running the app
 #
 
-.PHONY: npm_install
-npm_install:
-	npm install
+.PHONY: yarn_install
+yarn_install:
+	yarn install
 
 .PHONY: start_app
-start_app: npm_install deploy
+start_app: yarn_install deploy
 	node app.js

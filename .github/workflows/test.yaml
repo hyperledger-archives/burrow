@@ -125,7 +125,7 @@ jobs:
     - name: test
       run: |
         export PATH=${PATH}:$(pwd)/bin
-        make npm_install
+        make yarn_install
         make test_js
 
   charts:

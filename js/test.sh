@@ -10,4 +10,5 @@ cd $this
 export SIGNING_ADDRESS="$key1_addr"
 export BURROW_URL="$BURROW_HOST:$BURROW_GRPC_PORT"
 
-mocha -r ts-node/register "$1"
+mocha --bail --exit -r ts-node/register "$1"
+test_exit=$?
