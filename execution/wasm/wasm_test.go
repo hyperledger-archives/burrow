@@ -6,6 +6,7 @@ import (
 
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 
 	"github.com/hyperledger/burrow/crypto"
@@ -15,8 +16,19 @@ import (
 func TestStaticCallWithValue(t *testing.T) {
 	cache := acmstate.NewMemoryState()
 
+	gas := uint64(0)
+
+	params := engine.CallParams{
+		Origin: crypto.ZeroAddress,
+		Caller: crypto.ZeroAddress,
+		Callee: crypto.ZeroAddress,
+		Input:  []byte{},
+		Value:  0,
+		Gas:    &gas,
+	}
+
 	// run constructor
-	runtime, cerr := RunWASM(cache, crypto.ZeroAddress, true, Bytecode_storage_test, []byte{})
+	runtime, cerr := RunWASM(cache, params, Bytecode_storage_test)
 	require.NoError(t, cerr)
 
 	// run getFooPlus2
@@ -24,7 +36,9 @@ func TestStaticCallWithValue(t *testing.T) {
 	require.NoError(t, err)
 	calldata, _, err := spec.Pack("getFooPlus2")
 
-	returndata, cerr := RunWASM(cache, crypto.ZeroAddress, false, runtime, calldata)
+	params.Input = calldata
+
+	returndata, cerr := RunWASM(cache, params, runtime)
 	require.NoError(t, cerr)
 
 	data := abi.GetPackingTypes(spec.Functions["getFooPlus2"].Outputs)
@@ -39,7 +53,9 @@ func TestStaticCallWithValue(t *testing.T) {
 	// call incFoo
 	calldata, _, err = spec.Pack("incFoo")
 
-	returndata, cerr = RunWASM(cache, crypto.ZeroAddress, false, runtime, calldata)
+	params.Input = calldata
+
+	returndata, cerr = RunWASM(cache, params, runtime)
 	require.NoError(t, cerr)
 
 	require.Equal(t, returndata, []byte{})
@@ -48,7 +64,9 @@ func TestStaticCallWithValue(t *testing.T) {
 	calldata, _, err = spec.Pack("getFooPlus2")
 	require.NoError(t, err)
 
-	returndata, cerr = RunWASM(cache, crypto.ZeroAddress, false, runtime, calldata)
+	params.Input = calldata
+
+	returndata, cerr = RunWASM(cache, params, runtime)
 	require.NoError(t, cerr)
 
 	spec.Unpack(returndata, "getFooPlus2", data...)
