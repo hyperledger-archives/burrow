@@ -27,8 +27,6 @@ type specJSON struct {
 	Type            string
 	Inputs          []argumentJSON
 	Outputs         []argumentJSON
-	Constant        bool
-	Payable         bool
 	StateMutability string
 	Anonymous       bool
 }

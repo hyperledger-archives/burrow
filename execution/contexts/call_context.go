@@ -185,8 +185,18 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 	var err error
 	txHash := ctx.txe.Envelope.Tx.Hash()
 	gas := ctx.tx.GasLimit
+
+	params := engine.CallParams{
+		Origin: caller,
+		Caller: caller,
+		Callee: callee,
+		Input:  ctx.tx.Data,
+		Value:  value,
+		Gas:    &gas,
+	}
+
 	if len(wcode) != 0 {
-		ret, err = wasm.RunWASM(txCache, callee, createContract, wcode, ctx.tx.Data)
+		ret, err = wasm.RunWASM(txCache, params, wcode)
 		if err != nil {
 			// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
 			ctx.Logger.InfoMsg("Error on WASM execution",
@@ -210,15 +220,6 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		// EVM
 		ctx.EVM.SetNonce(txHash)
 		ctx.EVM.SetLogger(ctx.Logger.With(structure.TxHashKey, txHash))
-
-		params := engine.CallParams{
-			Origin: caller,
-			Caller: caller,
-			Callee: callee,
-			Input:  ctx.tx.Data,
-			Value:  value,
-			Gas:    &gas,
-		}
 
 		ret, err = ctx.EVM.Execute(txCache, ctx.Blockchain, ctx.txe, params, code)
 
