@@ -1,8 +1,13 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.30.5] - 2020-07-09
+### Added
+- [Vent] Add BytesToHex flag on projection field mappings that causes bytes fields (e.g. bytes32) solidity fields to be hex-encoded and mapped to varchar(64) rather than bytea/blob columns in postgres/sqlite
+
+
 ## [0.30.4] - 2020-04-05
 ### Added
 - [Build] Added Helm chart
-- [State] Account now has OpcodeBitset field to support upcoming EVM fixes
+- [State] Account now has EVMOpcodeBitset field to support upcoming EVM fixes
 
 ### Fixed
 - [JS] Github actions release of JS lib
@@ -661,6 +666,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.30.5]: https://github.com/hyperledger/burrow/compare/v0.30.4...v0.30.5
 [0.30.4]: https://github.com/hyperledger/burrow/compare/v0.30.3...v0.30.4
 [0.30.3]: https://github.com/hyperledger/burrow/compare/v0.30.2...v0.30.3
 [0.30.2]: https://github.com/hyperledger/burrow/compare/v0.30.1...v0.30.2

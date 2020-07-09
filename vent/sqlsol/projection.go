@@ -120,7 +120,13 @@ func NewProjection(spec types.ProjectionSpec) (*Projection, error) {
 
 		i := 0
 		for _, mapping := range eventClass.FieldMappings {
-			sqlType, sqlTypeLength, err := getSQLType(mapping.Type, mapping.BytesToString)
+			var bytesMapping BytesMapping
+			if mapping.BytesToHex {
+				bytesMapping = BytesToHex
+			} else if mapping.BytesToString {
+				bytesMapping = BytesToString
+			}
+			sqlType, sqlTypeLength, err := getSQLType(mapping.Type, bytesMapping)
 			if err != nil {
 				return nil, err
 			}
@@ -220,9 +226,17 @@ func readFile(file string) ([]byte, error) {
 	return byteValue, nil
 }
 
+type BytesMapping int
+
+const (
+	BytesToBytes = iota
+	BytesToString
+	BytesToHex
+)
+
 // getSQLType maps event input types with corresponding SQL column types
 // takes into account related solidity types info and element indexed or hashed
-func getSQLType(evmSignature string, bytesToString bool) (types.SQLColumnType, int, error) {
+func getSQLType(evmSignature string, bytesMapping BytesMapping) (types.SQLColumnType, int, error) {
 	evmSignature = strings.ToLower(evmSignature)
 	re := regexp.MustCompile("[0-9]+")
 	typeSize, _ := strconv.Atoi(re.FindString(evmSignature))
@@ -237,9 +251,12 @@ func getSQLType(evmSignature string, bytesToString bool) (types.SQLColumnType, i
 		// solidity bytes => sql bytes
 		// bytesToString == true means there is a string in there so => sql varchar
 	case strings.HasPrefix(evmSignature, types.EventFieldTypeBytes):
-		if bytesToString {
-			return types.SQLColumnTypeVarchar, 40, nil
-		} else {
+		switch bytesMapping {
+		case BytesToString:
+			return types.SQLColumnTypeVarchar, 32, nil
+		case BytesToHex:
+			return types.SQLColumnTypeVarchar, 64, nil
+		default:
 			return types.SQLColumnTypeByteA, 0, nil
 		}
 		// solidity string => sql text

@@ -23,6 +23,7 @@
         "ColumnName": "testdescription",
         "Type": "bytes32",
         "Primary": false,
+        "BytesToHex": true,
         "Notify": ["meta", "keyed_meta"]
       }
     ]
