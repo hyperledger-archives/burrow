@@ -109,7 +109,7 @@ func UnknownTypeJSONConfFile(t *testing.T) string {
 			},
 			"Fields"  , 
 				"ColumnName" , "ColumnName" : "testname", "Primary" : true},
-				"description", "ColumnName" : "testdescription", "Primary" : false}
+				"description", "ColumnName" : "testdescription", "Primary" : false, "BytesToHex": true}
 			}
 		}
 	]`

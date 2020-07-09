@@ -79,6 +79,8 @@ type EventFieldMapping struct {
 	Primary bool `json:",omitempty"`
 	// Whether to convert this event field from bytes32 to string
 	BytesToString bool `json:",omitempty"`
+	// Whether to convert this event field from bytes32 to hex-encoded string
+	BytesToHex bool `json:",omitempty"`
 	// Notification channels on which submit (via a trigger) a payload that contains this column's new value (upsert) or
 	// old value (delete). The payload will contain all other values with the same channel set as a JSON object.
 	Notify []string `json:",omitempty"`

@@ -47,7 +47,12 @@ func FullVersion() string {
 // To cut a new release add a release to the front of this slice then run the
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
-	MustDeclareReleases("0.30.4 - 2020-04-05",
+	MustDeclareReleases(
+		"0.30.5 - 2020-07-09",
+		`### Added
+- [Vent] Add BytesToHex flag on projection field mappings that causes bytes fields (e.g. bytes32) solidity fields to be hex-encoded and mapped to varchar(64) rather than bytea/blob columns in postgres/sqlite
+`,
+		"0.30.4 - 2020-04-05",
 		`### Added
 - [Build] Added Helm chart
 - [State] Account now has EVMOpcodeBitset field to support upcoming EVM fixes

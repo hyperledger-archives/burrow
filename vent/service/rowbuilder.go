@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/types"
 	"github.com/pkg/errors"
+	"github.com/tmthrgd/go-hex"
 )
 
 // buildEventData builds event data from transactions
@@ -50,11 +51,12 @@ func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass,
 		}
 		column, err := projection.GetColumn(eventClass.TableName, fieldMapping.ColumnName)
 		if err == nil {
-			if fieldMapping.BytesToString {
-				if bs, ok := value.(*[]byte); ok {
+			if bs, ok := value.(*[]byte); ok {
+				if fieldMapping.BytesToString {
 					str := sanitiseBytesForString(*bs, logger)
-					row[column.Name] = interface{}(str)
-					continue
+					value = interface{}(str)
+				} else if fieldMapping.BytesToHex {
+					value = hex.EncodeUpperToString(*bs)
 				}
 			}
 			row[column.Name] = value
