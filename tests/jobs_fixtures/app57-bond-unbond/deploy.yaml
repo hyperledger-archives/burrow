@@ -1,5 +1,6 @@
-jobs:
+no-parallel: true
 
+jobs:
 - name: power
   set:
     val: 12345

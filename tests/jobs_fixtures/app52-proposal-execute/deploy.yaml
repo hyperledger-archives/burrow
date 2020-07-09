@@ -1,3 +1,5 @@
+no-parallel: true
+
 jobs:
  - name: foobar
    deploy:
