@@ -1,12 +1,13 @@
 package wasm
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 
 	"github.com/hyperledger/burrow/acm/acmstate"
 	burrow_binary "github.com/hyperledger/burrow/binary"
-	"github.com/hyperledger/burrow/crypto"
+	crypto "github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/perlin-network/life/exec"
@@ -73,6 +74,35 @@ func (e *execContext) ResolveFunc(module, field string) exec.FunctionImport {
 	}
 
 	switch field {
+	case "call":
+		return func(vm *exec.VirtualMachine) int64 {
+			// gas := int(uint64(vm.GetCurrentFrame().Locals[0]))
+			addressPtr := int(uint32(vm.GetCurrentFrame().Locals[1]))
+			// valuePtr := int(uint32(vm.GetCurrentFrame().Locals[2]))
+			dataPtr := int(uint32(vm.GetCurrentFrame().Locals[3]))
+			dataLen := int(uint32(vm.GetCurrentFrame().Locals[4]))
+
+			// fixed support for system contract of keccak256
+			address := make([]byte, 20)
+
+			copy(address[:], vm.Memory[addressPtr:addressPtr+crypto.AddressLength])
+
+			if bytes.Equal(address, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}) {
+				copy(e.returnData[0:32], crypto.SHA256(vm.Memory[dataPtr:dataPtr+dataLen]))
+			} else if bytes.Equal(address, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03}) {
+				copy(e.returnData[0:32], crypto.RIPEMD160(vm.Memory[dataPtr:dataPtr+dataLen]))
+			} else if bytes.Equal(address, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09}) {
+				copy(e.returnData[0:32], crypto.Keccak256(vm.Memory[dataPtr:dataPtr+dataLen]))
+			} else {
+				panic(errors.Codes.InvalidAddress)
+			}
+
+			return 1
+		}
+
 	case "getCallDataSize":
 		return func(vm *exec.VirtualMachine) int64 {
 			return int64(len(e.params.Input))
