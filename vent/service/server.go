@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	"github.com/hyperledger/burrow/logging"
@@ -70,6 +71,11 @@ func healthHandler(consumer *Consumer) func(resp http.ResponseWriter, req *http.
 			resp.WriteHeader(http.StatusServiceUnavailable)
 		} else {
 			resp.WriteHeader(http.StatusOK)
+			bs, err := json.Marshal(consumer.statusMessage())
+			if err == nil {
+				resp.Header().Set("Content-Type", "application/json")
+				resp.Write(bs)
+			}
 		}
 	}
 }
