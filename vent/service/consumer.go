@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger/burrow/encoding"
+
 	"github.com/hyperledger/burrow/rpc"
 
 	"github.com/hyperledger/burrow/logging"
@@ -60,7 +62,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, stream bool) error {
 
 	c.Logger.InfoMsg("Connecting to Burrow gRPC server")
 
-	c.GRPCConnection, err = grpc.Dial(c.Config.GRPCAddr, grpc.WithInsecure())
+	c.GRPCConnection, err = encoding.GRPCDial(c.Config.GRPCAddr)
 	if err != nil {
 		return errors.Wrapf(err, "Error connecting to Burrow gRPC server at %s", c.Config.GRPCAddr)
 	}

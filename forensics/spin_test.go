@@ -11,9 +11,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
-	"google.golang.org/grpc"
 )
 
 func TestSpin(t *testing.T) {
@@ -38,7 +38,7 @@ func TestSpinAll(t *testing.T) {
 
 func consume(name, listenAddress string, wg *sync.WaitGroup) error {
 	defer wg.Done()
-	conn, err := grpc.Dial(listenAddress, grpc.WithInsecure())
+	conn, err := encoding.GRPCDial(listenAddress)
 	if err != nil {
 		return err
 	}

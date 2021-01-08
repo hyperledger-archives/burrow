@@ -37,8 +37,8 @@ fi
 # Constants
 
 # Ports etc must match those in burrow.toml
-export BURROW_GRPC_PORT=20997
 export BURROW_HOST=127.0.0.1
+export BURROW_GRPC_PORT=20123
 
 
 export chain_dir="$script_dir/chain"
@@ -70,12 +70,13 @@ test_setup(){
   echo "  $(type ${burrow_bin}) (version: $(${burrow_bin} --version))"
   echo
   # start test chain
+  BURROW_ADDRESS="$BURROW_HOST:$BURROW_GRPC_PORT"
   if [[ "$boot" = true ]]; then
-    echo "Starting Burrow using GRPC address: $BURROW_HOST:$BURROW_GRPC_PORT..."
+    echo "Starting Burrow using GRPC address: $BURROW_ADDRESS..."
     echo
     rm -rf ${burrow_root}
     pushd "$chain_dir"
-    ${burrow_bin} start -i0 2> "$burrow_log"&
+    ${burrow_bin} start --index 0 --grpc-address $BURROW_ADDRESS 2> "$burrow_log"&
     burrow_pid=$!
     popd
   else

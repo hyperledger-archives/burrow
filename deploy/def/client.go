@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hyperledger/burrow/encoding"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
@@ -28,7 +30,6 @@ import (
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/tendermint/tendermint/p2p"
 	hex "github.com/tmthrgd/go-hex"
-	"google.golang.org/grpc"
 )
 
 type Client struct {
@@ -58,7 +59,7 @@ func NewClient(chain, keysClientAddress string, mempoolSigning bool, timeout tim
 // Connect GRPC clients using ChainURL
 func (c *Client) dial(logger *logging.Logger) error {
 	if c.transactClient == nil {
-		conn, err := grpc.Dial(c.ChainAddress, grpc.WithInsecure())
+		conn, err := encoding.GRPCDial(c.ChainAddress)
 		if err != nil {
 			return err
 		}

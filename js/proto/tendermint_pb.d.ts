@@ -5,36 +5,36 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 
 export class NodeInfo extends jspb.Message { 
     getId(): Uint8Array | string;
     getId_asU8(): Uint8Array;
     getId_asB64(): string;
-    setId(value: Uint8Array | string): void;
+    setId(value: Uint8Array | string): NodeInfo;
 
     getListenaddress(): string;
-    setListenaddress(value: string): void;
+    setListenaddress(value: string): NodeInfo;
 
     getNetwork(): string;
-    setNetwork(value: string): void;
+    setNetwork(value: string): NodeInfo;
 
     getVersion(): string;
-    setVersion(value: string): void;
+    setVersion(value: string): NodeInfo;
 
     getChannels(): Uint8Array | string;
     getChannels_asU8(): Uint8Array;
     getChannels_asB64(): string;
-    setChannels(value: Uint8Array | string): void;
+    setChannels(value: Uint8Array | string): NodeInfo;
 
     getMoniker(): string;
-    setMoniker(value: string): void;
+    setMoniker(value: string): NodeInfo;
 
     getRpcaddress(): string;
-    setRpcaddress(value: string): void;
+    setRpcaddress(value: string): NodeInfo;
 
     getTxindex(): string;
-    setTxindex(value: string): void;
+    setTxindex(value: string): NodeInfo;
 
 
     serializeBinary(): Uint8Array;

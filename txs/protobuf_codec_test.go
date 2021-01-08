@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAminoEncodeTxDecodeTx(t *testing.T) {
+func TestTxEncoding(t *testing.T) {
 	codec := NewProtobufCodec()
 	inputAddress := crypto.Address{1, 2, 3, 4, 5}
 	outputAddress := crypto.Address{5, 4, 3, 2, 1}
@@ -37,7 +37,7 @@ func TestAminoEncodeTxDecodeTx(t *testing.T) {
 	assert.Equal(t, txEnv, txEnvOut)
 }
 
-func TestAminoEncodeTxDecodeTx_CallTx(t *testing.T) {
+func TestTxEncoding_CallTx(t *testing.T) {
 	codec := NewProtobufCodec()
 	inputAccount := acm.GeneratePrivateAccountFromSecret("fooo")
 	amount := uint64(2)
@@ -64,7 +64,7 @@ func TestAminoEncodeTxDecodeTx_CallTx(t *testing.T) {
 	assert.Equal(t, txEnv, txEnvOut)
 }
 
-func TestAminoTxEnvelope(t *testing.T) {
+func TestTxEnvelopeEncoding(t *testing.T) {
 	codec := NewProtobufCodec()
 	privAccFrom := acm.GeneratePrivateAccountFromSecret("foo")
 	privAccTo := acm.GeneratePrivateAccountFromSecret("bar")

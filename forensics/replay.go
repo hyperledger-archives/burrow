@@ -57,8 +57,14 @@ func NewSource(burrowDB, tmDB dbm.DB, genesisDoc *genesis.GenesisDoc) *Source {
 }
 
 func NewSourceFromDir(genesisDoc *genesis.GenesisDoc, dbDir string) *Source {
-	burrowDB := dbm.NewDB(core.BurrowDBName, dbm.GoLevelDBBackend, dbDir)
-	tmDB := dbm.NewDB("blockstore", dbm.GoLevelDBBackend, path.Join(dbDir, "data"))
+	burrowDB, err := dbm.NewDB(core.BurrowDBName, dbm.GoLevelDBBackend, dbDir)
+	if err != nil {
+		panic(fmt.Errorf("could not create core DB for replay source: %w", err))
+	}
+	tmDB, err := dbm.NewDB("blockstore", dbm.GoLevelDBBackend, path.Join(dbDir, "data"))
+	if err != nil {
+		panic(fmt.Errorf("could not create blockstore DB for replay source: %w", err))
+	}
 	return NewSource(burrowDB, tmDB, genesisDoc)
 }
 
@@ -73,7 +79,11 @@ func NewSourceFromGenesis(genesisDoc *genesis.GenesisDoc) *Source {
 	if err != nil {
 		panic(err)
 	}
-	sm.SaveState(tmDB, st)
+	stateStore := sm.NewStore(tmDB)
+	err = stateStore.Save(st)
+	if err != nil {
+		panic(err)
+	}
 	burrowDB, burrowState, burrowChain, err := initBurrow(genesisDoc)
 	if err != nil {
 		panic(err)

@@ -24,6 +24,7 @@ type Provider interface {
 }
 
 type executionEventsServer struct {
+	UnimplementedExecutionEventsServer
 	eventsProvider Provider
 	emitter        *event.Emitter
 	tip            bcm.BlockchainInfo

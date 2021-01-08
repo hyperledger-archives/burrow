@@ -2,7 +2,7 @@
 
 'use strict';
 var rpcdump_pb = require('./rpcdump_pb.js');
-var github_com_gogo_protobuf_gogoproto_gogo_pb = require('./github.com/gogo/protobuf/gogoproto/gogo_pb.js');
+var gogoproto_gogo_pb = require('./gogoproto/gogo_pb.js');
 var dump_pb = require('./dump_pb.js');
 
 function serialize_dump_Dump(arg) {

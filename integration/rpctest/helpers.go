@@ -4,10 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hyperledger/burrow/encoding"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
-	"golang.org/x/crypto/sha3"
-
+	_ "github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/integration"
@@ -19,7 +20,7 @@ import (
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
+	"golang.org/x/crypto/sha3"
 )
 
 // Recursive call count for UpsieDownsie() function call from strange_loop.sol
@@ -32,19 +33,19 @@ var GenesisDoc = integration.TestGenesisDoc(PrivateAccounts, 0)
 
 // Helpers
 func NewTransactClient(t testing.TB, listenAddress string) rpctransact.TransactClient {
-	conn, err := grpc.Dial(listenAddress, grpc.WithInsecure())
+	conn, err := encoding.GRPCDial(listenAddress)
 	require.NoError(t, err)
 	return rpctransact.NewTransactClient(conn)
 }
 
 func NewExecutionEventsClient(t testing.TB, listenAddress string) rpcevents.ExecutionEventsClient {
-	conn, err := grpc.Dial(listenAddress, grpc.WithInsecure())
+	conn, err := encoding.GRPCDial(listenAddress)
 	require.NoError(t, err)
 	return rpcevents.NewExecutionEventsClient(conn)
 }
 
 func NewQueryClient(t testing.TB, listenAddress string) rpcquery.QueryClient {
-	conn, err := grpc.Dial(listenAddress, grpc.WithInsecure())
+	conn, err := encoding.GRPCDial(listenAddress)
 	require.NoError(t, err)
 	return rpcquery.NewQueryClient(conn)
 }

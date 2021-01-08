@@ -5,8 +5,8 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
-import * as github_com_tendermint_tendermint_abci_types_types_pb from "./github.com/tendermint/tendermint/abci/types/types_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
+import * as tendermint_types_types_pb from "./tendermint/types/types_pb";
 import * as names_pb from "./names_pb";
 import * as acm_pb from "./acm_pb";
 import * as validator_pb from "./validator_pb";
@@ -16,10 +16,10 @@ import * as payload_pb from "./payload_pb";
 
 export class StatusParam extends jspb.Message { 
     getBlocktimewithin(): string;
-    setBlocktimewithin(value: string): void;
+    setBlocktimewithin(value: string): StatusParam;
 
     getBlockseentimewithin(): string;
-    setBlockseentimewithin(value: string): void;
+    setBlockseentimewithin(value: string): StatusParam;
 
 
     serializeBinary(): Uint8Array;
@@ -43,7 +43,7 @@ export class GetAccountParam extends jspb.Message {
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
-    setAddress(value: Uint8Array | string): void;
+    setAddress(value: Uint8Array | string): GetAccountParam;
 
 
     serializeBinary(): Uint8Array;
@@ -66,12 +66,12 @@ export class GetMetadataParam extends jspb.Message {
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
-    setAddress(value: Uint8Array | string): void;
+    setAddress(value: Uint8Array | string): GetMetadataParam;
 
     getMetadatahash(): Uint8Array | string;
     getMetadatahash_asU8(): Uint8Array;
     getMetadatahash_asB64(): string;
-    setMetadatahash(value: Uint8Array | string): void;
+    setMetadatahash(value: Uint8Array | string): GetMetadataParam;
 
 
     serializeBinary(): Uint8Array;
@@ -93,7 +93,7 @@ export namespace GetMetadataParam {
 
 export class MetadataResult extends jspb.Message { 
     getMetadata(): string;
-    setMetadata(value: string): void;
+    setMetadata(value: string): MetadataResult;
 
 
     serializeBinary(): Uint8Array;
@@ -116,12 +116,12 @@ export class GetStorageParam extends jspb.Message {
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
-    setAddress(value: Uint8Array | string): void;
+    setAddress(value: Uint8Array | string): GetStorageParam;
 
     getKey(): Uint8Array | string;
     getKey_asU8(): Uint8Array;
     getKey_asB64(): string;
-    setKey(value: Uint8Array | string): void;
+    setKey(value: Uint8Array | string): GetStorageParam;
 
 
     serializeBinary(): Uint8Array;
@@ -145,7 +145,7 @@ export class StorageValue extends jspb.Message {
     getValue(): Uint8Array | string;
     getValue_asU8(): Uint8Array;
     getValue_asB64(): string;
-    setValue(value: Uint8Array | string): void;
+    setValue(value: Uint8Array | string): StorageValue;
 
 
     serializeBinary(): Uint8Array;
@@ -166,7 +166,7 @@ export namespace StorageValue {
 
 export class ListAccountsParam extends jspb.Message { 
     getQuery(): string;
-    setQuery(value: string): void;
+    setQuery(value: string): ListAccountsParam;
 
 
     serializeBinary(): Uint8Array;
@@ -187,7 +187,7 @@ export namespace ListAccountsParam {
 
 export class GetNameParam extends jspb.Message { 
     getName(): string;
-    setName(value: string): void;
+    setName(value: string): GetNameParam;
 
 
     serializeBinary(): Uint8Array;
@@ -208,7 +208,7 @@ export namespace GetNameParam {
 
 export class ListNamesParam extends jspb.Message { 
     getQuery(): string;
-    setQuery(value: string): void;
+    setQuery(value: string): ListNamesParam;
 
 
     serializeBinary(): Uint8Array;
@@ -263,7 +263,7 @@ export namespace GetValidatorSetParam {
 
 export class GetValidatorSetHistoryParam extends jspb.Message { 
     getIncludeprevious(): number;
-    setIncludeprevious(value: number): void;
+    setIncludeprevious(value: number): GetValidatorSetHistoryParam;
 
 
     serializeBinary(): Uint8Array;
@@ -285,7 +285,7 @@ export namespace GetValidatorSetHistoryParam {
 export class NetworkRegistry extends jspb.Message { 
     clearSetList(): void;
     getSetList(): Array<RegisteredValidator>;
-    setSetList(value: Array<RegisteredValidator>): void;
+    setSetList(value: Array<RegisteredValidator>): NetworkRegistry;
     addSet(value?: RegisteredValidator, index?: number): RegisteredValidator;
 
 
@@ -309,13 +309,13 @@ export class RegisteredValidator extends jspb.Message {
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
-    setAddress(value: Uint8Array | string): void;
+    setAddress(value: Uint8Array | string): RegisteredValidator;
 
 
     hasNode(): boolean;
     clearNode(): void;
     getNode(): registry_pb.NodeIdentity | undefined;
-    setNode(value?: registry_pb.NodeIdentity): void;
+    setNode(value?: registry_pb.NodeIdentity): RegisteredValidator;
 
 
     serializeBinary(): Uint8Array;
@@ -338,7 +338,7 @@ export namespace RegisteredValidator {
 export class ValidatorSetHistory extends jspb.Message { 
     clearHistoryList(): void;
     getHistoryList(): Array<ValidatorSet>;
-    setHistoryList(value: Array<ValidatorSet>): void;
+    setHistoryList(value: Array<ValidatorSet>): ValidatorSetHistory;
     addHistory(value?: ValidatorSet, index?: number): ValidatorSet;
 
 
@@ -360,11 +360,11 @@ export namespace ValidatorSetHistory {
 
 export class ValidatorSet extends jspb.Message { 
     getHeight(): number;
-    setHeight(value: number): void;
+    setHeight(value: number): ValidatorSet;
 
     clearSetList(): void;
     getSetList(): Array<validator_pb.Validator>;
-    setSetList(value: Array<validator_pb.Validator>): void;
+    setSetList(value: Array<validator_pb.Validator>): ValidatorSet;
     addSet(value?: validator_pb.Validator, index?: number): validator_pb.Validator;
 
 
@@ -389,7 +389,7 @@ export class GetProposalParam extends jspb.Message {
     getHash(): Uint8Array | string;
     getHash_asU8(): Uint8Array;
     getHash_asB64(): string;
-    setHash(value: Uint8Array | string): void;
+    setHash(value: Uint8Array | string): GetProposalParam;
 
 
     serializeBinary(): Uint8Array;
@@ -410,7 +410,7 @@ export namespace GetProposalParam {
 
 export class ListProposalsParam extends jspb.Message { 
     getProposed(): boolean;
-    setProposed(value: boolean): void;
+    setProposed(value: boolean): ListProposalsParam;
 
 
     serializeBinary(): Uint8Array;
@@ -433,13 +433,13 @@ export class ProposalResult extends jspb.Message {
     getHash(): Uint8Array | string;
     getHash_asU8(): Uint8Array;
     getHash_asB64(): string;
-    setHash(value: Uint8Array | string): void;
+    setHash(value: Uint8Array | string): ProposalResult;
 
 
     hasBallot(): boolean;
     clearBallot(): void;
     getBallot(): payload_pb.Ballot | undefined;
-    setBallot(value?: payload_pb.Ballot): void;
+    setBallot(value?: payload_pb.Ballot): ProposalResult;
 
 
     serializeBinary(): Uint8Array;
@@ -478,10 +478,10 @@ export namespace GetStatsParam {
 
 export class Stats extends jspb.Message { 
     getAccountswithcode(): number;
-    setAccountswithcode(value: number): void;
+    setAccountswithcode(value: number): Stats;
 
     getAccountswithoutcode(): number;
-    setAccountswithoutcode(value: number): void;
+    setAccountswithoutcode(value: number): Stats;
 
 
     serializeBinary(): Uint8Array;
@@ -503,7 +503,7 @@ export namespace Stats {
 
 export class GetBlockParam extends jspb.Message { 
     getHeight(): number;
-    setHeight(value: number): void;
+    setHeight(value: number): GetBlockParam;
 
 
     serializeBinary(): Uint8Array;

@@ -5,22 +5,22 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 
 export class Entry extends jspb.Message { 
     getName(): string;
-    setName(value: string): void;
+    setName(value: string): Entry;
 
     getOwner(): Uint8Array | string;
     getOwner_asU8(): Uint8Array;
     getOwner_asB64(): string;
-    setOwner(value: Uint8Array | string): void;
+    setOwner(value: Uint8Array | string): Entry;
 
     getData(): string;
-    setData(value: string): void;
+    setData(value: string): Entry;
 
     getExpires(): number;
-    setExpires(value: number): void;
+    setExpires(value: number): Entry;
 
 
     serializeBinary(): Uint8Array;

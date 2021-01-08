@@ -5,14 +5,14 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 
 export class TestMessage extends jspb.Message { 
     getType(): number;
-    setType(value: number): void;
+    setType(value: number): TestMessage;
 
     getAmount(): number;
-    setAmount(value: number): void;
+    setAmount(value: number): TestMessage;
 
 
     serializeBinary(): Uint8Array;

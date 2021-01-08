@@ -4,19 +4,20 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hyperledger/burrow/encoding"
+
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/rpc/rpctransact"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
 )
 
 func NewTransactClient(t testing.TB, listenAddress string) rpctransact.TransactClient {
 	t.Helper()
 
-	conn, err := grpc.Dial(listenAddress, grpc.WithInsecure())
+	conn, err := encoding.GRPCDial(listenAddress)
 	require.NoError(t, err)
 	return rpctransact.NewTransactClient(conn)
 }

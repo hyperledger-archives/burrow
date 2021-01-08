@@ -15,12 +15,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hyperledger/burrow/dump"
-
 	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/dump"
+
+	// GRPC Codec
+	_ "github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/state"
@@ -79,6 +81,13 @@ func NewKernel(dbDir string) (*Kernel, error) {
 		return nil, fmt.Errorf("Burrow requires a database directory")
 	}
 	runID, err := simpleuuid.NewTime(time.Now()) // Create a random ID based on start time
+	if err != nil {
+		return nil, fmt.Errorf("could not create runID UUID: %w", err)
+	}
+	db, err := dbm.NewDB(BurrowDBName, dbm.GoLevelDBBackend, dbDir)
+	if err != nil {
+		return nil, fmt.Errorf("could not create DB for Kernel: %w", err)
+	}
 	return &Kernel{
 		Logger:         logging.NewNoopLogger(),
 		RunID:          runID,
@@ -87,7 +96,7 @@ func NewKernel(dbDir string) (*Kernel, error) {
 		listeners:      make(map[string]net.Listener),
 		shutdownNotify: make(chan struct{}),
 		txCodec:        txs.NewProtobufCodec(),
-		database:       dbm.NewDB(BurrowDBName, dbm.GoLevelDBBackend, dbDir),
+		database:       db,
 	}, err
 }
 

@@ -6,13 +6,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/hyperledger/burrow/encoding"
+
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/dump"
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/rpc/rpcdump"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	cli "github.com/jawher/mow.cli"
-	"google.golang.org/grpc"
 )
 
 type dumpOptions struct {
@@ -101,9 +102,7 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 				}
 				defer cancel()
 
-				var opts []grpc.DialOption
-				opts = append(opts, grpc.WithInsecure())
-				conn, err := grpc.DialContext(ctx, *chainURLOpt, opts...)
+				conn, err := encoding.GRPCDialContext(ctx, *chainURLOpt)
 				if err != nil {
 					output.Fatalf("failed to connect: %v", err)
 				}

@@ -5,12 +5,12 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 import * as crypto_pb from "./crypto_pb";
 
 export class ListRequest extends jspb.Message { 
     getKeyname(): string;
-    setKeyname(value: string): void;
+    setKeyname(value: string): ListRequest;
 
 
     serializeBinary(): Uint8Array;
@@ -82,7 +82,7 @@ export namespace AddNameResponse {
 
 export class RemoveNameRequest extends jspb.Message { 
     getKeyname(): string;
-    setKeyname(value: string): void;
+    setKeyname(value: string): RemoveNameRequest;
 
 
     serializeBinary(): Uint8Array;
@@ -103,13 +103,13 @@ export namespace RemoveNameRequest {
 
 export class GenRequest extends jspb.Message { 
     getPassphrase(): string;
-    setPassphrase(value: string): void;
+    setPassphrase(value: string): GenRequest;
 
     getCurvetype(): string;
-    setCurvetype(value: string): void;
+    setCurvetype(value: string): GenRequest;
 
     getKeyname(): string;
-    setKeyname(value: string): void;
+    setKeyname(value: string): GenRequest;
 
 
     serializeBinary(): Uint8Array;
@@ -132,7 +132,7 @@ export namespace GenRequest {
 
 export class GenResponse extends jspb.Message { 
     getAddress(): string;
-    setAddress(value: string): void;
+    setAddress(value: string): GenResponse;
 
 
     serializeBinary(): Uint8Array;
@@ -153,10 +153,10 @@ export namespace GenResponse {
 
 export class PubRequest extends jspb.Message { 
     getAddress(): string;
-    setAddress(value: string): void;
+    setAddress(value: string): PubRequest;
 
     getName(): string;
-    setName(value: string): void;
+    setName(value: string): PubRequest;
 
 
     serializeBinary(): Uint8Array;
@@ -180,10 +180,10 @@ export class PubResponse extends jspb.Message {
     getPublickey(): Uint8Array | string;
     getPublickey_asU8(): Uint8Array;
     getPublickey_asB64(): string;
-    setPublickey(value: Uint8Array | string): void;
+    setPublickey(value: Uint8Array | string): PubResponse;
 
     getCurvetype(): string;
-    setCurvetype(value: string): void;
+    setCurvetype(value: string): PubResponse;
 
 
     serializeBinary(): Uint8Array;
@@ -205,10 +205,10 @@ export namespace PubResponse {
 
 export class ImportJSONRequest extends jspb.Message { 
     getPassphrase(): string;
-    setPassphrase(value: string): void;
+    setPassphrase(value: string): ImportJSONRequest;
 
     getJson(): string;
-    setJson(value: string): void;
+    setJson(value: string): ImportJSONRequest;
 
 
     serializeBinary(): Uint8Array;
@@ -230,7 +230,7 @@ export namespace ImportJSONRequest {
 
 export class ImportResponse extends jspb.Message { 
     getAddress(): string;
-    setAddress(value: string): void;
+    setAddress(value: string): ImportResponse;
 
 
     serializeBinary(): Uint8Array;
@@ -251,18 +251,18 @@ export namespace ImportResponse {
 
 export class ImportRequest extends jspb.Message { 
     getPassphrase(): string;
-    setPassphrase(value: string): void;
+    setPassphrase(value: string): ImportRequest;
 
     getName(): string;
-    setName(value: string): void;
+    setName(value: string): ImportRequest;
 
     getCurvetype(): string;
-    setCurvetype(value: string): void;
+    setCurvetype(value: string): ImportRequest;
 
     getKeybytes(): Uint8Array | string;
     getKeybytes_asU8(): Uint8Array;
     getKeybytes_asB64(): string;
-    setKeybytes(value: Uint8Array | string): void;
+    setKeybytes(value: Uint8Array | string): ImportRequest;
 
 
     serializeBinary(): Uint8Array;
@@ -286,13 +286,13 @@ export namespace ImportRequest {
 
 export class ExportRequest extends jspb.Message { 
     getPassphrase(): string;
-    setPassphrase(value: string): void;
+    setPassphrase(value: string): ExportRequest;
 
     getName(): string;
-    setName(value: string): void;
+    setName(value: string): ExportRequest;
 
     getAddress(): string;
-    setAddress(value: string): void;
+    setAddress(value: string): ExportRequest;
 
 
     serializeBinary(): Uint8Array;
@@ -317,20 +317,20 @@ export class ExportResponse extends jspb.Message {
     getPublickey(): Uint8Array | string;
     getPublickey_asU8(): Uint8Array;
     getPublickey_asB64(): string;
-    setPublickey(value: Uint8Array | string): void;
+    setPublickey(value: Uint8Array | string): ExportResponse;
 
     getPrivatekey(): Uint8Array | string;
     getPrivatekey_asU8(): Uint8Array;
     getPrivatekey_asB64(): string;
-    setPrivatekey(value: Uint8Array | string): void;
+    setPrivatekey(value: Uint8Array | string): ExportResponse;
 
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
-    setAddress(value: Uint8Array | string): void;
+    setAddress(value: Uint8Array | string): ExportResponse;
 
     getCurvetype(): string;
-    setCurvetype(value: string): void;
+    setCurvetype(value: string): ExportResponse;
 
 
     serializeBinary(): Uint8Array;
@@ -354,18 +354,18 @@ export namespace ExportResponse {
 
 export class SignRequest extends jspb.Message { 
     getPassphrase(): string;
-    setPassphrase(value: string): void;
+    setPassphrase(value: string): SignRequest;
 
     getAddress(): string;
-    setAddress(value: string): void;
+    setAddress(value: string): SignRequest;
 
     getName(): string;
-    setName(value: string): void;
+    setName(value: string): SignRequest;
 
     getMessage(): Uint8Array | string;
     getMessage_asU8(): Uint8Array;
     getMessage_asB64(): string;
-    setMessage(value: Uint8Array | string): void;
+    setMessage(value: Uint8Array | string): SignRequest;
 
 
     serializeBinary(): Uint8Array;
@@ -392,7 +392,7 @@ export class SignResponse extends jspb.Message {
     hasSignature(): boolean;
     clearSignature(): void;
     getSignature(): crypto_pb.Signature | undefined;
-    setSignature(value?: crypto_pb.Signature): void;
+    setSignature(value?: crypto_pb.Signature): SignResponse;
 
 
     serializeBinary(): Uint8Array;
@@ -415,18 +415,18 @@ export class VerifyRequest extends jspb.Message {
     getPublickey(): Uint8Array | string;
     getPublickey_asU8(): Uint8Array;
     getPublickey_asB64(): string;
-    setPublickey(value: Uint8Array | string): void;
+    setPublickey(value: Uint8Array | string): VerifyRequest;
 
     getMessage(): Uint8Array | string;
     getMessage_asU8(): Uint8Array;
     getMessage_asB64(): string;
-    setMessage(value: Uint8Array | string): void;
+    setMessage(value: Uint8Array | string): VerifyRequest;
 
 
     hasSignature(): boolean;
     clearSignature(): void;
     getSignature(): crypto_pb.Signature | undefined;
-    setSignature(value?: crypto_pb.Signature): void;
+    setSignature(value?: crypto_pb.Signature): VerifyRequest;
 
 
     serializeBinary(): Uint8Array;
@@ -449,12 +449,12 @@ export namespace VerifyRequest {
 
 export class HashRequest extends jspb.Message { 
     getHashtype(): string;
-    setHashtype(value: string): void;
+    setHashtype(value: string): HashRequest;
 
     getMessage(): Uint8Array | string;
     getMessage_asU8(): Uint8Array;
     getMessage_asB64(): string;
-    setMessage(value: Uint8Array | string): void;
+    setMessage(value: Uint8Array | string): HashRequest;
 
 
     serializeBinary(): Uint8Array;
@@ -476,7 +476,7 @@ export namespace HashRequest {
 
 export class HashResponse extends jspb.Message { 
     getHash(): string;
-    setHash(value: string): void;
+    setHash(value: string): HashResponse;
 
 
     serializeBinary(): Uint8Array;
@@ -497,11 +497,11 @@ export namespace HashResponse {
 
 export class KeyID extends jspb.Message { 
     getAddress(): string;
-    setAddress(value: string): void;
+    setAddress(value: string): KeyID;
 
     clearKeynameList(): void;
     getKeynameList(): Array<string>;
-    setKeynameList(value: Array<string>): void;
+    setKeynameList(value: Array<string>): KeyID;
     addKeyname(value: string, index?: number): string;
 
 
@@ -525,7 +525,7 @@ export namespace KeyID {
 export class ListResponse extends jspb.Message { 
     clearKeyList(): void;
     getKeyList(): Array<KeyID>;
-    setKeyList(value: Array<KeyID>): void;
+    setKeyList(value: Array<KeyID>): ListResponse;
     addKey(value?: KeyID, index?: number): KeyID;
 
 
@@ -547,10 +547,10 @@ export namespace ListResponse {
 
 export class AddNameRequest extends jspb.Message { 
     getKeyname(): string;
-    setKeyname(value: string): void;
+    setKeyname(value: string): AddNameRequest;
 
     getAddress(): string;
-    setAddress(value: string): void;
+    setAddress(value: string): AddNameRequest;
 
 
     serializeBinary(): Uint8Array;

@@ -120,8 +120,8 @@ func makeBlock(t *testing.T, st sm.State, bs *store.BlockStore, commit func(*typ
 	partSet := block.MakePartSet(2)
 	commitSigs := []types.CommitSig{{Timestamp: time.Time{}}}
 	seenCommit := types.NewCommit(height, 0, types.BlockID{
-		Hash:        block.Hash(),
-		PartsHeader: partSet.Header(),
+		Hash:          block.Hash(),
+		PartSetHeader: partSet.Header(),
 	}, commitSigs)
 	bs.SaveBlock(block, partSet, seenCommit)
 }

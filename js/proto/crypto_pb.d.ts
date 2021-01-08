@@ -5,16 +5,16 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 
 export class PublicKey extends jspb.Message { 
     getCurvetype(): number;
-    setCurvetype(value: number): void;
+    setCurvetype(value: number): PublicKey;
 
     getPublickey(): Uint8Array | string;
     getPublickey_asU8(): Uint8Array;
     getPublickey_asB64(): string;
-    setPublickey(value: Uint8Array | string): void;
+    setPublickey(value: Uint8Array | string): PublicKey;
 
 
     serializeBinary(): Uint8Array;
@@ -36,17 +36,17 @@ export namespace PublicKey {
 
 export class PrivateKey extends jspb.Message { 
     getCurvetype(): number;
-    setCurvetype(value: number): void;
+    setCurvetype(value: number): PrivateKey;
 
     getPublickey(): Uint8Array | string;
     getPublickey_asU8(): Uint8Array;
     getPublickey_asB64(): string;
-    setPublickey(value: Uint8Array | string): void;
+    setPublickey(value: Uint8Array | string): PrivateKey;
 
     getPrivatekey(): Uint8Array | string;
     getPrivatekey_asU8(): Uint8Array;
     getPrivatekey_asB64(): string;
-    setPrivatekey(value: Uint8Array | string): void;
+    setPrivatekey(value: Uint8Array | string): PrivateKey;
 
 
     serializeBinary(): Uint8Array;
@@ -69,12 +69,12 @@ export namespace PrivateKey {
 
 export class Signature extends jspb.Message { 
     getCurvetype(): number;
-    setCurvetype(value: number): void;
+    setCurvetype(value: number): Signature;
 
     getSignature(): Uint8Array | string;
     getSignature_asU8(): Uint8Array;
     getSignature_asB64(): string;
-    setSignature(value: Uint8Array | string): void;
+    setSignature(value: Uint8Array | string): Signature;
 
 
     serializeBinary(): Uint8Array;

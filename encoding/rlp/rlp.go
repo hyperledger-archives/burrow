@@ -1,3 +1,5 @@
+//
+// See https://eth.wiki/fundamentals/rlp
 package rlp
 
 import (
@@ -54,6 +56,8 @@ func encodeUint64(i uint64) ([]byte, error) {
 }
 
 func encodeLength(n, offset int) []byte {
+	// > if a string is 0-55 bytes long, the RLP encoding consists of a single byte with value 0x80 plus
+	// > the length of the string followed by the string.
 	if n <= 55 {
 		return []uint8{uint8(n + offset)}
 	}
@@ -62,7 +66,10 @@ func encodeLength(n, offset int) []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, i)
 	size := bits.Len64(i)/8 + 1
-	return append([]byte{uint8(0xb7 + len(string(n)))}, b[8-size:]...)
+	// > If a string is more than 55 bytes long, the RLP encoding consists of a single byte with value 0xb7
+	// > plus the length in bytes of the length of the string in binary form, followed by the length of the string,
+	// > followed by the string
+	return append([]byte{uint8(0xb7 + size)}, b[8-size:]...)
 }
 
 func encodeString(input []byte) ([]byte, error) {

@@ -82,12 +82,12 @@ type prefixBatch struct {
 	batch  dbm.Batch
 }
 
-func (pb *prefixBatch) Set(key, value []byte) {
-	pb.batch.Set(pb.prefix.Key(key), value)
+func (pb *prefixBatch) Set(key, value []byte) error {
+	return pb.batch.Set(pb.prefix.Key(key), value)
 }
 
-func (pb *prefixBatch) Delete(key []byte) {
-	pb.batch.Delete(pb.prefix.Key(key))
+func (pb *prefixBatch) Delete(key []byte) error {
+	return pb.batch.Delete(pb.prefix.Key(key))
 }
 
 func (pb *prefixBatch) Write() error {
@@ -98,6 +98,6 @@ func (pb *prefixBatch) WriteSync() error {
 	return pb.batch.WriteSync()
 }
 
-func (pb *prefixBatch) Close() {
-	pb.batch.Close()
+func (pb *prefixBatch) Close() error {
+	return pb.batch.Close()
 }

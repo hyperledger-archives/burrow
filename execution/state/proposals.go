@@ -1,7 +1,7 @@
 package state
 
 import (
-	"fmt"
+	"github.com/hyperledger/burrow/encoding"
 
 	"github.com/hyperledger/burrow/execution/proposal"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -21,7 +21,12 @@ func (s *ReadState) GetProposal(proposalHash []byte) (*payload.Ballot, error) {
 		return nil, nil
 	}
 
-	return payload.DecodeBallot(bs)
+	ballot := new(payload.Ballot)
+	err = encoding.Decode(bs, ballot)
+	if err != nil {
+		return nil, err
+	}
+	return ballot, nil
 }
 
 func (ws *writeState) UpdateProposal(proposalHash []byte, p *payload.Ballot) error {
@@ -29,7 +34,7 @@ func (ws *writeState) UpdateProposal(proposalHash []byte, p *payload.Ballot) err
 	if err != nil {
 		return err
 	}
-	bs, err := p.Encode()
+	bs, err := encoding.Encode(p)
 	if err != nil {
 		return err
 	}
@@ -53,10 +58,11 @@ func (s *ReadState) IterateProposals(consumer func(proposalHash []byte, proposal
 		return err
 	}
 	return tree.Iterate(nil, nil, true, func(key []byte, value []byte) error {
-		entry, err := payload.DecodeBallot(value)
+		ballot := new(payload.Ballot)
+		err := encoding.Decode(value, ballot)
 		if err != nil {
-			return fmt.Errorf("State.IterateProposal() could not iterate over proposals: %v", err)
+			return err
 		}
-		return consumer(key, entry)
+		return consumer(key, ballot)
 	})
 }

@@ -37,7 +37,10 @@ func Explore(output Output) func(cmd *cli.Cmd) {
 				output.Fatalf("genesis doc is required")
 			}
 
-			explorer = bcm.NewBlockExplorer(dbm.BackendType(tmConf.DBBackend), tmConf.DBDir())
+			explorer, err = bcm.NewBlockExplorer(dbm.BackendType(tmConf.DBBackend), tmConf.DBDir())
+			if err != nil {
+				output.Fatalf("could not create BlockExplorer: %w", err)
+			}
 		}
 
 		cmd.Command("dump", "pretty print the state tree at the given height", func(cmd *cli.Cmd) {

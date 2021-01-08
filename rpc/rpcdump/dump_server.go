@@ -8,6 +8,7 @@ import (
 )
 
 type dumpServer struct {
+	UnimplementedDumpServer
 	dumper *dump.Dumper
 }
 

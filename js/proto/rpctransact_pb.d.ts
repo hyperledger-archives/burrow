@@ -5,7 +5,7 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 import * as google_protobuf_duration_pb from "google-protobuf/google/protobuf/duration_pb";
 import * as exec_pb from "./exec_pb";
 import * as payload_pb from "./payload_pb";
@@ -15,17 +15,17 @@ export class CallCodeParam extends jspb.Message {
     getFromaddress(): Uint8Array | string;
     getFromaddress_asU8(): Uint8Array;
     getFromaddress_asB64(): string;
-    setFromaddress(value: Uint8Array | string): void;
+    setFromaddress(value: Uint8Array | string): CallCodeParam;
 
     getCode(): Uint8Array | string;
     getCode_asU8(): Uint8Array;
     getCode_asB64(): string;
-    setCode(value: Uint8Array | string): void;
+    setCode(value: Uint8Array | string): CallCodeParam;
 
     getData(): Uint8Array | string;
     getData_asU8(): Uint8Array;
     getData_asB64(): string;
-    setData(value: Uint8Array | string): void;
+    setData(value: Uint8Array | string): CallCodeParam;
 
 
     serializeBinary(): Uint8Array;
@@ -51,7 +51,7 @@ export class TxEnvelope extends jspb.Message {
     hasEnvelope(): boolean;
     clearEnvelope(): void;
     getEnvelope(): txs_pb.Envelope | undefined;
-    setEnvelope(value?: txs_pb.Envelope): void;
+    setEnvelope(value?: txs_pb.Envelope): TxEnvelope;
 
 
     serializeBinary(): Uint8Array;
@@ -75,19 +75,19 @@ export class TxEnvelopeParam extends jspb.Message {
     hasEnvelope(): boolean;
     clearEnvelope(): void;
     getEnvelope(): txs_pb.Envelope | undefined;
-    setEnvelope(value?: txs_pb.Envelope): void;
+    setEnvelope(value?: txs_pb.Envelope): TxEnvelopeParam;
 
 
     hasPayload(): boolean;
     clearPayload(): void;
     getPayload(): payload_pb.Any | undefined;
-    setPayload(value?: payload_pb.Any): void;
+    setPayload(value?: payload_pb.Any): TxEnvelopeParam;
 
 
     hasTimeout(): boolean;
     clearTimeout(): void;
     getTimeout(): google_protobuf_duration_pb.Duration | undefined;
-    setTimeout(value?: google_protobuf_duration_pb.Duration): void;
+    setTimeout(value?: google_protobuf_duration_pb.Duration): TxEnvelopeParam;
 
 
     serializeBinary(): Uint8Array;

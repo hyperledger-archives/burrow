@@ -7,7 +7,7 @@
 import * as grpc from "@grpc/grpc-js";
 import {handleClientStreamingCall} from "@grpc/grpc-js/build/src/server-call";
 import * as keys_pb from "./keys_pb";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 import * as crypto_pb from "./crypto_pb";
 
 interface IKeysService extends grpc.ServiceDefinition<grpc.UntypedServiceImplementation> {
@@ -25,99 +25,99 @@ interface IKeysService extends grpc.ServiceDefinition<grpc.UntypedServiceImpleme
 }
 
 interface IKeysService_IGenerateKey extends grpc.MethodDefinition<keys_pb.GenRequest, keys_pb.GenResponse> {
-    path: string; // "/keys.Keys/GenerateKey"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/keys.Keys/GenerateKey";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<keys_pb.GenRequest>;
     requestDeserialize: grpc.deserialize<keys_pb.GenRequest>;
     responseSerialize: grpc.serialize<keys_pb.GenResponse>;
     responseDeserialize: grpc.deserialize<keys_pb.GenResponse>;
 }
 interface IKeysService_IPublicKey extends grpc.MethodDefinition<keys_pb.PubRequest, keys_pb.PubResponse> {
-    path: string; // "/keys.Keys/PublicKey"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/keys.Keys/PublicKey";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<keys_pb.PubRequest>;
     requestDeserialize: grpc.deserialize<keys_pb.PubRequest>;
     responseSerialize: grpc.serialize<keys_pb.PubResponse>;
     responseDeserialize: grpc.deserialize<keys_pb.PubResponse>;
 }
 interface IKeysService_ISign extends grpc.MethodDefinition<keys_pb.SignRequest, keys_pb.SignResponse> {
-    path: string; // "/keys.Keys/Sign"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/keys.Keys/Sign";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<keys_pb.SignRequest>;
     requestDeserialize: grpc.deserialize<keys_pb.SignRequest>;
     responseSerialize: grpc.serialize<keys_pb.SignResponse>;
     responseDeserialize: grpc.deserialize<keys_pb.SignResponse>;
 }
 interface IKeysService_IVerify extends grpc.MethodDefinition<keys_pb.VerifyRequest, keys_pb.VerifyResponse> {
-    path: string; // "/keys.Keys/Verify"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/keys.Keys/Verify";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<keys_pb.VerifyRequest>;
     requestDeserialize: grpc.deserialize<keys_pb.VerifyRequest>;
     responseSerialize: grpc.serialize<keys_pb.VerifyResponse>;
     responseDeserialize: grpc.deserialize<keys_pb.VerifyResponse>;
 }
 interface IKeysService_IImport extends grpc.MethodDefinition<keys_pb.ImportRequest, keys_pb.ImportResponse> {
-    path: string; // "/keys.Keys/Import"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/keys.Keys/Import";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<keys_pb.ImportRequest>;
     requestDeserialize: grpc.deserialize<keys_pb.ImportRequest>;
     responseSerialize: grpc.serialize<keys_pb.ImportResponse>;
     responseDeserialize: grpc.deserialize<keys_pb.ImportResponse>;
 }
 interface IKeysService_IImportJSON extends grpc.MethodDefinition<keys_pb.ImportJSONRequest, keys_pb.ImportResponse> {
-    path: string; // "/keys.Keys/ImportJSON"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/keys.Keys/ImportJSON";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<keys_pb.ImportJSONRequest>;
     requestDeserialize: grpc.deserialize<keys_pb.ImportJSONRequest>;
     responseSerialize: grpc.serialize<keys_pb.ImportResponse>;
     responseDeserialize: grpc.deserialize<keys_pb.ImportResponse>;
 }
 interface IKeysService_IExport extends grpc.MethodDefinition<keys_pb.ExportRequest, keys_pb.ExportResponse> {
-    path: string; // "/keys.Keys/Export"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/keys.Keys/Export";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<keys_pb.ExportRequest>;
     requestDeserialize: grpc.deserialize<keys_pb.ExportRequest>;
     responseSerialize: grpc.serialize<keys_pb.ExportResponse>;
     responseDeserialize: grpc.deserialize<keys_pb.ExportResponse>;
 }
 interface IKeysService_IHash extends grpc.MethodDefinition<keys_pb.HashRequest, keys_pb.HashResponse> {
-    path: string; // "/keys.Keys/Hash"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/keys.Keys/Hash";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<keys_pb.HashRequest>;
     requestDeserialize: grpc.deserialize<keys_pb.HashRequest>;
     responseSerialize: grpc.serialize<keys_pb.HashResponse>;
     responseDeserialize: grpc.deserialize<keys_pb.HashResponse>;
 }
 interface IKeysService_IRemoveName extends grpc.MethodDefinition<keys_pb.RemoveNameRequest, keys_pb.RemoveNameResponse> {
-    path: string; // "/keys.Keys/RemoveName"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/keys.Keys/RemoveName";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<keys_pb.RemoveNameRequest>;
     requestDeserialize: grpc.deserialize<keys_pb.RemoveNameRequest>;
     responseSerialize: grpc.serialize<keys_pb.RemoveNameResponse>;
     responseDeserialize: grpc.deserialize<keys_pb.RemoveNameResponse>;
 }
 interface IKeysService_IList extends grpc.MethodDefinition<keys_pb.ListRequest, keys_pb.ListResponse> {
-    path: string; // "/keys.Keys/List"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/keys.Keys/List";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<keys_pb.ListRequest>;
     requestDeserialize: grpc.deserialize<keys_pb.ListRequest>;
     responseSerialize: grpc.serialize<keys_pb.ListResponse>;
     responseDeserialize: grpc.deserialize<keys_pb.ListResponse>;
 }
 interface IKeysService_IAddName extends grpc.MethodDefinition<keys_pb.AddNameRequest, keys_pb.AddNameResponse> {
-    path: string; // "/keys.Keys/AddName"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/keys.Keys/AddName";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<keys_pb.AddNameRequest>;
     requestDeserialize: grpc.deserialize<keys_pb.AddNameRequest>;
     responseSerialize: grpc.serialize<keys_pb.AddNameResponse>;
@@ -126,7 +126,7 @@ interface IKeysService_IAddName extends grpc.MethodDefinition<keys_pb.AddNameReq
 
 export const KeysService: IKeysService;
 
-export interface IKeysServer {
+export interface IKeysServer extends grpc.UntypedServiceImplementation {
     generateKey: grpc.handleUnaryCall<keys_pb.GenRequest, keys_pb.GenResponse>;
     publicKey: grpc.handleUnaryCall<keys_pb.PubRequest, keys_pb.PubResponse>;
     sign: grpc.handleUnaryCall<keys_pb.SignRequest, keys_pb.SignResponse>;
@@ -177,7 +177,7 @@ export interface IKeysClient {
 }
 
 export class KeysClient extends grpc.Client implements IKeysClient {
-    constructor(address: string, credentials: grpc.ChannelCredentials, options?: object);
+    constructor(address: string, credentials: grpc.ChannelCredentials, options?: Partial<grpc.ClientOptions>);
     public generateKey(request: keys_pb.GenRequest, callback: (error: grpc.ServiceError | null, response: keys_pb.GenResponse) => void): grpc.ClientUnaryCall;
     public generateKey(request: keys_pb.GenRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: keys_pb.GenResponse) => void): grpc.ClientUnaryCall;
     public generateKey(request: keys_pb.GenRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: keys_pb.GenResponse) => void): grpc.ClientUnaryCall;

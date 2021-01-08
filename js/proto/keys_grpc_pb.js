@@ -2,7 +2,7 @@
 
 'use strict';
 var keys_pb = require('./keys_pb.js');
-var github_com_gogo_protobuf_gogoproto_gogo_pb = require('./github.com/gogo/protobuf/gogoproto/gogo_pb.js');
+var gogoproto_gogo_pb = require('./gogoproto/gogo_pb.js');
 var crypto_pb = require('./crypto_pb.js');
 
 function serialize_keys_AddNameRequest(arg) {

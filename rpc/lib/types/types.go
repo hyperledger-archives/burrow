@@ -42,7 +42,7 @@ func MapToRequest(id string, method string, params map[string]interface{}) (RPCR
 		}
 		params_[name] = valueJSON
 	}
-	payload, err := json.Marshal(params_) // NOTE: Amino doesn't handle maps yet.
+	payload, err := json.Marshal(params_)
 	if err != nil {
 		return RPCRequest{}, err
 	}
@@ -59,7 +59,7 @@ func ArrayToRequest(id string, method string, params []interface{}) (RPCRequest,
 		}
 		params_[i] = valueJSON
 	}
-	payload, err := json.Marshal(params_) // NOTE: Amino doesn't handle maps yet.
+	payload, err := json.Marshal(params_)
 	if err != nil {
 		return RPCRequest{}, err
 	}

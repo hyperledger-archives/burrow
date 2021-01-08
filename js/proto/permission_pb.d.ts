@@ -5,18 +5,18 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 
 export class AccountPermissions extends jspb.Message { 
 
     hasBase(): boolean;
     clearBase(): void;
     getBase(): BasePermissions | undefined;
-    setBase(value?: BasePermissions): void;
+    setBase(value?: BasePermissions): AccountPermissions;
 
     clearRolesList(): void;
     getRolesList(): Array<string>;
-    setRolesList(value: Array<string>): void;
+    setRolesList(value: Array<string>): AccountPermissions;
     addRoles(value: string, index?: number): string;
 
 
@@ -42,13 +42,13 @@ export class BasePermissions extends jspb.Message {
     hasPerms(): boolean;
     clearPerms(): void;
     getPerms(): number | undefined;
-    setPerms(value: number): void;
+    setPerms(value: number): BasePermissions;
 
 
     hasSetbit(): boolean;
     clearSetbit(): void;
     getSetbit(): number | undefined;
-    setSetbit(value: number): void;
+    setSetbit(value: number): BasePermissions;
 
 
     serializeBinary(): Uint8Array;
@@ -73,7 +73,7 @@ export class PermArgs extends jspb.Message {
     hasAction(): boolean;
     clearAction(): void;
     getAction(): number | undefined;
-    setAction(value: number): void;
+    setAction(value: number): PermArgs;
 
 
     hasTarget(): boolean;
@@ -81,25 +81,25 @@ export class PermArgs extends jspb.Message {
     getTarget(): Uint8Array | string;
     getTarget_asU8(): Uint8Array;
     getTarget_asB64(): string;
-    setTarget(value: Uint8Array | string): void;
+    setTarget(value: Uint8Array | string): PermArgs;
 
 
     hasPermission(): boolean;
     clearPermission(): void;
     getPermission(): number | undefined;
-    setPermission(value: number): void;
+    setPermission(value: number): PermArgs;
 
 
     hasRole(): boolean;
     clearRole(): void;
     getRole(): string | undefined;
-    setRole(value: string): void;
+    setRole(value: string): PermArgs;
 
 
     hasValue(): boolean;
     clearValue(): void;
     getValue(): boolean | undefined;
-    setValue(value: boolean): void;
+    setValue(value: boolean): PermArgs;
 
 
     serializeBinary(): Uint8Array;

@@ -5,22 +5,22 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 import * as crypto_pb from "./crypto_pb";
 
 export class Envelope extends jspb.Message { 
     clearSignatoriesList(): void;
     getSignatoriesList(): Array<Signatory>;
-    setSignatoriesList(value: Array<Signatory>): void;
+    setSignatoriesList(value: Array<Signatory>): Envelope;
     addSignatories(value?: Signatory, index?: number): Signatory;
 
     getTx(): Uint8Array | string;
     getTx_asU8(): Uint8Array;
     getTx_asB64(): string;
-    setTx(value: Uint8Array | string): void;
+    setTx(value: Uint8Array | string): Envelope;
 
     getEncoding(): Envelope.EncodingType;
-    setEncoding(value: Envelope.EncodingType): void;
+    setEncoding(value: Envelope.EncodingType): Envelope;
 
 
     serializeBinary(): Uint8Array;
@@ -51,19 +51,19 @@ export class Signatory extends jspb.Message {
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
-    setAddress(value: Uint8Array | string): void;
+    setAddress(value: Uint8Array | string): Signatory;
 
 
     hasPublickey(): boolean;
     clearPublickey(): void;
     getPublickey(): crypto_pb.PublicKey | undefined;
-    setPublickey(value?: crypto_pb.PublicKey): void;
+    setPublickey(value?: crypto_pb.PublicKey): Signatory;
 
 
     hasSignature(): boolean;
     clearSignature(): void;
     getSignature(): crypto_pb.Signature | undefined;
-    setSignature(value?: crypto_pb.Signature): void;
+    setSignature(value?: crypto_pb.Signature): Signatory;
 
 
     serializeBinary(): Uint8Array;
@@ -86,20 +86,20 @@ export namespace Signatory {
 
 export class Receipt extends jspb.Message { 
     getTxtype(): number;
-    setTxtype(value: number): void;
+    setTxtype(value: number): Receipt;
 
     getTxhash(): Uint8Array | string;
     getTxhash_asU8(): Uint8Array;
     getTxhash_asB64(): string;
-    setTxhash(value: Uint8Array | string): void;
+    setTxhash(value: Uint8Array | string): Receipt;
 
     getCreatescontract(): boolean;
-    setCreatescontract(value: boolean): void;
+    setCreatescontract(value: boolean): Receipt;
 
     getContractaddress(): Uint8Array | string;
     getContractaddress_asU8(): Uint8Array;
     getContractaddress_asB64(): string;
-    setContractaddress(value: Uint8Array | string): void;
+    setContractaddress(value: Uint8Array | string): Receipt;
 
 
     serializeBinary(): Uint8Array;

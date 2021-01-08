@@ -5,7 +5,7 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 import * as permission_pb from "./permission_pb";
 import * as registry_pb from "./registry_pb";
 import * as spec_pb from "./spec_pb";
@@ -15,61 +15,61 @@ export class Any extends jspb.Message {
     hasCalltx(): boolean;
     clearCalltx(): void;
     getCalltx(): CallTx | undefined;
-    setCalltx(value?: CallTx): void;
+    setCalltx(value?: CallTx): Any;
 
 
     hasSendtx(): boolean;
     clearSendtx(): void;
     getSendtx(): SendTx | undefined;
-    setSendtx(value?: SendTx): void;
+    setSendtx(value?: SendTx): Any;
 
 
     hasNametx(): boolean;
     clearNametx(): void;
     getNametx(): NameTx | undefined;
-    setNametx(value?: NameTx): void;
+    setNametx(value?: NameTx): Any;
 
 
     hasPermstx(): boolean;
     clearPermstx(): void;
     getPermstx(): PermsTx | undefined;
-    setPermstx(value?: PermsTx): void;
+    setPermstx(value?: PermsTx): Any;
 
 
     hasGovtx(): boolean;
     clearGovtx(): void;
     getGovtx(): GovTx | undefined;
-    setGovtx(value?: GovTx): void;
+    setGovtx(value?: GovTx): Any;
 
 
     hasBondtx(): boolean;
     clearBondtx(): void;
     getBondtx(): BondTx | undefined;
-    setBondtx(value?: BondTx): void;
+    setBondtx(value?: BondTx): Any;
 
 
     hasUnbondtx(): boolean;
     clearUnbondtx(): void;
     getUnbondtx(): UnbondTx | undefined;
-    setUnbondtx(value?: UnbondTx): void;
+    setUnbondtx(value?: UnbondTx): Any;
 
 
     hasBatchtx(): boolean;
     clearBatchtx(): void;
     getBatchtx(): BatchTx | undefined;
-    setBatchtx(value?: BatchTx): void;
+    setBatchtx(value?: BatchTx): Any;
 
 
     hasProposaltx(): boolean;
     clearProposaltx(): void;
     getProposaltx(): ProposalTx | undefined;
-    setProposaltx(value?: ProposalTx): void;
+    setProposaltx(value?: ProposalTx): Any;
 
 
     hasIdentifytx(): boolean;
     clearIdentifytx(): void;
     getIdentifytx(): IdentifyTx | undefined;
-    setIdentifytx(value?: IdentifyTx): void;
+    setIdentifytx(value?: IdentifyTx): Any;
 
 
     serializeBinary(): Uint8Array;
@@ -101,13 +101,13 @@ export class TxInput extends jspb.Message {
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
-    setAddress(value: Uint8Array | string): void;
+    setAddress(value: Uint8Array | string): TxInput;
 
     getAmount(): number;
-    setAmount(value: number): void;
+    setAmount(value: number): TxInput;
 
     getSequence(): number;
-    setSequence(value: number): void;
+    setSequence(value: number): TxInput;
 
 
     serializeBinary(): Uint8Array;
@@ -132,10 +132,10 @@ export class TxOutput extends jspb.Message {
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
-    setAddress(value: Uint8Array | string): void;
+    setAddress(value: Uint8Array | string): TxOutput;
 
     getAmount(): number;
-    setAmount(value: number): void;
+    setAmount(value: number): TxOutput;
 
 
     serializeBinary(): Uint8Array;
@@ -160,36 +160,36 @@ export class CallTx extends jspb.Message {
     hasInput(): boolean;
     clearInput(): void;
     getInput(): TxInput | undefined;
-    setInput(value?: TxInput): void;
+    setInput(value?: TxInput): CallTx;
 
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
-    setAddress(value: Uint8Array | string): void;
+    setAddress(value: Uint8Array | string): CallTx;
 
     getGaslimit(): number;
-    setGaslimit(value: number): void;
+    setGaslimit(value: number): CallTx;
 
     getFee(): number;
-    setFee(value: number): void;
+    setFee(value: number): CallTx;
 
     getData(): Uint8Array | string;
     getData_asU8(): Uint8Array;
     getData_asB64(): string;
-    setData(value: Uint8Array | string): void;
+    setData(value: Uint8Array | string): CallTx;
 
     getWasm(): Uint8Array | string;
     getWasm_asU8(): Uint8Array;
     getWasm_asB64(): string;
-    setWasm(value: Uint8Array | string): void;
+    setWasm(value: Uint8Array | string): CallTx;
 
     clearContractmetaList(): void;
     getContractmetaList(): Array<ContractMeta>;
-    setContractmetaList(value: Array<ContractMeta>): void;
+    setContractmetaList(value: Array<ContractMeta>): CallTx;
     addContractmeta(value?: ContractMeta, index?: number): ContractMeta;
 
     getGasprice(): number;
-    setGasprice(value: number): void;
+    setGasprice(value: number): CallTx;
 
 
     serializeBinary(): Uint8Array;
@@ -219,10 +219,10 @@ export class ContractMeta extends jspb.Message {
     getCodehash(): Uint8Array | string;
     getCodehash_asU8(): Uint8Array;
     getCodehash_asB64(): string;
-    setCodehash(value: Uint8Array | string): void;
+    setCodehash(value: Uint8Array | string): ContractMeta;
 
     getMeta(): string;
-    setMeta(value: string): void;
+    setMeta(value: string): ContractMeta;
 
 
     serializeBinary(): Uint8Array;
@@ -245,12 +245,12 @@ export namespace ContractMeta {
 export class SendTx extends jspb.Message { 
     clearInputsList(): void;
     getInputsList(): Array<TxInput>;
-    setInputsList(value: Array<TxInput>): void;
+    setInputsList(value: Array<TxInput>): SendTx;
     addInputs(value?: TxInput, index?: number): TxInput;
 
     clearOutputsList(): void;
     getOutputsList(): Array<TxOutput>;
-    setOutputsList(value: Array<TxOutput>): void;
+    setOutputsList(value: Array<TxOutput>): SendTx;
     addOutputs(value?: TxOutput, index?: number): TxOutput;
 
 
@@ -276,13 +276,13 @@ export class PermsTx extends jspb.Message {
     hasInput(): boolean;
     clearInput(): void;
     getInput(): TxInput | undefined;
-    setInput(value?: TxInput): void;
+    setInput(value?: TxInput): PermsTx;
 
 
     hasPermargs(): boolean;
     clearPermargs(): void;
     getPermargs(): permission_pb.PermArgs | undefined;
-    setPermargs(value?: permission_pb.PermArgs): void;
+    setPermargs(value?: permission_pb.PermArgs): PermsTx;
 
 
     serializeBinary(): Uint8Array;
@@ -307,16 +307,16 @@ export class NameTx extends jspb.Message {
     hasInput(): boolean;
     clearInput(): void;
     getInput(): TxInput | undefined;
-    setInput(value?: TxInput): void;
+    setInput(value?: TxInput): NameTx;
 
     getName(): string;
-    setName(value: string): void;
+    setName(value: string): NameTx;
 
     getData(): string;
-    setData(value: string): void;
+    setData(value: string): NameTx;
 
     getFee(): number;
-    setFee(value: number): void;
+    setFee(value: number): NameTx;
 
 
     serializeBinary(): Uint8Array;
@@ -343,7 +343,7 @@ export class BondTx extends jspb.Message {
     hasInput(): boolean;
     clearInput(): void;
     getInput(): TxInput | undefined;
-    setInput(value?: TxInput): void;
+    setInput(value?: TxInput): BondTx;
 
 
     serializeBinary(): Uint8Array;
@@ -367,13 +367,13 @@ export class UnbondTx extends jspb.Message {
     hasInput(): boolean;
     clearInput(): void;
     getInput(): TxInput | undefined;
-    setInput(value?: TxInput): void;
+    setInput(value?: TxInput): UnbondTx;
 
 
     hasOutput(): boolean;
     clearOutput(): void;
     getOutput(): TxOutput | undefined;
-    setOutput(value?: TxOutput): void;
+    setOutput(value?: TxOutput): UnbondTx;
 
 
     serializeBinary(): Uint8Array;
@@ -396,12 +396,12 @@ export namespace UnbondTx {
 export class GovTx extends jspb.Message { 
     clearInputsList(): void;
     getInputsList(): Array<TxInput>;
-    setInputsList(value: Array<TxInput>): void;
+    setInputsList(value: Array<TxInput>): GovTx;
     addInputs(value?: TxInput, index?: number): TxInput;
 
     clearAccountupdatesList(): void;
     getAccountupdatesList(): Array<spec_pb.TemplateAccount>;
-    setAccountupdatesList(value: Array<spec_pb.TemplateAccount>): void;
+    setAccountupdatesList(value: Array<spec_pb.TemplateAccount>): GovTx;
     addAccountupdates(value?: spec_pb.TemplateAccount, index?: number): spec_pb.TemplateAccount;
 
 
@@ -427,21 +427,21 @@ export class ProposalTx extends jspb.Message {
     hasInput(): boolean;
     clearInput(): void;
     getInput(): TxInput | undefined;
-    setInput(value?: TxInput): void;
+    setInput(value?: TxInput): ProposalTx;
 
     getVotingweight(): number;
-    setVotingweight(value: number): void;
+    setVotingweight(value: number): ProposalTx;
 
     getProposalhash(): Uint8Array | string;
     getProposalhash_asU8(): Uint8Array;
     getProposalhash_asB64(): string;
-    setProposalhash(value: Uint8Array | string): void;
+    setProposalhash(value: Uint8Array | string): ProposalTx;
 
 
     hasProposal(): boolean;
     clearProposal(): void;
     getProposal(): Proposal | undefined;
-    setProposal(value?: Proposal): void;
+    setProposal(value?: Proposal): ProposalTx;
 
 
     serializeBinary(): Uint8Array;
@@ -466,14 +466,14 @@ export namespace ProposalTx {
 export class IdentifyTx extends jspb.Message { 
     clearInputsList(): void;
     getInputsList(): Array<TxInput>;
-    setInputsList(value: Array<TxInput>): void;
+    setInputsList(value: Array<TxInput>): IdentifyTx;
     addInputs(value?: TxInput, index?: number): TxInput;
 
 
     hasNode(): boolean;
     clearNode(): void;
     getNode(): registry_pb.NodeIdentity | undefined;
-    setNode(value?: registry_pb.NodeIdentity): void;
+    setNode(value?: registry_pb.NodeIdentity): IdentifyTx;
 
 
     serializeBinary(): Uint8Array;
@@ -496,12 +496,12 @@ export namespace IdentifyTx {
 export class BatchTx extends jspb.Message { 
     clearInputsList(): void;
     getInputsList(): Array<TxInput>;
-    setInputsList(value: Array<TxInput>): void;
+    setInputsList(value: Array<TxInput>): BatchTx;
     addInputs(value?: TxInput, index?: number): TxInput;
 
     clearTxsList(): void;
     getTxsList(): Array<Any>;
-    setTxsList(value: Array<Any>): void;
+    setTxsList(value: Array<Any>): BatchTx;
     addTxs(value?: Any, index?: number): Any;
 
 
@@ -526,10 +526,10 @@ export class Vote extends jspb.Message {
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
-    setAddress(value: Uint8Array | string): void;
+    setAddress(value: Uint8Array | string): Vote;
 
     getVotingweight(): number;
-    setVotingweight(value: number): void;
+    setVotingweight(value: number): Vote;
 
 
     serializeBinary(): Uint8Array;
@@ -551,16 +551,16 @@ export namespace Vote {
 
 export class Proposal extends jspb.Message { 
     getName(): string;
-    setName(value: string): void;
+    setName(value: string): Proposal;
 
     getDescription(): string;
-    setDescription(value: string): void;
+    setDescription(value: string): Proposal;
 
 
     hasBatchtx(): boolean;
     clearBatchtx(): void;
     getBatchtx(): BatchTx | undefined;
-    setBatchtx(value?: BatchTx): void;
+    setBatchtx(value?: BatchTx): Proposal;
 
 
     serializeBinary(): Uint8Array;
@@ -586,19 +586,19 @@ export class Ballot extends jspb.Message {
     hasProposal(): boolean;
     clearProposal(): void;
     getProposal(): Proposal | undefined;
-    setProposal(value?: Proposal): void;
+    setProposal(value?: Proposal): Ballot;
 
     getFinalizingtx(): Uint8Array | string;
     getFinalizingtx_asU8(): Uint8Array;
     getFinalizingtx_asB64(): string;
-    setFinalizingtx(value: Uint8Array | string): void;
+    setFinalizingtx(value: Uint8Array | string): Ballot;
 
     getProposalstate(): Ballot.ProposalState;
-    setProposalstate(value: Ballot.ProposalState): void;
+    setProposalstate(value: Ballot.ProposalState): Ballot;
 
     clearVotesList(): void;
     getVotesList(): Array<Vote>;
-    setVotesList(value: Array<Vote>): void;
+    setVotesList(value: Array<Vote>): Ballot;
     addVotes(value?: Vote, index?: number): Vote;
 
 

@@ -98,12 +98,14 @@ type cacheBatch struct {
 	backend *CacheDB
 }
 
-func (cb *cacheBatch) Set(key, value []byte) {
+func (cb *cacheBatch) Set(key, value []byte) error {
 	cb.cache.Set(key, value)
+	return nil
 }
 
-func (cb *cacheBatch) Delete(key []byte) {
+func (cb *cacheBatch) Delete(key []byte) error {
 	cb.cache.Delete(key)
+	return nil
 }
 
 func (cb *cacheBatch) Write() error {
@@ -111,7 +113,8 @@ func (cb *cacheBatch) Write() error {
 	return nil
 }
 
-func (cb *cacheBatch) Close() {
+func (cb *cacheBatch) Close() error {
+	return nil
 }
 
 func (cb *cacheBatch) WriteSync() error {

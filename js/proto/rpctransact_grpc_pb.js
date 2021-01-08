@@ -2,7 +2,7 @@
 
 'use strict';
 var rpctransact_pb = require('./rpctransact_pb.js');
-var github_com_gogo_protobuf_gogoproto_gogo_pb = require('./github.com/gogo/protobuf/gogoproto/gogo_pb.js');
+var gogoproto_gogo_pb = require('./gogoproto/gogo_pb.js');
 var google_protobuf_duration_pb = require('google-protobuf/google/protobuf/duration_pb.js');
 var exec_pb = require('./exec_pb.js');
 var payload_pb = require('./payload_pb.js');

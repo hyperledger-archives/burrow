@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto/encoding"
 )
 
 type Validators interface {
@@ -29,6 +30,8 @@ const (
 )
 
 type App struct {
+	// Provides a no-op implementation for all methods (in particular snapshots for now will abort)
+	types.BaseApplication
 	// Node information to return in Info
 	nodeInfo string
 	// State
@@ -103,7 +106,7 @@ func (app *App) Query(reqQuery types.RequestQuery) (respQuery types.ResponseQuer
 	return
 }
 
-func (app *App) InitChain(chain types.RequestInitChain) (respInitChain types.ResponseInitChain) {
+func (app *App) InitChain(chain types.RequestInitChain) types.ResponseInitChain {
 	defer func() {
 		if r := recover(); r != nil {
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/InitChain: %v\n%s", r, debug.Stack()))
@@ -119,17 +122,19 @@ func (app *App) InitChain(chain types.RequestInitChain) (respInitChain types.Res
 			len(chain.Validators), currentSet.Size()))
 	}
 	for _, v := range chain.Validators {
-		pk, err := crypto.PublicKeyFromABCIPubKey(v.GetPubKey())
+		pk, err := encoding.PubKeyFromProto(v.GetPubKey())
 		if err != nil {
 			panic(err)
 		}
-		err = app.checkValidatorMatches(currentSet, types.Validator{Address: pk.GetAddress().Bytes(), Power: v.Power})
+		err = app.checkValidatorMatches(currentSet, types.Validator{Address: pk.Address().Bytes(), Power: v.Power})
 		if err != nil {
 			panic(err)
 		}
 	}
 	app.logger.InfoMsg("Initial validator set matches")
-	return
+	return types.ResponseInitChain{
+		AppHash: app.blockchain.AppHashAfterLastBlock(),
+	}
 }
 
 func (app *App) BeginBlock(block types.RequestBeginBlock) (respBeginBlock types.ResponseBeginBlock) {
@@ -235,8 +240,12 @@ func (app *App) EndBlock(reqEndBlock types.RequestEndBlock) types.ResponseEndBlo
 	err := app.validators.ValidatorChanges(BurrowValidatorDelayInBlocks).IterateValidators(func(id crypto.Addressable, power *big.Int) error {
 		app.logger.InfoMsg("Updating validator power", "validator_address", id.GetAddress(),
 			"new_power", power)
+		pk, err := encoding.PubKeyToProto(id.GetPublicKey().TendermintPubKey())
+		if err != nil {
+			panic(err)
+		}
 		validatorUpdates = append(validatorUpdates, types.ValidatorUpdate{
-			PubKey: id.GetPublicKey().ABCIPubKey(),
+			PubKey: pk,
 			// Must ensure power fits in an int64 during execution
 			Power: power.Int64(),
 		})

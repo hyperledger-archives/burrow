@@ -13,7 +13,7 @@ jobs:
     - run: git fetch --prune --unshallow
     - uses: actions/setup-go@v1
       with:
-        go-version: 1.13.x
+        go-version: 1.15
     - uses: goreleaser/goreleaser-action@v1
       with:
         version: latest
@@ -30,7 +30,7 @@ jobs:
     - run: git fetch --unshallow --prune
     - uses: actions/setup-node@v1
       with:
-        node-version: '12.x'
+        node-version: '14.x'
     - run: echo ::set-env name=RELEASE_VERSION::${GITHUB_REF:10}
     - name: publish
       env:

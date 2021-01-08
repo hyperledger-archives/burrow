@@ -3,7 +3,7 @@ syntax = 'proto3';
 
 option go_package = "github.com/hyperledger/burrow/bcm";
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "gogoproto/gogo.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 
@@ -17,7 +17,7 @@ option (gogoproto.goproto_registration) = true;
 option (gogoproto.messagename_all) = true;
 
 message SyncInfo {
-    uint64 LatestBlockHeight = 1 [(gogoproto.jsontag) = ""];
+    uint64 LatestBlockHeight = 1;
     bytes LatestBlockHash = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
     bytes LatestAppHash = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
     // Timestamp of block as set by the block proposer

@@ -21,6 +21,7 @@ import (
 const maxBroadcastSyncTimeout = time.Hour
 
 type transactServer struct {
+	UnimplementedTransactServer
 	state      acmstate.Reader
 	blockchain bcm.BlockchainInfo
 	transactor *execution.Transactor

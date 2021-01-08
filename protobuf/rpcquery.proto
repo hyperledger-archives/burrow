@@ -4,8 +4,8 @@ package rpcquery;
 
 option go_package = "github.com/hyperledger/burrow/rpc/rpcquery";
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-import "github.com/tendermint/tendermint/abci/types/types.proto";
+import "gogoproto/gogo.proto";
+import "tendermint/types/types.proto";
 
 import "names.proto";
 import "acm.proto";
@@ -14,6 +14,8 @@ import "registry.proto";
 import "rpc.proto";
 import "payload.proto";
 
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.stable_marshaler_all) = true;
 option (gogoproto.sizer_all) = true;
 option (gogoproto.goproto_registration) = true;
@@ -29,7 +31,7 @@ service Query {
 
     rpc GetName (GetNameParam) returns (names.Entry);
     rpc ListNames (ListNamesParam) returns (stream names.Entry);
-    
+
     // GetNetworkRegistry returns for each validator address, the list of their identified node at the current state
     rpc GetNetworkRegistry (GetNetworkRegistryParam) returns (NetworkRegistry);
     rpc GetValidatorSet (GetValidatorSetParam) returns (ValidatorSet);
@@ -40,7 +42,7 @@ service Query {
 
     rpc GetStats(GetStatsParam) returns (Stats);
 
-    rpc GetBlockHeader(GetBlockParam) returns (types.Header);
+    rpc GetBlockHeader(GetBlockParam) returns (tendermint.types.Header);
 }
 
 message StatusParam {
