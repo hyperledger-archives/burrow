@@ -618,6 +618,9 @@ func (e EVMBytes) pack(v interface{}) ([]byte, error) {
 }
 
 func (e EVMBytes) unpack(data []byte, offset int, v interface{}) (int, error) {
+	if len(data)-offset < ElementSize {
+		return 0, fmt.Errorf("%v: not enough data", e)
+	}
 	if e.M == 0 {
 		s := EVMString{}
 
