@@ -539,6 +539,9 @@ func (e EVMAddress) pack(v interface{}) ([]byte, error) {
 }
 
 func (e EVMAddress) unpack(data []byte, offset int, v interface{}) (int, error) {
+	if len(data)-offset < ElementSize {
+		return 0, fmt.Errorf("%v: not enough data", e)
+	}
 	addr, err := crypto.AddressFromBytes(data[offset+ElementSize-crypto.AddressLength : offset+ElementSize])
 	if err != nil {
 		return 0, err
