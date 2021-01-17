@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/decred/dcrd/dcrec/secp256k1/v3/ecdsa"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
@@ -13,6 +14,10 @@ import (
 )
 
 var Precompiles = New().
+	MustFunction(`Recover public key/address of account that signed the data`,
+		leftPadAddress(1),
+		permission.None,
+		ecrecoverFunc).
 	MustFunction(`Compute the sha256 hash of input`,
 		leftPadAddress(2),
 		permission.None,
@@ -34,29 +39,33 @@ func leftPadAddress(bs ...byte) crypto.Address {
 	return crypto.AddressFromWord256(binary.LeftPadWord256(bs))
 }
 
-/* Removed due to C dependency
-func ecrecoverFunc(state State, caller crypto.Address, input []byte, gas *int64) (output []byte, err error) {
+func ecrecoverFunc(ctx Context) (output []byte, err error) {
 	// Deduct gas
 	gasRequired := GasEcRecover
-	if *gas < gasRequired {
-		return nil, ErrInsufficientGas
+	if *ctx.Gas < gasRequired {
+		return nil, errors.Codes.InsufficientGas
 	} else {
-		*gas -= gasRequired
+		*ctx.Gas -= gasRequired
 	}
-	// Recover
-	hash := input[:32]
-	v := byte(input[32] - 27) // ignore input[33:64], v is small.
-	sig := append(input[64:], v)
 
-	recovered, err := secp256k1.RecoverPubkey(hash, sig)
+	// SECP256K1 Recovery
+	hash := ctx.Input[:32] // from 0 to 31 bytes
+	sig := ctx.Input[63:]  // skip values in range[32:62]
+
+	publicKey, isCompressed, err := ecdsa.RecoverCompact(sig, hash)
 	if err != nil {
 		return nil, err
-OH NO STOCASTIC CAT CODING!!!!
 	}
-	hashed := crypto.Keccak256(recovered[1:])
-	return LeftPadBytes(hashed, 32), nil
+
+	var serializedPublicKey []byte
+	if isCompressed == true {
+		serializedPublicKey = publicKey.SerializeCompressed()
+	} else {
+		serializedPublicKey = publicKey.SerializeUncompressed()
+	}
+	hashed := crypto.Keccak256(serializedPublicKey[1:])
+	return binary.LeftPadBytes(hashed, 32), nil
 }
-*/
 
 func sha256Func(ctx Context) (output []byte, err error) {
 	// Deduct gas

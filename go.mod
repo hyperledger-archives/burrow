@@ -9,6 +9,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20180720115003-f9ffefc3facf // indirect
 	github.com/btcsuite/btcd v0.0.0-20190523000118-16327141da8c
 	github.com/cep21/xdgbasedir v0.0.0-20170329171747-21470bfc93b9
+	github.com/decred/dcrd/dcrec/secp256k1/v3 v3.0.0
 	github.com/eapache/channels v1.1.0
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/elgs/gojq v0.0.0-20160421194050-81fa9a608a13
