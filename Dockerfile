@@ -1,7 +1,7 @@
 # For solc binary
 FROM ethereum/solc:0.5.12 as solc-builder
 # We use a multistage build to avoid bloating our deployment image with build dependencies
-FROM golang:1.13-alpine3.11 as builder
+FROM golang:1.15-alpine3.12 as builder
 
 RUN apk add --no-cache --update git bash make musl-dev gcc libc6-compat
 

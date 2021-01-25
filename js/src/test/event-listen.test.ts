@@ -4,7 +4,7 @@ import {burrow, compile} from '../test';
 describe('Event listening', function () {
 
   it('listens to an event from a contract', async () => {
-      const source = `
+    const source = `
       pragma solidity >=0.0.0;
       contract Contract {
         event Pay(
@@ -31,11 +31,12 @@ describe('Event listening', function () {
       }
     `
 
-      const {abi, code} = compile(source, 'Contract')
-      const contract: any = await burrow.contracts.deploy(abi, code)
+    const {abi, code} = compile(source, 'Contract')
+    const contract: any = await burrow.contracts.deploy(abi, code)
+    const promise = new Promise<void>((resolve, reject) => {
       const stream = contract.Pay((error, result) => {
         if (error) {
-          throw error;
+          reject(error);
         } else {
           const actual = Object.assign(
             {},
@@ -61,10 +62,14 @@ describe('Event listening', function () {
           )
 
           stream.cancel()
+          resolve()
         }
       });
-
-      contract.announce()
     })
+
+    await contract.announce()
+
+    return promise
+  })
 });
 
