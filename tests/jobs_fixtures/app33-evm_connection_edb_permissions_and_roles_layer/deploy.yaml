@@ -1,6 +1,3 @@
-# Exclusive with app03
-no-parallel: true
-
 jobs:
 
 - name: role
