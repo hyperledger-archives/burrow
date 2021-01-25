@@ -1,4 +1,4 @@
-FROM golang:1.13-alpine3.11
+FROM golang:1.15-alpine3.13
 MAINTAINER Monax <support@monax.io>
 
 ENV DOCKER_VERSION "17.12.1-ce"
@@ -21,9 +21,9 @@ RUN apk add --update --no-cache \
  docker \
  libffi-dev \
  openssl-dev \
- python-dev \
+ python3-dev \
  py-pip
-RUN pip install docker-compose
+RUN pip3 install docker-compose
 # get docker client
 WORKDIR /usr/bin
 RUN curl -sS -L https://download.docker.com/linux/static/stable/x86_64/docker-$DOCKER_VERSION.tgz | tar xz --strip-components 1 docker/docker
