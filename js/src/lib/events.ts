@@ -1,14 +1,15 @@
-import { IExecutionEventsClient } from '../../proto/rpcevents_grpc_pb';
-import { BlocksRequest, BlockRange, Bound, EventsResponse } from '../../proto/rpcevents_pb';
-import { LogEvent } from '../../proto/exec_pb';
-import { Error } from './burrow';
+import {IExecutionEventsClient} from '../../proto/rpcevents_grpc_pb';
+import {BlocksRequest, BlockRange, Bound, EventsResponse} from '../../proto/rpcevents_pb';
+import {LogEvent} from '../../proto/exec_pb';
+import {Error} from './burrow';
 import * as grpc from '@grpc/grpc-js';
 
 export type EventStream = grpc.ClientReadableStream<EventsResponse>;
 
 export class Events {
 
-  constructor(private burrow: IExecutionEventsClient) {}
+  constructor(private burrow: IExecutionEventsClient) {
+  }
 
   listen(query: string, callback: (err: Error, log: LogEvent) => void): EventStream {
     const start = new Bound();
@@ -32,8 +33,7 @@ export class Events {
         callback(null, event.getLog());
       });
     });
-    stream.on('error', (err: Error) =>
-      err.code === grpc.status.CANCELLED ? callback(null, null) : callback(err, null));
+    stream.on('error', (err: Error) => err.code === grpc.status.CANCELLED || callback(err, null));
     return stream;
   }
 
