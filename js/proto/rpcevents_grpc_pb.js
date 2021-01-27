@@ -2,7 +2,7 @@
 
 'use strict';
 var rpcevents_pb = require('./rpcevents_pb.js');
-var github_com_gogo_protobuf_gogoproto_gogo_pb = require('./github.com/gogo/protobuf/gogoproto/gogo_pb.js');
+var gogoproto_gogo_pb = require('./gogoproto/gogo_pb.js');
 var exec_pb = require('./exec_pb.js');
 
 function serialize_exec_StreamEvent(arg) {

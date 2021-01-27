@@ -19,6 +19,7 @@ import (
 
 type FilesystemKeyStore struct {
 	sync.Mutex
+	UnimplementedKeysServer
 	AllowBadFilePermissions bool
 	keysDirPath             string
 }

@@ -30,7 +30,7 @@ import (
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
-	abciTypes "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/proto/tendermint/types"
 )
 
 type Executor interface {
@@ -68,7 +68,7 @@ type BatchExecutor interface {
 type BatchCommitter interface {
 	BatchExecutor
 	// Commit execution results to underlying State and provide opportunity to mutate state before it is saved
-	Commit(header *abciTypes.Header) (stateHash []byte, err error)
+	Commit(header *types.Header) (stateHash []byte, err error)
 }
 
 type executor struct {
@@ -341,7 +341,7 @@ func (exe *executor) updateSignatory(sig txs.Signatory) error {
 
 // Commit the current state - optionally pass in the tendermint ABCI header for that to be included with the BeginBlock
 // StreamEvent
-func (exe *executor) Commit(header *abciTypes.Header) (stateHash []byte, err error) {
+func (exe *executor) Commit(header *types.Header) (stateHash []byte, err error) {
 	// The write lock to the executor is controlled by the caller (e.g. abci.App) so we do not acquire it here to avoid
 	// deadlock
 	defer func() {
@@ -444,7 +444,7 @@ func (exe *executor) PendingValidators() validator.IterableReader {
 	return exe.validatorCache.Delta
 }
 
-func (exe *executor) finaliseBlockExecution(header *abciTypes.Header) (*exec.BlockExecution, error) {
+func (exe *executor) finaliseBlockExecution(header *types.Header) (*exec.BlockExecution, error) {
 	if header != nil && uint64(header.Height) != exe.block.Height {
 		return nil, fmt.Errorf("trying to finalise block execution with height %v but passed Tendermint"+
 			"block header at height %v", exe.block.Height, header.Height)

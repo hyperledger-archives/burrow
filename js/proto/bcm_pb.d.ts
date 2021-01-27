@@ -5,41 +5,41 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 import * as google_protobuf_timestamp_pb from "google-protobuf/google/protobuf/timestamp_pb";
 import * as google_protobuf_duration_pb from "google-protobuf/google/protobuf/duration_pb";
 
 export class SyncInfo extends jspb.Message { 
     getLatestblockheight(): number;
-    setLatestblockheight(value: number): void;
+    setLatestblockheight(value: number): SyncInfo;
 
     getLatestblockhash(): Uint8Array | string;
     getLatestblockhash_asU8(): Uint8Array;
     getLatestblockhash_asB64(): string;
-    setLatestblockhash(value: Uint8Array | string): void;
+    setLatestblockhash(value: Uint8Array | string): SyncInfo;
 
     getLatestapphash(): Uint8Array | string;
     getLatestapphash_asU8(): Uint8Array;
     getLatestapphash_asB64(): string;
-    setLatestapphash(value: Uint8Array | string): void;
+    setLatestapphash(value: Uint8Array | string): SyncInfo;
 
 
     hasLatestblocktime(): boolean;
     clearLatestblocktime(): void;
     getLatestblocktime(): google_protobuf_timestamp_pb.Timestamp | undefined;
-    setLatestblocktime(value?: google_protobuf_timestamp_pb.Timestamp): void;
+    setLatestblocktime(value?: google_protobuf_timestamp_pb.Timestamp): SyncInfo;
 
 
     hasLatestblockseentime(): boolean;
     clearLatestblockseentime(): void;
     getLatestblockseentime(): google_protobuf_timestamp_pb.Timestamp | undefined;
-    setLatestblockseentime(value?: google_protobuf_timestamp_pb.Timestamp): void;
+    setLatestblockseentime(value?: google_protobuf_timestamp_pb.Timestamp): SyncInfo;
 
 
     hasLatestblockduration(): boolean;
     clearLatestblockduration(): void;
     getLatestblockduration(): google_protobuf_duration_pb.Duration | undefined;
-    setLatestblockduration(value?: google_protobuf_duration_pb.Duration): void;
+    setLatestblockduration(value?: google_protobuf_duration_pb.Duration): SyncInfo;
 
 
     serializeBinary(): Uint8Array;
@@ -67,21 +67,21 @@ export class PersistedState extends jspb.Message {
     getApphashafterlastblock(): Uint8Array | string;
     getApphashafterlastblock_asU8(): Uint8Array;
     getApphashafterlastblock_asB64(): string;
-    setApphashafterlastblock(value: Uint8Array | string): void;
+    setApphashafterlastblock(value: Uint8Array | string): PersistedState;
 
 
     hasLastblocktime(): boolean;
     clearLastblocktime(): void;
     getLastblocktime(): google_protobuf_timestamp_pb.Timestamp | undefined;
-    setLastblocktime(value?: google_protobuf_timestamp_pb.Timestamp): void;
+    setLastblocktime(value?: google_protobuf_timestamp_pb.Timestamp): PersistedState;
 
     getLastblockheight(): number;
-    setLastblockheight(value: number): void;
+    setLastblockheight(value: number): PersistedState;
 
     getGenesishash(): Uint8Array | string;
     getGenesishash_asU8(): Uint8Array;
     getGenesishash_asB64(): string;
-    setGenesishash(value: Uint8Array | string): void;
+    setGenesishash(value: Uint8Array | string): PersistedState;
 
 
     serializeBinary(): Uint8Array;

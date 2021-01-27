@@ -4,8 +4,8 @@ package exec;
 
 option go_package = "github.com/hyperledger/burrow/execution/exec";
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-import "github.com/tendermint/tendermint/abci/types/types.proto";
+import "gogoproto/gogo.proto";
+import "tendermint/types/types.proto";
 import "google/protobuf/timestamp.proto";
 
 import "errors.proto";
@@ -43,7 +43,7 @@ message BeginBlock {
     uint64 NumTxs = 3;
     // The height of the most recent block we stored in state (which is the last non-empty block in current implementation)
     uint64 PredecessorHeight = 4;
-    types.Header Header = 2;
+    tendermint.types.Header Header = 2;
 }
 
 message EndBlock {
@@ -83,7 +83,7 @@ message BlockExecution {
     uint64 Height = 1;
     // The height of the most recent block we stored in state (which is the last non-empty block in current implementation)
     uint64 PredecessorHeight = 4;
-    types.Header Header = 2;
+    tendermint.types.Header Header = 2;
     repeated TxExecution TxExecutions = 3;
 }
 

@@ -4,7 +4,7 @@ package names;
 
 option go_package = "github.com/hyperledger/burrow/execution/names";
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "gogoproto/gogo.proto";
 
 option (gogoproto.stable_marshaler_all) = true;
 // Enable custom Marshal method.

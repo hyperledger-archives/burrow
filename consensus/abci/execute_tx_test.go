@@ -8,14 +8,13 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/libs/kv"
 )
 
 func TestWithEvents(t *testing.T) {
 	var buf bytes.Buffer
 	logger := logging.NewLogger(log.NewLogfmtLogger(&buf))
-	kvp := kv.Pair{Key: []byte("foo"), Value: []byte("bar")}
-	event := types.Event{Type: "event", Attributes: []kv.Pair{kvp}}
+	kvp := types.EventAttribute{Key: []byte("foo"), Value: []byte("bar")}
+	event := types.Event{Type: "event", Attributes: []types.EventAttribute{kvp}}
 	events := []types.Event{event}
 	logger = WithEvents(logger, events)
 	logger.InfoMsg("hello, world")

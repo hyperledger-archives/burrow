@@ -89,10 +89,11 @@ func (it *ChannelIterator) Value() []byte {
 	return it.kv.Value
 }
 
-func (it *ChannelIterator) Close() {
+func (it *ChannelIterator) Close() error {
 	for range it.ch {
 		// drain channel if necessary
 	}
+	return nil
 }
 
 func (it *ChannelIterator) Error() error {

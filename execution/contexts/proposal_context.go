@@ -6,6 +6,8 @@ import (
 	"runtime/debug"
 	"unicode"
 
+	"github.com/hyperledger/burrow/encoding"
+
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/crypto"
@@ -27,6 +29,17 @@ type ProposalContext struct {
 	Logger            *logging.Logger
 	tx                *payload.ProposalTx
 	Contexts          map[payload.Type]Context
+}
+
+func HashProposal(p *payload.Proposal) []byte {
+	bs, err := encoding.Encode(p)
+	if err != nil {
+		panic("failed to encode Proposal")
+	}
+
+	hash := sha256.Sum256(bs)
+
+	return hash[:]
 }
 
 func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) error {
@@ -77,7 +90,7 @@ func (ctx *ProposalContext) Execute(txe *exec.TxExecution, p payload.Payload) er
 			return err
 		}
 
-		proposalHash = ctx.tx.Proposal.Hash()
+		proposalHash = HashProposal(ctx.tx.Proposal)
 
 		ballot, err = ctx.ProposalReg.GetProposal(proposalHash)
 		if err != nil {

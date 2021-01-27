@@ -158,7 +158,6 @@ func (address *Address) UnmarshalText(text []byte) error {
 
 func (address Address) MarshalText() ([]byte, error) {
 	return ([]byte)(hex.EncodeUpperToString(address[:])), nil
-
 }
 
 // Gogo proto support
@@ -196,7 +195,7 @@ func Nonce(caller Address, nonce []byte) []byte {
 	return hasher.Sum(nil)
 }
 
-// Obtain a nearly unique nonce based on a montonic account sequence number
+// Obtain a nearly unique nonce based on a monotonic account sequence number
 func SequenceNonce(address Address, sequence uint64) []byte {
 	bs := make([]byte, 8)
 	bin.BigEndian.PutUint64(bs, sequence)

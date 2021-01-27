@@ -189,8 +189,8 @@ func (pi *prefixIterator) Value() []byte {
 	return pi.source.Value()
 }
 
-func (pi *prefixIterator) Close() {
-	pi.source.Close()
+func (pi *prefixIterator) Close() error {
+	return pi.source.Close()
 }
 
 func (pi *prefixIterator) Error() error {

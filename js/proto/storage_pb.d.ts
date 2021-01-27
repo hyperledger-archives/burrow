@@ -5,16 +5,16 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 
 export class CommitID extends jspb.Message { 
     getVersion(): number;
-    setVersion(value: number): void;
+    setVersion(value: number): CommitID;
 
     getHash(): Uint8Array | string;
     getHash_asU8(): Uint8Array;
     getHash_asB64(): string;
-    setHash(value: Uint8Array | string): void;
+    setHash(value: Uint8Array | string): CommitID;
 
 
     serializeBinary(): Uint8Array;

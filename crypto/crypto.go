@@ -52,14 +52,14 @@ func CurveTypeFromString(s string) (CurveType, error) {
 	case "":
 		return CurveTypeUnset, nil
 	default:
-		return CurveTypeUnset, ErrInvalidCurve(s)
+		return CurveTypeUnset, fmt.Errorf("invalid curve name: '%s'", s)
 	}
 }
 
-type ErrInvalidCurve string
+type ErrInvalidCurve uint32
 
-func (err ErrInvalidCurve) Error() string {
-	return fmt.Sprintf("invalid curve type")
+func (curveType ErrInvalidCurve) Error() string {
+	return fmt.Sprintf("invalid curve type: %d", curveType)
 }
 
 // The types in this file allow us to control serialisation of keys and signatures, as well as the interface

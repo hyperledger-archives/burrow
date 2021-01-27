@@ -4,7 +4,7 @@ package registry;
 
 option go_package = "github.com/hyperledger/burrow/execution/registry";
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "gogoproto/gogo.proto";
 
 option (gogoproto.stable_marshaler_all) = true;
 // Enable custom Marshal method.
@@ -29,7 +29,7 @@ message NodeIdentity {
 	string NetworkAddress = 2;
 	// The Tendermint p2p node ID
 	bytes TendermintNodeID = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
-	// The public key that this node will validate with if it becomes a validator 
+	// The public key that this node will validate with if it becomes a validator
 	// (use this to create a binding between p2p node ID and validator)
 	bytes ValidatorPublicKey = 4 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.PublicKey", (gogoproto.nullable) = false];
 }

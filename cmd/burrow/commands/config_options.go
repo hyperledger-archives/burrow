@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/hyperledger/burrow/config"
@@ -18,6 +19,7 @@ type configOptions struct {
 	initPassphraseOpt  *string
 	initMonikerOpt     *string
 	externalAddressOpt *string
+	grpcAddressOpt     *string
 }
 
 const configFileSpec = "[--config=<config file>]"
@@ -43,6 +45,7 @@ func addConfigOptions(cmd *cli.Cmd) *configOptions {
 		"|--address=<address of signing key>] " +
 		"[--passphrase=<secret passphrase to unlock key>] " +
 		"[--external-address=<hostname:port>] " +
+		"[--grpc-address=<hostname:port>] " +
 		configFileSpec + " " + genesisFileSpec
 
 	cmd.Spec = strings.Join([]string{cmd.Spec, spec}, " ")
@@ -85,6 +88,12 @@ func addConfigOptions(cmd *cli.Cmd) *configOptions {
 			EnvVar: "BURROW_EXTERNAL_ADDRESS",
 		}),
 
+		grpcAddressOpt: cmd.String(cli.StringOpt{
+			Name:   "grpc-address",
+			Desc:   "GRPC listen address",
+			EnvVar: "BURROW_GRPC_ADDRESS",
+		}),
+
 		configFileOpt: cmd.String(configFileOption),
 
 		genesisFileOpt: cmd.String(genesisFileOption),
@@ -118,6 +127,14 @@ func (opts *configOptions) obtainBurrowConfig() (*config.BurrowConfig, error) {
 	}
 	if *opts.externalAddressOpt != "" {
 		conf.Tendermint.ExternalAddress = *opts.externalAddressOpt
+	}
+	if *opts.grpcAddressOpt != "" {
+		host, port, err := net.SplitHostPort(*opts.grpcAddressOpt)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse GRPC listen addres: %w", err)
+		}
+		conf.RPC.GRPC.ListenHost = host
+		conf.RPC.GRPC.ListenPort = port
 	}
 	return conf, nil
 }

@@ -5,7 +5,7 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 import * as permission_pb from "./permission_pb";
 import * as crypto_pb from "./crypto_pb";
 
@@ -13,53 +13,53 @@ export class Account extends jspb.Message {
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
-    setAddress(value: Uint8Array | string): void;
+    setAddress(value: Uint8Array | string): Account;
 
 
     hasPublickey(): boolean;
     clearPublickey(): void;
     getPublickey(): crypto_pb.PublicKey | undefined;
-    setPublickey(value?: crypto_pb.PublicKey): void;
+    setPublickey(value?: crypto_pb.PublicKey): Account;
 
     getSequence(): number;
-    setSequence(value: number): void;
+    setSequence(value: number): Account;
 
     getBalance(): number;
-    setBalance(value: number): void;
+    setBalance(value: number): Account;
 
     getEvmcode(): Uint8Array | string;
     getEvmcode_asU8(): Uint8Array;
     getEvmcode_asB64(): string;
-    setEvmcode(value: Uint8Array | string): void;
+    setEvmcode(value: Uint8Array | string): Account;
 
 
     hasPermissions(): boolean;
     clearPermissions(): void;
     getPermissions(): permission_pb.AccountPermissions | undefined;
-    setPermissions(value?: permission_pb.AccountPermissions): void;
+    setPermissions(value?: permission_pb.AccountPermissions): Account;
 
     getWasmcode(): Uint8Array | string;
     getWasmcode_asU8(): Uint8Array;
     getWasmcode_asB64(): string;
-    setWasmcode(value: Uint8Array | string): void;
+    setWasmcode(value: Uint8Array | string): Account;
 
     getNativename(): string;
-    setNativename(value: string): void;
+    setNativename(value: string): Account;
 
     getCodehash(): Uint8Array | string;
     getCodehash_asU8(): Uint8Array;
     getCodehash_asB64(): string;
-    setCodehash(value: Uint8Array | string): void;
+    setCodehash(value: Uint8Array | string): Account;
 
     clearContractmetaList(): void;
     getContractmetaList(): Array<ContractMeta>;
-    setContractmetaList(value: Array<ContractMeta>): void;
+    setContractmetaList(value: Array<ContractMeta>): Account;
     addContractmeta(value?: ContractMeta, index?: number): ContractMeta;
 
     getForebear(): Uint8Array | string;
     getForebear_asU8(): Uint8Array;
     getForebear_asB64(): string;
-    setForebear(value: Uint8Array | string): void;
+    setForebear(value: Uint8Array | string): Account;
 
 
     serializeBinary(): Uint8Array;
@@ -92,15 +92,15 @@ export class ContractMeta extends jspb.Message {
     getCodehash(): Uint8Array | string;
     getCodehash_asU8(): Uint8Array;
     getCodehash_asB64(): string;
-    setCodehash(value: Uint8Array | string): void;
+    setCodehash(value: Uint8Array | string): ContractMeta;
 
     getMetadatahash(): Uint8Array | string;
     getMetadatahash_asU8(): Uint8Array;
     getMetadatahash_asB64(): string;
-    setMetadatahash(value: Uint8Array | string): void;
+    setMetadatahash(value: Uint8Array | string): ContractMeta;
 
     getMetadata(): string;
-    setMetadata(value: string): void;
+    setMetadata(value: string): ContractMeta;
 
 
     serializeBinary(): Uint8Array;

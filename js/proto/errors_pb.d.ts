@@ -5,14 +5,14 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 
 export class Exception extends jspb.Message { 
     getCode(): number;
-    setCode(value: number): void;
+    setCode(value: number): Exception;
 
     getException(): string;
-    setException(value: string): void;
+    setException(value: string): Exception;
 
 
     serializeBinary(): Uint8Array;

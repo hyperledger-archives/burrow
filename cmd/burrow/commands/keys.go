@@ -10,13 +10,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/hyperledger/burrow/encoding"
+
 	"github.com/howeyc/gopass"
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/config/deployment"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/keys"
 	cli "github.com/jawher/mow.cli"
-	"google.golang.org/grpc"
 )
 
 // Keys runs as either client or server
@@ -37,9 +38,7 @@ func Keys(output Output) func(cmd *cli.Cmd) {
 		})
 
 		grpcKeysClient := func(output Output) keys.KeysClient {
-			var opts []grpc.DialOption
-			opts = append(opts, grpc.WithInsecure())
-			conn, err := grpc.Dial(*keysHost+":"+*keysPort, opts...)
+			conn, err := encoding.GRPCDial(*keysHost + ":" + *keysPort)
 			if err != nil {
 				output.Fatalf("Failed to connect to grpc server: %v", err)
 			}

@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/hyperledger/burrow/encoding"
+
 	"github.com/hyperledger/burrow/deploy/compile"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	cli "github.com/jawher/mow.cli"
-	"google.golang.org/grpc"
 )
 
 // Accounts lists all the accounts in a chain, alongside with any metadata like contract name and ABI
@@ -26,9 +27,7 @@ func Accounts(output Output) func(cmd *cli.Cmd) {
 			}
 			defer cancel()
 
-			var opts []grpc.DialOption
-			opts = append(opts, grpc.WithInsecure())
-			conn, err := grpc.DialContext(ctx, *chainURLOpt, opts...)
+			conn, err := encoding.GRPCDialContext(ctx, *chainURLOpt)
 			if err != nil {
 				output.Fatalf("failed to connect: %v", err)
 			}

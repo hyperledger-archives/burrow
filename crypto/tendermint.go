@@ -2,67 +2,33 @@ package crypto
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/btcsuite/btcd/btcec"
-	abci "github.com/tendermint/tendermint/abci/types"
 	tmCrypto "github.com/tendermint/tendermint/crypto"
 	tmEd25519 "github.com/tendermint/tendermint/crypto/ed25519"
 	tmSecp256k1 "github.com/tendermint/tendermint/crypto/secp256k1"
-	"github.com/tendermint/tendermint/p2p"
 )
-
-func NodeIDFromAddress(id Address) p2p.ID {
-	return p2p.ID(strings.ToLower(id.String()))
-}
 
 func PublicKeyFromTendermintPubKey(pubKey tmCrypto.PubKey) (PublicKey, error) {
 	switch pk := pubKey.(type) {
-	case tmEd25519.PubKeyEd25519:
+	case tmEd25519.PubKey:
 		return PublicKeyFromBytes(pk[:], CurveTypeEd25519)
-	case tmSecp256k1.PubKeySecp256k1:
+	case tmSecp256k1.PubKey:
 		return PublicKeyFromBytes(pk[:], CurveTypeSecp256k1)
 	default:
 		return PublicKey{}, fmt.Errorf("unrecognised tendermint public key type: %v", pk)
 	}
 
 }
-func PublicKeyFromABCIPubKey(pubKey abci.PubKey) (PublicKey, error) {
-	switch pubKey.Type {
-	case CurveTypeEd25519.ABCIType():
-		return PublicKey{
-			CurveType: CurveTypeEd25519,
-			PublicKey: pubKey.Data,
-		}, nil
-	case CurveTypeSecp256k1.ABCIType():
-		return PublicKey{
-			CurveType: CurveTypeSecp256k1,
-			PublicKey: pubKey.Data,
-		}, nil
-	}
-	return PublicKey{}, fmt.Errorf("did not recognise ABCI PubKey type: %s", pubKey.Type)
-}
 
 // PublicKey extensions
-
-// Return the ABCI PubKey. See Tendermint protobuf.go for the go-crypto conversion this is based on
-func (p PublicKey) ABCIPubKey() abci.PubKey {
-	return abci.PubKey{
-		Type: p.CurveType.ABCIType(),
-		Data: p.PublicKey,
-	}
-}
 
 func (p PublicKey) TendermintPubKey() tmCrypto.PubKey {
 	switch p.CurveType {
 	case CurveTypeEd25519:
-		pk := tmEd25519.PubKeyEd25519{}
-		copy(pk[:], p.PublicKey)
-		return pk
+		return tmEd25519.PubKey(p.PublicKey)
 	case CurveTypeSecp256k1:
-		pk := tmSecp256k1.PubKeySecp256k1{}
-		copy(pk[:], p.PublicKey)
-		return pk
+		return tmSecp256k1.PubKey(p.PublicKey)
 	default:
 		return nil
 	}

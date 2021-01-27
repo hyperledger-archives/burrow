@@ -5,8 +5,8 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
-import * as github_com_tendermint_tendermint_abci_types_types_pb from "./github.com/tendermint/tendermint/abci/types/types_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
+import * as tendermint_types_types_pb from "./tendermint/types/types_pb";
 import * as google_protobuf_timestamp_pb from "google-protobuf/google/protobuf/timestamp_pb";
 import * as errors_pb from "./errors_pb";
 import * as names_pb from "./names_pb";
@@ -17,7 +17,7 @@ import * as spec_pb from "./spec_pb";
 export class StreamEvents extends jspb.Message { 
     clearStreameventsList(): void;
     getStreameventsList(): Array<StreamEvent>;
-    setStreameventsList(value: Array<StreamEvent>): void;
+    setStreameventsList(value: Array<StreamEvent>): StreamEvents;
     addStreamevents(value?: StreamEvent, index?: number): StreamEvent;
 
 
@@ -42,37 +42,37 @@ export class StreamEvent extends jspb.Message {
     hasBeginblock(): boolean;
     clearBeginblock(): void;
     getBeginblock(): BeginBlock | undefined;
-    setBeginblock(value?: BeginBlock): void;
+    setBeginblock(value?: BeginBlock): StreamEvent;
 
 
     hasBegintx(): boolean;
     clearBegintx(): void;
     getBegintx(): BeginTx | undefined;
-    setBegintx(value?: BeginTx): void;
+    setBegintx(value?: BeginTx): StreamEvent;
 
 
     hasEnvelope(): boolean;
     clearEnvelope(): void;
     getEnvelope(): txs_pb.Envelope | undefined;
-    setEnvelope(value?: txs_pb.Envelope): void;
+    setEnvelope(value?: txs_pb.Envelope): StreamEvent;
 
 
     hasEvent(): boolean;
     clearEvent(): void;
     getEvent(): Event | undefined;
-    setEvent(value?: Event): void;
+    setEvent(value?: Event): StreamEvent;
 
 
     hasEndtx(): boolean;
     clearEndtx(): void;
     getEndtx(): EndTx | undefined;
-    setEndtx(value?: EndTx): void;
+    setEndtx(value?: EndTx): StreamEvent;
 
 
     hasEndblock(): boolean;
     clearEndblock(): void;
     getEndblock(): EndBlock | undefined;
-    setEndblock(value?: EndBlock): void;
+    setEndblock(value?: EndBlock): StreamEvent;
 
 
     serializeBinary(): Uint8Array;
@@ -98,19 +98,19 @@ export namespace StreamEvent {
 
 export class BeginBlock extends jspb.Message { 
     getHeight(): number;
-    setHeight(value: number): void;
+    setHeight(value: number): BeginBlock;
 
     getNumtxs(): number;
-    setNumtxs(value: number): void;
+    setNumtxs(value: number): BeginBlock;
 
     getPredecessorheight(): number;
-    setPredecessorheight(value: number): void;
+    setPredecessorheight(value: number): BeginBlock;
 
 
     hasHeader(): boolean;
     clearHeader(): void;
-    getHeader(): github_com_tendermint_tendermint_abci_types_types_pb.Header | undefined;
-    setHeader(value?: github_com_tendermint_tendermint_abci_types_types_pb.Header): void;
+    getHeader(): tendermint_types_types_pb.Header | undefined;
+    setHeader(value?: tendermint_types_types_pb.Header): BeginBlock;
 
 
     serializeBinary(): Uint8Array;
@@ -128,13 +128,13 @@ export namespace BeginBlock {
         height: number,
         numtxs: number,
         predecessorheight: number,
-        header?: github_com_tendermint_tendermint_abci_types_types_pb.Header.AsObject,
+        header?: tendermint_types_types_pb.Header.AsObject,
     }
 }
 
 export class EndBlock extends jspb.Message { 
     getHeight(): number;
-    setHeight(value: number): void;
+    setHeight(value: number): EndBlock;
 
 
     serializeBinary(): Uint8Array;
@@ -158,22 +158,22 @@ export class BeginTx extends jspb.Message {
     hasTxheader(): boolean;
     clearTxheader(): void;
     getTxheader(): TxHeader | undefined;
-    setTxheader(value?: TxHeader): void;
+    setTxheader(value?: TxHeader): BeginTx;
 
     getNumevents(): number;
-    setNumevents(value: number): void;
+    setNumevents(value: number): BeginTx;
 
 
     hasResult(): boolean;
     clearResult(): void;
     getResult(): Result | undefined;
-    setResult(value?: Result): void;
+    setResult(value?: Result): BeginTx;
 
 
     hasException(): boolean;
     clearException(): void;
     getException(): errors_pb.Exception | undefined;
-    setException(value?: errors_pb.Exception): void;
+    setException(value?: errors_pb.Exception): BeginTx;
 
 
     serializeBinary(): Uint8Array;
@@ -199,7 +199,7 @@ export class EndTx extends jspb.Message {
     getTxhash(): Uint8Array | string;
     getTxhash_asU8(): Uint8Array;
     getTxhash_asB64(): string;
-    setTxhash(value: Uint8Array | string): void;
+    setTxhash(value: Uint8Array | string): EndTx;
 
 
     serializeBinary(): Uint8Array;
@@ -220,24 +220,24 @@ export namespace EndTx {
 
 export class TxHeader extends jspb.Message { 
     getTxtype(): number;
-    setTxtype(value: number): void;
+    setTxtype(value: number): TxHeader;
 
     getTxhash(): Uint8Array | string;
     getTxhash_asU8(): Uint8Array;
     getTxhash_asB64(): string;
-    setTxhash(value: Uint8Array | string): void;
+    setTxhash(value: Uint8Array | string): TxHeader;
 
     getHeight(): number;
-    setHeight(value: number): void;
+    setHeight(value: number): TxHeader;
 
     getIndex(): number;
-    setIndex(value: number): void;
+    setIndex(value: number): TxHeader;
 
 
     hasOrigin(): boolean;
     clearOrigin(): void;
     getOrigin(): Origin | undefined;
-    setOrigin(value?: Origin): void;
+    setOrigin(value?: Origin): TxHeader;
 
 
     serializeBinary(): Uint8Array;
@@ -262,20 +262,20 @@ export namespace TxHeader {
 
 export class BlockExecution extends jspb.Message { 
     getHeight(): number;
-    setHeight(value: number): void;
+    setHeight(value: number): BlockExecution;
 
     getPredecessorheight(): number;
-    setPredecessorheight(value: number): void;
+    setPredecessorheight(value: number): BlockExecution;
 
 
     hasHeader(): boolean;
     clearHeader(): void;
-    getHeader(): github_com_tendermint_tendermint_abci_types_types_pb.Header | undefined;
-    setHeader(value?: github_com_tendermint_tendermint_abci_types_types_pb.Header): void;
+    getHeader(): tendermint_types_types_pb.Header | undefined;
+    setHeader(value?: tendermint_types_types_pb.Header): BlockExecution;
 
     clearTxexecutionsList(): void;
     getTxexecutionsList(): Array<TxExecution>;
-    setTxexecutionsList(value: Array<TxExecution>): void;
+    setTxexecutionsList(value: Array<TxExecution>): BlockExecution;
     addTxexecutions(value?: TxExecution, index?: number): TxExecution;
 
 
@@ -293,17 +293,17 @@ export namespace BlockExecution {
     export type AsObject = {
         height: number,
         predecessorheight: number,
-        header?: github_com_tendermint_tendermint_abci_types_types_pb.Header.AsObject,
+        header?: tendermint_types_types_pb.Header.AsObject,
         txexecutionsList: Array<TxExecution.AsObject>,
     }
 }
 
 export class TxExecutionKey extends jspb.Message { 
     getHeight(): number;
-    setHeight(value: number): void;
+    setHeight(value: number): TxExecutionKey;
 
     getOffset(): number;
-    setOffset(value: number): void;
+    setOffset(value: number): TxExecutionKey;
 
 
     serializeBinary(): Uint8Array;
@@ -328,40 +328,40 @@ export class TxExecution extends jspb.Message {
     hasHeader(): boolean;
     clearHeader(): void;
     getHeader(): TxHeader | undefined;
-    setHeader(value?: TxHeader): void;
+    setHeader(value?: TxHeader): TxExecution;
 
 
     hasEnvelope(): boolean;
     clearEnvelope(): void;
     getEnvelope(): txs_pb.Envelope | undefined;
-    setEnvelope(value?: txs_pb.Envelope): void;
+    setEnvelope(value?: txs_pb.Envelope): TxExecution;
 
     clearEventsList(): void;
     getEventsList(): Array<Event>;
-    setEventsList(value: Array<Event>): void;
+    setEventsList(value: Array<Event>): TxExecution;
     addEvents(value?: Event, index?: number): Event;
 
 
     hasResult(): boolean;
     clearResult(): void;
     getResult(): Result | undefined;
-    setResult(value?: Result): void;
+    setResult(value?: Result): TxExecution;
 
 
     hasReceipt(): boolean;
     clearReceipt(): void;
     getReceipt(): txs_pb.Receipt | undefined;
-    setReceipt(value?: txs_pb.Receipt): void;
+    setReceipt(value?: txs_pb.Receipt): TxExecution;
 
 
     hasException(): boolean;
     clearException(): void;
     getException(): errors_pb.Exception | undefined;
-    setException(value?: errors_pb.Exception): void;
+    setException(value?: errors_pb.Exception): TxExecution;
 
     clearTxexecutionsList(): void;
     getTxexecutionsList(): Array<TxExecution>;
-    setTxexecutionsList(value: Array<TxExecution>): void;
+    setTxexecutionsList(value: Array<TxExecution>): TxExecution;
     addTxexecutions(value?: TxExecution, index?: number): TxExecution;
 
 
@@ -389,19 +389,19 @@ export namespace TxExecution {
 
 export class Origin extends jspb.Message { 
     getChainid(): string;
-    setChainid(value: string): void;
+    setChainid(value: string): Origin;
 
     getHeight(): number;
-    setHeight(value: number): void;
+    setHeight(value: number): Origin;
 
     getIndex(): number;
-    setIndex(value: number): void;
+    setIndex(value: number): Origin;
 
 
     hasTime(): boolean;
     clearTime(): void;
     getTime(): google_protobuf_timestamp_pb.Timestamp | undefined;
-    setTime(value?: google_protobuf_timestamp_pb.Timestamp): void;
+    setTime(value?: google_protobuf_timestamp_pb.Timestamp): Origin;
 
 
     serializeBinary(): Uint8Array;
@@ -425,30 +425,30 @@ export namespace Origin {
 
 export class Header extends jspb.Message { 
     getTxtype(): number;
-    setTxtype(value: number): void;
+    setTxtype(value: number): Header;
 
     getTxhash(): Uint8Array | string;
     getTxhash_asU8(): Uint8Array;
     getTxhash_asB64(): string;
-    setTxhash(value: Uint8Array | string): void;
+    setTxhash(value: Uint8Array | string): Header;
 
     getEventtype(): number;
-    setEventtype(value: number): void;
+    setEventtype(value: number): Header;
 
     getEventid(): string;
-    setEventid(value: string): void;
+    setEventid(value: string): Header;
 
     getHeight(): number;
-    setHeight(value: number): void;
+    setHeight(value: number): Header;
 
     getIndex(): number;
-    setIndex(value: number): void;
+    setIndex(value: number): Header;
 
 
     hasException(): boolean;
     clearException(): void;
     getException(): errors_pb.Exception | undefined;
-    setException(value?: errors_pb.Exception): void;
+    setException(value?: errors_pb.Exception): Header;
 
 
     serializeBinary(): Uint8Array;
@@ -478,37 +478,37 @@ export class Event extends jspb.Message {
     hasHeader(): boolean;
     clearHeader(): void;
     getHeader(): Header | undefined;
-    setHeader(value?: Header): void;
+    setHeader(value?: Header): Event;
 
 
     hasInput(): boolean;
     clearInput(): void;
     getInput(): InputEvent | undefined;
-    setInput(value?: InputEvent): void;
+    setInput(value?: InputEvent): Event;
 
 
     hasOutput(): boolean;
     clearOutput(): void;
     getOutput(): OutputEvent | undefined;
-    setOutput(value?: OutputEvent): void;
+    setOutput(value?: OutputEvent): Event;
 
 
     hasCall(): boolean;
     clearCall(): void;
     getCall(): CallEvent | undefined;
-    setCall(value?: CallEvent): void;
+    setCall(value?: CallEvent): Event;
 
 
     hasLog(): boolean;
     clearLog(): void;
     getLog(): LogEvent | undefined;
-    setLog(value?: LogEvent): void;
+    setLog(value?: LogEvent): Event;
 
 
     hasGovernaccount(): boolean;
     clearGovernaccount(): void;
     getGovernaccount(): GovernAccountEvent | undefined;
-    setGovernaccount(value?: GovernAccountEvent): void;
+    setGovernaccount(value?: GovernAccountEvent): Event;
 
 
     serializeBinary(): Uint8Array;
@@ -536,22 +536,22 @@ export class Result extends jspb.Message {
     getReturn(): Uint8Array | string;
     getReturn_asU8(): Uint8Array;
     getReturn_asB64(): string;
-    setReturn(value: Uint8Array | string): void;
+    setReturn(value: Uint8Array | string): Result;
 
     getGasused(): number;
-    setGasused(value: number): void;
+    setGasused(value: number): Result;
 
 
     hasNameentry(): boolean;
     clearNameentry(): void;
     getNameentry(): names_pb.Entry | undefined;
-    setNameentry(value?: names_pb.Entry): void;
+    setNameentry(value?: names_pb.Entry): Result;
 
 
     hasPermargs(): boolean;
     clearPermargs(): void;
     getPermargs(): permission_pb.PermArgs | undefined;
-    setPermargs(value?: permission_pb.PermArgs): void;
+    setPermargs(value?: permission_pb.PermArgs): Result;
 
 
     serializeBinary(): Uint8Array;
@@ -577,18 +577,18 @@ export class LogEvent extends jspb.Message {
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
-    setAddress(value: Uint8Array | string): void;
+    setAddress(value: Uint8Array | string): LogEvent;
 
     getData(): Uint8Array | string;
     getData_asU8(): Uint8Array;
     getData_asB64(): string;
-    setData(value: Uint8Array | string): void;
+    setData(value: Uint8Array | string): LogEvent;
 
     clearTopicsList(): void;
     getTopicsList(): Array<Uint8Array | string>;
     getTopicsList_asU8(): Array<Uint8Array>;
     getTopicsList_asB64(): Array<string>;
-    setTopicsList(value: Array<Uint8Array | string>): void;
+    setTopicsList(value: Array<Uint8Array | string>): LogEvent;
     addTopics(value: Uint8Array | string, index?: number): Uint8Array | string;
 
 
@@ -612,26 +612,26 @@ export namespace LogEvent {
 
 export class CallEvent extends jspb.Message { 
     getCalltype(): number;
-    setCalltype(value: number): void;
+    setCalltype(value: number): CallEvent;
 
 
     hasCalldata(): boolean;
     clearCalldata(): void;
     getCalldata(): CallData | undefined;
-    setCalldata(value?: CallData): void;
+    setCalldata(value?: CallData): CallEvent;
 
     getOrigin(): Uint8Array | string;
     getOrigin_asU8(): Uint8Array;
     getOrigin_asB64(): string;
-    setOrigin(value: Uint8Array | string): void;
+    setOrigin(value: Uint8Array | string): CallEvent;
 
     getStackdepth(): number;
-    setStackdepth(value: number): void;
+    setStackdepth(value: number): CallEvent;
 
     getReturn(): Uint8Array | string;
     getReturn_asU8(): Uint8Array;
     getReturn_asB64(): string;
-    setReturn(value: Uint8Array | string): void;
+    setReturn(value: Uint8Array | string): CallEvent;
 
 
     serializeBinary(): Uint8Array;
@@ -659,7 +659,7 @@ export class GovernAccountEvent extends jspb.Message {
     hasAccountupdate(): boolean;
     clearAccountupdate(): void;
     getAccountupdate(): spec_pb.TemplateAccount | undefined;
-    setAccountupdate(value?: spec_pb.TemplateAccount): void;
+    setAccountupdate(value?: spec_pb.TemplateAccount): GovernAccountEvent;
 
 
     serializeBinary(): Uint8Array;
@@ -682,7 +682,7 @@ export class InputEvent extends jspb.Message {
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
-    setAddress(value: Uint8Array | string): void;
+    setAddress(value: Uint8Array | string): InputEvent;
 
 
     serializeBinary(): Uint8Array;
@@ -705,7 +705,7 @@ export class OutputEvent extends jspb.Message {
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
-    setAddress(value: Uint8Array | string): void;
+    setAddress(value: Uint8Array | string): OutputEvent;
 
 
     serializeBinary(): Uint8Array;
@@ -728,23 +728,23 @@ export class CallData extends jspb.Message {
     getCaller(): Uint8Array | string;
     getCaller_asU8(): Uint8Array;
     getCaller_asB64(): string;
-    setCaller(value: Uint8Array | string): void;
+    setCaller(value: Uint8Array | string): CallData;
 
     getCallee(): Uint8Array | string;
     getCallee_asU8(): Uint8Array;
     getCallee_asB64(): string;
-    setCallee(value: Uint8Array | string): void;
+    setCallee(value: Uint8Array | string): CallData;
 
     getData(): Uint8Array | string;
     getData_asU8(): Uint8Array;
     getData_asB64(): string;
-    setData(value: Uint8Array | string): void;
+    setData(value: Uint8Array | string): CallData;
 
     getValue(): number;
-    setValue(value: number): void;
+    setValue(value: number): CallData;
 
     getGas(): number;
-    setGas(value: number): void;
+    setGas(value: number): CallData;
 
 
     serializeBinary(): Uint8Array;

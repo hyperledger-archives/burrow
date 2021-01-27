@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"runtime/debug"
 
+	"github.com/hyperledger/burrow/encoding"
+
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"golang.org/x/net/context"
@@ -12,7 +14,8 @@ import (
 
 func NewGRPCServer(logger *logging.Logger) *grpc.Server {
 	return grpc.NewServer(grpc.UnaryInterceptor(unaryInterceptor(logger)),
-		grpc.StreamInterceptor(streamInterceptor(logger.WithScope("NewGRPCServer"))))
+		grpc.StreamInterceptor(streamInterceptor(logger.WithScope("NewGRPCServer"))),
+		grpc.CustomCodec(&encoding.GRPCCodec{}))
 }
 
 func unaryInterceptor(logger *logging.Logger) grpc.UnaryServerInterceptor {

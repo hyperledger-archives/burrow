@@ -6,13 +6,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/encoding"
+
 	"github.com/hyperledger/burrow/crypto"
 
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
 )
 
 type hashInfo struct {
@@ -35,7 +36,7 @@ func TestKeysServer(t *testing.T) {
 		"sha256":    {"hi", "8F434346648F6B96DF89DDA901C5176B10A6D83961DD3C1AC88B59B2DC327AA4"},
 		"ripemd160": {"hi", "242485AB6BFD3502BCB3442EA2E211687B8E4D89"},
 	}
-	conn, err := grpc.Dial(address, grpc.WithInsecure())
+	conn, err := encoding.GRPCDial(address)
 	require.NoError(t, err)
 	cli := keys.NewKeysClient(conn)
 

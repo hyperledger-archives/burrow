@@ -194,7 +194,7 @@ func benchmarkNClients(n int, b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		s.PublishWithTags(ctx, "Gamora", query.TagMap{"abci.Account.Owner": "Ivan", "abci.Invoices.Number": string(i)})
+		s.PublishWithTags(ctx, "Gamora", query.TagMap{"abci.Account.Owner": "Ivan", "abci.Invoices.Number": fmt.Sprint(i)})
 	}
 }
 

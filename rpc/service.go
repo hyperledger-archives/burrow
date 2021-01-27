@@ -402,7 +402,7 @@ func Status(blockchain bcm.BlockchainInfo, validators validator.History, nodeVie
 		GenesisHash:   blockchain.GenesisHash(),
 		NodeInfo:      nodeView.NodeInfo(),
 		SyncInfo:      bcm.GetSyncInfo(blockchain),
-		CatchingUp:    nodeView.IsFastSyncing(),
+		CatchingUp:    nodeView.IsSyncing(),
 	}
 	if nodeView != nil {
 		address := nodeView.ValidatorAddress()

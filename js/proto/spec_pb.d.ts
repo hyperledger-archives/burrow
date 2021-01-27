@@ -5,44 +5,44 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 import * as crypto_pb from "./crypto_pb";
 import * as balance_pb from "./balance_pb";
 
 export class TemplateAccount extends jspb.Message { 
     getName(): string;
-    setName(value: string): void;
+    setName(value: string): TemplateAccount;
 
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
-    setAddress(value: Uint8Array | string): void;
+    setAddress(value: Uint8Array | string): TemplateAccount;
 
 
     hasPublickey(): boolean;
     clearPublickey(): void;
     getPublickey(): crypto_pb.PublicKey | undefined;
-    setPublickey(value?: crypto_pb.PublicKey): void;
+    setPublickey(value?: crypto_pb.PublicKey): TemplateAccount;
 
     clearAmountsList(): void;
     getAmountsList(): Array<balance_pb.Balance>;
-    setAmountsList(value: Array<balance_pb.Balance>): void;
+    setAmountsList(value: Array<balance_pb.Balance>): TemplateAccount;
     addAmounts(value?: balance_pb.Balance, index?: number): balance_pb.Balance;
 
     clearPermissionsList(): void;
     getPermissionsList(): Array<string>;
-    setPermissionsList(value: Array<string>): void;
+    setPermissionsList(value: Array<string>): TemplateAccount;
     addPermissions(value: string, index?: number): string;
 
     clearRolesList(): void;
     getRolesList(): Array<string>;
-    setRolesList(value: Array<string>): void;
+    setRolesList(value: Array<string>): TemplateAccount;
     addRoles(value: string, index?: number): string;
 
     getCode(): Uint8Array | string;
     getCode_asU8(): Uint8Array;
     getCode_asB64(): string;
-    setCode(value: Uint8Array | string): void;
+    setCode(value: Uint8Array | string): TemplateAccount;
 
 
     serializeBinary(): Uint8Array;

@@ -5,46 +5,46 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 import * as tendermint_pb from "./tendermint_pb";
 import * as validator_pb from "./validator_pb";
 import * as bcm_pb from "./bcm_pb";
 
 export class ResultStatus extends jspb.Message { 
     getChainid(): string;
-    setChainid(value: string): void;
+    setChainid(value: string): ResultStatus;
 
     getRunid(): string;
-    setRunid(value: string): void;
+    setRunid(value: string): ResultStatus;
 
     getBurrowversion(): string;
-    setBurrowversion(value: string): void;
+    setBurrowversion(value: string): ResultStatus;
 
     getGenesishash(): Uint8Array | string;
     getGenesishash_asU8(): Uint8Array;
     getGenesishash_asB64(): string;
-    setGenesishash(value: Uint8Array | string): void;
+    setGenesishash(value: Uint8Array | string): ResultStatus;
 
 
     hasNodeinfo(): boolean;
     clearNodeinfo(): void;
     getNodeinfo(): tendermint_pb.NodeInfo | undefined;
-    setNodeinfo(value?: tendermint_pb.NodeInfo): void;
+    setNodeinfo(value?: tendermint_pb.NodeInfo): ResultStatus;
 
 
     hasSyncinfo(): boolean;
     clearSyncinfo(): void;
     getSyncinfo(): bcm_pb.SyncInfo | undefined;
-    setSyncinfo(value?: bcm_pb.SyncInfo): void;
+    setSyncinfo(value?: bcm_pb.SyncInfo): ResultStatus;
 
     getCatchingup(): boolean;
-    setCatchingup(value: boolean): void;
+    setCatchingup(value: boolean): ResultStatus;
 
 
     hasValidatorinfo(): boolean;
     clearValidatorinfo(): void;
     getValidatorinfo(): validator_pb.Validator | undefined;
-    setValidatorinfo(value?: validator_pb.Validator): void;
+    setValidatorinfo(value?: validator_pb.Validator): ResultStatus;
 
 
     serializeBinary(): Uint8Array;

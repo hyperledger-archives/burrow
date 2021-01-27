@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger/burrow/vent/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	tmTypes "github.com/tendermint/tendermint/abci/types"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 )
 
 func TestBlockConsumer(t *testing.T) {
@@ -173,7 +173,7 @@ func consumeBlock(blockConsumer func(*exec.BlockExecution) error, eventCh <-chan
 	logEvents ...*exec.LogEvent) (map[string]types.EventDataTable, error) {
 
 	block := &exec.BlockExecution{
-		Header: &tmTypes.Header{},
+		Header: &tmproto.Header{},
 	}
 	for _, logEvent := range logEvents {
 		txe := &exec.TxExecution{

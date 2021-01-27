@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/hyperledger/burrow/execution/contexts"
+
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
@@ -179,7 +181,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playb
 		return "", err
 	}
 	proposal.BatchTx.Inputs = []*payload.TxInput{proposalInput}
-	proposalHash := proposal.Hash()
+	proposalHash := contexts.HashProposal(&proposal)
 
 	var proposalTx *payload.ProposalTx
 	if do.ProposeVerify {

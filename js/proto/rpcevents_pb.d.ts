@@ -5,15 +5,15 @@
 /* eslint-disable */
 
 import * as jspb from "google-protobuf";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 import * as exec_pb from "./exec_pb";
 
 export class GetBlockRequest extends jspb.Message { 
     getHeight(): number;
-    setHeight(value: number): void;
+    setHeight(value: number): GetBlockRequest;
 
     getWait(): boolean;
-    setWait(value: boolean): void;
+    setWait(value: boolean): GetBlockRequest;
 
 
     serializeBinary(): Uint8Array;
@@ -37,10 +37,10 @@ export class TxRequest extends jspb.Message {
     getTxhash(): Uint8Array | string;
     getTxhash_asU8(): Uint8Array;
     getTxhash_asB64(): string;
-    setTxhash(value: Uint8Array | string): void;
+    setTxhash(value: Uint8Array | string): TxRequest;
 
     getWait(): boolean;
-    setWait(value: boolean): void;
+    setWait(value: boolean): TxRequest;
 
 
     serializeBinary(): Uint8Array;
@@ -65,10 +65,10 @@ export class BlocksRequest extends jspb.Message {
     hasBlockrange(): boolean;
     clearBlockrange(): void;
     getBlockrange(): BlockRange | undefined;
-    setBlockrange(value?: BlockRange): void;
+    setBlockrange(value?: BlockRange): BlocksRequest;
 
     getQuery(): string;
-    setQuery(value: string): void;
+    setQuery(value: string): BlocksRequest;
 
 
     serializeBinary(): Uint8Array;
@@ -90,11 +90,11 @@ export namespace BlocksRequest {
 
 export class EventsResponse extends jspb.Message { 
     getHeight(): number;
-    setHeight(value: number): void;
+    setHeight(value: number): EventsResponse;
 
     clearEventsList(): void;
     getEventsList(): Array<exec_pb.Event>;
-    setEventsList(value: Array<exec_pb.Event>): void;
+    setEventsList(value: Array<exec_pb.Event>): EventsResponse;
     addEvents(value?: exec_pb.Event, index?: number): exec_pb.Event;
 
 
@@ -117,13 +117,13 @@ export namespace EventsResponse {
 
 export class GetTxsRequest extends jspb.Message { 
     getStartheight(): number;
-    setStartheight(value: number): void;
+    setStartheight(value: number): GetTxsRequest;
 
     getEndheight(): number;
-    setEndheight(value: number): void;
+    setEndheight(value: number): GetTxsRequest;
 
     getQuery(): string;
-    setQuery(value: string): void;
+    setQuery(value: string): GetTxsRequest;
 
 
     serializeBinary(): Uint8Array;
@@ -146,11 +146,11 @@ export namespace GetTxsRequest {
 
 export class GetTxsResponse extends jspb.Message { 
     getHeight(): number;
-    setHeight(value: number): void;
+    setHeight(value: number): GetTxsResponse;
 
     clearTxexecutionsList(): void;
     getTxexecutionsList(): Array<exec_pb.TxExecution>;
-    setTxexecutionsList(value: Array<exec_pb.TxExecution>): void;
+    setTxexecutionsList(value: Array<exec_pb.TxExecution>): GetTxsResponse;
     addTxexecutions(value?: exec_pb.TxExecution, index?: number): exec_pb.TxExecution;
 
 
@@ -173,10 +173,10 @@ export namespace GetTxsResponse {
 
 export class Bound extends jspb.Message { 
     getType(): Bound.BoundType;
-    setType(value: Bound.BoundType): void;
+    setType(value: Bound.BoundType): Bound;
 
     getIndex(): number;
-    setIndex(value: number): void;
+    setIndex(value: number): Bound;
 
 
     serializeBinary(): Uint8Array;
@@ -210,13 +210,13 @@ export class BlockRange extends jspb.Message {
     hasStart(): boolean;
     clearStart(): void;
     getStart(): Bound | undefined;
-    setStart(value?: Bound): void;
+    setStart(value?: Bound): BlockRange;
 
 
     hasEnd(): boolean;
     clearEnd(): void;
     getEnd(): Bound | undefined;
-    setEnd(value?: Bound): void;
+    setEnd(value?: Bound): BlockRange;
 
 
     serializeBinary(): Uint8Array;

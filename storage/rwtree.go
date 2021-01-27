@@ -3,7 +3,7 @@ package storage
 import (
 	"fmt"
 
-	"github.com/tendermint/iavl"
+	"github.com/cosmos/iavl"
 
 	dbm "github.com/tendermint/tm-db"
 	"github.com/xlab/treeprint"

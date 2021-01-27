@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hyperledger/burrow/encoding"
+
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/logging"
-	"google.golang.org/grpc"
 )
 
 type KeyClient interface {
@@ -163,9 +164,7 @@ func (l *remoteKeyClient) HealthCheck() error {
 // NewRemoteKeyClient returns a new keys client for provided rpc location
 func NewRemoteKeyClient(rpcAddress string, logger *logging.Logger) (KeyClient, error) {
 	logger = logger.WithScope("RemoteKeyClient")
-	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithInsecure())
-	conn, err := grpc.Dial(rpcAddress, opts...)
+	conn, err := encoding.GRPCDial(rpcAddress)
 	if err != nil {
 		return nil, err
 	}

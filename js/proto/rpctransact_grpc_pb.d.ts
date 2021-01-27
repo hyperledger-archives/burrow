@@ -7,7 +7,7 @@
 import * as grpc from "@grpc/grpc-js";
 import {handleClientStreamingCall} from "@grpc/grpc-js/build/src/server-call";
 import * as rpctransact_pb from "./rpctransact_pb";
-import * as github_com_gogo_protobuf_gogoproto_gogo_pb from "./github.com/gogo/protobuf/gogoproto/gogo_pb";
+import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 import * as google_protobuf_duration_pb from "google-protobuf/google/protobuf/duration_pb";
 import * as exec_pb from "./exec_pb";
 import * as payload_pb from "./payload_pb";
@@ -29,108 +29,108 @@ interface ITransactService extends grpc.ServiceDefinition<grpc.UntypedServiceImp
 }
 
 interface ITransactService_IBroadcastTxSync extends grpc.MethodDefinition<rpctransact_pb.TxEnvelopeParam, exec_pb.TxExecution> {
-    path: string; // "/rpctransact.Transact/BroadcastTxSync"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/rpctransact.Transact/BroadcastTxSync";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<rpctransact_pb.TxEnvelopeParam>;
     requestDeserialize: grpc.deserialize<rpctransact_pb.TxEnvelopeParam>;
     responseSerialize: grpc.serialize<exec_pb.TxExecution>;
     responseDeserialize: grpc.deserialize<exec_pb.TxExecution>;
 }
 interface ITransactService_IBroadcastTxAsync extends grpc.MethodDefinition<rpctransact_pb.TxEnvelopeParam, txs_pb.Receipt> {
-    path: string; // "/rpctransact.Transact/BroadcastTxAsync"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/rpctransact.Transact/BroadcastTxAsync";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<rpctransact_pb.TxEnvelopeParam>;
     requestDeserialize: grpc.deserialize<rpctransact_pb.TxEnvelopeParam>;
     responseSerialize: grpc.serialize<txs_pb.Receipt>;
     responseDeserialize: grpc.deserialize<txs_pb.Receipt>;
 }
 interface ITransactService_ISignTx extends grpc.MethodDefinition<rpctransact_pb.TxEnvelopeParam, rpctransact_pb.TxEnvelope> {
-    path: string; // "/rpctransact.Transact/SignTx"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/rpctransact.Transact/SignTx";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<rpctransact_pb.TxEnvelopeParam>;
     requestDeserialize: grpc.deserialize<rpctransact_pb.TxEnvelopeParam>;
     responseSerialize: grpc.serialize<rpctransact_pb.TxEnvelope>;
     responseDeserialize: grpc.deserialize<rpctransact_pb.TxEnvelope>;
 }
 interface ITransactService_IFormulateTx extends grpc.MethodDefinition<payload_pb.Any, rpctransact_pb.TxEnvelope> {
-    path: string; // "/rpctransact.Transact/FormulateTx"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/rpctransact.Transact/FormulateTx";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<payload_pb.Any>;
     requestDeserialize: grpc.deserialize<payload_pb.Any>;
     responseSerialize: grpc.serialize<rpctransact_pb.TxEnvelope>;
     responseDeserialize: grpc.deserialize<rpctransact_pb.TxEnvelope>;
 }
 interface ITransactService_ICallTxSync extends grpc.MethodDefinition<payload_pb.CallTx, exec_pb.TxExecution> {
-    path: string; // "/rpctransact.Transact/CallTxSync"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/rpctransact.Transact/CallTxSync";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<payload_pb.CallTx>;
     requestDeserialize: grpc.deserialize<payload_pb.CallTx>;
     responseSerialize: grpc.serialize<exec_pb.TxExecution>;
     responseDeserialize: grpc.deserialize<exec_pb.TxExecution>;
 }
 interface ITransactService_ICallTxAsync extends grpc.MethodDefinition<payload_pb.CallTx, txs_pb.Receipt> {
-    path: string; // "/rpctransact.Transact/CallTxAsync"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/rpctransact.Transact/CallTxAsync";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<payload_pb.CallTx>;
     requestDeserialize: grpc.deserialize<payload_pb.CallTx>;
     responseSerialize: grpc.serialize<txs_pb.Receipt>;
     responseDeserialize: grpc.deserialize<txs_pb.Receipt>;
 }
 interface ITransactService_ICallTxSim extends grpc.MethodDefinition<payload_pb.CallTx, exec_pb.TxExecution> {
-    path: string; // "/rpctransact.Transact/CallTxSim"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/rpctransact.Transact/CallTxSim";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<payload_pb.CallTx>;
     requestDeserialize: grpc.deserialize<payload_pb.CallTx>;
     responseSerialize: grpc.serialize<exec_pb.TxExecution>;
     responseDeserialize: grpc.deserialize<exec_pb.TxExecution>;
 }
 interface ITransactService_ICallCodeSim extends grpc.MethodDefinition<rpctransact_pb.CallCodeParam, exec_pb.TxExecution> {
-    path: string; // "/rpctransact.Transact/CallCodeSim"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/rpctransact.Transact/CallCodeSim";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<rpctransact_pb.CallCodeParam>;
     requestDeserialize: grpc.deserialize<rpctransact_pb.CallCodeParam>;
     responseSerialize: grpc.serialize<exec_pb.TxExecution>;
     responseDeserialize: grpc.deserialize<exec_pb.TxExecution>;
 }
 interface ITransactService_ISendTxSync extends grpc.MethodDefinition<payload_pb.SendTx, exec_pb.TxExecution> {
-    path: string; // "/rpctransact.Transact/SendTxSync"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/rpctransact.Transact/SendTxSync";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<payload_pb.SendTx>;
     requestDeserialize: grpc.deserialize<payload_pb.SendTx>;
     responseSerialize: grpc.serialize<exec_pb.TxExecution>;
     responseDeserialize: grpc.deserialize<exec_pb.TxExecution>;
 }
 interface ITransactService_ISendTxAsync extends grpc.MethodDefinition<payload_pb.SendTx, txs_pb.Receipt> {
-    path: string; // "/rpctransact.Transact/SendTxAsync"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/rpctransact.Transact/SendTxAsync";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<payload_pb.SendTx>;
     requestDeserialize: grpc.deserialize<payload_pb.SendTx>;
     responseSerialize: grpc.serialize<txs_pb.Receipt>;
     responseDeserialize: grpc.deserialize<txs_pb.Receipt>;
 }
 interface ITransactService_INameTxSync extends grpc.MethodDefinition<payload_pb.NameTx, exec_pb.TxExecution> {
-    path: string; // "/rpctransact.Transact/NameTxSync"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/rpctransact.Transact/NameTxSync";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<payload_pb.NameTx>;
     requestDeserialize: grpc.deserialize<payload_pb.NameTx>;
     responseSerialize: grpc.serialize<exec_pb.TxExecution>;
     responseDeserialize: grpc.deserialize<exec_pb.TxExecution>;
 }
 interface ITransactService_INameTxAsync extends grpc.MethodDefinition<payload_pb.NameTx, txs_pb.Receipt> {
-    path: string; // "/rpctransact.Transact/NameTxAsync"
-    requestStream: boolean; // false
-    responseStream: boolean; // false
+    path: "/rpctransact.Transact/NameTxAsync";
+    requestStream: false;
+    responseStream: false;
     requestSerialize: grpc.serialize<payload_pb.NameTx>;
     requestDeserialize: grpc.deserialize<payload_pb.NameTx>;
     responseSerialize: grpc.serialize<txs_pb.Receipt>;
@@ -139,7 +139,7 @@ interface ITransactService_INameTxAsync extends grpc.MethodDefinition<payload_pb
 
 export const TransactService: ITransactService;
 
-export interface ITransactServer {
+export interface ITransactServer extends grpc.UntypedServiceImplementation {
     broadcastTxSync: grpc.handleUnaryCall<rpctransact_pb.TxEnvelopeParam, exec_pb.TxExecution>;
     broadcastTxAsync: grpc.handleUnaryCall<rpctransact_pb.TxEnvelopeParam, txs_pb.Receipt>;
     signTx: grpc.handleUnaryCall<rpctransact_pb.TxEnvelopeParam, rpctransact_pb.TxEnvelope>;
@@ -194,7 +194,7 @@ export interface ITransactClient {
 }
 
 export class TransactClient extends grpc.Client implements ITransactClient {
-    constructor(address: string, credentials: grpc.ChannelCredentials, options?: object);
+    constructor(address: string, credentials: grpc.ChannelCredentials, options?: Partial<grpc.ClientOptions>);
     public broadcastTxSync(request: rpctransact_pb.TxEnvelopeParam, callback: (error: grpc.ServiceError | null, response: exec_pb.TxExecution) => void): grpc.ClientUnaryCall;
     public broadcastTxSync(request: rpctransact_pb.TxEnvelopeParam, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: exec_pb.TxExecution) => void): grpc.ClientUnaryCall;
     public broadcastTxSync(request: rpctransact_pb.TxEnvelopeParam, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: exec_pb.TxExecution) => void): grpc.ClientUnaryCall;

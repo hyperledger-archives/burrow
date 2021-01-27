@@ -2,8 +2,8 @@
 
 'use strict';
 var rpcquery_pb = require('./rpcquery_pb.js');
-var github_com_gogo_protobuf_gogoproto_gogo_pb = require('./github.com/gogo/protobuf/gogoproto/gogo_pb.js');
-var github_com_tendermint_tendermint_abci_types_types_pb = require('./github.com/tendermint/tendermint/abci/types/types_pb.js');
+var gogoproto_gogo_pb = require('./gogoproto/gogo_pb.js');
+var tendermint_types_types_pb = require('./tendermint/types/types_pb.js');
 var names_pb = require('./names_pb.js');
 var acm_pb = require('./acm_pb.js');
 var validator_pb = require('./validator_pb.js');
@@ -286,15 +286,15 @@ function deserialize_rpcquery_ValidatorSetHistory(buffer_arg) {
   return rpcquery_pb.ValidatorSetHistory.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
-function serialize_types_Header(arg) {
-  if (!(arg instanceof github_com_tendermint_tendermint_abci_types_types_pb.Header)) {
-    throw new Error('Expected argument of type types.Header');
+function serialize_tendermint_types_Header(arg) {
+  if (!(arg instanceof tendermint_types_types_pb.Header)) {
+    throw new Error('Expected argument of type tendermint.types.Header');
   }
   return Buffer.from(arg.serializeBinary());
 }
 
-function deserialize_types_Header(buffer_arg) {
-  return github_com_tendermint_tendermint_abci_types_types_pb.Header.deserializeBinary(new Uint8Array(buffer_arg));
+function deserialize_tendermint_types_Header(buffer_arg) {
+  return tendermint_types_types_pb.Header.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
 
@@ -448,11 +448,11 @@ getNetworkRegistry: {
     requestStream: false,
     responseStream: false,
     requestType: rpcquery_pb.GetBlockParam,
-    responseType: github_com_tendermint_tendermint_abci_types_types_pb.Header,
+    responseType: tendermint_types_types_pb.Header,
     requestSerialize: serialize_rpcquery_GetBlockParam,
     requestDeserialize: deserialize_rpcquery_GetBlockParam,
-    responseSerialize: serialize_types_Header,
-    responseDeserialize: deserialize_types_Header,
+    responseSerialize: serialize_tendermint_types_Header,
+    responseDeserialize: deserialize_tendermint_types_Header,
   },
 };
 

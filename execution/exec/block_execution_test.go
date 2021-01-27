@@ -5,12 +5,12 @@ import (
 
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/abci/types"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 )
 
 func TestBlockExecution_Marshal(t *testing.T) {
 	be := &BlockExecution{
-		Header: &types.Header{
+		Header: &tmproto.Header{
 			Height:          3,
 			AppHash:         []byte{2},
 			ProposerAddress: []byte{1, 2, 33},
@@ -24,7 +24,7 @@ func TestBlockExecution_Marshal(t *testing.T) {
 
 func TestBlockExecution_StreamEvents(t *testing.T) {
 	be := &BlockExecution{
-		Header: &types.Header{
+		Header: &tmproto.Header{
 			Height:          2,
 			AppHash:         []byte{2},
 			ProposerAddress: []byte{1, 2, 33},
