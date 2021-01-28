@@ -282,7 +282,7 @@ func (exe *executor) validateInputsAndStorePublicKeys(txEnv *txs.Envelope) error
 	for s, in := range txEnv.Tx.GetInputs() {
 		err := exe.updateSignatory(txEnv.Signatories[s])
 		if err != nil {
-			return fmt.Errorf("failed to update public key for input %X: %v", in.Address, err)
+			return fmt.Errorf("failed to update public key for input %v: %v", in.Address, err)
 		}
 		acc, err := exe.stateCache.GetAccount(in.Address)
 		if err != nil {
@@ -335,7 +335,7 @@ func (exe *executor) updateSignatory(sig txs.Signatory) error {
 		return fmt.Errorf("unexpected mismatch between address %v and supplied public key %v",
 			acc.Address, sig.PublicKey)
 	}
-	acc.PublicKey = *sig.PublicKey
+	acc.PublicKey = sig.PublicKey
 	return exe.stateCache.UpdateAccount(acc)
 }
 

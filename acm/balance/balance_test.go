@@ -24,6 +24,6 @@ func TestSort(t *testing.T) {
 func TestEtherConversion(t *testing.T) {
 	wei := NativeToWei(1)
 	assert.Equal(t, wei.String(), "1000000000000000000", "must equal one ether")
-	native := WeiToNative(wei.Bytes())
+	native := WeiToNative(wei)
 	assert.Equal(t, native.Uint64(), uint64(1))
 }

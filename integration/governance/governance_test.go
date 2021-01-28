@@ -221,7 +221,7 @@ func TestGovernance(t *testing.T) {
 			power := uint64(2445)
 			tx := payload.UpdateAccountTx(inputAddress, &spec.TemplateAccount{
 				Address:   &address,
-				PublicKey: &publicKey,
+				PublicKey: publicKey,
 				Amounts:   balance.New().Power(power),
 			})
 

@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSNativeContractDescription1a(t *testing.T) {
+func TestECRecover(t *testing.T) {
 	message := []byte("THIS MESSAGE IS NOT SIGNED")
 	digest := crypto.Keccak256(message)
 	privateKey, err := btcec.NewPrivateKey(btcec.S256())
@@ -65,7 +65,7 @@ func TestSNativeContractDescription1a(t *testing.T) {
 	})
 	returnValue, err := vm.Contract(solidity.DeployedBytecode_ECRecover).Call(state, params)
 	require.NoError(t, err)
-	priv, err := crypto.PrivateKeyFromRawBytes(privateKey.D.Bytes(), crypto.CurveTypeSecp256k1)
+	priv, err := crypto.PrivateKeyFromRawBytes(privateKey.Serialize(), crypto.CurveTypeSecp256k1)
 	require.NoError(t, err)
 	address := priv.GetPublicKey().GetAddress()
 	addressOut := crypto.AddressFromWord256(binary.LeftPadWord256(returnValue))

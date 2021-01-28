@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/encoding"
+	"github.com/tendermint/tendermint/p2p"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
@@ -28,7 +29,6 @@ import (
 	"github.com/hyperledger/burrow/rpc/rpctransact"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
-	"github.com/tendermint/tendermint/p2p"
 	hex "github.com/tmthrgd/go-hex"
 )
 
@@ -260,25 +260,25 @@ func (c *Client) SignTx(tx payload.Payload, logger *logging.Logger) (*txs.Envelo
 }
 
 // Creates a keypair using attached keys service
-func (c *Client) CreateKey(keyName, curveTypeString string, logger *logging.Logger) (crypto.PublicKey, error) {
+func (c *Client) CreateKey(keyName, curveTypeString string, logger *logging.Logger) (*crypto.PublicKey, error) {
 	err := c.dial(logger)
 	if err != nil {
-		return crypto.PublicKey{}, err
+		return nil, err
 	}
 	if c.keyClient == nil {
-		return crypto.PublicKey{}, fmt.Errorf("could not create key pair since no keys service is attached, " +
+		return nil, fmt.Errorf("could not create key pair since no keys service is attached, " +
 			"pass --keys flag")
 	}
 	curveType := crypto.CurveTypeEd25519
 	if curveTypeString != "" {
 		curveType, err = crypto.CurveTypeFromString(curveTypeString)
 		if err != nil {
-			return crypto.PublicKey{}, err
+			return nil, err
 		}
 	}
 	address, err := c.keyClient.Generate(keyName, curveType)
 	if err != nil {
-		return crypto.PublicKey{}, err
+		return nil, err
 	}
 	return c.keyClient.PublicKey(address)
 }
@@ -374,7 +374,7 @@ func (c *Client) UpdateAccount(arg *GovArg, logger *logging.Logger) (*payload.Go
 		if err != nil {
 			return nil, fmt.Errorf("could not parse publicKey: %v", err)
 		}
-		update.PublicKey = &pubKey
+		update.PublicKey = pubKey
 	} else {
 		// Attempt to get public key from connected key client
 		if arg.Address != "" {
@@ -425,13 +425,13 @@ func (c *Client) PublicKeyFromAddress(address *crypto.Address) (*crypto.PublicKe
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve public key from keys server: %v", err)
 	}
-	return &pubKey, nil
+	return pubKey, nil
 }
 
-func PublicKeyFromString(publicKey string) (crypto.PublicKey, error) {
+func PublicKeyFromString(publicKey string) (*crypto.PublicKey, error) {
 	bs, err := hex.DecodeString(publicKey)
 	if err != nil {
-		return crypto.PublicKey{}, fmt.Errorf("could not parse public key string %s as hex: %v", publicKey, err)
+		return nil, fmt.Errorf("could not parse public key string %s as hex: %v", publicKey, err)
 	}
 	switch len(bs) {
 	case crypto.PublicKeyLength(crypto.CurveTypeEd25519):
@@ -439,8 +439,8 @@ func PublicKeyFromString(publicKey string) (crypto.PublicKey, error) {
 	case crypto.PublicKeyLength(crypto.CurveTypeSecp256k1):
 		return crypto.PublicKeyFromBytes(bs, crypto.CurveTypeSecp256k1)
 	default:
-		return crypto.PublicKey{}, fmt.Errorf("public key string %s has byte length %d which is not the size of either "+
-			"ed25519 or compressed secp256k1 keys so cannot construct public key", publicKey, len(bs))
+		return nil, fmt.Errorf("public key string %s has byte length %d which is not the size of either "+
+			"ed25519 or uncompressed secp256k1 keys so cannot construct public key", publicKey, len(bs))
 	}
 }
 

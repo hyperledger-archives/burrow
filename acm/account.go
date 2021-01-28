@@ -18,7 +18,7 @@ import (
 
 var GlobalPermissionsAddress = crypto.Address(binary.Zero160)
 
-func NewAccount(pubKey crypto.PublicKey) *Account {
+func NewAccount(pubKey *crypto.PublicKey) *Account {
 	return &Account{
 		Address:   pubKey.GetAddress(),
 		PublicKey: pubKey,

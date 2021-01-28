@@ -10,11 +10,6 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
-const (
-	MaxPublicKeyLength                = btcec.PubKeyBytesLenCompressed
-	PublicKeyFixedWidthEncodingLength = MaxPublicKeyLength + 1
-)
-
 type PublicKeyJSON struct {
 	CurveType string
 	PublicKey string
@@ -26,18 +21,18 @@ func PublicKeyLength(curveType CurveType) int {
 	case CurveTypeEd25519:
 		return ed25519.PublicKeySize
 	case CurveTypeSecp256k1:
-		return btcec.PubKeyBytesLenCompressed
+		return btcec.PubKeyBytesLenUncompressed
 	default:
 		// Other functions rely on this
 		return 0
 	}
 }
 
-func (p PublicKey) IsSet() bool {
-	return p.CurveType != CurveTypeUnset && p.IsValid()
+func (p *PublicKey) IsSet() bool {
+	return p != nil && p.CurveType != CurveTypeUnset && p.IsValid()
 }
 
-func (p PublicKey) MarshalJSON() ([]byte, error) {
+func (p *PublicKey) MarshalJSON() ([]byte, error) {
 	jStruct := PublicKeyJSON{
 		CurveType: p.CurveType.String(),
 		PublicKey: hex.EncodeUpperToString(p.PublicKey),
@@ -46,7 +41,7 @@ func (p PublicKey) MarshalJSON() ([]byte, error) {
 	return txt, err
 }
 
-func (p PublicKey) MarshalText() ([]byte, error) {
+func (p *PublicKey) MarshalText() ([]byte, error) {
 	return p.MarshalJSON()
 }
 
@@ -73,12 +68,12 @@ func (p *PublicKey) UnmarshalText(text []byte) error {
 	return p.UnmarshalJSON(text)
 }
 
-func (p PublicKey) IsValid() bool {
+func (p *PublicKey) IsValid() bool {
 	publicKeyLength := PublicKeyLength(p.CurveType)
 	return publicKeyLength != 0 && publicKeyLength == len(p.PublicKey)
 }
 
-func (p PublicKey) Verify(msg []byte, signature *Signature) error {
+func (p *PublicKey) Verify(msg []byte, signature *Signature) error {
 	switch p.CurveType {
 	case CurveTypeUnset:
 		return fmt.Errorf("public key is unset")
@@ -89,25 +84,17 @@ func (p PublicKey) Verify(msg []byte, signature *Signature) error {
 		return fmt.Errorf("signature '%X' is not a valid ed25519 signature for message: %s",
 			signature.Signature, string(msg))
 	case CurveTypeSecp256k1:
-		pub, err := btcec.ParsePubKey(p.PublicKey, btcec.S256())
+		_, _, err := btcec.RecoverCompact(btcec.S256(), signature.Signature, Keccak256(msg))
 		if err != nil {
-			return fmt.Errorf("could not parse secp256k1 public key: %v", err)
+			return fmt.Errorf("signature verification for secp256k1 key failed: %v", err)
 		}
-		sig, err := btcec.ParseSignature(signature.Signature, btcec.S256())
-		if err != nil {
-			return fmt.Errorf("could not parse DER signature for secp256k1 key: %v", err)
-		}
-		if sig.Verify(Keccak256(msg), pub) {
-			return nil
-		}
-		return fmt.Errorf("signature '%X' is not a valid secp256k1 signature for message: %s",
-			signature.Signature, string(msg))
+		return nil
 	default:
 		return fmt.Errorf("invalid curve type")
 	}
 }
 
-func (p PublicKey) GetAddress() Address {
+func (p *PublicKey) GetAddress() Address {
 	switch p.CurveType {
 	case CurveTypeEd25519:
 		addr, _ := AddressFromBytes(tmhash.Sum(p.PublicKey))
@@ -125,7 +112,7 @@ func (p PublicKey) GetAddress() Address {
 	}
 }
 
-func (p PublicKey) AddressHashType() string {
+func (p *PublicKey) AddressHashType() string {
 	switch p.CurveType {
 	case CurveTypeEd25519:
 		return "go-crypto-0.5.0"
@@ -136,25 +123,6 @@ func (p PublicKey) AddressHashType() string {
 	}
 }
 
-func (p PublicKey) String() string {
+func (p *PublicKey) String() string {
 	return hex.EncodeUpperToString(p.PublicKey)
-}
-
-// Produces a binary encoding of the CurveType byte plus
-// the public key for padded to a fixed width on the right
-func (p PublicKey) EncodeFixedWidth() []byte {
-	encoded := make([]byte, PublicKeyFixedWidthEncodingLength)
-	encoded[0] = p.CurveType.Byte()
-	copy(encoded[1:], p.PublicKey)
-	return encoded
-}
-
-func DecodePublicKeyFixedWidth(bs []byte) (PublicKey, error) {
-	const errHeader = "DecodePublicKeyFixedWidth():"
-	if len(bs) != PublicKeyFixedWidthEncodingLength {
-		return PublicKey{}, fmt.Errorf("%s expected exactly %d bytes but got %d bytes",
-			errHeader, PublicKeyFixedWidthEncodingLength, len(bs))
-	}
-	curveType := CurveType(bs[0])
-	return PublicKeyFromBytes(bs[1:PublicKeyLength(curveType)+1], curveType)
 }

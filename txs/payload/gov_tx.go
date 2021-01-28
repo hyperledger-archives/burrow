@@ -52,7 +52,7 @@ func AlterPowerTx(inputAddress crypto.Address, id crypto.Addressable, power uint
 func AlterBalanceTx(inputAddress crypto.Address, id crypto.Addressable, bal balance.Balances) *GovTx {
 	publicKey := id.GetPublicKey()
 	return UpdateAccountTx(inputAddress, &spec.TemplateAccount{
-		PublicKey: &publicKey,
+		PublicKey: publicKey,
 		Amounts:   bal,
 	})
 }

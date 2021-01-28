@@ -40,7 +40,7 @@ func NewKey(typ crypto.CurveType) (*Key, error) {
 	pubKey := privKey.GetPublicKey()
 	return &Key{
 		CurveType:  typ,
-		PublicKey:  pubKey,
+		PublicKey:  *pubKey,
 		Address:    pubKey.GetAddress(),
 		PrivateKey: privKey,
 	}, nil
@@ -54,7 +54,7 @@ func NewKeyFromPub(curveType crypto.CurveType, PubKeyBytes []byte) (*Key, error)
 
 	return &Key{
 		CurveType: curveType,
-		PublicKey: pubKey,
+		PublicKey: *pubKey,
 		Address:   pubKey.GetAddress(),
 	}, nil
 }
@@ -71,7 +71,7 @@ func NewKeyFromPriv(curveType crypto.CurveType, PrivKeyBytes []byte) (*Key, erro
 	return &Key{
 		CurveType:  curveType,
 		Address:    pubKey.GetAddress(),
-		PublicKey:  pubKey,
+		PublicKey:  *pubKey,
 		PrivateKey: privKey,
 	}, nil
 }
@@ -116,7 +116,7 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 
 	k.Address = k2.Address
 	k.CurveType = curveType
-	k.PublicKey = k2.PrivateKey.GetPublicKey()
+	k.PublicKey = *k2.PrivateKey.GetPublicKey()
 	k.PrivateKey = k2.PrivateKey
 
 	return nil

@@ -24,8 +24,8 @@ func (pa *PrivateAccount) GetAddress() crypto.Address {
 	return pa.concretePrivateAccount.Address
 }
 
-func (pa *PrivateAccount) GetPublicKey() crypto.PublicKey {
-	return pa.concretePrivateAccount.PublicKey
+func (pa *PrivateAccount) GetPublicKey() *crypto.PublicKey {
+	return &pa.concretePrivateAccount.PublicKey
 }
 
 func (pa *PrivateAccount) Sign(msg []byte) (*crypto.Signature, error) {
@@ -78,7 +78,7 @@ func PrivateAccountFromPrivateKey(privateKey crypto.PrivateKey) *PrivateAccount 
 	return &PrivateAccount{
 		concretePrivateAccount: &ConcretePrivateAccount{
 			PrivateKey: privateKey,
-			PublicKey:  publicKey,
+			PublicKey:  *publicKey,
 			Address:    publicKey.GetAddress(),
 		},
 	}
@@ -102,7 +102,7 @@ func GeneratePrivateAccount(ct crypto.CurveType) (*PrivateAccount, error) {
 	publicKey := privateKey.GetPublicKey()
 	return ConcretePrivateAccount{
 		Address:    publicKey.GetAddress(),
-		PublicKey:  publicKey,
+		PublicKey:  *publicKey,
 		PrivateKey: privateKey,
 	}.PrivateAccount(), nil
 }
@@ -111,7 +111,7 @@ func privateAccount(privateKey crypto.PrivateKey) *PrivateAccount {
 	publicKey := privateKey.GetPublicKey()
 	return ConcretePrivateAccount{
 		Address:    publicKey.GetAddress(),
-		PublicKey:  publicKey,
+		PublicKey:  *publicKey,
 		PrivateKey: privateKey,
 	}.PrivateAccount()
 }

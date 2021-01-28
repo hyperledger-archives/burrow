@@ -29,7 +29,7 @@ const ShortHashSuffixBytes = 3
 type BasicAccount struct {
 	// Address is convenient to have in file for reference, but otherwise ignored since derived from PublicKey
 	Address   crypto.Address
-	PublicKey crypto.PublicKey
+	PublicKey *crypto.PublicKey
 	Amount    uint64
 }
 

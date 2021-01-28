@@ -7,7 +7,7 @@ import (
 )
 
 type Writer interface {
-	SetPower(id crypto.PublicKey, power *big.Int) (flow *big.Int, err error)
+	SetPower(id *crypto.PublicKey, power *big.Int) (flow *big.Int, err error)
 }
 
 type Reader interface {
@@ -38,7 +38,7 @@ type History interface {
 	Validators(blocksAgo int) IterableReader
 }
 
-func AddPower(vs ReaderWriter, id crypto.PublicKey, power *big.Int) error {
+func AddPower(vs ReaderWriter, id *crypto.PublicKey, power *big.Int) error {
 	// Current power + power
 	currentPower, err := vs.Power(id.GetAddress())
 	if err != nil {
@@ -48,7 +48,7 @@ func AddPower(vs ReaderWriter, id crypto.PublicKey, power *big.Int) error {
 	return err
 }
 
-func SubtractPower(vs ReaderWriter, id crypto.PublicKey, power *big.Int) error {
+func SubtractPower(vs ReaderWriter, id *crypto.PublicKey, power *big.Int) error {
 	currentPower, err := vs.Power(id.GetAddress())
 	if err != nil {
 		return err

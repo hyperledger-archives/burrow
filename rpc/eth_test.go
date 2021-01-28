@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/txs/payload"
+
 	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/crypto"
 	x "github.com/hyperledger/burrow/encoding/hex"
@@ -43,7 +46,7 @@ func TestWeb3Service(t *testing.T) {
 		err = store.StoreKeyPlain(&keys.Key{
 			CurveType:  acc.PrivateKey().CurveType,
 			Address:    acc.GetAddress(),
-			PublicKey:  acc.GetPublicKey(),
+			PublicKey:  *acc.GetPublicKey(),
 			PrivateKey: acc.PrivateKey(),
 		})
 		require.NoError(t, err)
@@ -87,7 +90,7 @@ func TestWeb3Service(t *testing.T) {
 		t.Run("NetVersion", func(t *testing.T) {
 			result, err := eth.NetVersion()
 			require.NoError(t, err)
-			require.Equal(t, x.EncodeNumber(1), result.ChainID)
+			require.Equal(t, crypto.GetEthChainID(genesisDoc.ChainID()).String(), result.ChainID)
 		})
 
 		t.Run("EthProtocolVersion", func(t *testing.T) {
@@ -107,14 +110,34 @@ func TestWeb3Service(t *testing.T) {
 	t.Run("EthTransactions", func(t *testing.T) {
 		var txHash, contractAddress string
 
+		sender := genesisAccounts[1]
 		receivee := genesisAccounts[2].GetPublicKey().GetAddress()
 		acc, err := kern.State.GetAccount(receivee)
 		require.NoError(t, err)
 		before := acc.GetBalance()
 
 		t.Run("EthSendRawTransaction", func(t *testing.T) {
-			// see: https://github.com/ethereumjs/ethereumjs-tx/blob/master/examples/transactions.ts#L9
-			raw := `0xf867808082520894f97798df751deb4b6e39d4cf998ee7cd4dcb9acc880de0b6b3a76400008025a0f0d2396973296cd6a71141c974d4a851f5eae8f08a8fba2dc36a0fef9bd6440ca0171995aa750d3f9f8e4d0eac93ff67634274f3c5acf422723f49ff09a6885422`
+			txEnv := txs.Enclose(genesisDoc.ChainID(), &payload.CallTx{
+				Input: &payload.TxInput{
+					Address:  sender.GetAddress(),
+					Amount:   1,
+					Sequence: 0,
+				},
+				Address: &receivee,
+				Data:    nil,
+			})
+			txEnv.Encoding = txs.Envelope_RLP
+			err = txEnv.Sign(sender)
+			require.NoError(t, err)
+
+			rawTx, err := txs.RawTxFromEnvelope(txEnv)
+			require.NoError(t, err)
+
+			bs, err := rawTx.Marshal()
+			require.NoError(t, err)
+
+			raw := x.EncodeBytes(bs)
+
 			_, err = eth.EthSendRawTransaction(&web3.EthSendRawTransactionParams{
 				SignedTransactionData: raw,
 			})
@@ -129,7 +152,7 @@ func TestWeb3Service(t *testing.T) {
 			require.NoError(t, err)
 			after, err := x.DecodeToBigInt(result.GetBalanceResult)
 			require.NoError(t, err)
-			after = balance.WeiToNative(after.Bytes())
+			after = balance.WeiToNative(after)
 			require.Equal(t, after.Uint64(), before+1)
 		})
 
@@ -245,11 +268,11 @@ func TestWeb3Service(t *testing.T) {
 
 	t.Run("EthSign", func(t *testing.T) {
 		result, err := eth.EthSign(&web3.EthSignParams{
-			Address: "0x2c2d14a9a3f0d078ac8b38e3043d78ca8bc11029",
+			Address: "0x" + genesisAccounts[1].GetAddress().String(),
 			Bytes:   "0xdeadbeaf",
 		})
 		require.NoError(t, err)
-		require.Equal(t, `0x30440220345d17225ac03a575f467cea3a8d5cc2dea42fc89030c42ea175fd5140c542eb02200307004fc21ea592ce5ca013705959292c2de85b71d0fa0c84ebd8b541f505d5`, result.Signature)
+		require.Equal(t, `0x1ba96f3dd6cbbc27aaaafe9d68a5368653f72a5677e365e2505ad207a5e8741949717cfc1cc107583142bfe54b9ba4840f5ad7cb12b224dd97b2fb6a735b93c57a`, result.Signature)
 	})
 
 	t.Run("EthGetBlock", func(t *testing.T) {

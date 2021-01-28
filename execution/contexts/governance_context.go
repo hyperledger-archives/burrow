@@ -82,7 +82,7 @@ func (ctx *GovernanceContext) UpdateAccount(account *acm.Account, update *spec.T
 			return
 		}
 		power := new(big.Int).SetUint64(update.Balances().GetPower(0))
-		_, err := ctx.ValidatorSet.SetPower(*update.PublicKey, power)
+		_, err := ctx.ValidatorSet.SetPower(update.PublicKey, power)
 		if err != nil {
 			return ev, err
 		}
@@ -146,7 +146,7 @@ func MaybeGetPublicKey(sw acmstate.ReaderWriter, address crypto.Address) (*crypt
 	}
 	if acc != nil && acc.PublicKey.IsSet() {
 		publicKey := acc.PublicKey
-		return &publicKey, nil
+		return publicKey, nil
 	}
 	return nil, nil
 }

@@ -59,7 +59,7 @@ func ecrecover(ctx Context) ([]byte, error) {
 	//   r = encrypted random point
 	//   s = signature proof
 
-	// Signature layout required by btcec:
+	// Signature layout required by ethereum:
 	// sig:    [  r   |  s   |  v  ]
 	// bytes:  [  32  |  32  |  1  ]
 	hash := ctx.Input[:32]

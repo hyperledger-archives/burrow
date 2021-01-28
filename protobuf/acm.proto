@@ -19,7 +19,7 @@ option (gogoproto.messagename_all) = true;
 message Account {
     option (gogoproto.goproto_stringer) = false;
     bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
-    crypto.PublicKey PublicKey = 2 [(gogoproto.nullable) = false];
+    crypto.PublicKey PublicKey = 2;
     // Sequence counts the number of transactions that have been accepted from this account
     uint64 Sequence = 3;
     // The account's current native token balance

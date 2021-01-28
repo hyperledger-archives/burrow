@@ -9,7 +9,7 @@ import (
 	"github.com/hyperledger/burrow/acm"
 )
 
-func New(publicKey crypto.PublicKey, power *big.Int) *Validator {
+func New(publicKey *crypto.PublicKey, power *big.Int) *Validator {
 	v := &Validator{
 		PublicKey: publicKey,
 		Power:     power.Uint64(),

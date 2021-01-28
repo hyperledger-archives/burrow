@@ -140,7 +140,7 @@ type ResultAccount struct {
 
 type AccountHumanReadable struct {
 	Address     crypto.Address
-	PublicKey   crypto.PublicKey
+	PublicKey   *crypto.PublicKey
 	Sequence    uint64
 	Balance     uint64
 	Code        []string

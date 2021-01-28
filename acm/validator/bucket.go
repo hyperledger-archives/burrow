@@ -47,7 +47,7 @@ func (vc *Bucket) Power(id crypto.Address) (*big.Int, error) {
 }
 
 // SetPower ensures that validator power would not change too quickly in a single block
-func (vc *Bucket) SetPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
+func (vc *Bucket) SetPower(id *crypto.PublicKey, power *big.Int) (*big.Int, error) {
 	const errHeader = "Bucket.SetPower():"
 	err := checkPower(power)
 	if err != nil {

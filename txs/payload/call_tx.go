@@ -7,7 +7,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 )
 
-func NewCallTx(st acmstate.AccountGetter, from crypto.PublicKey, to *crypto.Address, data []byte,
+func NewCallTx(st acmstate.AccountGetter, from *crypto.PublicKey, to *crypto.Address, data []byte,
 	amt, gasLimit, fee uint64) (*CallTx, error) {
 
 	addr := from.GetAddress()
@@ -23,7 +23,7 @@ func NewCallTx(st acmstate.AccountGetter, from crypto.PublicKey, to *crypto.Addr
 	return NewCallTxWithSequence(from, to, data, amt, gasLimit, fee, sequence), nil
 }
 
-func NewCallTxWithSequence(from crypto.PublicKey, to *crypto.Address, data []byte,
+func NewCallTxWithSequence(from *crypto.PublicKey, to *crypto.Address, data []byte,
 	amt, gasLimit, fee, sequence uint64) *CallTx {
 	input := &TxInput{
 		Address:  from.GetAddress(),
