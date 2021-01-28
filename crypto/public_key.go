@@ -118,7 +118,7 @@ func (p PublicKey) GetAddress() Address {
 			return Address{}
 		}
 		hash := Keccak256(pub.SerializeUncompressed()[1:])
-		addr, _ := AddressFromBytes(hash[len(hash)-20:])
+		addr, _ := AddressFromBytes(hash[len(hash)-AddressLength:])
 		return addr
 	default:
 		panic(fmt.Sprintf("unknown CurveType %d", p.CurveType))
