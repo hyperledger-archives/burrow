@@ -133,6 +133,13 @@ func TestSignExtend(t *testing.T) {
 		"0000 0000 0000 0000 0000 0000 0000 0000 0001 0000 1000 0000 1101 0011 1001 0000")
 }
 
+func TestLittleEndian(t *testing.T) {
+	x, ok := new(big.Int).SetString("234890234579042368982348972347234789897", 10)
+	require.True(t, ok)
+	y := BigIntFromLittleEndianBytes(BigIntToLittleEndianBytes(x))
+	require.Equal(t, x.Cmp(y), 0)
+}
+
 func assertSignExtend(t *testing.T, extendedBits int, embeddedBits uint, inputString, expectedString string) bool {
 	input := intFromString(t, extendedBits, inputString)
 	expected := intFromString(t, extendedBits, expectedString)

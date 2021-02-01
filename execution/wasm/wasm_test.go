@@ -2,7 +2,10 @@ package wasm
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
+
+	"github.com/hyperledger/burrow/execution/exec"
 
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
@@ -16,19 +19,21 @@ import (
 func TestStaticCallWithValue(t *testing.T) {
 	cache := acmstate.NewMemoryState()
 
-	gas := uint64(0)
-
 	params := engine.CallParams{
 		Origin: crypto.ZeroAddress,
 		Caller: crypto.ZeroAddress,
 		Callee: crypto.ZeroAddress,
 		Input:  []byte{},
-		Value:  0,
-		Gas:    &gas,
+		Value:  *big.NewInt(0),
+		Gas:    big.NewInt(1000),
 	}
 
+	vm := Default()
+	blockchain := new(engine.TestBlockchain)
+	eventSink := exec.NewNoopEventSink()
+
 	// run constructor
-	runtime, cerr := RunWASM(cache, params, Bytecode_storage_test)
+	runtime, cerr := vm.Execute(cache, blockchain, eventSink, params, Bytecode_storage_test)
 	require.NoError(t, cerr)
 
 	// run getFooPlus2
@@ -38,7 +43,7 @@ func TestStaticCallWithValue(t *testing.T) {
 
 	params.Input = calldata
 
-	returndata, cerr := RunWASM(cache, params, runtime)
+	returndata, cerr := vm.Execute(cache, blockchain, eventSink, params, runtime)
 	require.NoError(t, cerr)
 
 	data := abi.GetPackingTypes(spec.Functions["getFooPlus2"].Outputs)
@@ -55,7 +60,7 @@ func TestStaticCallWithValue(t *testing.T) {
 
 	params.Input = calldata
 
-	returndata, cerr = RunWASM(cache, params, runtime)
+	returndata, cerr = vm.Execute(cache, blockchain, eventSink, params, runtime)
 	require.NoError(t, cerr)
 
 	require.Equal(t, returndata, []byte{})
@@ -66,7 +71,7 @@ func TestStaticCallWithValue(t *testing.T) {
 
 	params.Input = calldata
 
-	returndata, cerr = RunWASM(cache, params, runtime)
+	returndata, cerr = vm.Execute(cache, blockchain, eventSink, params, runtime)
 	require.NoError(t, cerr)
 
 	spec.Unpack(returndata, "getFooPlus2", data...)

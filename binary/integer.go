@@ -67,6 +67,24 @@ func SignExtend(x *big.Int, n uint) *big.Int {
 	}
 }
 
+// Reverse bytes in-place
+func reverse(bs []byte) []byte {
+	n := len(bs) - 1
+	for i := 0; i < len(bs)/2; i++ {
+		bs[i], bs[n-i] = bs[n-i], bs[i]
+	}
+	return bs
+}
+
+// Note: this function destructively reverses its input slice - pass a copy if the original is used elsewhere
+func BigIntFromLittleEndianBytes(bs []byte) *big.Int {
+	return new(big.Int).SetBytes(reverse(bs))
+}
+
+func BigIntToLittleEndianBytes(x *big.Int) []byte {
+	return reverse(x.Bytes())
+}
+
 func andMask(n uint) *big.Int {
 	x := new(big.Int)
 	return x.Sub(x.Lsh(big1, n), big1)

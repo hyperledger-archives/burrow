@@ -10,10 +10,33 @@ type Dispatcher interface {
 	Dispatch(acc *acm.Account) Callable
 }
 
+type DispatcherFunc func(acc *acm.Account) Callable
+
+func (d DispatcherFunc) Dispatch(acc *acm.Account) Callable {
+	return d(acc)
+}
+
 // An ExternalDispatcher is able to Dispatch accounts to external engines as well as Dispatch to itself
 type ExternalDispatcher interface {
 	Dispatcher
 	SetExternals(externals Dispatcher)
+}
+
+// An ExternalDispatcher is able to Dispatch accounts to external engines as well as Dispatch to itself
+type Externals struct {
+	// Provide any foreign dispatchers to allow calls between VMs
+	externals Dispatcher
+}
+
+var _ ExternalDispatcher = (*Externals)(nil)
+
+func (ed *Externals) Dispatch(acc *acm.Account) Callable {
+	// Try external calls then fallback to EVM
+	return ed.externals.Dispatch(acc)
+}
+
+func (ed *Externals) SetExternals(externals Dispatcher) {
+	ed.externals = externals
 }
 
 type Dispatchers []Dispatcher
@@ -58,4 +81,7 @@ func (ds Dispatchers) Dispatch(acc *acm.Account) Callable {
 		}
 	}
 	return nil
+}
+
+type ExternalsStorage struct {
 }

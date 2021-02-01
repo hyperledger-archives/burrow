@@ -4,6 +4,7 @@
 package evm
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/hyperledger/burrow/execution/evm/abi"
@@ -47,8 +48,6 @@ func TestECRecover(t *testing.T) {
 		EventSink: exec.NewNoopEventSink(),
 	}
 
-	gas := uint64(10000)
-
 	spec, err := abi.ReadSpec(solidity.Abi_ECRecover)
 	require.NoError(t, err)
 	funcId := spec.Functions["recoverSigningAddress"].FunctionID
@@ -57,7 +56,7 @@ func TestECRecover(t *testing.T) {
 	params := engine.CallParams{
 		Caller: caller.Address,
 		Input:  input,
-		Gas:    &gas,
+		Gas:    big.NewInt(10000),
 	}
 
 	vm := New(Options{

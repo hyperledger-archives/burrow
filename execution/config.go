@@ -3,6 +3,8 @@ package execution
 import (
 	"fmt"
 
+	"github.com/hyperledger/burrow/execution/engine"
+
 	"github.com/hyperledger/burrow/execution/evm"
 )
 
@@ -45,7 +47,7 @@ func VMOptions(vmOptions evm.Options) func(*executor) {
 func (ec *ExecutionConfig) ExecutionOptions() ([]Option, error) {
 	var exeOptions []Option
 	vmOptions := evm.Options{
-		MemoryProvider:           evm.DefaultDynamicMemoryProvider,
+		MemoryProvider:           engine.DefaultDynamicMemoryProvider,
 		CallStackMaxDepth:        ec.CallStackMaxDepth,
 		DataStackInitialCapacity: ec.DataStackInitialCapacity,
 		DataStackMaxDepth:        ec.DataStackMaxDepth,

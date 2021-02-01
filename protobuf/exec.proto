@@ -192,6 +192,7 @@ message CallData {
     bytes Caller = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
     bytes Callee = 2 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
     bytes Data = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false];
-    uint64 Value = 4;
-    uint64 Gas = 5;
+    // Bytes of a big integer value
+    bytes Value = 4;
+    bytes Gas = 5;
 }

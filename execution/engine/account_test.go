@@ -1,4 +1,4 @@
-package native
+package engine
 
 import (
 	"testing"
@@ -6,7 +6,6 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,7 +29,7 @@ func TestState_CreateAccount(t *testing.T) {
 
 func TestState_Sync(t *testing.T) {
 	backend := acmstate.NewCache(acmstate.NewMemoryState())
-	st := engine.NewCallFrame(backend)
+	st := NewCallFrame(backend)
 	address := AddressFromName("frogs")
 
 	err := CreateAccount(st, address)
@@ -46,7 +45,7 @@ func TestState_Sync(t *testing.T) {
 }
 
 func TestState_NewCache(t *testing.T) {
-	st := engine.NewCallFrame(acmstate.NewMemoryState())
+	st := NewCallFrame(acmstate.NewMemoryState())
 	address := AddressFromName("frogs")
 
 	cache, err := st.NewFrame()
@@ -64,7 +63,7 @@ func TestState_NewCache(t *testing.T) {
 	err = cache.Sync()
 	require.NoError(t, err)
 
-	acc, err = mustAccount(cache, address)
+	acc, err = MustAccount(cache, address)
 	require.NoError(t, err)
 	assert.Equal(t, amt, acc.Balance)
 

@@ -72,12 +72,12 @@ func (f *Function) SetExternals(externals engine.Dispatcher) {
 }
 
 func (f *Function) Call(state engine.State, params engine.CallParams) ([]byte, error) {
-	return Call(state, params, f.execute)
+	return engine.Call(state, params, f.execute)
 }
 
 func (f *Function) execute(state engine.State, params engine.CallParams) ([]byte, error) {
 	// check if we have permission to call this function
-	hasPermission, err := HasPermission(state.CallFrame, params.Caller, f.PermFlag)
+	hasPermission, err := engine.HasPermission(state.CallFrame, params.Caller, f.PermFlag)
 	if err != nil {
 		return nil, err
 	}

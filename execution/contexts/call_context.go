@@ -2,6 +2,7 @@ package contexts
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
@@ -10,7 +11,6 @@ import (
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
-	"github.com/hyperledger/burrow/execution/native"
 	"github.com/hyperledger/burrow/execution/wasm"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
@@ -135,7 +135,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		callee = crypto.NewContractAddress(caller, ctx.txe.TxHash)
 		code = ctx.tx.Data
 		wcode = ctx.tx.WASM
-		err := native.CreateAccount(txCache, callee)
+		err := engine.CreateAccount(txCache, callee)
 		if err != nil {
 			return err
 		}
@@ -144,7 +144,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 			"init_code", code)
 
 		// store abis
-		err = native.UpdateContractMeta(txCache, metaCache, callee, ctx.tx.ContractMeta)
+		err = engine.UpdateContractMeta(txCache, metaCache, callee, ctx.tx.ContractMeta)
 		if err != nil {
 			return err
 		}
@@ -184,19 +184,21 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 	var ret []byte
 	var err error
 	txHash := ctx.txe.Envelope.Tx.Hash()
-	gas := ctx.tx.GasLimit
+	gas := new(big.Int).SetUint64(ctx.tx.GasLimit)
 
 	params := engine.CallParams{
 		Origin: caller,
 		Caller: caller,
 		Callee: callee,
 		Input:  ctx.tx.Data,
-		Value:  value,
-		Gas:    &gas,
+		Value:  *new(big.Int).SetUint64(value),
+		Gas:    gas,
 	}
 
 	if len(wcode) != 0 {
-		ret, err = wasm.RunWASM(txCache, params, wcode)
+		// TODO: accept options
+		vm := wasm.Default()
+		ret, err = vm.Execute(txCache, ctx.Blockchain, ctx.txe, params, wcode)
 		if err != nil {
 			// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
 			ctx.Logger.InfoMsg("Error on WASM execution",
@@ -206,7 +208,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		} else {
 			ctx.Logger.TraceMsg("Successful execution")
 			if createContract {
-				err := native.InitWASMCode(txCache, callee, ret)
+				err := engine.InitWASMCode(txCache, callee, ret)
 				if err != nil {
 					return err
 				}
@@ -233,7 +235,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		} else {
 			ctx.Logger.TraceMsg("Successful execution")
 			if createContract {
-				err := native.InitEVMCode(txCache, callee, ret)
+				err := engine.InitEVMCode(txCache, callee, ret)
 				if err != nil {
 					return err
 				}
@@ -245,7 +247,8 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		}
 		ctx.CallEvents(err)
 	}
-	ctx.txe.Return(ret, ctx.tx.GasLimit-gas)
+	// Gas starts life as a uint64 and should only been reduced (used up) over a transaction so .Uint64() is safe
+	ctx.txe.Return(ret, ctx.tx.GasLimit-gas.Uint64())
 	// Create a receipt from the ret and whether it erred.
 	ctx.Logger.TraceMsg("VM Call complete",
 		"caller", caller,

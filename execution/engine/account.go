@@ -1,7 +1,8 @@
-package native
+package engine
 
 import (
 	"bytes"
+	"math/big"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
@@ -12,23 +13,6 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func CreateAccount(st acmstate.ReaderWriter, address crypto.Address) error {
-	acc, err := st.GetAccount(address)
-	if err != nil {
-		return err
-	}
-	if acc != nil {
-		if acc.NativeName != "" {
-			return errors.Errorf(errors.Codes.ReservedAddress,
-				"cannot create account at %v because that address is reserved for a native contract '%s'",
-				address, acc.NativeName)
-		}
-		return errors.Errorf(errors.Codes.DuplicateAddress,
-			"tried to create an account at an address that already exists: %v", address)
-	}
-	return st.UpdateAccount(&acm.Account{Address: address})
-}
-
 func InitEVMCode(st acmstate.ReaderWriter, address crypto.Address, code []byte) error {
 	return initEVMCode(st, address, nil, code)
 }
@@ -38,7 +22,7 @@ func InitChildCode(st acmstate.ReaderWriter, address crypto.Address, parent cryp
 }
 
 func initEVMCode(st acmstate.ReaderWriter, address crypto.Address, parent *crypto.Address, code []byte) error {
-	acc, err := mustAccount(st, address)
+	acc, err := MustAccount(st, address)
 	if err != nil {
 		return err
 	}
@@ -116,7 +100,7 @@ func codehashPermitted(codehash []byte, metamap []*acm.ContractMeta) bool {
 }
 
 func InitWASMCode(st acmstate.ReaderWriter, address crypto.Address, code []byte) error {
-	acc, err := mustAccount(st, address)
+	acc, err := MustAccount(st, address)
 	if err != nil {
 		return err
 	}
@@ -133,25 +117,29 @@ func InitWASMCode(st acmstate.ReaderWriter, address crypto.Address, code []byte)
 	return st.UpdateAccount(acc)
 }
 
-func Transfer(st acmstate.ReaderWriter, from, to crypto.Address, amount uint64) error {
-	if amount == 0 {
+// TODO: consider pushing big.Int usage all the way to account balance
+func Transfer(st acmstate.ReaderWriter, from, to crypto.Address, amount *big.Int) error {
+	if !amount.IsInt64() {
+		return errors.Errorf(errors.Codes.IntegerOverflow, "transfer amount %v overflows int64", amount)
+	}
+	if amount.Sign() == 0 {
 		return nil
 	}
-	acc, err := mustAccount(st, from)
+	acc, err := MustAccount(st, from)
 	if err != nil {
 		return err
 	}
-	if acc.Balance < amount {
+	if new(big.Int).SetUint64(acc.Balance).Cmp(amount) < 0 {
 		return errors.Codes.InsufficientBalance
 	}
 	err = UpdateAccount(st, from, func(account *acm.Account) error {
-		return account.SubtractFromBalance(amount)
+		return account.SubtractFromBalance(amount.Uint64())
 	})
 	if err != nil {
 		return err
 	}
 	return UpdateAccount(st, to, func(account *acm.Account) error {
-		return account.AddToBalance(amount)
+		return account.AddToBalance(amount.Uint64())
 	})
 }
 
@@ -159,7 +147,7 @@ func UpdateContractMeta(st acmstate.ReaderWriter, metaSt acmstate.MetadataWriter
 	if len(payloadMeta) == 0 {
 		return nil
 	}
-	acc, err := mustAccount(st, address)
+	acc, err := MustAccount(st, address)
 	if err != nil {
 		return err
 	}
@@ -194,7 +182,7 @@ func RemoveAccount(st acmstate.ReaderWriter, address crypto.Address) error {
 }
 
 func UpdateAccount(st acmstate.ReaderWriter, address crypto.Address, updater func(acc *acm.Account) error) error {
-	acc, err := mustAccount(st, address)
+	acc, err := MustAccount(st, address)
 	if err != nil {
 		return err
 	}
@@ -205,7 +193,7 @@ func UpdateAccount(st acmstate.ReaderWriter, address crypto.Address, updater fun
 	return st.UpdateAccount(acc)
 }
 
-func mustAccount(st acmstate.Reader, address crypto.Address) (*acm.Account, error) {
+func MustAccount(st acmstate.Reader, address crypto.Address) (*acm.Account, error) {
 	acc, err := st.GetAccount(address)
 	if err != nil {
 		return nil, err
