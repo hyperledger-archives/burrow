@@ -13,7 +13,6 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // ExecutionEventsClient is the client API for ExecutionEvents service.
@@ -38,7 +37,7 @@ func NewExecutionEventsClient(cc grpc.ClientConnInterface) ExecutionEventsClient
 }
 
 func (c *executionEventsClient) Stream(ctx context.Context, in *BlocksRequest, opts ...grpc.CallOption) (ExecutionEvents_StreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, &ExecutionEvents_ServiceDesc.Streams[0], "/rpcevents.ExecutionEvents/Stream", opts...)
+	stream, err := c.cc.NewStream(ctx, &_ExecutionEvents_serviceDesc.Streams[0], "/rpcevents.ExecutionEvents/Stream", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +78,7 @@ func (c *executionEventsClient) Tx(ctx context.Context, in *TxRequest, opts ...g
 }
 
 func (c *executionEventsClient) Events(ctx context.Context, in *BlocksRequest, opts ...grpc.CallOption) (ExecutionEvents_EventsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &ExecutionEvents_ServiceDesc.Streams[1], "/rpcevents.ExecutionEvents/Events", opts...)
+	stream, err := c.cc.NewStream(ctx, &_ExecutionEvents_serviceDesc.Streams[1], "/rpcevents.ExecutionEvents/Events", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +146,7 @@ type UnsafeExecutionEventsServer interface {
 }
 
 func RegisterExecutionEventsServer(s grpc.ServiceRegistrar, srv ExecutionEventsServer) {
-	s.RegisterService(&ExecutionEvents_ServiceDesc, srv)
+	s.RegisterService(&_ExecutionEvents_serviceDesc, srv)
 }
 
 func _ExecutionEvents_Stream_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -210,10 +209,7 @@ func (x *executionEventsEventsServer) Send(m *EventsResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-// ExecutionEvents_ServiceDesc is the grpc.ServiceDesc for ExecutionEvents service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var ExecutionEvents_ServiceDesc = grpc.ServiceDesc{
+var _ExecutionEvents_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "rpcevents.ExecutionEvents",
 	HandlerType: (*ExecutionEventsServer)(nil),
 	Methods: []grpc.MethodDesc{

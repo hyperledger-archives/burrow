@@ -740,11 +740,15 @@ export class CallData extends jspb.Message {
     getData_asB64(): string;
     setData(value: Uint8Array | string): CallData;
 
-    getValue(): number;
-    setValue(value: number): CallData;
+    getValue(): Uint8Array | string;
+    getValue_asU8(): Uint8Array;
+    getValue_asB64(): string;
+    setValue(value: Uint8Array | string): CallData;
 
-    getGas(): number;
-    setGas(value: number): CallData;
+    getGas(): Uint8Array | string;
+    getGas_asU8(): Uint8Array;
+    getGas_asB64(): string;
+    setGas(value: Uint8Array | string): CallData;
 
 
     serializeBinary(): Uint8Array;
@@ -762,7 +766,7 @@ export namespace CallData {
         caller: Uint8Array | string,
         callee: Uint8Array | string,
         data: Uint8Array | string,
-        value: number,
-        gas: number,
+        value: Uint8Array | string,
+        gas: Uint8Array | string,
     }
 }

@@ -5427,8 +5427,8 @@ proto.exec.CallData.toObject = function(includeInstance, msg) {
     caller: msg.getCaller_asB64(),
     callee: msg.getCallee_asB64(),
     data: msg.getData_asB64(),
-    value: jspb.Message.getFieldWithDefault(msg, 4, 0),
-    gas: jspb.Message.getFieldWithDefault(msg, 5, 0)
+    value: msg.getValue_asB64(),
+    gas: msg.getGas_asB64()
   };
 
   if (includeInstance) {
@@ -5478,11 +5478,11 @@ proto.exec.CallData.deserializeBinaryFromReader = function(msg, reader) {
       msg.setData(value);
       break;
     case 4:
-      var value = /** @type {number} */ (reader.readUint64());
+      var value = /** @type {!Uint8Array} */ (reader.readBytes());
       msg.setValue(value);
       break;
     case 5:
-      var value = /** @type {number} */ (reader.readUint64());
+      var value = /** @type {!Uint8Array} */ (reader.readBytes());
       msg.setGas(value);
       break;
     default:
@@ -5535,16 +5535,16 @@ proto.exec.CallData.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
-  f = message.getValue();
-  if (f !== 0) {
-    writer.writeUint64(
+  f = message.getValue_asU8();
+  if (f.length > 0) {
+    writer.writeBytes(
       4,
       f
     );
   }
-  f = message.getGas();
-  if (f !== 0) {
-    writer.writeUint64(
+  f = message.getGas_asU8();
+  if (f.length > 0) {
+    writer.writeBytes(
       5,
       f
     );
@@ -5679,38 +5679,86 @@ proto.exec.CallData.prototype.setData = function(value) {
 
 
 /**
- * optional uint64 Value = 4;
- * @return {number}
+ * optional bytes Value = 4;
+ * @return {!(string|Uint8Array)}
  */
 proto.exec.CallData.prototype.getValue = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 4, 0));
+  return /** @type {!(string|Uint8Array)} */ (jspb.Message.getFieldWithDefault(this, 4, ""));
 };
 
 
 /**
- * @param {number} value
+ * optional bytes Value = 4;
+ * This is a type-conversion wrapper around `getValue()`
+ * @return {string}
+ */
+proto.exec.CallData.prototype.getValue_asB64 = function() {
+  return /** @type {string} */ (jspb.Message.bytesAsB64(
+      this.getValue()));
+};
+
+
+/**
+ * optional bytes Value = 4;
+ * Note that Uint8Array is not supported on all browsers.
+ * @see http://caniuse.com/Uint8Array
+ * This is a type-conversion wrapper around `getValue()`
+ * @return {!Uint8Array}
+ */
+proto.exec.CallData.prototype.getValue_asU8 = function() {
+  return /** @type {!Uint8Array} */ (jspb.Message.bytesAsU8(
+      this.getValue()));
+};
+
+
+/**
+ * @param {!(string|Uint8Array)} value
  * @return {!proto.exec.CallData} returns this
  */
 proto.exec.CallData.prototype.setValue = function(value) {
-  return jspb.Message.setProto3IntField(this, 4, value);
+  return jspb.Message.setProto3BytesField(this, 4, value);
 };
 
 
 /**
- * optional uint64 Gas = 5;
- * @return {number}
+ * optional bytes Gas = 5;
+ * @return {!(string|Uint8Array)}
  */
 proto.exec.CallData.prototype.getGas = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 5, 0));
+  return /** @type {!(string|Uint8Array)} */ (jspb.Message.getFieldWithDefault(this, 5, ""));
 };
 
 
 /**
- * @param {number} value
+ * optional bytes Gas = 5;
+ * This is a type-conversion wrapper around `getGas()`
+ * @return {string}
+ */
+proto.exec.CallData.prototype.getGas_asB64 = function() {
+  return /** @type {string} */ (jspb.Message.bytesAsB64(
+      this.getGas()));
+};
+
+
+/**
+ * optional bytes Gas = 5;
+ * Note that Uint8Array is not supported on all browsers.
+ * @see http://caniuse.com/Uint8Array
+ * This is a type-conversion wrapper around `getGas()`
+ * @return {!Uint8Array}
+ */
+proto.exec.CallData.prototype.getGas_asU8 = function() {
+  return /** @type {!Uint8Array} */ (jspb.Message.bytesAsU8(
+      this.getGas()));
+};
+
+
+/**
+ * @param {!(string|Uint8Array)} value
  * @return {!proto.exec.CallData} returns this
  */
 proto.exec.CallData.prototype.setGas = function(value) {
-  return jspb.Message.setProto3IntField(this, 5, value);
+  return jspb.Message.setProto3BytesField(this, 5, value);
 };
 
 

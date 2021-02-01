@@ -8,10 +8,11 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/hyperledger/burrow/execution/engine"
+
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
-	"github.com/hyperledger/burrow/execution/native"
 )
 
 // Not goroutine safe
@@ -20,11 +21,11 @@ type Stack struct {
 	maxCapacity uint64
 	ptr         int
 
-	gas     *uint64
+	gas     *big.Int
 	errSink errors.Sink
 }
 
-func NewStack(errSink errors.Sink, initialCapacity uint64, maxCapacity uint64, gas *uint64) *Stack {
+func NewStack(errSink errors.Sink, initialCapacity uint64, maxCapacity uint64, gas *big.Int) *Stack {
 	return &Stack{
 		slice:       make([]Word256, initialCapacity),
 		ptr:         0,
@@ -35,7 +36,7 @@ func NewStack(errSink errors.Sink, initialCapacity uint64, maxCapacity uint64, g
 }
 
 func (st *Stack) Push(d Word256) {
-	st.useGas(native.GasStackOp)
+	st.useGas(engine.GasStackOp)
 	err := st.ensureCapacity(uint64(st.ptr) + 1)
 	if err != nil {
 		st.pushErr(errors.Codes.DataStackOverflow)
@@ -46,7 +47,7 @@ func (st *Stack) Push(d Word256) {
 }
 
 func (st *Stack) Pop() Word256 {
-	st.useGas(native.GasStackOp)
+	st.useGas(engine.GasStackOp)
 	if st.ptr == 0 {
 		st.pushErr(errors.Codes.DataStackUnderflow)
 		return Zero256
@@ -109,7 +110,7 @@ func (st *Stack) Len() int {
 }
 
 func (st *Stack) Swap(n int) {
-	st.useGas(native.GasStackOp)
+	st.useGas(engine.GasStackOp)
 	if st.ptr < n {
 		st.pushErr(errors.Codes.DataStackUnderflow)
 		return
@@ -118,7 +119,7 @@ func (st *Stack) Swap(n int) {
 }
 
 func (st *Stack) Dup(n int) {
-	st.useGas(native.GasStackOp)
+	st.useGas(engine.GasStackOp)
 	if st.ptr < n {
 		st.pushErr(errors.Codes.DataStackUnderflow)
 		return
@@ -197,11 +198,7 @@ func (st *Stack) ensureCapacity(newCapacity uint64) error {
 }
 
 func (st *Stack) useGas(gasToUse uint64) {
-	if *st.gas > gasToUse {
-		*st.gas -= gasToUse
-	} else {
-		st.pushErr(errors.Codes.InsufficientGas)
-	}
+	st.pushErr(engine.UseGasNegative(st.gas, gasToUse))
 }
 
 func (st *Stack) pushErr(err errors.CodedError) {

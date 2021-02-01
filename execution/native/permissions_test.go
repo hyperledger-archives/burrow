@@ -5,6 +5,7 @@ package native
 
 import (
 	"encoding/hex"
+	"math/big"
 	"strconv"
 	"strings"
 	"testing"
@@ -79,14 +80,12 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	function := contract.FunctionByName("setBase")
 	require.NotNil(t, function, "Could not get function: %s")
 	funcID := function.Abi().FunctionID
-	gas := uint64(1000)
-
 	// Should fail since we have no permissions
 	input := bc.MustSplice(funcID[:], grantee.Address, permFlagToWord256(permission.CreateAccount))
 	params := engine.CallParams{
 		Caller: caller.Address,
 		Input:  input,
-		Gas:    &gas,
+		Gas:    big.NewInt(1000),
 	}
 	_, err := contract.Call(state, params)
 	if !assert.Error(t, err, "Should fail due to lack of permissions") {
@@ -95,7 +94,7 @@ func TestSNativeContractDescription_Dispatch(t *testing.T) {
 	assert.Equal(t, errors.Codes.NativeFunction, errors.GetCode(err))
 
 	// Grant all permissions and dispatch should success
-	err = UpdateAccount(state, caller.Address, func(acc *acm.Account) error {
+	err = engine.UpdateAccount(state, caller.Address, func(acc *acm.Account) error {
 		return acc.Permissions.Base.Set(permission.SetBase, true)
 	})
 	require.NoError(t, err)
@@ -120,7 +119,7 @@ func TestHasPermission(t *testing.T) {
 	require.NoError(t, err)
 
 	acc := &acm.Account{
-		Address: AddressFromName("frog"),
+		Address: engine.AddressFromName("frog"),
 		Permissions: permission.AccountPermissions{
 			Base: base,
 		},
@@ -130,7 +129,7 @@ func TestHasPermission(t *testing.T) {
 	// Ensure we are falling through to global permissions on those bits not set
 
 	flag := permission.Send | permission.Call | permission.Name | permission.HasRole
-	hasPermission, err := HasPermission(cache, acc.Address, flag)
+	hasPermission, err := engine.HasPermission(cache, acc.Address, flag)
 	require.NoError(t, err)
 	assert.True(t, hasPermission)
 }

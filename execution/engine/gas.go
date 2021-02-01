@@ -1,7 +1,13 @@
 // Copyright Monax Industries Limited
 // SPDX-License-Identifier: Apache-2.0
 
-package native
+package engine
+
+import (
+	"math/big"
+
+	"github.com/hyperledger/burrow/execution/errors"
+)
 
 const (
 	GasSha3          uint64 = 1
@@ -22,3 +28,15 @@ const (
 	GasIdentityWord  uint64 = 1
 	GasIdentityBase  uint64 = 1
 )
+
+// Try to deduct gasToUse from gasLeft.  If ok return false, otherwise
+// set err and return true.
+func UseGasNegative(gasLeft *big.Int, gasToUse uint64) errors.CodedError {
+	delta := new(big.Int).SetUint64(gasToUse)
+	if gasLeft.Cmp(delta) >= 0 {
+		gasLeft.Sub(gasLeft, delta)
+	} else {
+		return errors.Codes.InsufficientGas
+	}
+	return nil
+}

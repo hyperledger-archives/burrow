@@ -2,7 +2,9 @@ package engine
 
 import (
 	"github.com/hyperledger/burrow/acm/acmstate"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
+	"github.com/hyperledger/burrow/permission"
 )
 
 type CallFrame struct {
@@ -62,4 +64,12 @@ func (st *CallFrame) Sync() error {
 
 func (st *CallFrame) CallStackDepth() uint64 {
 	return st.callStackDepth
+}
+
+func (st *CallFrame) CreateAccount(creator, address crypto.Address) error {
+	err := EnsurePermission(st, creator, permission.CreateAccount)
+	if err != nil {
+		return err
+	}
+	return CreateAccount(st, address)
 }

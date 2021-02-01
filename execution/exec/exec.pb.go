@@ -1264,14 +1264,15 @@ func (*OutputEvent) XXX_MessageName() string {
 }
 
 type CallData struct {
-	Caller               github_com_hyperledger_burrow_crypto.Address  `protobuf:"bytes,1,opt,name=Caller,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Caller"`
-	Callee               github_com_hyperledger_burrow_crypto.Address  `protobuf:"bytes,2,opt,name=Callee,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Callee"`
-	Data                 github_com_hyperledger_burrow_binary.HexBytes `protobuf:"bytes,3,opt,name=Data,proto3,customtype=github.com/hyperledger/burrow/binary.HexBytes" json:"Data"`
-	Value                uint64                                        `protobuf:"varint,4,opt,name=Value,proto3" json:"Value,omitempty"`
-	Gas                  uint64                                        `protobuf:"varint,5,opt,name=Gas,proto3" json:"Gas,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}                                      `json:"-"`
-	XXX_unrecognized     []byte                                        `json:"-"`
-	XXX_sizecache        int32                                         `json:"-"`
+	Caller github_com_hyperledger_burrow_crypto.Address  `protobuf:"bytes,1,opt,name=Caller,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Caller"`
+	Callee github_com_hyperledger_burrow_crypto.Address  `protobuf:"bytes,2,opt,name=Callee,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"Callee"`
+	Data   github_com_hyperledger_burrow_binary.HexBytes `protobuf:"bytes,3,opt,name=Data,proto3,customtype=github.com/hyperledger/burrow/binary.HexBytes" json:"Data"`
+	// Bytes of a big integer value
+	Value                []byte   `protobuf:"bytes,4,opt,name=Value,proto3" json:"Value,omitempty"`
+	Gas                  []byte   `protobuf:"bytes,5,opt,name=Gas,proto3" json:"Gas,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *CallData) Reset()         { *m = CallData{} }
@@ -1303,18 +1304,18 @@ func (m *CallData) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_CallData proto.InternalMessageInfo
 
-func (m *CallData) GetValue() uint64 {
+func (m *CallData) GetValue() []byte {
 	if m != nil {
 		return m.Value
 	}
-	return 0
+	return nil
 }
 
-func (m *CallData) GetGas() uint64 {
+func (m *CallData) GetGas() []byte {
 	if m != nil {
 		return m.Gas
 	}
-	return 0
+	return nil
 }
 
 func (*CallData) XXX_MessageName() string {
@@ -1367,7 +1368,7 @@ func init() { proto.RegisterFile("exec.proto", fileDescriptor_4d737c7315c25422) 
 func init() { golang_proto.RegisterFile("exec.proto", fileDescriptor_4d737c7315c25422) }
 
 var fileDescriptor_4d737c7315c25422 = []byte{
-	// 1311 bytes of a gzipped FileDescriptorProto
+	// 1314 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x57, 0xcf, 0x6f, 0x1b, 0xc5,
 	0x17, 0xef, 0xda, 0x6b, 0xc7, 0x7e, 0x76, 0xfa, 0x6d, 0x47, 0xf9, 0x22, 0xab, 0xaa, 0xec, 0xb2,
 	0x45, 0xa5, 0x94, 0xb2, 0xae, 0x02, 0x45, 0xa8, 0x48, 0x88, 0xba, 0x09, 0x6d, 0xa0, 0xa4, 0x65,
@@ -1445,11 +1446,12 @@ var fileDescriptor_4d737c7315c25422 = []byte{
 	0xff, 0x9f, 0x0c, 0xd9, 0x24, 0x1a, 0x3b, 0x9c, 0x21, 0x84, 0x96, 0xb1, 0xd6, 0x67, 0x00, 0xf3,
 	0xa9, 0x3e, 0x6c, 0xaa, 0x59, 0x9f, 0x43, 0xab, 0xb0, 0x0a, 0x0e, 0xdd, 0xfd, 0x37, 0x15, 0x28,
 	0x75, 0x56, 0x9c, 0x71, 0xb1, 0xfd, 0xe3, 0xce, 0x2a, 0x1f, 0xb9, 0x37, 0x76, 0x30, 0x9e, 0x28,
-	0x1f, 0xf9, 0xc8, 0x55, 0x0f, 0x3e, 0x72, 0x4b, 0x50, 0xbb, 0xe3, 0x8c, 0x53, 0xa6, 0x1f, 0x97,
-	0x52, 0x20, 0xc7, 0xa0, 0x7a, 0xd5, 0xd1, 0x2f, 0x7f, 0x71, 0x1c, 0xbc, 0xb7, 0xb5, 0xdd, 0x35,
-	0x1e, 0x6d, 0x77, 0x8d, 0x5f, 0xb6, 0xbb, 0xc6, 0x6f, 0xdb, 0x5d, 0xe3, 0xa7, 0x27, 0x5d, 0x63,
-	0xeb, 0x49, 0xd7, 0xf8, 0x74, 0x9f, 0x14, 0x98, 0x7e, 0x14, 0xc8, 0xd3, 0x46, 0x5d, 0xde, 0xd7,
-	0xaf, 0xff, 0x15, 0x00, 0x00, 0xff, 0xff, 0xf2, 0xc4, 0xac, 0x30, 0x8d, 0x0f, 0x00, 0x00,
+	0x1f, 0xf9, 0xc8, 0x55, 0x0f, 0x3e, 0x72, 0x4b, 0x50, 0xbb, 0xe3, 0x8c, 0x53, 0x75, 0xad, 0xb6,
+	0xa9, 0x12, 0xc8, 0x31, 0xa8, 0x5e, 0x75, 0xd4, 0xcb, 0xbf, 0x4d, 0xc5, 0x71, 0xf0, 0xde, 0xd6,
+	0x76, 0xd7, 0x78, 0xb4, 0xdd, 0x35, 0x7e, 0xd9, 0xee, 0x1a, 0xbf, 0x6d, 0x77, 0x8d, 0x9f, 0x9e,
+	0x74, 0x8d, 0xad, 0x27, 0x5d, 0xe3, 0xd3, 0x7d, 0x52, 0x60, 0xfa, 0x51, 0x20, 0x4f, 0x1b, 0x75,
+	0x79, 0x5f, 0xbf, 0xfe, 0x57, 0x00, 0x00, 0x00, 0xff, 0xff, 0xde, 0x53, 0x6b, 0x0d, 0x8d, 0x0f,
+	0x00, 0x00,
 }
 
 func (m *StreamEvents) Marshal() (dAtA []byte, err error) {
@@ -2619,15 +2621,19 @@ func (m *CallData) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	if m.Gas != 0 {
-		i = encodeVarintExec(dAtA, i, uint64(m.Gas))
+	if len(m.Gas) > 0 {
+		i -= len(m.Gas)
+		copy(dAtA[i:], m.Gas)
+		i = encodeVarintExec(dAtA, i, uint64(len(m.Gas)))
 		i--
-		dAtA[i] = 0x28
+		dAtA[i] = 0x2a
 	}
-	if m.Value != 0 {
-		i = encodeVarintExec(dAtA, i, uint64(m.Value))
+	if len(m.Value) > 0 {
+		i -= len(m.Value)
+		copy(dAtA[i:], m.Value)
+		i = encodeVarintExec(dAtA, i, uint64(len(m.Value)))
 		i--
-		dAtA[i] = 0x20
+		dAtA[i] = 0x22
 	}
 	{
 		size := m.Data.Size()
@@ -3150,11 +3156,13 @@ func (m *CallData) Size() (n int) {
 	n += 1 + l + sovExec(uint64(l))
 	l = m.Data.Size()
 	n += 1 + l + sovExec(uint64(l))
-	if m.Value != 0 {
-		n += 1 + sovExec(uint64(m.Value))
+	l = len(m.Value)
+	if l > 0 {
+		n += 1 + l + sovExec(uint64(l))
 	}
-	if m.Gas != 0 {
-		n += 1 + sovExec(uint64(m.Gas))
+	l = len(m.Gas)
+	if l > 0 {
+		n += 1 + l + sovExec(uint64(l))
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -6359,10 +6367,10 @@ func (m *CallData) Unmarshal(dAtA []byte) error {
 			}
 			iNdEx = postIndex
 		case 4:
-			if wireType != 0 {
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Value", wireType)
 			}
-			m.Value = 0
+			var byteLen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowExec
@@ -6372,16 +6380,31 @@ func (m *CallData) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Value |= uint64(b&0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			if byteLen < 0 {
+				return ErrInvalidLengthExec
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthExec
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Value = append(m.Value[:0], dAtA[iNdEx:postIndex]...)
+			if m.Value == nil {
+				m.Value = []byte{}
+			}
+			iNdEx = postIndex
 		case 5:
-			if wireType != 0 {
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Gas", wireType)
 			}
-			m.Gas = 0
+			var byteLen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowExec
@@ -6391,11 +6414,26 @@ func (m *CallData) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Gas |= uint64(b&0x7F) << shift
+				byteLen |= int(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			if byteLen < 0 {
+				return ErrInvalidLengthExec
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthExec
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Gas = append(m.Gas[:0], dAtA[iNdEx:postIndex]...)
+			if m.Gas == nil {
+				m.Gas = []byte{}
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipExec(dAtA[iNdEx:])

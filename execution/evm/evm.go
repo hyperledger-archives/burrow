@@ -25,7 +25,7 @@ type EVM struct {
 	options  Options
 	sequence uint64
 	// Provide any foreign dispatchers to allow calls between VMs
-	externals engine.Dispatcher
+	engine.Externals
 	// User dispatcher.CallableProvider to get access to other VMs
 	logger *logging.Logger
 }
@@ -33,7 +33,7 @@ type EVM struct {
 // Options are parameters that are generally stable across a burrow configuration.
 // Defaults will be used for any zero values.
 type Options struct {
-	MemoryProvider           func(errors.Sink) Memory
+	MemoryProvider           func(errors.Sink) engine.Memory
 	Natives                  *native.Natives
 	Nonce                    []byte
 	DebugOpcodes             bool
@@ -47,7 +47,7 @@ type Options struct {
 func New(options Options) *EVM {
 	// Set defaults
 	if options.MemoryProvider == nil {
-		options.MemoryProvider = DefaultDynamicMemoryProvider
+		options.MemoryProvider = engine.DefaultDynamicMemoryProvider
 	}
 	if options.Logger == nil {
 		options.Logger = logging.NewNoopLogger()
@@ -105,17 +105,11 @@ func (vm *EVM) SetLogger(logger *logging.Logger) {
 }
 
 func (vm *EVM) Dispatch(acc *acm.Account) engine.Callable {
-	// Try external calls then fallback to EVM
-	callable := vm.externals.Dispatch(acc)
+	callable := vm.Externals.Dispatch(acc)
 	if callable != nil {
 		return callable
 	}
-	// This supports empty code calls
 	return vm.Contract(acc.EVMCode)
-}
-
-func (vm *EVM) SetExternals(externals engine.Dispatcher) {
-	vm.externals = externals
 }
 
 func (vm *EVM) Contract(code []byte) *Contract {

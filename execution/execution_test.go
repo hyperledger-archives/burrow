@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/execution/engine"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/bcm"
@@ -1255,7 +1257,7 @@ func TestOrigin(t *testing.T) {
 
 	// Set a contract that stores the origin address in storage at loc
 	loc := []byte{3}
-	err := native.UpdateAccount(exe.stateCache, calleeAddress, func(acc *acm.Account) error {
+	err := engine.UpdateAccount(exe.stateCache, calleeAddress, func(acc *acm.Account) error {
 		acc.EVMCode = bc.MustSplice(ORIGIN, PUSH1, loc, SSTORE)
 		return nil
 	})
