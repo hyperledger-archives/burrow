@@ -210,7 +210,7 @@ test_js:
 	@cd ${BURROW_TS_PATH} && yarn test
 
 .PHONY: test
-test: check bin/solc
+test: check bin/solc bin/solang
 	@tests/scripts/bin_wrapper.sh go test ./... ${GO_TEST_ARGS}
 
 .PHONY: test_keys
@@ -254,6 +254,11 @@ bin/solc: ./tests/scripts/deps/solc.sh
 	@mkdir -p bin
 	@tests/scripts/deps/solc.sh bin/solc
 	@touch bin/solc
+
+bin/solang: ./tests/scripts/deps/solang.sh
+	@mkdir -p bin
+	@tests/scripts/deps/solang.sh bin/solang
+	@touch bin/solang
 
 # test burrow with checks for race conditions
 .PHONY: test_race

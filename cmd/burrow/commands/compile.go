@@ -40,7 +40,7 @@ func Compile(output Output) func(cmd *cli.Cmd) {
 				}
 
 				if resp.Warning != "" {
-					output.Fatalf(resp.Warning)
+					output.Printf(resp.Warning)
 				}
 
 				f, err := os.Create(solfile + ".go")
