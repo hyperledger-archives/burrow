@@ -1,18 +1,26 @@
 //
 // See https://eth.wiki/fundamentals/rlp
+//
 package rlp
 
 import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"math/big"
 	"math/bits"
 	"reflect"
+
+	binary2 "github.com/hyperledger/burrow/binary"
 )
 
+type magicOffset uint8
+
 const (
-	EmptyString = 0x80
-	EmptySlice  = 0xC0
+	ShortLength              = 55
+	StringOffset magicOffset = 0x80 // 128 - if string length is less than or equal to 55 [inclusive]
+	SliceOffset  magicOffset = 0xC0 // 192 - if slice length is less than or equal to 55 [inclusive]
+	SmallByte                = 0x7f // 247 - value less than or equal is itself [inclusive
 )
 
 type Code uint32
@@ -22,6 +30,8 @@ const (
 	ErrNoInput
 	ErrInvalid
 )
+
+var bigIntType = reflect.TypeOf(&big.Int{})
 
 func (c Code) Error() string {
 	switch c {
@@ -34,268 +44,16 @@ func (c Code) Error() string {
 	}
 }
 
-func encodeUint8(input uint8) ([]byte, error) {
-	if input == 0 {
-		return []byte{EmptyString}, nil
-	} else if input >= 0x00 && input <= 0x7f {
-		return []byte{input}, nil
-	} else if input >= 0x80 && input <= 0xff {
-		return []byte{0x81, input}, nil
-	}
-	return []byte{EmptyString}, nil
-}
-
-func encodeUint64(i uint64) ([]byte, error) {
-	size := bits.Len64(i)/8 + 1
-	if size == 1 {
-		return encodeUint8(uint8(i))
-	}
-	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, uint64(i))
-	return encodeString(b[8-size:])
-}
-
-func encodeLength(n, offset int) []byte {
-	// > if a string is 0-55 bytes long, the RLP encoding consists of a single byte with value 0x80 plus
-	// > the length of the string followed by the string.
-	if n <= 55 {
-		return []uint8{uint8(n + offset)}
-	}
-
-	i := uint64(n)
-	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, i)
-	size := bits.Len64(i)/8 + 1
-	// > If a string is more than 55 bytes long, the RLP encoding consists of a single byte with value 0xb7
-	// > plus the length in bytes of the length of the string in binary form, followed by the length of the string,
-	// > followed by the string
-	return append([]byte{uint8(0xb7 + size)}, b[8-size:]...)
-}
-
-func encodeString(input []byte) ([]byte, error) {
-	if len(input) == 0 {
-		return []byte{EmptyString}, nil
-	} else if len(input) == 1 {
-		return encodeUint8(input[0])
-	} else {
-		return append(encodeLength(len(input), EmptyString), []byte(input)...), nil
-	}
-}
-
-func encodeList(val reflect.Value) ([]byte, error) {
-	if val.Len() == 0 {
-		return []byte{EmptySlice}, nil
-	}
-
-	out := make([][]byte, 0)
-	for i := 0; i < val.Len(); i++ {
-		data, err := encode(val.Index(i).Interface())
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, data)
-	}
-
-	sum := bytes.Join(out, []byte{})
-	return append(encodeLength(len(sum), EmptySlice), sum...), nil
-}
-
-func encodeStruct(val reflect.Value) ([]byte, error) {
-	out := make([][]byte, 0)
-
-	for i := 0; i < val.NumField(); i++ {
-		data, err := encode(val.Field(i).Interface())
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, data)
-	}
-	sum := bytes.Join(out, []byte{})
-	return append(encodeLength(len(sum), EmptySlice), sum...), nil
-}
-
-func encode(input interface{}) ([]byte, error) {
-	val := reflect.ValueOf(input)
-	typ := reflect.TypeOf(input)
-
-	switch val.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		i := val.Int()
-		if i < 0 {
-			return nil, fmt.Errorf("cannot rlp encode negative integer")
-		}
-		return encodeUint64(uint64(i))
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return encodeUint64(val.Uint())
-	case reflect.Bool:
-		if val.Bool() {
-			return []byte{0x01}, nil
-		}
-		return []byte{EmptyString}, nil
-	case reflect.String:
-		return encodeString([]byte(reflect.ValueOf(input).String()))
-	case reflect.Slice:
-		switch typ.Elem().Kind() {
-		case reflect.Uint8:
-			return encodeString(reflect.ValueOf(input).Bytes())
-		default:
-			return encodeList(val)
-		}
-	case reflect.Struct:
-		return encodeStruct(val)
-	default:
-		return []byte{EmptyString}, nil
-	}
-}
-
 func Encode(input interface{}) ([]byte, error) {
-	return encode(input)
-}
-
-type fields struct {
-	fields [][]byte
-}
-
-func (f *fields) add(element []byte) {
-	f.fields = append(f.fields, element)
-}
-
-func decode(in []byte, out *fields) error {
-	if len(in) == 0 {
-		return nil
+	val := reflect.ValueOf(input)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
 	}
-
-	offset, length, typ, err := decodeLength(in)
-	if err != nil {
-		return err
-	}
-
-	switch typ {
-	case reflect.String:
-		out.add(in[offset:length])
-	case reflect.Slice:
-		err = decode(in[offset:length], out)
-		if err != nil {
-			return err
-		}
-	}
-
-	return decode(in[length:], out)
-}
-
-func decodeLength(input []byte) (uint8, uint8, reflect.Kind, error) {
-	length := len(input)
-
-	if length == 0 {
-		return 0, 0, reflect.Invalid, ErrNoInput
-	}
-
-	prefix := input[0]
-
-	if prefix <= 0x7f {
-		// single byte
-		return 0, 1, reflect.String, nil
-
-	} else if length > int(prefix-0x80) && prefix <= 0xb7 {
-		// short string
-		strLen := prefix - 0x80
-		if strLen == 1 && uint8(input[1]) <= 0x7f {
-			return 0, 0, reflect.Invalid, fmt.Errorf("single byte below 128 must be encoded as itself")
-		}
-		return 1, strLen + 1, reflect.String, nil
-
-	} else if length > int(prefix-0xb7) && prefix <= 0xbf {
-		// long string
-		next, err := getLength(input[1 : (prefix-0xb7)+1])
-		if err != nil {
-			return 0, 0, reflect.Invalid, err
-		} else if length > int(prefix-0xb7+next) {
-			lenOfStrLen := prefix - 0xb7
-			if input[1] == 0 {
-				return 0, 0, reflect.Invalid, fmt.Errorf("multi-byte length must have no leading zero")
-			}
-			strLen, err := getLength(input[1 : lenOfStrLen+1])
-			if err != nil {
-				return 0, 0, reflect.Invalid, err
-			} else if strLen < 56 {
-				return 0, 0, reflect.Invalid, fmt.Errorf("length below 56 must be encoded in one byte")
-			}
-			return lenOfStrLen + 1, lenOfStrLen + strLen, reflect.String, nil
-		}
-
-	} else if length > int(prefix-0xc0) && prefix <= 0xf7 {
-		// short list
-		lenOfList := prefix - 0xc0
-		return 1, lenOfList + 1, reflect.Slice, nil
-
-	} else if prefix <= 0xff && length > int(prefix-0xf7) {
-		// long list
-		lenOfListLen := (prefix - 0xf7) + 1
-		next, err := getLength(input[1:lenOfListLen])
-		if err != nil {
-			return 0, 0, reflect.Invalid, err
-		} else if length > int(prefix-0xf7+next) {
-			if input[1] == 0 {
-				return 0, 0, reflect.Invalid, fmt.Errorf("multi-byte length must have no leading zero")
-			}
-			listLen, err := getLength(input[1:lenOfListLen])
-			if err != nil {
-				return 0, 0, reflect.Invalid, err
-			} else if listLen < 56 {
-				return 0, 0, reflect.Invalid, fmt.Errorf("length below 56 must be encoded in one byte")
-			}
-			return lenOfListLen, lenOfListLen + listLen, reflect.Slice, nil
-		}
-	}
-
-	return 0, 0, reflect.Invalid, ErrInvalid
-}
-
-func getLength(data []byte) (uint8, error) {
-	length := len(data)
-	if length == 0 {
-		return 0, ErrNoInput
-	} else if length == 1 {
-		return uint8(data[0]), nil
-	} else {
-		next, err := getLength(data[0 : len(data)-1])
-		return uint8(data[len(data)-1]) + next, err
-	}
-}
-
-func decodeStruct(in reflect.Value, fields [][]byte) error {
-	if in.NumField() != len(fields) {
-		return fmt.Errorf("wrong number of fields; have %d, want %d", len(fields), in.NumField())
-	}
-	for i := 0; i < in.NumField(); i++ {
-		val := in.Field(i)
-		typ := in.Field(i).Type()
-		switch val.Kind() {
-		case reflect.String:
-			val.SetString(string(fields[i]))
-		case reflect.Uint64:
-			out := make([]byte, 8)
-			for j := range fields[i] {
-				out[len(out)-(len(fields[i])-j)] = fields[i][j]
-			}
-			val.SetUint(binary.BigEndian.Uint64(out))
-		case reflect.Slice:
-			if typ.Elem().Kind() != reflect.Uint8 {
-				continue
-			}
-			out := make([]byte, len(fields[i]))
-			for i, b := range fields[i] {
-				out[i] = b
-			}
-			val.SetBytes(out)
-		}
-	}
-	return nil
+	return encode(val)
 }
 
 func Decode(src []byte, dst interface{}) error {
-	dec := new(fields)
-	err := decode(src, dec)
+	fields, err := decode(src)
 	if err != nil {
 		return err
 	}
@@ -315,27 +73,273 @@ func Decode(src []byte, dst interface{}) error {
 			if !ok {
 				return fmt.Errorf("cannot decode into type %s", val.Type())
 			}
-			found := bytes.Join(dec.fields, []byte(""))
+			found := bytes.Join(fields, []byte(""))
 			if len(out) < len(found) {
 				return fmt.Errorf("cannot decode %d bytes into slice of size %d", len(found), len(out))
 			}
 			for i, b := range found {
 				out[i] = b
 			}
-			return nil
-		case reflect.Slice:
-			out, ok := dst.([][]byte)
-			if !ok {
-				return fmt.Errorf("cannot decode into type %s", val.Type())
+		default:
+			for i := 0; i < val.Len(); i++ {
+				elem := val.Index(i)
+				err = decodeField(elem, fields[i])
+				if err != nil {
+					return err
+				}
 			}
-			for i := range out {
-				out[i] = dec.fields[i]
-			}
-			return nil
 		}
 	case reflect.Struct:
-		return decodeStruct(val, dec.fields)
+		if val.NumField() != len(fields) {
+			return fmt.Errorf("wrong number of fields; have %d, want %d", len(fields), val.NumField())
+		}
+		for i := 0; i < val.NumField(); i++ {
+			err := decodeField(val.Field(i), fields[i])
+			if err != nil {
+				return err
+			}
+		}
+	default:
+		return fmt.Errorf("cannot decode into unsupported type %v", reflect.TypeOf(dst))
+	}
+	return nil
+}
+
+func encodeUint8(input uint8) ([]byte, error) {
+	if input == 0 {
+		// yes this makes no sense, but it does seem to be what everyone else does, apparently 'no leading zeroes'.
+		// It means we cannot store []byte{0} because that is indistinguishable from byte{}
+		return []byte{uint8(StringOffset)}, nil
+	} else if input <= SmallByte {
+		return []byte{input}, nil
+	} else if input >= uint8(StringOffset) {
+		return []byte{0x81, input}, nil
+	}
+	return []byte{uint8(StringOffset)}, nil
+}
+
+func encodeUint64(i uint64) ([]byte, error) {
+	size := bits.Len64(i)/8 + 1
+	if size == 1 {
+		return encodeUint8(uint8(i))
+	}
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(i))
+	return encodeString(b[8-size:])
+}
+
+func encodeBigInt(b *big.Int) ([]byte, error) {
+	if b.Sign() == -1 {
+		return nil, fmt.Errorf("cannot RLP encode negative number")
+	}
+	if b.IsUint64() {
+		return encodeUint64(b.Uint64())
+	}
+	bs := b.Bytes()
+	length := encodeLength(len(bs), StringOffset)
+	return append(length, bs...), nil
+}
+
+func encodeLength(n int, offset magicOffset) []byte {
+	// > if a string is 0-55 bytes long, the RLP encoding consists of a single byte with value 0x80 plus
+	// > the length of the string followed by the string.
+	if n <= ShortLength {
+		return []uint8{uint8(offset) + uint8(n)}
 	}
 
-	return fmt.Errorf("cannot decode into unsupported type %v", reflect.TypeOf(dst))
+	i := uint64(n)
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, i)
+	byteLengthOfLength := bits.Len64(i)/8 + 1
+	// > If a string is more than 55 bytes long, the RLP encoding consists of a single byte with value 0xb7
+	// > plus the length in bytes of the length of the string in binary form, followed by the length of the string,
+	// > followed by the string
+	return append([]byte{uint8(offset) + ShortLength + uint8(byteLengthOfLength)}, b[8-byteLengthOfLength:]...)
+}
+
+func encodeString(input []byte) ([]byte, error) {
+	if len(input) == 1 && input[0] <= SmallByte {
+		return encodeUint8(input[0])
+	} else {
+		return append(encodeLength(len(input), StringOffset), input...), nil
+	}
+}
+
+func encodeList(val reflect.Value) ([]byte, error) {
+	if val.Len() == 0 {
+		return []byte{uint8(SliceOffset)}, nil
+	}
+
+	out := make([][]byte, 0)
+	for i := 0; i < val.Len(); i++ {
+		data, err := encode(val.Index(i))
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, data)
+	}
+
+	sum := bytes.Join(out, []byte{})
+	return append(encodeLength(len(sum), SliceOffset), sum...), nil
+}
+
+func encodeStruct(val reflect.Value) ([]byte, error) {
+	out := make([][]byte, 0)
+
+	for i := 0; i < val.NumField(); i++ {
+		data, err := encode(val.Field(i))
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, data)
+	}
+	sum := bytes.Join(out, []byte{})
+	length := encodeLength(len(sum), SliceOffset)
+	return append(length, sum...), nil
+}
+
+func encode(val reflect.Value) ([]byte, error) {
+	if val.Kind() == reflect.Interface {
+		val = val.Elem()
+	}
+
+	switch val.Kind() {
+	case reflect.Ptr:
+		if !val.Type().AssignableTo(bigIntType) {
+			return nil, fmt.Errorf("cannot encode pointer type %v", val.Type())
+		}
+		return encodeBigInt(val.Interface().(*big.Int))
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		i := val.Int()
+		if i < 0 {
+			return nil, fmt.Errorf("cannot rlp encode negative integer")
+		}
+		return encodeUint64(uint64(i))
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return encodeUint64(val.Uint())
+	case reflect.Bool:
+		if val.Bool() {
+			return []byte{0x01}, nil
+		}
+		return []byte{uint8(StringOffset)}, nil
+	case reflect.String:
+		return encodeString([]byte(val.String()))
+	case reflect.Slice:
+		switch val.Type().Elem().Kind() {
+		case reflect.Uint8:
+			i, err := encodeString(val.Bytes())
+			return i, err
+		default:
+			return encodeList(val)
+		}
+	case reflect.Struct:
+		return encodeStruct(val)
+	default:
+		return []byte{uint8(StringOffset)}, nil
+	}
+}
+
+// Split into RLP fields by reading length prefixes and consuming chunks
+func decode(in []byte) ([][]byte, error) {
+	if len(in) == 0 {
+		return nil, nil
+	}
+
+	offset, length, typ := decodeLength(in)
+	end := offset + length
+
+	if end > uint64(len(in)) {
+		return nil, fmt.Errorf("read length prefix of %d but there is only %d bytes of unconsumed input",
+			length, uint64(len(in))-offset)
+	}
+
+	suffix, err := decode(in[end:])
+	if err != nil {
+		return nil, err
+	}
+	switch typ {
+	case reflect.String:
+		return append([][]byte{in[offset:end]}, suffix...), nil
+	case reflect.Slice:
+		prefix, err := decode(in[offset:end])
+		if err != nil {
+			return nil, err
+		}
+		return append(prefix, suffix...), nil
+	}
+
+	return suffix, nil
+}
+
+func decodeLength(input []byte) (uint64, uint64, reflect.Kind) {
+	magicByte := magicOffset(input[0])
+
+	switch {
+	case magicByte <= SmallByte:
+		// small byte: sufficiently small single byte
+		return 0, 1, reflect.String
+
+	case magicByte <= StringOffset+ShortLength:
+		// short string: length less than or equal to 55 bytes
+		length := uint64(magicByte - StringOffset)
+		return 1, length, reflect.String
+
+	case magicByte < SliceOffset:
+		// long string: length described by magic = 0xb7 + <byte length of length of string>
+		byteLengthOfLength := magicByte - StringOffset - ShortLength
+		length := getUint64(input[1:byteLengthOfLength])
+		offset := uint64(byteLengthOfLength + 1)
+		return offset, length, reflect.String
+
+	case magicByte <= SliceOffset+ShortLength:
+		// short slice: length less than or equal to 55 bytes
+		length := uint64(magicByte - SliceOffset)
+		return 1, length, reflect.Slice
+
+	// Note this takes us all the way up to <= 255 so this switch is exhaustive
+	default:
+		// long string: length described by magic = 0xf7 + <byte length of length of string>
+		byteLengthOfLength := magicByte - SliceOffset - ShortLength
+		length := getUint64(input[1:byteLengthOfLength])
+		offset := uint64(byteLengthOfLength + 1)
+		return offset, length, reflect.Slice
+	}
+}
+
+func getUint64(bs []byte) uint64 {
+	bs = binary2.LeftPadBytes(bs, 8)
+	return binary.BigEndian.Uint64(bs)
+}
+
+func decodeField(val reflect.Value, field []byte) error {
+	typ := val.Type()
+
+	switch val.Kind() {
+	case reflect.Ptr:
+		if !typ.AssignableTo(bigIntType) {
+			return fmt.Errorf("cannot decode into pointer type %v", typ)
+		}
+		bi := new(big.Int).SetBytes(field)
+		val.Set(reflect.ValueOf(bi))
+
+	case reflect.String:
+		val.SetString(string(field))
+	case reflect.Uint64:
+		out := make([]byte, 8)
+		for j := range field {
+			out[len(out)-(len(field)-j)] = field[j]
+		}
+		val.SetUint(binary.BigEndian.Uint64(out))
+	case reflect.Slice:
+		if typ.Elem().Kind() != reflect.Uint8 {
+			// skip
+			return nil
+		}
+		out := make([]byte, len(field))
+		for i, b := range field {
+			out[i] = b
+		}
+		val.SetBytes(out)
+	}
+	return nil
 }

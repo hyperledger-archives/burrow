@@ -53,8 +53,6 @@ func (m *MockSource) Recv() (*Dump, error) {
 		if m.Accounts%2 > 0 {
 			row.Account.EVMCode = make([]byte, m.rand.Intn(10000))
 			m.rand.Read(row.Account.EVMCode)
-		} else {
-			row.Account.PublicKey = crypto.PublicKey{}
 		}
 		m.Accounts--
 		if m.MaxStorage > 0 {

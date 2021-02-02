@@ -28,7 +28,7 @@ func (tx *BondTx) String() string {
 	return fmt.Sprintf("BondTx{%v}", tx.Input)
 }
 
-func (tx *BondTx) AddInput(st acmstate.AccountGetter, pubkey crypto.PublicKey, amt uint64) error {
+func (tx *BondTx) AddInput(st acmstate.AccountGetter, pubkey *crypto.PublicKey, amt uint64) error {
 	addr := pubkey.GetAddress()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
@@ -40,7 +40,7 @@ func (tx *BondTx) AddInput(st acmstate.AccountGetter, pubkey crypto.PublicKey, a
 	return tx.AddInputWithSequence(pubkey, amt, acc.Sequence+uint64(1))
 }
 
-func (tx *BondTx) AddInputWithSequence(pubkey crypto.PublicKey, amt uint64, sequence uint64) error {
+func (tx *BondTx) AddInputWithSequence(pubkey *crypto.PublicKey, amt uint64, sequence uint64) error {
 	tx.Input = &TxInput{
 		Address:  pubkey.GetAddress(),
 		Amount:   amt,

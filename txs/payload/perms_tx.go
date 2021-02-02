@@ -8,7 +8,7 @@ import (
 	"github.com/hyperledger/burrow/permission"
 )
 
-func NewPermsTx(st acmstate.AccountGetter, from crypto.PublicKey, args permission.PermArgs) (*PermsTx, error) {
+func NewPermsTx(st acmstate.AccountGetter, from *crypto.PublicKey, args permission.PermArgs) (*PermsTx, error) {
 	addr := from.GetAddress()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
@@ -22,7 +22,7 @@ func NewPermsTx(st acmstate.AccountGetter, from crypto.PublicKey, args permissio
 	return NewPermsTxWithSequence(from, args, sequence), nil
 }
 
-func NewPermsTxWithSequence(from crypto.PublicKey, args permission.PermArgs, sequence uint64) *PermsTx {
+func NewPermsTxWithSequence(from *crypto.PublicKey, args permission.PermArgs, sequence uint64) *PermsTx {
 	input := &TxInput{
 		Address:  from.GetAddress(),
 		Amount:   1, // NOTE: amounts can't be 0 ...

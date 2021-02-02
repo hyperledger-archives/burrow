@@ -69,7 +69,7 @@ func (ta TemplateAccount) GenesisAccount(keyClient keys.KeyClient, index int, cu
 
 // Adds a public key and address to the template. If PublicKey will try to fetch it by Address.
 // If both PublicKey and Address are not set will use the keyClient to generate a new keypair
-func (ta TemplateAccount) RealisePublicKeyAndAddress(keyClient keys.KeyClient, curve crypto.CurveType) (pubKey crypto.PublicKey, address crypto.Address, err error) {
+func (ta TemplateAccount) RealisePublicKeyAndAddress(keyClient keys.KeyClient, curve crypto.CurveType) (pubKey *crypto.PublicKey, address crypto.Address, err error) {
 	if ta.PublicKey == nil {
 		if ta.Address == nil {
 			// If neither PublicKey or Address set then generate a new one
@@ -91,7 +91,7 @@ func (ta TemplateAccount) RealisePublicKeyAndAddress(keyClient keys.KeyClient, c
 			err = fmt.Errorf("template address %s does not match public key derived address %s", ta.Address,
 				ta.PublicKey)
 		}
-		pubKey = *ta.PublicKey
+		pubKey = ta.PublicKey
 	}
 	return
 }

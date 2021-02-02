@@ -16,10 +16,10 @@ type Addressable interface {
 	// Get the 20 byte EVM address of this account
 	GetAddress() Address
 	// Public key from which the Address is derived
-	GetPublicKey() PublicKey
+	GetPublicKey() *PublicKey
 }
 
-func NewAddressable(publicKey PublicKey) Addressable {
+func NewAddressable(publicKey *PublicKey) Addressable {
 	return &memoizedAddressable{
 		address:   publicKey.GetAddress(),
 		publicKey: publicKey,
@@ -27,11 +27,11 @@ func NewAddressable(publicKey PublicKey) Addressable {
 }
 
 type memoizedAddressable struct {
-	publicKey PublicKey
+	publicKey *PublicKey
 	address   Address
 }
 
-func (a *memoizedAddressable) GetPublicKey() PublicKey {
+func (a *memoizedAddressable) GetPublicKey() *PublicKey {
 	return a.publicKey
 }
 

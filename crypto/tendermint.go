@@ -9,16 +9,15 @@ import (
 	tmSecp256k1 "github.com/tendermint/tendermint/crypto/secp256k1"
 )
 
-func PublicKeyFromTendermintPubKey(pubKey tmCrypto.PubKey) (PublicKey, error) {
+func PublicKeyFromTendermintPubKey(pubKey tmCrypto.PubKey) (*PublicKey, error) {
 	switch pk := pubKey.(type) {
 	case tmEd25519.PubKey:
 		return PublicKeyFromBytes(pk[:], CurveTypeEd25519)
 	case tmSecp256k1.PubKey:
 		return PublicKeyFromBytes(pk[:], CurveTypeSecp256k1)
 	default:
-		return PublicKey{}, fmt.Errorf("unrecognised tendermint public key type: %v", pk)
+		return nil, fmt.Errorf("unrecognised tendermint public key type: %v", pk)
 	}
-
 }
 
 // PublicKey extensions

@@ -63,7 +63,7 @@ func (vc *Ring) GetPower(id crypto.Address) *big.Int {
 	return vc.Head().Previous.GetPower(id)
 }
 
-func (vc *Ring) SetPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
+func (vc *Ring) SetPower(id *crypto.PublicKey, power *big.Int) (*big.Int, error) {
 	return vc.Head().SetPower(id, power)
 }
 

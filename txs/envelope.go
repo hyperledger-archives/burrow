@@ -50,7 +50,7 @@ func (s *Signatory) RealisePublicKey(getter acmstate.AccountGetter) error {
 			return fmt.Errorf("%s: could not get account %v: %v", errPrefix, *s.Address, err)
 		}
 		publicKey := acc.PublicKey
-		s.PublicKey = &publicKey
+		s.PublicKey = publicKey
 	}
 	if !s.PublicKey.IsValid() {
 		return fmt.Errorf("%s: public key %v is invalid", errPrefix, *s.PublicKey)
@@ -154,7 +154,7 @@ func (txEnv *Envelope) Sign(signingAccounts ...acm.AddressableSigner) error {
 		publicKey := sa.GetPublicKey()
 		txEnv.Signatories = append(txEnv.Signatories, Signatory{
 			Address:   &address,
-			PublicKey: &publicKey,
+			PublicKey: publicKey,
 			Signature: sig,
 		})
 	}

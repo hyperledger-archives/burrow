@@ -15,7 +15,7 @@ import (
 
 type NodeView struct {
 	tmNode    *Node
-	publicKey crypto.PublicKey
+	publicKey *crypto.PublicKey
 	txDecoder txs.Decoder
 	runID     simpleuuid.UUID
 }
@@ -38,9 +38,9 @@ func NewNodeView(tmNode *Node, txDecoder txs.Decoder, runID simpleuuid.UUID) (*N
 	}, nil
 }
 
-func (nv *NodeView) ValidatorPublicKey() crypto.PublicKey {
+func (nv *NodeView) ValidatorPublicKey() *crypto.PublicKey {
 	if nv == nil {
-		return crypto.PublicKey{}
+		return nil
 	}
 	return nv.publicKey
 }

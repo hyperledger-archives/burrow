@@ -19,10 +19,10 @@ func TestPublicKeySerialisation(t *testing.T) {
 		0xfe, 0x6c, 0xb1, 0x9f, 0x6, 0x42, 0xe8, 0xa5, 0x98, 0x98,
 	}
 	assert.Equal(t, expectedAddress, pub.GetAddress())
-	bs, err := proto.Marshal(&pub)
+	bs, err := proto.Marshal(pub)
 	require.NoError(t, err)
-	var pubOut PublicKey
-	err = proto.Unmarshal(bs, &pubOut)
+	pubOut := new(PublicKey)
+	err = proto.Unmarshal(bs, pubOut)
 	require.NoError(t, err)
 	assert.Equal(t, pub, pubOut)
 
@@ -32,31 +32,6 @@ func TestPublicKeySerialisation(t *testing.T) {
 		string(bs))
 }
 
-func TestPublicKey_EncodeFixedWidth(t *testing.T) {
-	privEd25519 := PrivateKeyFromSecret("foo1", CurveTypeEd25519)
-	assertFixedWidthEncodeRoundTrip(t, privEd25519.GetPublicKey())
-
-	privSecp256k1 := PrivateKeyFromSecret("foo2", CurveTypeSecp256k1)
-	assertFixedWidthEncodeRoundTrip(t, privSecp256k1.GetPublicKey())
-
-	privUnset := PrivateKeyFromSecret("foo3", CurveTypeUnset)
-	assertFixedWidthEncodeRoundTrip(t, privUnset.GetPublicKey())
-
-	// Unknown CurveType
-	privUnset.CurveType = CurveType(5)
-	bs := privUnset.GetPublicKey().EncodeFixedWidth()
-	_, err := DecodePublicKeyFixedWidth(bs)
-	assert.Error(t, err, "should not decode unset")
-}
-
-func assertFixedWidthEncodeRoundTrip(t *testing.T, p PublicKey) {
-	bs := p.EncodeFixedWidth()
-	assert.Len(t, bs, PublicKeyFixedWidthEncodingLength)
-	pOut, err := DecodePublicKeyFixedWidth(bs)
-	require.NoError(t, err)
-	assert.Equal(t, p, pOut)
-}
-
 func TestGetAddress(t *testing.T) {
 	privBytes := hex.MustDecodeString(`35622dddb842c9191ca8c2ca2a2b35a6aac90362d095b32f29d8e8abd63d55a5`)
 	privKey, err := PrivateKeyFromRawBytes(privBytes, CurveTypeSecp256k1)
@@ -64,7 +39,7 @@ func TestGetAddress(t *testing.T) {
 	require.Equal(t, "F97798DF751DEB4B6E39D4CF998EE7CD4DCB9ACC", privKey.GetPublicKey().GetAddress().String())
 
 	_, pub := btcec.PrivKeyFromBytes(btcec.S256(), privBytes)
-	pubKey, err := PublicKeyFromBytes(pub.SerializeCompressed(), CurveTypeSecp256k1)
+	pubKey, err := PublicKeyFromBytes(pub.SerializeUncompressed(), CurveTypeSecp256k1)
 	require.NoError(t, err)
 
 	require.Equal(t, "F97798DF751DEB4B6E39D4CF998EE7CD4DCB9ACC", pubKey.GetAddress().String())

@@ -18,6 +18,6 @@ option (gogoproto.messagename_all) = true;
 message Validator {
     option (gogoproto.goproto_stringer) = false;
     bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address"];
-    crypto.PublicKey PublicKey = 2 [(gogoproto.nullable) = false];
+    crypto.PublicKey PublicKey = 2;
     uint64 Power = 3;
 }

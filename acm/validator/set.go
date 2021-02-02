@@ -44,12 +44,12 @@ func NewTrimSet() *Set {
 }
 
 // Implements Writer, but will never error
-func (vs *Set) SetPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
+func (vs *Set) SetPower(id *crypto.PublicKey, power *big.Int) (*big.Int, error) {
 	return vs.ChangePower(id, power), nil
 }
 
 // Add the power of a validator and returns the flow into that validator
-func (vs *Set) ChangePower(id crypto.PublicKey, power *big.Int) *big.Int {
+func (vs *Set) ChangePower(id *crypto.PublicKey, power *big.Int) *big.Int {
 	address := id.GetAddress()
 	// Calculate flow into this validator (positive means in, negative means out)
 	flow := vs.Flow(id, power)
@@ -78,7 +78,7 @@ func (vs *Set) MaxFlow() *big.Int {
 }
 
 // Returns the flow that would be induced by a validator power change
-func (vs *Set) Flow(id crypto.PublicKey, power *big.Int) *big.Int {
+func (vs *Set) Flow(id *crypto.PublicKey, power *big.Int) *big.Int {
 	return new(big.Int).Sub(power, vs.GetPower(id.GetAddress()))
 }
 

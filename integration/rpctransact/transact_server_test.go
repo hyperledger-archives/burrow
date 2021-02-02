@@ -42,7 +42,7 @@ func TestTransactServer(t *testing.T) {
 		require.NoError(t, err)
 
 		// Account PublicKey should be initially unset
-		assert.False(t, acc.PublicKey.IsSet())
+		assert.False(t, acc.GetPublicKey().IsSet())
 
 		// Sign with this account - should set public key
 		_, err = rpctest.CreateContract(tcli, input.GetAddress(), solidity.Bytecode_StrangeLoop, nil)

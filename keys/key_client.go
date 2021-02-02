@@ -19,7 +19,7 @@ type KeyClient interface {
 	Sign(signAddress crypto.Address, message []byte) (*crypto.Signature, error)
 
 	// PublicKey returns the public key associated with a given address
-	PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error)
+	PublicKey(address crypto.Address) (publicKey *crypto.PublicKey, err error)
 
 	// Generate requests that a key be generate within the keys instance and returns the address
 	Generate(keyName string, keyType crypto.CurveType) (keyAddress crypto.Address, err error)
@@ -53,14 +53,14 @@ func (l *localKeyClient) Sign(signAddress crypto.Address, message []byte) (*cryp
 	return resp.GetSignature(), nil
 }
 
-func (l *localKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
+func (l *localKeyClient) PublicKey(address crypto.Address) (publicKey *crypto.PublicKey, err error) {
 	resp, err := l.ks.PublicKey(context.Background(), &PubRequest{Address: address.String()})
 	if err != nil {
-		return crypto.PublicKey{}, err
+		return nil, err
 	}
 	curveType, err := crypto.CurveTypeFromString(resp.GetCurveType())
 	if err != nil {
-		return crypto.PublicKey{}, err
+		return nil, err
 	}
 	return crypto.PublicKeyFromBytes(resp.GetPublicKey(), curveType)
 }
@@ -101,7 +101,7 @@ func (l *remoteKeyClient) Sign(signAddress crypto.Address, message []byte) (*cry
 	return resp.GetSignature(), nil
 }
 
-func (l *remoteKeyClient) PublicKey(address crypto.Address) (publicKey crypto.PublicKey, err error) {
+func (l *remoteKeyClient) PublicKey(address crypto.Address) (publicKey *crypto.PublicKey, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	req := PubRequest{Address: address.String()}
@@ -109,11 +109,11 @@ func (l *remoteKeyClient) PublicKey(address crypto.Address) (publicKey crypto.Pu
 	resp, err := l.kc.PublicKey(ctx, &req)
 	if err != nil {
 		l.logger.TraceMsg("Received PublicKey error response: ", err)
-		return crypto.PublicKey{}, err
+		return nil, err
 	}
 	curveType, err := crypto.CurveTypeFromString(resp.GetCurveType())
 	if err != nil {
-		return crypto.PublicKey{}, err
+		return nil, err
 	}
 	l.logger.TraceMsg("Received PublicKey response to remote key server: ", fmt.Sprintf("%v", resp))
 	return crypto.PublicKeyFromBytes(resp.GetPublicKey(), curveType)
@@ -182,7 +182,7 @@ func NewLocalKeyClient(ks KeyStore, logger *logging.Logger) KeyClient {
 type Signer struct {
 	keyClient KeyClient
 	address   crypto.Address
-	publicKey crypto.PublicKey
+	publicKey *crypto.PublicKey
 }
 
 // AddressableSigner creates a signer that assumes the address holds an Ed25519 key
@@ -203,7 +203,7 @@ func (ms *Signer) GetAddress() crypto.Address {
 	return ms.address
 }
 
-func (ms *Signer) GetPublicKey() crypto.PublicKey {
+func (ms *Signer) GetPublicKey() *crypto.PublicKey {
 	return ms.publicKey
 }
 

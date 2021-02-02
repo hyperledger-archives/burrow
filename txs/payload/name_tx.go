@@ -7,7 +7,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 )
 
-func NewNameTx(st acmstate.AccountGetter, from crypto.PublicKey, name, data string, amt, fee uint64) (*NameTx, error) {
+func NewNameTx(st acmstate.AccountGetter, from *crypto.PublicKey, name, data string, amt, fee uint64) (*NameTx, error) {
 	addr := from.GetAddress()
 	acc, err := st.GetAccount(addr)
 	if err != nil {
@@ -21,7 +21,7 @@ func NewNameTx(st acmstate.AccountGetter, from crypto.PublicKey, name, data stri
 	return NewNameTxWithSequence(from, name, data, amt, fee, sequence), nil
 }
 
-func NewNameTxWithSequence(from crypto.PublicKey, name, data string, amt, fee, sequence uint64) *NameTx {
+func NewNameTxWithSequence(from *crypto.PublicKey, name, data string, amt, fee, sequence uint64) *NameTx {
 	input := &TxInput{
 		Address:  from.GetAddress(),
 		Amount:   amt,

@@ -85,6 +85,6 @@ func pow(p int) *big.Int {
 	return big.NewInt(int64(p))
 }
 
-func pub(secret interface{}) crypto.PublicKey {
+func pub(secret interface{}) *crypto.PublicKey {
 	return acm.NewAccountFromSecret(fmt.Sprintf("%v", secret)).PublicKey
 }

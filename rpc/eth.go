@@ -7,6 +7,8 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/hyperledger/burrow/encoding/rlp"
+
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/acm/validator"
@@ -14,7 +16,6 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
 	x "github.com/hyperledger/burrow/encoding/hex"
-	"github.com/hyperledger/burrow/encoding/rlp"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/state"
@@ -29,7 +30,6 @@ import (
 )
 
 const (
-	chainID      = 1
 	maxGasLimit  = 2<<52 - 1
 	hexZero      = "0x0"
 	hexZeroNonce = "0x0000000000000000"
@@ -51,11 +51,16 @@ type EthService struct {
 }
 
 // NewEthService returns our web3 provider
-func NewEthService(accounts acmstate.IterableStatsReader,
-	events EventsReader, blockchain bcm.BlockchainInfo,
-	validators validator.History, nodeView *tendermint.NodeView,
-	trans *execution.Transactor, keyStore *keys.FilesystemKeyStore,
-	logger *logging.Logger) *EthService {
+func NewEthService(
+	accounts acmstate.IterableStatsReader,
+	events EventsReader,
+	blockchain bcm.BlockchainInfo,
+	validators validator.History,
+	nodeView *tendermint.NodeView,
+	trans *execution.Transactor,
+	keyStore *keys.FilesystemKeyStore,
+	logger *logging.Logger,
+) *EthService {
 
 	keyClient := keys.NewLocalKeyClient(keyStore, logger)
 
@@ -119,7 +124,7 @@ func (srv *EthService) NetPeerCount() (*web3.NetPeerCountResult, error) {
 // this is typically a small int (where 1 == Ethereum mainnet)
 func (srv *EthService) NetVersion() (*web3.NetVersionResult, error) {
 	return &web3.NetVersionResult{
-		ChainID: x.EncodeNumber(uint64(chainID)),
+		ChainID: crypto.GetEthChainID(srv.blockchain.ChainID()).String(),
 	}, nil
 }
 
@@ -548,19 +553,6 @@ func (srv *EthService) EthGasPrice() (*web3.EthGasPriceResult, error) {
 	}, nil
 }
 
-type RawTx struct {
-	Nonce    uint64 `json:"nonce"`
-	GasPrice uint64 `json:"gasPrice"`
-	GasLimit uint64 `json:"gasLimit"`
-	To       []byte `json:"to"`
-	Value    []byte `json:"value"`
-	Data     []byte `json:"data"`
-
-	V uint64 `json:"v"`
-	R []byte `json:"r"`
-	S []byte `json:"s"`
-}
-
 func (srv *EthService) EthGetRawTransactionByHash(req *web3.EthGetRawTransactionByHashParams) (*web3.EthGetRawTransactionByHashResult, error) {
 	// TODO
 	return nil, web3.ErrNotFound
@@ -582,42 +574,31 @@ func (srv *EthService) EthSendRawTransaction(req *web3.EthSendRawTransactionPara
 		return nil, err
 	}
 
-	rawTx := new(RawTx)
+	rawTx := new(txs.EthRawTx)
 	err = rlp.Decode(data, rawTx)
 	if err != nil {
 		return nil, err
 	}
 
-	net := uint64(chainID)
-	enc, err := txs.RLPEncode(rawTx.Nonce, rawTx.GasPrice, rawTx.GasLimit, rawTx.To, rawTx.Value, rawTx.Data)
+	publicKey, signature, err := rawTx.RecoverPublicKey()
 	if err != nil {
 		return nil, err
 	}
 
-	sig := crypto.CompressedSignatureFromParams(rawTx.V-net-8-1, rawTx.R, rawTx.S)
-	pub, err := crypto.PublicKeyFromSignature(sig, crypto.Keccak256(enc))
-	if err != nil {
-		return nil, err
-	}
-	from := pub.GetAddress()
-	unc := crypto.UncompressedSignatureFromParams(rawTx.R, rawTx.S)
-	signature, err := crypto.SignatureFromBytes(unc, crypto.CurveTypeSecp256k1)
-	if err != nil {
-		return nil, err
-	}
+	from := publicKey.GetAddress()
 
 	to, err := crypto.AddressFromBytes(rawTx.To)
 	if err != nil {
 		return nil, err
 	}
 
-	amount := balance.WeiToNative(rawTx.Value).Uint64()
+	amount := balance.WeiToNative(rawTx.Amount).Uint64()
 
 	txEnv := &txs.Envelope{
 		Signatories: []txs.Signatory{
 			{
 				Address:   &from,
-				PublicKey: pub,
+				PublicKey: publicKey,
 				Signature: signature,
 			},
 		},
@@ -630,7 +611,7 @@ func (srv *EthService) EthSendRawTransaction(req *web3.EthSendRawTransactionPara
 					Amount:  amount,
 					// first tx sequence should be 1,
 					// but metamask starts at 0
-					Sequence: rawTx.Nonce + 1,
+					Sequence: rawTx.Sequence + 1,
 				},
 				Address:  &to,
 				GasLimit: rawTx.GasLimit,

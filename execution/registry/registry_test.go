@@ -14,7 +14,7 @@ func TestEncodeProtobuf(t *testing.T) {
 	entry := &NodeIdentity{
 		Moniker:          "test",
 		TendermintNodeID: crypto.Address{},
-		ValidatorPublicKey: crypto.PublicKey{
+		ValidatorPublicKey: &crypto.PublicKey{
 			CurveType: crypto.CurveTypeEd25519,
 			PublicKey: binary.HexBytes{1, 2, 3, 4, 5},
 		},

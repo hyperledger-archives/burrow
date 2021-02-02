@@ -137,7 +137,6 @@ func NativeToWei(n uint64) *big.Int {
 	return new(big.Int).Mul(x, eth)
 }
 
-func WeiToNative(n []byte) *big.Int {
-	x := new(big.Int).SetBytes(n)
+func WeiToNative(x *big.Int) *big.Int {
 	return new(big.Int).Div(x, eth)
 }
