@@ -181,10 +181,12 @@ func (ctx *context) ResolveFunc(module, field string) lifeExec.FunctionImport {
 			dataPtr := int(uint32(vm.GetCurrentFrame().Locals[1]))
 
 			key := bin.Word256{}
+			value := make([]byte, 32)
 
 			copy(key[:], vm.Memory[keyPtr:keyPtr+32])
+			copy(value, vm.Memory[dataPtr:dataPtr+32])
 
-			err := ctx.state.SetStorage(ctx.params.Callee, key, vm.Memory[dataPtr:dataPtr+32])
+			err := ctx.state.SetStorage(ctx.params.Callee, key, value)
 			if err != nil {
 				panic(err)
 			}
