@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/hyperledger/burrow/execution/errors"
@@ -141,10 +140,15 @@ func CallFromSite(st State, dispatcher Dispatcher, site CallParams, target CallP
 		target.Callee = site.Callee
 
 	default:
-		panic(fmt.Errorf("switch statement should be exhaustive so this should not have been reached"))
+		// Switch should be exhaustive so we should reach this
+		panic("invalid call type")
 	}
 
-	returnData, err := dispatcher.Dispatch(acc).Call(childState, target)
+	dispatch := dispatcher.Dispatch(acc)
+	if dispatch == nil {
+		return nil, errors.Errorf(errors.Codes.NotCallable, "cannot call: %v", acc.Address)
+	}
+	returnData, err := dispatch.Call(childState, target)
 
 	if err == nil {
 		// Sync error is a hard stop

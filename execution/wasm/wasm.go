@@ -31,7 +31,7 @@ func New(options engine.Options) *WVM {
 		options:  defaults.CompleteOptions(options),
 		vmConfig: DefaultVMConfig,
 	}
-	vm.externalDispatcher = engine.Dispatchers{&vm.Externals, vm}
+	vm.externalDispatcher = engine.Dispatchers{&vm.Externals, options.Natives, vm}
 	return vm
 }
 

@@ -37,7 +37,7 @@ func New(options engine.Options) *EVM {
 		options: options,
 	}
 	vm.logger = options.Logger.WithScope("NewVM").With("evm_nonce", options.Nonce)
-	vm.externalDispatcher = engine.Dispatchers{&vm.Externals, vm}
+	vm.externalDispatcher = engine.Dispatchers{&vm.Externals, options.Natives, vm}
 	return vm
 }
 
@@ -81,7 +81,8 @@ func (vm *EVM) SetLogger(logger *logging.Logger) {
 }
 
 func (vm *EVM) Dispatch(acc *acm.Account) engine.Callable {
-	if len(acc.EVMCode) == 0 {
+	// Let the EVM handle code-less (e.g. those created by a call) contracts (so only return nil if there is _other_ non-EVM code)
+	if len(acc.EVMCode) == 0 && len(acc.Code()) != 0 {
 		return nil
 	}
 	return vm.Contract(acc.EVMCode)

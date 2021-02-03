@@ -32,6 +32,9 @@ var _ ExternalDispatcher = (*Externals)(nil)
 
 func (ed *Externals) Dispatch(acc *acm.Account) Callable {
 	// Try external calls then fallback to EVM
+	if ed.externals == nil {
+		return nil
+	}
 	return ed.externals.Dispatch(acc)
 }
 

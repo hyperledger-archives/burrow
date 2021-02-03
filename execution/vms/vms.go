@@ -17,7 +17,7 @@ func NewConnectedVirtualMachines(options engine.Options) *VirtualMachines {
 	evm := evm.New(options)
 	wvm := wasm.New(options)
 	// Allow the virtual machines to call each other
-	engine.Connect(evm, wvm, options.Natives)
+	engine.Connect(evm, wvm)
 	return &VirtualMachines{
 		EVM: evm,
 		WVM: wvm,

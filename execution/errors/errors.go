@@ -64,6 +64,7 @@ var Codes = codes{
 	UnresolvedSymbols:      code("code has unresolved symbols"),
 	InvalidContractCode:    code("contract being created with unexpected code"),
 	NonExistentAccount:     code("account does not exist"),
+	NotCallable:            code("cannot dispatch call"),
 }
 
 func init() {
