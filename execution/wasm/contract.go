@@ -94,13 +94,14 @@ func (ctx *context) ResolveFunc(module, field string) lifeExec.FunctionImport {
 			value := bin.BigIntFromLittleEndianBytes(vm.Memory[valuePtr : valuePtr+ValueByteSize])
 
 			var err error
-			ctx.returnData, err = engine.CallFromSite(ctx.state, ctx.vm, ctx.params, engine.CallParams{
-				CallType: exec.CallTypeCall,
-				Callee:   target,
-				Input:    vm.Memory[dataPtr : dataPtr+dataLen],
-				Value:    *value,
-				Gas:      gasLimit,
-			})
+			ctx.returnData, err = engine.CallFromSite(ctx.state, ctx.vm.externalDispatcher, ctx.params,
+				engine.CallParams{
+					CallType: exec.CallTypeCall,
+					Callee:   target,
+					Input:    vm.Memory[dataPtr : dataPtr+dataLen],
+					Value:    *value,
+					Gas:      gasLimit,
+				})
 
 			// Refund any remaining gas to be used on subsequent calls
 			ctx.params.Gas.Add(ctx.params.Gas, gasLimit)

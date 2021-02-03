@@ -8,8 +8,8 @@ import (
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
+	"github.com/hyperledger/burrow/execution/defaults"
 	"github.com/hyperledger/burrow/execution/engine"
-	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/native"
 	"github.com/hyperledger/burrow/logging"
@@ -22,51 +22,27 @@ const (
 )
 
 type EVM struct {
-	options  Options
+	options  engine.Options
 	sequence uint64
 	// Provide any foreign dispatchers to allow calls between VMs
 	engine.Externals
+	externalDispatcher engine.Dispatcher
 	// User dispatcher.CallableProvider to get access to other VMs
 	logger *logging.Logger
 }
 
-// Options are parameters that are generally stable across a burrow configuration.
-// Defaults will be used for any zero values.
-type Options struct {
-	MemoryProvider           func(errors.Sink) engine.Memory
-	Natives                  *native.Natives
-	Nonce                    []byte
-	DebugOpcodes             bool
-	DumpTokens               bool
-	CallStackMaxDepth        uint64
-	DataStackInitialCapacity uint64
-	DataStackMaxDepth        uint64
-	Logger                   *logging.Logger
-}
-
-func New(options Options) *EVM {
-	// Set defaults
-	if options.MemoryProvider == nil {
-		options.MemoryProvider = engine.DefaultDynamicMemoryProvider
-	}
-	if options.Logger == nil {
-		options.Logger = logging.NewNoopLogger()
-	}
-	if options.Natives == nil {
-		options.Natives = native.MustDefaultNatives()
-	}
+func New(options engine.Options) *EVM {
+	options = defaults.CompleteOptions(options)
 	vm := &EVM{
 		options: options,
 	}
-	// TODO: ultimately this wiring belongs a level up, but for the time being it is convenient to handle it here
-	// since we need to both intercept backend state to serve up natives AND connect the external dispatchers
-	engine.Connect(vm, options.Natives)
 	vm.logger = options.Logger.WithScope("NewVM").With("evm_nonce", options.Nonce)
+	vm.externalDispatcher = engine.Dispatchers{&vm.Externals, vm}
 	return vm
 }
 
 func Default() *EVM {
-	return New(Options{})
+	return New(engine.Options{})
 }
 
 // Initiate an EVM call against the provided state pushing events to eventSink. code should contain the EVM bytecode,
@@ -105,9 +81,8 @@ func (vm *EVM) SetLogger(logger *logging.Logger) {
 }
 
 func (vm *EVM) Dispatch(acc *acm.Account) engine.Callable {
-	callable := vm.Externals.Dispatch(acc)
-	if callable != nil {
-		return callable
+	if len(acc.EVMCode) == 0 {
+		return nil
 	}
 	return vm.Contract(acc.EVMCode)
 }

@@ -40,7 +40,7 @@ type Function struct {
 	logger    *logging.Logger
 }
 
-var _ Native = &Function{}
+var _ engine.Native = &Function{}
 
 // Context is the first argument to any native function. This struct carries
 // all the context an native needs to access e.g. state in burrow.

@@ -38,7 +38,7 @@ func DefaultExecutionConfig() *ExecutionConfig {
 
 type Option func(*executor)
 
-func VMOptions(vmOptions evm.Options) func(*executor) {
+func VMOptions(vmOptions engine.Options) func(*executor) {
 	return func(exe *executor) {
 		exe.vmOptions = vmOptions
 	}
@@ -46,7 +46,7 @@ func VMOptions(vmOptions evm.Options) func(*executor) {
 
 func (ec *ExecutionConfig) ExecutionOptions() ([]Option, error) {
 	var exeOptions []Option
-	vmOptions := evm.Options{
+	vmOptions := engine.Options{
 		MemoryProvider:           engine.DefaultDynamicMemoryProvider,
 		CallStackMaxDepth:        ec.CallStackMaxDepth,
 		DataStackInitialCapacity: ec.DataStackInitialCapacity,

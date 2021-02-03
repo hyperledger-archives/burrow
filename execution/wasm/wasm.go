@@ -2,13 +2,12 @@ package wasm
 
 import (
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/execution/exec"
-	"github.com/hyperledger/burrow/execution/native"
-	"github.com/hyperledger/burrow/logging"
-
 	"github.com/hyperledger/burrow/acm/acmstate"
+	"github.com/hyperledger/burrow/execution/defaults"
 	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/errors"
+	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/execution/native"
 	lifeExec "github.com/perlin-network/life/exec"
 )
 
@@ -22,31 +21,22 @@ var DefaultVMConfig = lifeExec.VMConfig{
 
 type WVM struct {
 	engine.Externals
-	options  Options
-	vmConfig lifeExec.VMConfig
+	options            engine.Options
+	vmConfig           lifeExec.VMConfig
+	externalDispatcher engine.Dispatcher
 }
 
-type Options struct {
-	Natives           *native.Natives
-	CallStackMaxDepth uint64
-	Logger            *logging.Logger
-}
-
-func New(options Options) *WVM {
-	if options.Natives == nil {
-		options.Natives = native.MustDefaultNatives()
-	}
-	if options.Logger == nil {
-		options.Logger = logging.NewNoopLogger()
-	}
-	return &WVM{
-		options:  options,
+func New(options engine.Options) *WVM {
+	vm := &WVM{
+		options:  defaults.CompleteOptions(options),
 		vmConfig: DefaultVMConfig,
 	}
+	vm.externalDispatcher = engine.Dispatchers{&vm.Externals, vm}
+	return vm
 }
 
 func Default() *WVM {
-	return New(Options{})
+	return New(engine.Options{})
 }
 
 // RunWASM creates a WASM VM, and executes the given WASM contract code
@@ -77,9 +67,8 @@ func (vm *WVM) Execute(st acmstate.ReaderWriter, blockchain engine.Blockchain, e
 }
 
 func (vm *WVM) Dispatch(acc *acm.Account) engine.Callable {
-	callable := vm.Externals.Dispatch(acc)
-	if callable != nil {
-		return callable
+	if len(acc.WASMCode) == 0 {
+		return nil
 	}
 	return vm.Contract(acc.WASMCode)
 }

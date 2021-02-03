@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/hyperledger/burrow/execution/vms"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/errors"
-	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
-	"github.com/hyperledger/burrow/execution/wasm"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -21,7 +21,7 @@ import (
 const GasLimit = uint64(1000000)
 
 type CallContext struct {
-	EVM           *evm.EVM
+	VMS           *vms.VirtualMachines
 	State         acmstate.ReaderWriter
 	MetadataState acmstate.MetadataReaderWriter
 	Blockchain    engine.Blockchain
@@ -197,8 +197,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 
 	if len(wcode) != 0 {
 		// TODO: accept options
-		vm := wasm.Default()
-		ret, err = vm.Execute(txCache, ctx.Blockchain, ctx.txe, params, wcode)
+		ret, err = ctx.VMS.WVM.Execute(txCache, ctx.Blockchain, ctx.txe, params, wcode)
 		if err != nil {
 			// Failure. Charge the gas fee. The 'value' was otherwise not transferred.
 			ctx.Logger.InfoMsg("Error on WASM execution",
@@ -220,10 +219,10 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 		}
 	} else {
 		// EVM
-		ctx.EVM.SetNonce(txHash)
-		ctx.EVM.SetLogger(ctx.Logger.With(structure.TxHashKey, txHash))
+		ctx.VMS.EVM.SetNonce(txHash)
+		ctx.VMS.EVM.SetLogger(ctx.Logger.With(structure.TxHashKey, txHash))
 
-		ret, err = ctx.EVM.Execute(txCache, ctx.Blockchain, ctx.txe, params, code)
+		ret, err = ctx.VMS.EVM.Execute(txCache, ctx.Blockchain, ctx.txe, params, code)
 
 		if err != nil {
 			// Failure. Charge the gas fee. The 'value' was otherwise not transferred.

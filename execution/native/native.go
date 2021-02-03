@@ -1,19 +1,5 @@
 package native
 
-import (
-	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/execution/engine"
-)
-
-type Native interface {
-	engine.Callable
-	SetExternals(externals engine.Dispatcher)
-	ContractMeta() []*acm.ContractMeta
-	FullName() string
-	Address() crypto.Address
-}
-
 func MustDefaultNatives() *Natives {
 	ns, err := DefaultNatives()
 	if err != nil {

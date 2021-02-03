@@ -9,6 +9,8 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"github.com/hyperledger/burrow/execution/vms"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/acm/validator"
@@ -18,7 +20,6 @@ import (
 	"github.com/hyperledger/burrow/execution/contexts"
 	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/errors"
-	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/execution/proposal"
@@ -85,7 +86,7 @@ type executor struct {
 	emitter          *event.Emitter
 	block            *exec.BlockExecution
 	logger           *logging.Logger
-	vmOptions        evm.Options
+	vmOptions        engine.Options
 	contexts         map[payload.Type]contexts.Context
 }
 
@@ -149,7 +150,8 @@ func newExecutor(name string, runCall bool, params Params, backend ExecutorState
 
 	baseContexts := map[payload.Type]contexts.Context{
 		payload.TypeCall: &contexts.CallContext{
-			EVM:           evm.New(exe.vmOptions),
+			// TODO: expose WASM options to config
+			VMS:           vms.NewConnectedVirtualMachines(exe.vmOptions),
 			Blockchain:    blockchain,
 			State:         exe.stateCache,
 			MetadataState: exe.metadataCache,

@@ -34,7 +34,7 @@ import (
 
 // Runs a basic loop
 func TestEVM(t *testing.T) {
-	vm := New(Options{
+	vm := New(engine.Options{
 		Natives: native.MustDefaultNatives(),
 	})
 
@@ -841,7 +841,7 @@ func TestEVM(t *testing.T) {
 		st := acmstate.NewMemoryState()
 		blockchain := new(engine.TestBlockchain)
 		eventSink := exec.NewNoopEventSink()
-		vm := New(Options{
+		vm := New(engine.Options{
 			MemoryProvider: func(err errors.Sink) engine.Memory {
 				return engine.NewDynamicMemory(1024, 2048, err)
 			},
@@ -1199,7 +1199,7 @@ func TestEVM(t *testing.T) {
 			Input:  code,
 			Gas:    big.NewInt(1000000),
 		}
-		vm := New(Options{
+		vm := New(engine.Options{
 			DataStackMaxDepth: 4,
 		})
 
@@ -1254,7 +1254,7 @@ func TestEVM(t *testing.T) {
 			Input:  code,
 			Gas:    big.NewInt(1000000),
 		}
-		options := Options{
+		options := engine.Options{
 			CallStackMaxDepth: 2,
 		}
 		vm := New(options)
@@ -1746,7 +1746,7 @@ func returnWord() []byte {
 func runVM(st acmstate.ReaderWriter, caller, callee crypto.Address, code []byte, gas uint64) *exec.TxExecution {
 	gasBefore := new(big.Int).SetUint64(gas)
 	txe := new(exec.TxExecution)
-	vm := New(Options{
+	vm := New(engine.Options{
 		DebugOpcodes: true,
 	})
 	bigGas := new(big.Int).SetUint64(gas)

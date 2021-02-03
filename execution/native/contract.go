@@ -53,7 +53,7 @@ type Contract struct {
 	logger        *logging.Logger
 }
 
-var _ Native = &Contract{}
+var _ engine.Native = &Contract{}
 
 // Create a new native contract description object by passing a comment, name
 // and a list of member functions descriptions

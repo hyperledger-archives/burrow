@@ -669,7 +669,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			c.debugf(" => %v\n", target)
 
 			var err error
-			returnData, err = engine.CallFromSite(st, c, params, engine.CallParams{
+			returnData, err = engine.CallFromSite(st, c.externalDispatcher, params, engine.CallParams{
 				CallType: callTypeFromOpCode(op),
 				Callee:   target,
 				Input:    memory.Read(inOffset, inSize),

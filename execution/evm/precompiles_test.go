@@ -59,7 +59,7 @@ func TestECRecover(t *testing.T) {
 		Gas:    big.NewInt(10000),
 	}
 
-	vm := New(Options{
+	vm := New(engine.Options{
 		Natives: native.MustDefaultNatives(),
 	})
 	returnValue, err := vm.Contract(solidity.DeployedBytecode_ECRecover).Call(state, params)
