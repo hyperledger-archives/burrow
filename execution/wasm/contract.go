@@ -84,13 +84,7 @@ func (ctx *context) ResolveFunc(module, field string) lifeExec.FunctionImport {
 	}
 
 	switch field {
-	case "call":
-		fallthrough
-	case "callCode":
-		fallthrough
-	case "callDelegate":
-		fallthrough
-	case "callStatic":
+	case "call", "callCode", "callDelegate", "callStatic":
 		return func(vm *lifeExec.VirtualMachine) int64 {
 			gasLimit := big.NewInt(vm.GetCurrentFrame().Locals[0])
 			addressPtr := uint32(vm.GetCurrentFrame().Locals[1])

@@ -478,9 +478,19 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			stack.Push64(number)
 			c.debugf(" => %d\n", number)
 
+		case DIFFICULTY: // 0x44
+			// ~ hashes per solution - by convention we'll use unity since there are no misses if you are proposer
+			stack.Push(One256)
+			c.debugf(" => %v\n", One256)
+
 		case GASLIMIT: // 0x45
 			stack.PushBigInt(params.Gas)
 			c.debugf(" => %v\n", *params.Gas)
+
+		case CHAINID: // 0x46
+			id := crypto.GetEthChainID(st.Blockchain.ChainID())
+			stack.PushBigInt(id)
+			c.debugf(" => %X\n", id)
 
 		case POP: // 0x50
 			popped := stack.Pop()
