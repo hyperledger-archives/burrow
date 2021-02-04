@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/permission"
 	"golang.org/x/crypto/ripemd160"
+	"golang.org/x/crypto/sha3"
 )
 
 var Precompiles = New().
@@ -35,7 +36,11 @@ var Precompiles = New().
 	MustFunction(`Compute the operation base**exp % mod where the values are big ints`,
 		leftPadAddress(5),
 		permission.None,
-		expMod)
+		expMod).
+	MustFunction(`Compute the keccak256 hash of input`,
+		leftPadAddress(20),
+		permission.None,
+		keccak256Func)
 
 func leftPadAddress(bs ...byte) crypto.Address {
 	return crypto.AddressFromWord256(binary.LeftPadWord256(bs))
@@ -116,6 +121,20 @@ func ripemd160Func(ctx Context) (output []byte, err error) {
 	}
 	// Hash
 	hasher := ripemd160.New()
+	// CONTRACT: this does not err
+	hasher.Write(ctx.Input)
+	return binary.LeftPadBytes(hasher.Sum(nil), 32), nil
+}
+
+func keccak256Func(ctx Context) (output []byte, err error) {
+	// Deduct gas
+	gasRequired := wordsIn(uint64(len(ctx.Input)))*engine.GasRipemd160Word + engine.GasRipemd160Base
+	err = engine.UseGasNegative(ctx.Gas, gasRequired)
+	if err != nil {
+		return nil, err
+	}
+	// Hash
+	hasher := sha3.NewLegacyKeccak256()
 	// CONTRACT: this does not err
 	hasher.Write(ctx.Input)
 	return binary.LeftPadBytes(hasher.Sum(nil), 32), nil
