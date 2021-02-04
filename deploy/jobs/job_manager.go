@@ -22,6 +22,7 @@ const (
 type solidityCompilerWork struct {
 	contractName string
 	workDir      string
+	wasm         bool
 }
 
 type compilerJob struct {
@@ -31,33 +32,28 @@ type compilerJob struct {
 	done         chan struct{}
 }
 
-func solcRunner(jobs chan *compilerJob, logger *logging.Logger) {
-	for {
-		job, ok := <-jobs
-		if !ok {
-			break
-		}
-		resp, err := compilers.EVM(job.work.contractName, false, job.work.workDir, nil, logger)
-		(*job).compilerResp = resp
-		(*job).err = err
-		close(job.done)
-	}
-}
-
-func solangRunner(jobs chan *compilerJob, logger *logging.Logger) {
+func solidityRunner(jobs chan *compilerJob, logger *logging.Logger) {
 	for {
 		job, ok := <-jobs
 		if !ok {
 			return
 		}
-		resp, err := compilers.WASM(job.work.contractName, job.work.workDir, logger)
-		(*job).compilerResp = resp
-		(*job).err = err
+		if job.work.wasm {
+			resp, err := compilers.WASM(job.work.contractName, job.work.workDir, logger)
+			(*job).compilerResp = resp
+			(*job).err = err
+
+		} else {
+			resp, err := compilers.EVM(job.work.contractName, false, job.work.workDir, nil, logger)
+			(*job).compilerResp = resp
+			(*job).err = err
+
+		}
 		close(job.done)
 	}
 }
 
-func queueCompilerWork(job *def.Job, playbook *def.Playbook, jobs chan *compilerJob) error {
+func queueCompilerWork(job *def.Job, playbook *def.Playbook, jobs chan *compilerJob, forceWasm bool) error {
 	payload, err := job.Payload()
 	if err != nil {
 		return fmt.Errorf("could not get Job payload: %v", payload)
@@ -71,6 +67,7 @@ func queueCompilerWork(job *def.Job, playbook *def.Playbook, jobs chan *compiler
 			work: solidityCompilerWork{
 				contractName: job.Build.Contract,
 				workDir:      playbook.Path,
+				wasm:         job.Build.Wasm || forceWasm,
 			},
 		}
 		job.Intermediate = &intermediate
@@ -82,6 +79,7 @@ func queueCompilerWork(job *def.Job, playbook *def.Playbook, jobs chan *compiler
 				work: solidityCompilerWork{
 					contractName: job.Deploy.Contract,
 					workDir:      playbook.Path,
+					wasm:         job.Deploy.Wasm || forceWasm,
 				},
 			}
 			job.Intermediate = &intermediate
@@ -89,14 +87,14 @@ func queueCompilerWork(job *def.Job, playbook *def.Playbook, jobs chan *compiler
 		}
 	case *def.Proposal:
 		for _, job := range job.Proposal.Jobs {
-			err = queueCompilerWork(job, playbook, jobs)
+			err = queueCompilerWork(job, playbook, jobs, forceWasm)
 			if err != nil {
 				return err
 			}
 		}
 	case *def.Meta:
 		for _, job := range job.Meta.Playbook.Jobs {
-			err = queueCompilerWork(job, playbook, jobs)
+			err = queueCompilerWork(job, playbook, jobs, forceWasm)
 			if err != nil {
 				return err
 			}
@@ -318,15 +316,11 @@ func ExecutePlaybook(args *def.DeployArgs, playbook *def.Playbook, client *def.C
 	defer close(jobs)
 
 	for i := 0; i < concurrentSolc; i++ {
-		if args.Wasm {
-			go solangRunner(jobs, logger)
-		} else {
-			go solcRunner(jobs, logger)
-		}
+		go solidityRunner(jobs, logger)
 	}
 
 	for _, job := range playbook.Jobs {
-		queueCompilerWork(job, playbook, jobs)
+		queueCompilerWork(job, playbook, jobs, args.Wasm)
 	}
 
 	err = doJobs(playbook, args, client, logger)

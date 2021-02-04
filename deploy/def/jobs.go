@@ -317,6 +317,8 @@ type Build struct {
 	Instance string `mapstructure:"instance" json:"instance" yaml:"instance" toml:"instance"`
 	// (Optional) Path to store an extra copy of the bin file
 	Store string `mapstructure:"store" json:"store" yaml:"store" toml:"store"`
+	// (Optional) Use solang to compile to wasm
+	Wasm bool `mapstructure:"wasm" json:"wasm" yaml:"wasm" toml:"wasm"`
 }
 
 func (job *Build) Validate() error {
@@ -361,6 +363,8 @@ type Deploy struct {
 	Variables []*abi.Variable
 	// (Optional) Path to store an extra copy of the bin file
 	Store string `mapstructure:"store" json:"store" yaml:"store" toml:"store"`
+	// (Optional) Use solang to compile to wasm
+	Wasm bool `mapstructure:"wasm" json:"wasm" yaml:"wasm" toml:"wasm"`
 }
 
 func (job *Deploy) Validate() error {
