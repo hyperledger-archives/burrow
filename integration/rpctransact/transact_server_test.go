@@ -45,7 +45,7 @@ func TestTransactServer(t *testing.T) {
 		assert.False(t, acc.GetPublicKey().IsSet())
 
 		// Sign with this account - should set public key
-		_, err = rpctest.CreateContract(tcli, input.GetAddress(), solidity.Bytecode_StrangeLoop, nil)
+		_, err = rpctest.CreateEVMContract(tcli, input.GetAddress(), solidity.Bytecode_StrangeLoop, nil)
 		require.NoError(t, err)
 		acc, err = qcli.GetAccount(context.Background(), &rpcquery.GetAccountParam{Address: input.GetAddress()})
 

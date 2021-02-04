@@ -193,7 +193,7 @@ solidity: $(patsubst %.sol, %.sol.go, $(wildcard ./execution/solidity/*.sol)) bu
 
 # Solang fixtures
 .PHONY: solang
-solang: $(patsubst %.solang, %.solang.go, $(wildcard ./execution/wasm/*.solang)) build_burrow
+solang: $(patsubst %.solang, %.solang.go, $(wildcard ./execution/solidity/*.solang) $(wildcard ./execution/wasm/*.solang)) build_burrow
 
 %.solang.go: %.solang
 	@burrow compile --wasm $^

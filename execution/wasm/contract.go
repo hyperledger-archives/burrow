@@ -51,6 +51,10 @@ func (c *Contract) execute(state engine.State, params engine.CallParams) ([]byte
 	}
 
 	_, err = vm.Run(entryID)
+	if err != nil && errors.GetCode(err) == errors.Codes.ExecutionReverted {
+		return nil, err
+	}
+
 	if err != nil && errors.GetCode(err) != errors.Codes.None {
 		return nil, errors.Errorf(errors.Codes.ExecutionAborted, "%s: %v", errHeader, err)
 	}

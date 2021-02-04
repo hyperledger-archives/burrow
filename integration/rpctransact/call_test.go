@@ -140,7 +140,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 				go func() {
 					defer wg.Done()
 					for j := 0; j < numRuns; j++ {
-						createTxe, err := rpctest.CreateContract(cli, inputAddress, solidity.Bytecode_StrangeLoop, nil)
+						createTxe, err := rpctest.CreateEVMContract(cli, inputAddress, solidity.Bytecode_StrangeLoop, nil)
 						if err != nil {
 							errCh <- err
 							return
@@ -280,7 +280,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 
 		t.Run("CallEvents", func(t *testing.T) {
 			t.Parallel()
-			createTxe, err := rpctest.CreateContract(cli, inputAddress, solidity.Bytecode_StrangeLoop, nil)
+			createTxe, err := rpctest.CreateEVMContract(cli, inputAddress, solidity.Bytecode_StrangeLoop, nil)
 			require.NoError(t, err)
 			address := lastCall(createTxe.Events).CallData.Callee
 			spec, err := abi.ReadSpec(solidity.Abi_StrangeLoop)
@@ -299,7 +299,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 
 		t.Run("DeployAbis", func(t *testing.T) {
 			t.Parallel()
-			createTxe, err := rpctest.CreateContract(cli, inputAddress, solidity.Bytecode_A, []rpctest.MetadataMap{
+			createTxe, err := rpctest.CreateEVMContract(cli, inputAddress, solidity.Bytecode_A, []rpctest.MetadataMap{
 				{DeployedCode: solidity.DeployedBytecode_A, Abi: solidity.Abi_A},
 				{DeployedCode: solidity.DeployedBytecode_B, Abi: solidity.Abi_B},
 				{DeployedCode: solidity.DeployedBytecode_C, Abi: solidity.Abi_C},
@@ -342,7 +342,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 
 		t.Run("LogEvents", func(t *testing.T) {
 			t.Parallel()
-			createTxe, err := rpctest.CreateContract(cli, inputAddress, solidity.Bytecode_StrangeLoop, nil)
+			createTxe, err := rpctest.CreateEVMContract(cli, inputAddress, solidity.Bytecode_StrangeLoop, nil)
 			require.NoError(t, err)
 			address := lastCall(createTxe.Events).CallData.Callee
 			spec, err := abi.ReadSpec(solidity.Abi_StrangeLoop)
@@ -367,7 +367,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 
 		t.Run("EventEmitter", func(t *testing.T) {
 			t.Parallel()
-			createTxe, err := rpctest.CreateContract(cli, inputAddress, solidity.Bytecode_EventEmitter, nil)
+			createTxe, err := rpctest.CreateEVMContract(cli, inputAddress, solidity.Bytecode_EventEmitter, nil)
 			require.NoError(t, err)
 			address := lastCall(createTxe.Events).CallData.Callee
 			spec, err := abi.ReadSpec(solidity.Abi_EventEmitter)
@@ -406,7 +406,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			 * Any indexed string (or dynamic array) will be hashed, so we might want to store strings
 			 * in bytes32. This shows how we would automatically map this to string
 			 */
-			createTxe, err := rpctest.CreateContract(cli, inputAddress, solidity.Bytecode_EventEmitter, nil)
+			createTxe, err := rpctest.CreateEVMContract(cli, inputAddress, solidity.Bytecode_EventEmitter, nil)
 			require.NoError(t, err)
 			address := lastCall(createTxe.Events).CallData.Callee
 			spec, err := abi.ReadSpec(solidity.Abi_EventEmitter)
@@ -442,7 +442,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 
 		t.Run("Revert", func(t *testing.T) {
 			t.Parallel()
-			txe, err := rpctest.CreateContract(cli, inputAddress, solidity.Bytecode_Revert, nil)
+			txe, err := rpctest.CreateEVMContract(cli, inputAddress, solidity.Bytecode_Revert, nil)
 			require.NoError(t, err)
 			spec, err := abi.ReadSpec(solidity.Abi_Revert)
 			require.NoError(t, err)
@@ -460,7 +460,7 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 
 		t.Run("RevertWithoutReason", func(t *testing.T) {
 			t.Parallel()
-			txe, err := rpctest.CreateContract(cli, inputAddress, solidity.Bytecode_Revert, nil)
+			txe, err := rpctest.CreateEVMContract(cli, inputAddress, solidity.Bytecode_Revert, nil)
 			require.NoError(t, err)
 			spec, err := abi.ReadSpec(solidity.Abi_Revert)
 			require.NoError(t, err)
@@ -472,6 +472,96 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			revertReason, err := abi.UnpackRevert(txe.Result.Return)
 			require.NoError(t, err)
 			assert.Nil(t, revertReason)
+			return
+		})
+
+		t.Run("SimpleWasm", func(t *testing.T) {
+			t.Parallel()
+			txe, err := rpctest.CreateWASMContract(cli, inputAddress, solidity.Bytecode_ewasm, nil)
+			require.NoError(t, err)
+			spec, err := abi.ReadSpec(solidity.Abi_ewasm)
+			require.NoError(t, err)
+			data, _, err := spec.Pack("get_number")
+			require.NoError(t, err)
+			txe, err = rpctest.CallContract(cli, inputAddress, txe.Receipt.ContractAddress, data)
+			require.NoError(t, err)
+			var number int64
+			err = spec.Unpack(txe.Result.Return, "get_number", &number)
+			require.NoError(t, err)
+			assert.Equal(t, number, int64(54321))
+			return
+		})
+
+		t.Run("WasmRevertWithoutReason", func(t *testing.T) {
+			t.Parallel()
+			txe, err := rpctest.CreateWASMContract(cli, inputAddress, solidity.Bytecode_ewasm, nil)
+			require.NoError(t, err)
+			spec, err := abi.ReadSpec(solidity.Abi_ewasm)
+			require.NoError(t, err)
+			data, _, err := spec.Pack("try_revert")
+			require.NoError(t, err)
+			txe, err = rpctest.CallContract(cli, inputAddress, txe.Receipt.ContractAddress, data)
+			require.NoError(t, err)
+			assert.Equal(t, errors.Codes.ExecutionReverted, errors.GetCode(txe.Exception))
+			revertReason, err := abi.UnpackRevert(txe.Result.Return)
+			require.NoError(t, err)
+			assert.Nil(t, revertReason)
+			return
+		})
+
+		t.Run("WasmCallEvm", func(t *testing.T) {
+			t.Parallel()
+			txe, err := rpctest.CreateWASMContract(cli, inputAddress, solidity.Bytecode_ewasm, nil)
+			require.NoError(t, err)
+			wasmContract := txe.Receipt.ContractAddress
+			txe, err = rpctest.CreateEVMContract(cli, inputAddress, solidity.Bytecode_evm, nil)
+			require.NoError(t, err)
+			evmContract := txe.Receipt.ContractAddress
+			spec, err := abi.ReadSpec(solidity.Abi_ewasm)
+			require.NoError(t, err)
+			data, _, err := spec.Pack("call_get_vm", evmContract)
+			require.NoError(t, err)
+			txe, err = rpctest.CallContract(cli, inputAddress, wasmContract, data)
+			require.NoError(t, err)
+			var res string
+			err = spec.Unpack(txe.Result.Return, "call_get_vm", &res)
+			require.NoError(t, err)
+			assert.Equal(t, res, "ewasm called evm")
+			return
+		})
+
+		t.Run("EvmCallWasm", func(t *testing.T) {
+			t.Parallel()
+			txe, err := rpctest.CreateWASMContract(cli, inputAddress, solidity.Bytecode_ewasm, nil)
+			require.NoError(t, err)
+			wasmContract := txe.Receipt.ContractAddress
+			txe, err = rpctest.CreateEVMContract(cli, inputAddress, solidity.Bytecode_evm, nil)
+			require.NoError(t, err)
+			evmContract := txe.Receipt.ContractAddress
+			spec, err := abi.ReadSpec(solidity.Abi_evm)
+			require.NoError(t, err)
+			data, _, err := spec.Pack("call_get_vm", wasmContract)
+			require.NoError(t, err)
+			txe, err = rpctest.CallContract(cli, inputAddress, evmContract, data)
+			require.NoError(t, err)
+			var res string
+			err = spec.Unpack(txe.Result.Return, "call_get_vm", &res)
+			require.NoError(t, err)
+			assert.Equal(t, res, "evm called ewasm")
+			return
+		})
+
+		t.Run("WasmHashPrecompiles", func(t *testing.T) {
+			t.Parallel()
+			txe, err := rpctest.CreateWASMContract(cli, inputAddress, solidity.Bytecode_ewasm, nil)
+			require.NoError(t, err)
+			wasmContract := txe.Receipt.ContractAddress
+			spec, err := abi.ReadSpec(solidity.Abi_ewasm)
+			require.NoError(t, err)
+			data, _, err := spec.Pack("hash_tests", wasmContract)
+			require.NoError(t, err)
+			txe, err = rpctest.CallContract(cli, inputAddress, wasmContract, data)
+			require.NoError(t, err)
 			return
 		})
 	})

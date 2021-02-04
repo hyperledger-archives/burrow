@@ -55,7 +55,7 @@ type MetadataMap struct {
 	Abi          []byte
 }
 
-func CreateContract(cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte, metamap []MetadataMap) (*exec.TxExecution, error) {
+func CreateEVMContract(cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte, metamap []MetadataMap) (*exec.TxExecution, error) {
 	var meta []*payload.ContractMeta
 	if metamap != nil {
 		meta = make([]*payload.ContractMeta, len(metamap))
@@ -76,6 +76,37 @@ func CreateContract(cli rpctransact.TransactClient, inputAddress crypto.Address,
 		},
 		Address:      nil,
 		Data:         bytecode,
+		Fee:          2,
+		GasLimit:     10000,
+		ContractMeta: meta,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return txe, nil
+}
+
+func CreateWASMContract(cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte, metamap []MetadataMap) (*exec.TxExecution, error) {
+	var meta []*payload.ContractMeta
+	if metamap != nil {
+		meta = make([]*payload.ContractMeta, len(metamap))
+		for i, m := range metamap {
+			hash := sha3.NewLegacyKeccak256()
+			hash.Write(m.DeployedCode)
+			meta[i] = &payload.ContractMeta{
+				CodeHash: hash.Sum(nil),
+				Meta:     string(m.Abi),
+			}
+		}
+	}
+
+	txe, err := cli.CallTxSync(context.Background(), &payload.CallTx{
+		Input: &payload.TxInput{
+			Address: inputAddress,
+			Amount:  2,
+		},
+		Address:      nil,
+		WASM:         bytecode,
 		Fee:          2,
 		GasLimit:     10000,
 		ContractMeta: meta,
