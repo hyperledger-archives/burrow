@@ -564,6 +564,33 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			require.NoError(t, err)
 			return
 		})
+
+		t.Run("WasmLogEvents", func(t *testing.T) {
+			t.Parallel()
+			createTxe, err := rpctest.CreateWASMContract(cli, inputAddress, solidity.Bytecode_ewasm, nil)
+			require.NoError(t, err)
+			address := lastCall(createTxe.Events).CallData.Callee
+			spec, err := abi.ReadSpec(solidity.Abi_ewasm)
+			require.NoError(t, err)
+			data, _, err := spec.Pack("test_events")
+			require.NoError(t, err)
+			callTxe, err := rpctest.CallContract(cli, inputAddress, address, data)
+			require.NoError(t, err)
+			evs := filterLogs(callTxe.Events)
+			require.Len(t, evs, 1)
+			log := evs[0]
+			var f1 int64
+			var f2 string
+			var f3 bool
+			evAbi := spec.EventsByName["L"]
+			err = abi.UnpackEvent(evAbi, log.Topics, log.Data, &f1, &f2, &f3)
+			require.NoError(t, err)
+			assert.Equal(t, evAbi.ID.Bytes(), log.Topics[0].Bytes())
+			assert.Equal(t, int64(102), f1)
+			assert.Equal(t, "Hello from wasm", f2)
+			assert.Equal(t, true, f3)
+			return
+		})
 	})
 }
 

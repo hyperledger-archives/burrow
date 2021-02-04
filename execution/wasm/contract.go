@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
 
 	bin "github.com/hyperledger/burrow/binary"
@@ -84,6 +85,12 @@ func (ctx *context) ResolveFunc(module, field string) lifeExec.FunctionImport {
 
 	switch field {
 	case "call":
+		fallthrough
+	case "callCode":
+		fallthrough
+	case "callDelegate":
+		fallthrough
+	case "callStatic":
 		return func(vm *lifeExec.VirtualMachine) int64 {
 			gasLimit := big.NewInt(vm.GetCurrentFrame().Locals[0])
 			addressPtr := uint32(vm.GetCurrentFrame().Locals[1])
@@ -97,10 +104,25 @@ func (ctx *context) ResolveFunc(module, field string) lifeExec.FunctionImport {
 			// TODO: is this guaranteed to be okay? Should be avoid panic here if out of bounds?
 			value := bin.BigIntFromLittleEndianBytes(vm.Memory[valuePtr : valuePtr+ValueByteSize])
 
+			var callType exec.CallType
+
+			switch field {
+			case "call":
+				callType = exec.CallTypeCall
+			case "callCode":
+				callType = exec.CallTypeCode
+			case "callStatic":
+				callType = exec.CallTypeStatic
+			case "callDeletegate":
+				callType = exec.CallTypeDelegate
+			default:
+				panic("should not happen")
+			}
+
 			var err error
 			ctx.returnData, err = engine.CallFromSite(ctx.state, ctx.vm.externalDispatcher, ctx.params,
 				engine.CallParams{
-					CallType: exec.CallTypeCall,
+					CallType: callType,
 					Callee:   target,
 					Input:    vm.Memory[dataPtr : dataPtr+dataLen],
 					Value:    *value,
@@ -121,7 +143,6 @@ func (ctx *context) ResolveFunc(module, field string) lifeExec.FunctionImport {
 				// Spec says return 1 for error, but not sure when to do that (as opposed to abort):
 				// https://github.com/ewasm/design/blob/master/eth_interface.md#call
 				panic(err)
-				return Error
 			}
 			return Success
 		}
@@ -275,6 +296,111 @@ func (ctx *context) ResolveFunc(module, field string) lifeExec.FunctionImport {
 			binary.LittleEndian.PutUint64(bs, acc.Balance)
 
 			copy(vm.Memory[balancePtr:], bs)
+
+			return Success
+		}
+
+	case "getBlockTimestamp":
+		return func(vm *lifeExec.VirtualMachine) int64 {
+			return int64(ctx.state.Blockchain.LastBlockTime().Unix())
+		}
+
+	case "getBlockNumber":
+		return func(vm *lifeExec.VirtualMachine) int64 {
+			return int64(ctx.state.Blockchain.LastBlockHeight())
+		}
+
+	case "getTxOrigin":
+		return func(vm *lifeExec.VirtualMachine) int64 {
+			addressPtr := int(uint32(vm.GetCurrentFrame().Locals[0]))
+
+			copy(vm.Memory[addressPtr:addressPtr+crypto.AddressLength], ctx.params.Origin.Bytes())
+
+			return Success
+		}
+
+	case "getCaller":
+		return func(vm *lifeExec.VirtualMachine) int64 {
+			addressPtr := int(uint32(vm.GetCurrentFrame().Locals[0]))
+
+			copy(vm.Memory[addressPtr:addressPtr+crypto.AddressLength], ctx.params.Caller.Bytes())
+
+			return Success
+		}
+
+	case "getBlockGasLimit":
+		return func(vm *lifeExec.VirtualMachine) int64 {
+			return ctx.params.Gas.Int64()
+		}
+
+	case "getGasLeft":
+		return func(vm *lifeExec.VirtualMachine) int64 {
+			// do the same as EVM
+			return ctx.params.Gas.Int64()
+		}
+
+	case "getBlockCoinbase":
+		return func(vm *lifeExec.VirtualMachine) int64 {
+			// do the same as EVM
+			addressPtr := int(uint32(vm.GetCurrentFrame().Locals[0]))
+
+			copy(vm.Memory[addressPtr:addressPtr+crypto.AddressLength], crypto.ZeroAddress.Bytes())
+
+			return Success
+		}
+
+	case "getBlockHash":
+		return func(vm *lifeExec.VirtualMachine) int64 {
+			blockNumber := uint64(vm.GetCurrentFrame().Locals[0])
+			hashPtr := int(vm.GetCurrentFrame().Locals[1])
+
+			lastBlockHeight := ctx.state.Blockchain.LastBlockHeight()
+			if blockNumber >= lastBlockHeight {
+				panic(fmt.Sprintf(" => attempted to get block hash of a non-existent block: %v", blockNumber))
+			} else if lastBlockHeight-blockNumber > evm.MaximumAllowedBlockLookBack {
+				panic(fmt.Sprintf(" => attempted to get block hash of a block %d outside of the allowed range "+
+					"(must be within %d blocks)", blockNumber, evm.MaximumAllowedBlockLookBack))
+			} else {
+				hash, err := ctx.state.Blockchain.BlockHash(blockNumber)
+				if err != nil {
+					panic(fmt.Sprintf(" => blockhash failed: %v", err))
+				}
+
+				copy(vm.Memory[hashPtr:hashPtr+len(hash)], hash)
+			}
+
+			return Success
+		}
+
+	case "log":
+		return func(vm *lifeExec.VirtualMachine) int64 {
+			dataPtr := int(uint32(vm.GetCurrentFrame().Locals[0]))
+			dataLen := int(uint32(vm.GetCurrentFrame().Locals[1]))
+
+			data := vm.Memory[dataPtr : dataPtr+dataLen]
+
+			topicCount := uint32(vm.GetCurrentFrame().Locals[2])
+			topics := make([]bin.Word256, topicCount)
+
+			if topicCount > 4 {
+				panic(fmt.Sprintf("%d topics not permitted", topicCount))
+			}
+
+			for i := uint32(0); i < topicCount; i++ {
+				topicPtr := int(uint32(vm.GetCurrentFrame().Locals[3+i]))
+				topicData := vm.Memory[topicPtr : topicPtr+bin.Word256Bytes]
+				topics[i] = bin.RightPadWord256(topicData)
+			}
+
+			err := ctx.state.EventSink.Log(&exec.LogEvent{
+				Address: ctx.params.Callee,
+				Topics:  topics,
+				Data:    data,
+			})
+
+			if err != nil {
+				panic(fmt.Sprintf(" => log failed: %v", err))
+			}
 
 			return Success
 		}

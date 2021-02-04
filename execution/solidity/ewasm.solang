@@ -3,12 +3,18 @@ interface E {
 	function get_number() external returns (int);
 }
 
+event L (
+	int indexed f1,
+	string f2,
+	bool f3
+);
+
 contract ewasm is E {
-	function get_vm() public override returns (string memory) {
+	function get_vm() public override pure returns (string memory) {
 		return "ewasm";
 	}
 
-	function get_number() public override returns (int) {
+	function get_number() public pure override returns (int) {
 		return 54321;
 	}
 
@@ -37,5 +43,9 @@ contract ewasm is E {
 		bytes20 hash3 = ripemd160("Hello, World!");
 
 		assert(hash3 == hex"527a6a4b9a6da75607546842e0e00105350b1aaf");
+	}
+
+	function test_events() public {
+		emit L(102, "Hello from wasm", true);
 	}
 }
