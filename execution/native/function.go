@@ -40,7 +40,7 @@ type Function struct {
 	logger    *logging.Logger
 }
 
-var _ Native = &Function{}
+var _ engine.Native = &Function{}
 
 // Context is the first argument to any native function. This struct carries
 // all the context an native needs to access e.g. state in burrow.
@@ -72,12 +72,12 @@ func (f *Function) SetExternals(externals engine.Dispatcher) {
 }
 
 func (f *Function) Call(state engine.State, params engine.CallParams) ([]byte, error) {
-	return Call(state, params, f.execute)
+	return engine.Call(state, params, f.execute)
 }
 
 func (f *Function) execute(state engine.State, params engine.CallParams) ([]byte, error) {
 	// check if we have permission to call this function
-	hasPermission, err := HasPermission(state.CallFrame, params.Caller, f.PermFlag)
+	hasPermission, err := engine.HasPermission(state.CallFrame, params.Caller, f.PermFlag)
 	if err != nil {
 		return nil, err
 	}

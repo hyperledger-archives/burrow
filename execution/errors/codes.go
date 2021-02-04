@@ -49,6 +49,7 @@ type codes struct {
 	UnresolvedSymbols      *Code
 	InvalidContractCode    *Code
 	NonExistentAccount     *Code
+	NotCallable            *Code
 
 	// For lookup
 	codes []*Code

@@ -6,8 +6,9 @@ import (
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/contexts"
-	"github.com/hyperledger/burrow/execution/evm"
+	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/execution/vms"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -20,7 +21,7 @@ func CallSim(reader acmstate.Reader, blockchain bcm.BlockchainInfo, fromAddress,
 
 	cache := acmstate.NewCache(reader)
 	exe := contexts.CallContext{
-		EVM:           evm.Default(),
+		VMS:           vms.NewConnectedVirtualMachines(engine.Options{}),
 		RunCall:       true,
 		State:         cache,
 		MetadataState: acmstate.NewMemoryState(),

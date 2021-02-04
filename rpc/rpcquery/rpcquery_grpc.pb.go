@@ -17,7 +17,6 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // QueryClient is the client API for Query service.
@@ -86,7 +85,7 @@ func (c *queryClient) GetStorage(ctx context.Context, in *GetStorageParam, opts 
 }
 
 func (c *queryClient) ListAccounts(ctx context.Context, in *ListAccountsParam, opts ...grpc.CallOption) (Query_ListAccountsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Query_ServiceDesc.Streams[0], "/rpcquery.Query/ListAccounts", opts...)
+	stream, err := c.cc.NewStream(ctx, &_Query_serviceDesc.Streams[0], "/rpcquery.Query/ListAccounts", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +126,7 @@ func (c *queryClient) GetName(ctx context.Context, in *GetNameParam, opts ...grp
 }
 
 func (c *queryClient) ListNames(ctx context.Context, in *ListNamesParam, opts ...grpc.CallOption) (Query_ListNamesClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Query_ServiceDesc.Streams[1], "/rpcquery.Query/ListNames", opts...)
+	stream, err := c.cc.NewStream(ctx, &_Query_serviceDesc.Streams[1], "/rpcquery.Query/ListNames", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +194,7 @@ func (c *queryClient) GetProposal(ctx context.Context, in *GetProposalParam, opt
 }
 
 func (c *queryClient) ListProposals(ctx context.Context, in *ListProposalsParam, opts ...grpc.CallOption) (Query_ListProposalsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Query_ServiceDesc.Streams[2], "/rpcquery.Query/ListProposals", opts...)
+	stream, err := c.cc.NewStream(ctx, &_Query_serviceDesc.Streams[2], "/rpcquery.Query/ListProposals", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -322,7 +321,7 @@ type UnsafeQueryServer interface {
 }
 
 func RegisterQueryServer(s grpc.ServiceRegistrar, srv QueryServer) {
-	s.RegisterService(&Query_ServiceDesc, srv)
+	s.RegisterService(&_Query_serviceDesc, srv)
 }
 
 func _Query_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -586,10 +585,7 @@ func _Query_GetBlockHeader_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-// Query_ServiceDesc is the grpc.ServiceDesc for Query service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var Query_ServiceDesc = grpc.ServiceDesc{
+var _Query_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "rpcquery.Query",
 	HandlerType: (*QueryServer)(nil),
 	Methods: []grpc.MethodDesc{

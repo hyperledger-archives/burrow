@@ -14,15 +14,15 @@ import (
 )
 
 type Natives struct {
-	callableByAddress map[crypto.Address]Native
-	callableByName    map[string]Native
+	callableByAddress map[crypto.Address]engine.Native
+	callableByName    map[string]engine.Native
 	logger            *logging.Logger
 }
 
 func New() *Natives {
 	return &Natives{
-		callableByAddress: make(map[crypto.Address]Native),
-		callableByName:    make(map[string]Native),
+		callableByAddress: make(map[crypto.Address]engine.Native),
+		callableByName:    make(map[string]engine.Native),
 		logger:            logging.NewNoopLogger(),
 	}
 }
@@ -63,7 +63,7 @@ func (ns *Natives) Callables() []engine.Callable {
 	return callables
 }
 
-func (ns *Natives) GetByName(name string) Native {
+func (ns *Natives) GetByName(name string) engine.Native {
 	return ns.callableByName[name]
 }
 
@@ -77,7 +77,7 @@ func (ns *Natives) GetFunction(name string) *Function {
 	return f
 }
 
-func (ns *Natives) GetByAddress(address crypto.Address) Native {
+func (ns *Natives) GetByAddress(address crypto.Address) engine.Native {
 	return ns.callableByAddress[address]
 }
 
@@ -126,7 +126,7 @@ func (ns *Natives) Function(comment string, address crypto.Address, permFlag per
 	return ns, nil
 }
 
-func (ns *Natives) register(callable Native) error {
+func (ns *Natives) register(callable engine.Native) error {
 	name := callable.FullName()
 	address := callable.Address()
 	_, ok := ns.callableByName[name]

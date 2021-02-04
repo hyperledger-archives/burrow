@@ -5,19 +5,20 @@ import (
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/errors"
 )
 
 // This wrapper provides a state that behaves 'as if' the natives were stored directly in state.
 // TODO: we may want to actually store native account sentinel values (and their metadata) in on-disk state down the line
 type State struct {
-	natives *Natives
+	natives engine.Natives
 	backend acmstate.ReaderWriter
 }
 
 // Get a new state that wraps the backend but intercepts any calls to natives returning appropriate errors message
 // or an Account sentinel for the particular native
-func NewState(natives *Natives, backend acmstate.ReaderWriter) *State {
+func NewState(natives engine.Natives, backend acmstate.ReaderWriter) *State {
 	return &State{
 		natives: natives,
 		backend: backend,
@@ -74,7 +75,7 @@ func (s *State) ensureNonNative(address crypto.Address, action string) error {
 	return nil
 }
 
-func account(callable Native) *acm.Account {
+func account(callable engine.Native) *acm.Account {
 	return &acm.Account{
 		Address:    callable.Address(),
 		NativeName: callable.FullName(),

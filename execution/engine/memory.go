@@ -1,4 +1,4 @@
-package evm
+package engine
 
 import (
 	"fmt"
@@ -158,4 +158,9 @@ func (mem *dynamicMemory) ensureCapacity(newCapacity uint64) error {
 	// just re-slice (even if len(mem.slice) < newCapacity)
 	mem.slice = mem.slice[:newCapacity]
 	return nil
+}
+
+type fixedMemory struct {
+	slice   []byte
+	errSink errors.Sink
 }

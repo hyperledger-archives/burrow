@@ -3,8 +3,9 @@ package native
 import (
 	"fmt"
 
+	"github.com/hyperledger/burrow/execution/engine"
+
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/permission"
 )
@@ -85,32 +86,6 @@ var Permissions = New().MustContract("Permissions",
 	},
 )
 
-// CONTRACT: it is the duty of the contract writer to call known permissions
-// we do not convey if a permission is not set
-// (unlike in state/execution, where we guarantee HasPermission is called
-// on known permissions and panics else)
-// If the perm is not defined in the acc nor set by default in GlobalPermissions,
-// this function returns false.
-func HasPermission(st acmstate.Reader, address crypto.Address, perm permission.PermFlag) (bool, error) {
-	acc, err := st.GetAccount(address)
-	if err != nil {
-		return false, err
-	}
-	if acc == nil {
-		return false, fmt.Errorf("account %v does not exist", address)
-	}
-	globalPerms, err := acmstate.GlobalAccountPermissions(st)
-	if err != nil {
-		return false, err
-	}
-	perms := acc.Permissions.Base.Compose(globalPerms.Base)
-	value, err := perms.Get(perm)
-	if err != nil {
-		return false, err
-	}
-	return value, nil
-}
-
 type hasBaseArgs struct {
 	Account    crypto.Address
 	Permission uint64
@@ -125,7 +100,7 @@ func hasBase(ctx Context, args hasBaseArgs) (hasBaseRets, error) {
 	if !permN.IsValid() {
 		return hasBaseRets{}, permission.ErrInvalidPermission(permN)
 	}
-	hasPermission, err := HasPermission(ctx.State, args.Account, permN)
+	hasPermission, err := engine.HasPermission(ctx.State, args.Account, permN)
 	if err != nil {
 		return hasBaseRets{}, err
 	}
@@ -151,7 +126,7 @@ func setBase(ctx Context, args setBaseArgs) (setBaseRets, error) {
 	if !permFlag.IsValid() {
 		return setBaseRets{}, permission.ErrInvalidPermission(permFlag)
 	}
-	err := UpdateAccount(ctx.State, args.Account, func(acc *acm.Account) error {
+	err := engine.UpdateAccount(ctx.State, args.Account, func(acc *acm.Account) error {
 		err := acc.Permissions.Base.Set(permFlag, args.Set)
 		return err
 	})
@@ -178,7 +153,7 @@ func unsetBase(ctx Context, args unsetBaseArgs) (unsetBaseRets, error) {
 	if !permFlag.IsValid() {
 		return unsetBaseRets{}, permission.ErrInvalidPermission(permFlag)
 	}
-	err := UpdateAccount(ctx.State, args.Account, func(acc *acm.Account) error {
+	err := engine.UpdateAccount(ctx.State, args.Account, func(acc *acm.Account) error {
 		return acc.Permissions.Base.Unset(permFlag)
 	})
 	if err != nil {
@@ -205,7 +180,7 @@ func setGlobal(ctx Context, args setGlobalArgs) (setGlobalRets, error) {
 	if !permFlag.IsValid() {
 		return setGlobalRets{}, permission.ErrInvalidPermission(permFlag)
 	}
-	err := UpdateAccount(ctx.State, acm.GlobalPermissionsAddress, func(acc *acm.Account) error {
+	err := engine.UpdateAccount(ctx.State, acm.GlobalPermissionsAddress, func(acc *acm.Account) error {
 		return acc.Permissions.Base.Set(permFlag, args.Set)
 	})
 	if err != nil {
@@ -227,7 +202,7 @@ type hasRoleRets struct {
 }
 
 func hasRole(ctx Context, args hasRoleArgs) (hasRoleRets, error) {
-	acc, err := mustAccount(ctx.State, args.Account)
+	acc, err := engine.MustAccount(ctx.State, args.Account)
 	if err != nil {
 		return hasRoleRets{}, err
 	}
@@ -249,7 +224,7 @@ type addRoleRets struct {
 
 func addRole(ctx Context, args addRoleArgs) (addRoleRets, error) {
 	ret := addRoleRets{}
-	err := UpdateAccount(ctx.State, args.Account, func(account *acm.Account) error {
+	err := engine.UpdateAccount(ctx.State, args.Account, func(account *acm.Account) error {
 		ret.Result = account.Permissions.AddRole(args.Role)
 		return nil
 	})
@@ -273,7 +248,7 @@ type removeRoleRets struct {
 
 func removeRole(ctx Context, args removeRoleArgs) (removeRoleRets, error) {
 	ret := removeRoleRets{}
-	err := UpdateAccount(ctx.State, args.Account, func(account *acm.Account) error {
+	err := engine.UpdateAccount(ctx.State, args.Account, func(account *acm.Account) error {
 		ret.Result = account.Permissions.RemoveRole(args.Role)
 		return nil
 	})

@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/hyperledger/burrow/execution/engine"
+
 	"github.com/btcsuite/btcd/btcec"
 
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/permission"
 	"golang.org/x/crypto/ripemd160"
+	"golang.org/x/crypto/sha3"
 )
 
 var Precompiles = New().
@@ -34,7 +36,11 @@ var Precompiles = New().
 	MustFunction(`Compute the operation base**exp % mod where the values are big ints`,
 		leftPadAddress(5),
 		permission.None,
-		expMod)
+		expMod).
+	MustFunction(`Compute the keccak256 hash of input`,
+		leftPadAddress(20),
+		permission.None,
+		keccak256Func)
 
 func leftPadAddress(bs ...byte) crypto.Address {
 	return crypto.AddressFromWord256(binary.LeftPadWord256(bs))
@@ -43,11 +49,10 @@ func leftPadAddress(bs ...byte) crypto.Address {
 // SECP256K1 Recovery
 func ecrecover(ctx Context) ([]byte, error) {
 	// Deduct gas
-	gasRequired := GasEcRecover
-	if *ctx.Gas < gasRequired {
-		return nil, errors.Codes.InsufficientGas
-	} else {
-		*ctx.Gas -= gasRequired
+	gasRequired := engine.GasEcRecover
+	var err error = engine.UseGasNegative(ctx.Gas, gasRequired)
+	if err != nil {
+		return nil, err
 	}
 
 	// layout is:
@@ -95,11 +100,10 @@ func ecrecover(ctx Context) ([]byte, error) {
 
 func sha256(ctx Context) (output []byte, err error) {
 	// Deduct gas
-	gasRequired := wordsIn(uint64(len(ctx.Input)))*GasSha256Word + GasSha256Base
-	if *ctx.Gas < gasRequired {
-		return nil, errors.Codes.InsufficientGas
-	} else {
-		*ctx.Gas -= gasRequired
+	gasRequired := wordsIn(uint64(len(ctx.Input)))*engine.GasSha256Word + engine.GasSha256Base
+	err = engine.UseGasNegative(ctx.Gas, gasRequired)
+	if err != nil {
+		return nil, err
 	}
 	// Hash
 	hasher := cryptoSha256.New()
@@ -110,11 +114,10 @@ func sha256(ctx Context) (output []byte, err error) {
 
 func ripemd160Func(ctx Context) (output []byte, err error) {
 	// Deduct gas
-	gasRequired := wordsIn(uint64(len(ctx.Input)))*GasRipemd160Word + GasRipemd160Base
-	if *ctx.Gas < gasRequired {
-		return nil, errors.Codes.InsufficientGas
-	} else {
-		*ctx.Gas -= gasRequired
+	gasRequired := wordsIn(uint64(len(ctx.Input)))*engine.GasRipemd160Word + engine.GasRipemd160Base
+	err = engine.UseGasNegative(ctx.Gas, gasRequired)
+	if err != nil {
+		return nil, err
 	}
 	// Hash
 	hasher := ripemd160.New()
@@ -123,13 +126,26 @@ func ripemd160Func(ctx Context) (output []byte, err error) {
 	return binary.LeftPadBytes(hasher.Sum(nil), 32), nil
 }
 
+func keccak256Func(ctx Context) (output []byte, err error) {
+	// Deduct gas
+	gasRequired := wordsIn(uint64(len(ctx.Input)))*engine.GasRipemd160Word + engine.GasRipemd160Base
+	err = engine.UseGasNegative(ctx.Gas, gasRequired)
+	if err != nil {
+		return nil, err
+	}
+	// Hash
+	hasher := sha3.NewLegacyKeccak256()
+	// CONTRACT: this does not err
+	hasher.Write(ctx.Input)
+	return binary.LeftPadBytes(hasher.Sum(nil), 32), nil
+}
+
 func identity(ctx Context) (output []byte, err error) {
 	// Deduct gas
-	gasRequired := wordsIn(uint64(len(ctx.Input)))*GasIdentityWord + GasIdentityBase
-	if *ctx.Gas < gasRequired {
-		return nil, errors.Codes.InsufficientGas
-	} else {
-		*ctx.Gas -= gasRequired
+	gasRequired := wordsIn(uint64(len(ctx.Input)))*engine.GasIdentityWord + engine.GasIdentityBase
+	err = engine.UseGasNegative(ctx.Gas, gasRequired)
+	if err != nil {
+		return nil, err
 	}
 	// Return identity
 	return ctx.Input, nil
@@ -152,13 +168,12 @@ func expMod(ctx Context) (output []byte, err error) {
 
 	// TODO: implement non-trivial gas schedule for this operation. Probably a parameterised version of the one
 	// described in EIP though that one seems like a bit of a complicated fudge
-	gasRequired := GasExpModBase + GasExpModWord*(wordsIn(baseLength)*wordsIn(expLength)*wordsIn(modLength))
+	gasRequired := engine.GasExpModBase + engine.GasExpModWord*(wordsIn(baseLength)*wordsIn(expLength)*wordsIn(modLength))
 
-	if *ctx.Gas < gasRequired {
-		return nil, errors.Codes.InsufficientGas
+	err = engine.UseGasNegative(ctx.Gas, gasRequired)
+	if err != nil {
+		return nil, err
 	}
-
-	*ctx.Gas -= gasRequired
 
 	input, segments, err = cut(input, baseLength, expLength, modLength)
 	if err != nil {
