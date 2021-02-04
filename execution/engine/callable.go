@@ -12,6 +12,7 @@ type Blockchain interface {
 	LastBlockHeight() uint64
 	LastBlockTime() time.Time
 	BlockHash(height uint64) ([]byte, error)
+	ChainID() string
 }
 
 type CallParams struct {

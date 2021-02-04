@@ -12,6 +12,8 @@ type TestBlockchain struct {
 	BlockTime   time.Time
 }
 
+var _ Blockchain = (*TestBlockchain)(nil)
+
 func (b *TestBlockchain) LastBlockHeight() uint64 {
 	return b.BlockHeight
 }
@@ -27,4 +29,8 @@ func (b *TestBlockchain) BlockHash(height uint64) ([]byte, error) {
 	bs := make([]byte, 32)
 	binary.BigEndian.PutUint64(bs[24:], height)
 	return bs, nil
+}
+
+func (V *TestBlockchain) ChainID() string {
+	return "TestChain"
 }

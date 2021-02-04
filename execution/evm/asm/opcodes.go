@@ -71,8 +71,9 @@ const (
 	COINBASE
 	TIMESTAMP
 	BLOCKHEIGHT
-	DIFFICULTY_DEPRECATED
+	DIFFICULTY
 	GASLIMIT
+	CHAINID
 )
 
 const (
@@ -236,12 +237,13 @@ var opCodeNames = map[OpCode]string{
 	EXTCODEHASH:         "EXTCODEHASH",
 
 	// 0x40 range - block operations
-	BLOCKHASH:             "BLOCKHASH",
-	COINBASE:              "COINBASE",
-	TIMESTAMP:             "TIMESTAMP",
-	BLOCKHEIGHT:           "BLOCKHEIGHT",
-	DIFFICULTY_DEPRECATED: "DIFFICULTY_DEPRECATED",
-	GASLIMIT:              "GASLIMIT",
+	BLOCKHASH:   "BLOCKHASH",
+	COINBASE:    "COINBASE",
+	TIMESTAMP:   "TIMESTAMP",
+	BLOCKHEIGHT: "BLOCKHEIGHT",
+	DIFFICULTY:  "DIFFICULTY",
+	GASLIMIT:    "GASLIMIT",
+	CHAINID:     "CHAINID",
 
 	// 0x50 range - 'storage' and execution
 	POP:      "POP",
