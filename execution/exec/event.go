@@ -24,6 +24,7 @@ const (
 	TypeEnvelope
 	TypeEndTx
 	TypeEndBlock
+	TypePrint
 )
 
 var nameFromType = map[EventType]string{

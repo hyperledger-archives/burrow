@@ -7,6 +7,7 @@ import (
 type EventSink interface {
 	Call(call *CallEvent, exception *errors.Exception) error
 	Log(log *LogEvent) error
+	Print(print *PrintEvent) error
 }
 
 type noopEventSink struct {
@@ -21,6 +22,10 @@ func (es *noopEventSink) Call(call *CallEvent, exception *errors.Exception) erro
 }
 
 func (es *noopEventSink) Log(log *LogEvent) error {
+	return nil
+}
+
+func (es *noopEventSink) Print(print *PrintEvent) error {
 	return nil
 }
 

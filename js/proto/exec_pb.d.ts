@@ -511,6 +511,12 @@ export class Event extends jspb.Message {
     setGovernaccount(value?: GovernAccountEvent): Event;
 
 
+    hasPrint(): boolean;
+    clearPrint(): void;
+    getPrint(): PrintEvent | undefined;
+    setPrint(value?: PrintEvent): Event;
+
+
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Event.AsObject;
     static toObject(includeInstance: boolean, msg: Event): Event.AsObject;
@@ -529,6 +535,7 @@ export namespace Event {
         call?: CallEvent.AsObject,
         log?: LogEvent.AsObject,
         governaccount?: GovernAccountEvent.AsObject,
+        print?: PrintEvent.AsObject,
     }
 }
 
@@ -651,6 +658,35 @@ export namespace CallEvent {
         origin: Uint8Array | string,
         stackdepth: number,
         pb_return: Uint8Array | string,
+    }
+}
+
+export class PrintEvent extends jspb.Message { 
+    getAddress(): Uint8Array | string;
+    getAddress_asU8(): Uint8Array;
+    getAddress_asB64(): string;
+    setAddress(value: Uint8Array | string): PrintEvent;
+
+    getData(): Uint8Array | string;
+    getData_asU8(): Uint8Array;
+    getData_asB64(): string;
+    setData(value: Uint8Array | string): PrintEvent;
+
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): PrintEvent.AsObject;
+    static toObject(includeInstance: boolean, msg: PrintEvent): PrintEvent.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: PrintEvent, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): PrintEvent;
+    static deserializeBinaryFromReader(message: PrintEvent, reader: jspb.BinaryReader): PrintEvent;
+}
+
+export namespace PrintEvent {
+    export type AsObject = {
+        address: Uint8Array | string,
+        data: Uint8Array | string,
     }
 }
 

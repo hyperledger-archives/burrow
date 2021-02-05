@@ -574,14 +574,17 @@ func deployFinalize(client *def.Client, tx payload.Payload, logger *logging.Logg
 }
 
 func logEvents(txe *exec.TxExecution, client *def.Client, logger *logging.Logger) {
-	if client.AllSpecs == nil {
-		return
-	}
-
 	for _, event := range txe.Events {
+		print := event.GetPrint()
+
+		if print != nil {
+			logger.InfoMsg("print", "address", print.Address.String(), "msg", string(print.Data))
+			continue
+		}
+
 		eventLog := event.GetLog()
 
-		if eventLog == nil {
+		if eventLog == nil || client.AllSpecs == nil {
 			continue
 		}
 

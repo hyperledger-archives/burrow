@@ -591,6 +591,23 @@ func testCallTx(t *testing.T, kern *core.Kernel, cli rpctransact.TransactClient)
 			assert.Equal(t, true, f3)
 			return
 		})
+
+		t.Run("WasmPrint", func(t *testing.T) {
+			t.Parallel()
+			createTxe, err := rpctest.CreateWASMContract(cli, inputAddress, solidity.Bytecode_ewasm, nil)
+			require.NoError(t, err)
+			address := lastCall(createTxe.Events).CallData.Callee
+			spec, err := abi.ReadSpec(solidity.Abi_ewasm)
+			require.NoError(t, err)
+			data, _, err := spec.Pack("test_print", 102, "Fishy")
+			require.NoError(t, err)
+			callTxe, err := rpctest.CallContract(cli, inputAddress, address, data)
+			require.NoError(t, err)
+			evs := filterPrint(callTxe.Events)
+			require.Len(t, evs, 1)
+			assert.Equal(t, string(evs[0].Data), "arg1:102 arg2:Fishy")
+			return
+		})
 	})
 }
 
@@ -632,6 +649,16 @@ func filterLogs(evs []*exec.Event) []*exec.LogEvent {
 		}
 	}
 	return logEvs
+}
+
+func filterPrint(evs []*exec.Event) []*exec.PrintEvent {
+	var printEvs []*exec.PrintEvent
+	for _, ev := range evs {
+		if ev.Print != nil {
+			printEvs = append(printEvs, ev.Print)
+		}
+	}
+	return printEvs
 }
 
 func lastCall(evs []*exec.Event) *exec.CallEvent {
