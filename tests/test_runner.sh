@@ -19,6 +19,7 @@ script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 export burrow_bin=${burrow_bin:-burrow}
 export solc_bin=${solc_bin:-solc}
+export solang_bin=${solang_bin:-solang}
 
 # If false we will not try to start Burrow and expect them to be running
 export boot=${boot:-true}
@@ -67,6 +68,7 @@ test_setup(){
   echo
   echo "Using binaries:"
   echo "  $(type ${solc_bin}) (version: $(${solc_bin} --version))"
+  echo "  $(type ${solang_bin}) (version: $(${solang_bin} --version))"
   echo "  $(type ${burrow_bin}) (version: $(${burrow_bin} --version))"
   echo
   # start test chain

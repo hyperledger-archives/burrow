@@ -1,17 +1,17 @@
-import {Metadata} from "@grpc/grpc-js";
-import {callErrorFromStatus} from "@grpc/grpc-js/build/src/call";
-import {Keccak} from "sha3";
+import { Metadata } from "@grpc/grpc-js";
+import { callErrorFromStatus } from "@grpc/grpc-js/build/src/call";
+import { Keccak } from "sha3";
 import * as utils from '../utils/utils';
 import * as coder from 'ethereumjs-abi';
 import * as convert from '../utils/convert';
 import * as grpc from '@grpc/grpc-js';
 import sha3 from '../utils/sha3';
-import {TxInput, CallTx, ContractMeta} from '../../../proto/payload_pb';
-import {TxExecution, Result} from '../../../proto/exec_pb';
-import {Burrow, Error} from '../burrow';
-import {Envelope} from '../../../proto/txs_pb';
-import {Function, FunctionInput, FunctionOutput} from 'solc';
-import {ABI, Contract} from "./contract";
+import { TxInput, CallTx, ContractMeta } from '../../../proto/payload_pb';
+import { TxExecution, Result } from '../../../proto/exec_pb';
+import { Burrow, Error } from '../burrow';
+import { Envelope } from '../../../proto/txs_pb';
+import { Function, FunctionInput, FunctionOutput } from 'solc';
+import { ABI, Contract } from "./contract";
 
 type FunctionIO = FunctionInput & FunctionOutput;
 
@@ -52,12 +52,20 @@ function txPayload(data: string, account: string, address: string, contract?: Co
   if (address) payload.setAddress(Buffer.from(address, 'hex'));
   payload.setGaslimit(DEFAULT_GAS);
   payload.setFee(0);
-  payload.setData(Buffer.from(data, 'hex'));
+  const code = Buffer.from(data, 'hex');
+  // if we are deploying and it looks like wasm, it must be wasm. Note that
+  // evm opcode 0 is stop, so this would not make any sense.
+  const wasm_magic = Buffer.from('\0asm');
+  if (!address && !Buffer.compare(code.slice(0, 4), wasm_magic)) {
+    payload.setWasm(code);
+  } else {
+    payload.setData(code);
+  }
   // If address is null then we are creating a new contract, if we have the deployedBytecode then send it with the ABI
   if (!address && contract.code.deployedBytecode) {
     const meta = new ContractMeta()
     // TODO: document/formalise the expected structure of the contract metadata
-    meta.setMeta(JSON.stringify({Abi: contract.abi}))
+    meta.setMeta(JSON.stringify({ Abi: contract.abi }))
     const codeHash = (new Keccak(256)).update(contract.code.deployedBytecode, "hex").digest()
     meta.setCodehash(codeHash)
     payload.setContractmetaList([meta])
@@ -91,7 +99,7 @@ const decodeF = function (abi: Function, output: Uint8Array): DecodedResult {
 
   // Decode raw bytes to arguments
   let raw = convert.abiToBurrow(outputTypes, coder.rawDecode(outputTypes, Buffer.from(output)));
-  let result: DecodedResult = {raw: raw.slice()}
+  let result: DecodedResult = { raw: raw.slice() }
 
   result.values = outputs.reduce(function (acc, current) {
     let value = raw.shift();
@@ -187,7 +195,7 @@ export const SolidityFunction = function (abi: Function, burrow: Burrow) {
         // Unpack return arguments
         if (!isConstructor) {
           try {
-            let {raw, values} = decodeF(abi, result.getResult().getReturn_asU8());
+            let { raw, values } = decodeF(abi, result.getResult().getReturn_asU8());
             returnObj.raw = raw;
             returnObj.values = values;
           } catch (e) {
@@ -217,5 +225,5 @@ export const SolidityFunction = function (abi: Function, burrow: Burrow) {
     return handler(result);
   }
 
-  return {displayName, typeName, call, encode, decode}
+  return { displayName, typeName, call, encode, decode }
 }
