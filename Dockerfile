@@ -31,6 +31,7 @@ LABEL org.label-schema.vcs-url="https://github.com/hyperledger/burrow"
 ENV BURROW_PATH /home/$USER
 RUN addgroup -g 101 -S $USER && adduser -S -D -u 1000 $USER $USER
 WORKDIR $BURROW_PATH
+ADD --chown=$USER /testnet/ $BURROW_PATH
 
 # Copy binaries built in previous stage
 COPY --from=builder /src/burrow/bin/burrow $INSTALL_BASE/
@@ -44,3 +45,4 @@ EXPOSE 10997
 
 USER $USER:$USER
 ENTRYPOINT [ "burrow" ]
+CMD [ "start" ]
