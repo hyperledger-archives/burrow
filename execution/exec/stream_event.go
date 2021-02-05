@@ -35,6 +35,8 @@ func (ev *StreamEvent) EventType() EventType {
 		return TypeEndTx
 	case ev.EndBlock != nil:
 		return TypeEndBlock
+	case ev.Event.Print != nil:
+		return TypePrint
 	}
 	return TypeUnknown
 }

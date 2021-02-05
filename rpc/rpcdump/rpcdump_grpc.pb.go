@@ -13,6 +13,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // DumpClient is the client API for Dump service.
@@ -31,7 +32,7 @@ func NewDumpClient(cc grpc.ClientConnInterface) DumpClient {
 }
 
 func (c *dumpClient) GetDump(ctx context.Context, in *GetDumpParam, opts ...grpc.CallOption) (Dump_GetDumpClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Dump_serviceDesc.Streams[0], "/rpcdump.Dump/GetDump", opts...)
+	stream, err := c.cc.NewStream(ctx, &Dump_ServiceDesc.Streams[0], "/rpcdump.Dump/GetDump", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +88,7 @@ type UnsafeDumpServer interface {
 }
 
 func RegisterDumpServer(s grpc.ServiceRegistrar, srv DumpServer) {
-	s.RegisterService(&_Dump_serviceDesc, srv)
+	s.RegisterService(&Dump_ServiceDesc, srv)
 }
 
 func _Dump_GetDump_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -111,7 +112,10 @@ func (x *dumpGetDumpServer) Send(m *dump.Dump) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-var _Dump_serviceDesc = grpc.ServiceDesc{
+// Dump_ServiceDesc is the grpc.ServiceDesc for Dump service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Dump_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "rpcdump.Dump",
 	HandlerType: (*DumpServer)(nil),
 	Methods:     []grpc.MethodDesc{},

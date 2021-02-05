@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/big"
 
+	hex "github.com/tmthrgd/go-hex"
+
 	"github.com/hyperledger/burrow/execution/evm"
 	"github.com/hyperledger/burrow/execution/exec"
 
@@ -79,6 +81,140 @@ func (ctx *context) ResolveGlobal(module, field string) int64 {
 }
 
 func (ctx *context) ResolveFunc(module, field string) lifeExec.FunctionImport {
+	if module == "debug" {
+		// See https://github.com/ewasm/hera#interfaces
+		switch field {
+		case "print32":
+			return func(vm *lifeExec.VirtualMachine) int64 {
+				n := int32(vm.GetCurrentFrame().Locals[0])
+
+				s := fmt.Sprintf("%d", n)
+
+				err := ctx.state.EventSink.Print(&exec.PrintEvent{
+					Address: ctx.params.Callee,
+					Data:    []byte(s),
+				})
+
+				if err != nil {
+					panic(fmt.Sprintf(" => print32 failed: %v", err))
+				}
+
+				return Success
+			}
+
+		case "print64":
+			return func(vm *lifeExec.VirtualMachine) int64 {
+				n := int64(vm.GetCurrentFrame().Locals[0])
+
+				s := fmt.Sprintf("%d", n)
+
+				err := ctx.state.EventSink.Print(&exec.PrintEvent{
+					Address: ctx.params.Callee,
+					Data:    []byte(s),
+				})
+
+				if err != nil {
+					panic(fmt.Sprintf(" => print32 failed: %v", err))
+				}
+
+				return Success
+			}
+
+		case "printMem":
+			return func(vm *lifeExec.VirtualMachine) int64 {
+				dataPtr := int(uint32(vm.GetCurrentFrame().Locals[0]))
+				dataLen := int(uint32(vm.GetCurrentFrame().Locals[1]))
+
+				s := vm.Memory[dataPtr : dataPtr+dataLen]
+
+				err := ctx.state.EventSink.Print(&exec.PrintEvent{
+					Address: ctx.params.Callee,
+					Data:    s,
+				})
+
+				if err != nil {
+					panic(fmt.Sprintf(" => printMem failed: %v", err))
+				}
+
+				return Success
+			}
+
+		case "printMemHex":
+			return func(vm *lifeExec.VirtualMachine) int64 {
+				dataPtr := int(uint32(vm.GetCurrentFrame().Locals[0]))
+				dataLen := int(uint32(vm.GetCurrentFrame().Locals[1]))
+
+				s := hex.EncodeToString(vm.Memory[dataPtr : dataPtr+dataLen])
+
+				err := ctx.state.EventSink.Print(&exec.PrintEvent{
+					Address: ctx.params.Callee,
+					Data:    []byte(s),
+				})
+
+				if err != nil {
+					panic(fmt.Sprintf(" => printMemHex failed: %v", err))
+				}
+
+				return Success
+			}
+
+		case "printStorage":
+			return func(vm *lifeExec.VirtualMachine) int64 {
+				keyPtr := int(uint32(vm.GetCurrentFrame().Locals[0]))
+
+				key := bin.Word256{}
+
+				copy(key[:], vm.Memory[keyPtr:keyPtr+32])
+
+				val, err := ctx.state.GetStorage(ctx.params.Callee, key)
+				if err != nil {
+					panic(err)
+				}
+
+				err = ctx.state.EventSink.Print(&exec.PrintEvent{
+					Address: ctx.params.Callee,
+					Data:    val,
+				})
+
+				if err != nil {
+					panic(fmt.Sprintf(" => printStorage failed: %v", err))
+				}
+
+				return Success
+			}
+
+		case "printStorageHex":
+			return func(vm *lifeExec.VirtualMachine) int64 {
+				keyPtr := int(uint32(vm.GetCurrentFrame().Locals[0]))
+
+				key := bin.Word256{}
+
+				copy(key[:], vm.Memory[keyPtr:keyPtr+32])
+
+				val, err := ctx.state.GetStorage(ctx.params.Callee, key)
+				if err != nil {
+					panic(err)
+				}
+
+				s := hex.EncodeToString(val)
+
+				err = ctx.state.EventSink.Print(&exec.PrintEvent{
+					Address: ctx.params.Callee,
+					Data:    []byte(s),
+				})
+
+				if err != nil {
+					panic(fmt.Sprintf(" => printStorage failed: %v", err))
+				}
+
+				return Success
+			}
+
+		default:
+			panic(fmt.Sprintf("function %s unknown for debug module", field))
+		}
+	}
+
 	if module != "ethereum" {
 		panic(fmt.Sprintf("unknown module %s", module))
 	}

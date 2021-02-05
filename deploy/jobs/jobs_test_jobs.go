@@ -69,6 +69,8 @@ func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, script *def.
 		return "", nil, err
 	}
 
+	logEvents(txe, client, logger)
+
 	result2 := util.GetReturnValue(query.Variables, logger)
 	// Finalize
 	if result2 != "" {

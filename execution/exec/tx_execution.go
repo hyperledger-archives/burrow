@@ -128,6 +128,14 @@ func (txe *TxExecution) GovernAccount(governAccount *GovernAccountEvent, excepti
 	})
 }
 
+func (txe *TxExecution) Print(print *PrintEvent) error {
+	txe.Append(&Event{
+		Header: txe.Header(TypePrint, EventStringLogEvent(print.Address), nil),
+		Print:  print,
+	})
+	return nil
+}
+
 // Errors pushed to TxExecutions end up in merkle state so it is essential that they are deterministic and independent
 // of the code path taken to execution (e.g. replay takes a different path to that of normal consensus reactor so stack
 // traces may differ - as they may across architectures)

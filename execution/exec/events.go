@@ -44,6 +44,17 @@ func (evs *Events) Log(log *LogEvent) error {
 	return nil
 }
 
+func (evs *Events) Print(print *PrintEvent) error {
+	evs.Append(&Event{
+		Header: &Header{
+			EventType: TypePrint,
+			EventID:   EventStringLogEvent(print.Address),
+		},
+		Print: print,
+	})
+	return nil
+}
+
 func (evs Events) CallTrace() string {
 	var calls []string
 	for _, ev := range evs {

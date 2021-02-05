@@ -48,4 +48,8 @@ contract ewasm is E {
 	function test_events() public {
 		emit L(102, "Hello from wasm", true);
 	}
+
+	function test_print(int64 arg1, string arg2) public {
+		print("arg1:{} arg2:{}".format(arg1, arg2));
+	}
 }
