@@ -1,0 +1,111 @@
+{
+	"GenesisTime": "2021-02-05T17:29:45.612487942Z",
+	"ChainName": "Burrow Testnet",
+	"Params": {
+		"ProposalThreshold": 3
+	},
+	"GlobalPermissions": {
+		"Base": {
+			"Perms": "send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | hasRole",
+			"SetBit": "root | send | call | createContract | createAccount | bond | name | proposal | input | batch | identify | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole"
+		}
+	},
+	"Accounts": [
+		{
+			"Address": "83896EE39F92CCFC91EB8185D8AADCBE8321A687",
+			"PublicKey": {
+				"CurveType": "ed25519",
+				"PublicKey": "94E1542E21C9DDF6796F21B5B29A136FB7553123F9C9960DD8DFB2610FD7D02C"
+			},
+			"Amount": 9999999999,
+			"Name": "Validator_0",
+			"Permissions": {
+				"Base": {
+					"Perms": "bond",
+					"SetBit": "bond"
+				}
+			}
+		},
+		{
+			"Address": "7D2F766B60461EA787B35FA0352BA4F1449CAEC3",
+			"PublicKey": {
+				"CurveType": "ed25519",
+				"PublicKey": "F3E03123373B4089022A9E94D9D5628795F6F59BDD87DD1940A68E539DD602C1"
+			},
+			"Amount": 99999999999999,
+			"Name": "Root_0",
+			"Permissions": {
+				"Base": {
+					"Perms": "root | send | call | createContract | createAccount | bond | name | proposal | input | batch | identify | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole",
+					"SetBit": "root | send | call | createContract | createAccount | bond | name | proposal | input | batch | identify | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole"
+				}
+			}
+		},
+		{
+			"Address": "545D5025216A47B37F4C611BD0494F4025704331",
+			"PublicKey": {
+				"CurveType": "ed25519",
+				"PublicKey": "49BDE104BD224137D39FE8CE7BB1DCEF7F72A9387CDEC9E3749597B234032730"
+			},
+			"Amount": 99999999999999,
+			"Name": "Root_1",
+			"Permissions": {
+				"Base": {
+					"Perms": "root | send | call | createContract | createAccount | bond | name | proposal | input | batch | identify | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole",
+					"SetBit": "root | send | call | createContract | createAccount | bond | name | proposal | input | batch | identify | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole"
+				}
+			}
+		},
+		{
+			"Address": "ABE2314B5D38BE9EA2BEDB8E58345C62FA6636BA",
+			"PublicKey": {
+				"CurveType": "ed25519",
+				"PublicKey": "9348C950DD9986E3347455BC82EA796C1B9AF6062A2A4E13B9D706C38A7757F4"
+			},
+			"Amount": 9999999999,
+			"Name": "Participant_0",
+			"Permissions": {
+				"Base": {
+					"Perms": "send | call | name | proposal | input | hasRole",
+					"SetBit": "send | call | name | proposal | input | hasRole"
+				}
+			}
+		},
+		{
+			"Address": "A094BFF202E3C5ED2998DCF210E1D9F84705287D",
+			"PublicKey": {
+				"CurveType": "ed25519",
+				"PublicKey": "85D4EF470CA14D3C1490EFF2DBC21B97D97D6D2BC2D6C3FE21E4289AECC2E0B1"
+			},
+			"Amount": 9999999999,
+			"Name": "Participant_1",
+			"Permissions": {
+				"Base": {
+					"Perms": "send | call | name | proposal | input | hasRole",
+					"SetBit": "send | call | name | proposal | input | hasRole"
+				}
+			}
+		}
+	],
+	"Validators": [
+		{
+			"Address": "83896EE39F92CCFC91EB8185D8AADCBE8321A687",
+			"PublicKey": {
+				"CurveType": "ed25519",
+				"PublicKey": "94E1542E21C9DDF6796F21B5B29A136FB7553123F9C9960DD8DFB2610FD7D02C"
+			},
+			"Amount": 9999999998,
+			"Name": "Validator_0",
+			"UnbondTo": [
+				{
+					"Address": "83896EE39F92CCFC91EB8185D8AADCBE8321A687",
+					"PublicKey": {
+						"CurveType": "ed25519",
+						"PublicKey": "94E1542E21C9DDF6796F21B5B29A136FB7553123F9C9960DD8DFB2610FD7D02C"
+					},
+					"Amount": 9999999998
+				}
+			]
+		}
+	]
+}
