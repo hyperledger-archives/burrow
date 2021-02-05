@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"math/big"
 
+	lifeExec "github.com/perlin-network/life/exec"
 	hex "github.com/tmthrgd/go-hex"
-
-	"github.com/hyperledger/burrow/execution/evm"
-	"github.com/hyperledger/burrow/execution/exec"
 
 	bin "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/errors"
-	lifeExec "github.com/perlin-network/life/exec"
+	"github.com/hyperledger/burrow/execution/evm"
+	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/permission"
+	"github.com/hyperledger/burrow/txs"
 )
 
 type Contract struct {
@@ -72,6 +73,7 @@ type context struct {
 	code       []byte
 	output     []byte
 	returnData []byte
+	sequence   uint64
 }
 
 var _ lifeExec.ImportResolver = (*context)(nil)
@@ -220,13 +222,130 @@ func (ctx *context) ResolveFunc(module, field string) lifeExec.FunctionImport {
 	}
 
 	switch field {
+	case "create":
+		return func(vm *lifeExec.VirtualMachine) int64 {
+			valuePtr := int(uint32(vm.GetCurrentFrame().Locals[0]))
+			dataPtr := uint32(vm.GetCurrentFrame().Locals[1])
+			dataLen := uint32(vm.GetCurrentFrame().Locals[2])
+			resultPtr := uint32(vm.GetCurrentFrame().Locals[3])
+
+			// TODO: is this guaranteed to be okay? Should be avoid panic here if out of bounds?
+			value := bin.BigIntFromLittleEndianBytes(vm.Memory[valuePtr : valuePtr+ValueByteSize])
+
+			var data []byte
+			copy(data, vm.Memory[dataPtr:dataPtr+dataLen])
+
+			ctx.sequence++
+			nonce := make([]byte, txs.HashLength+8)
+			copy(nonce, ctx.vm.options.Nonce)
+			binary.BigEndian.PutUint64(nonce[txs.HashLength:], ctx.sequence)
+			newAccountAddress := crypto.NewContractAddress(ctx.params.Callee, nonce)
+
+			err := engine.EnsurePermission(ctx.state.CallFrame, ctx.params.Callee, permission.CreateContract)
+			if err != nil {
+				return Error
+			}
+
+			err = ctx.state.CallFrame.CreateAccount(ctx.params.Caller, newAccountAddress)
+			if err != nil {
+				return Error
+			}
+
+			res, err := ctx.vm.Contract(vm.Memory[dataPtr:dataPtr+dataLen]).Call(ctx.state, engine.CallParams{
+				Caller: ctx.params.Caller,
+				Callee: newAccountAddress,
+				Input:  nil,
+				Value:  *value,
+				Gas:    ctx.params.Gas,
+			})
+
+			if err != nil {
+				if errors.GetCode(err) == errors.Codes.ExecutionReverted {
+					return Revert
+				}
+				panic(err)
+			}
+			err = engine.InitWASMCode(ctx.state, newAccountAddress, res)
+			if err != nil {
+				if errors.GetCode(err) == errors.Codes.ExecutionReverted {
+					return Revert
+				}
+				panic(err)
+			}
+
+			copy(vm.Memory[resultPtr:], newAccountAddress.Bytes())
+
+			return Success
+		}
+
+	case "getBlockDifficulty":
+		return func(vm *lifeExec.VirtualMachine) int64 {
+			resultPtr := int(vm.GetCurrentFrame().Locals[0])
+
+			// set it to 1
+			copy(vm.Memory[resultPtr:resultPtr+32], bin.RightPadBytes([]byte{1}, 32))
+			return Success
+		}
+
+	case "getTxGasPrice":
+		return func(vm *lifeExec.VirtualMachine) int64 {
+			resultPtr := int(vm.GetCurrentFrame().Locals[0])
+
+			// set it to 1
+			copy(vm.Memory[resultPtr:resultPtr+16], bin.RightPadBytes([]byte{1}, 16))
+			return Success
+		}
+
+	case "selfDestruct":
+		return func(vm *lifeExec.VirtualMachine) int64 {
+			receiverPtr := int(vm.GetCurrentFrame().Locals[0])
+
+			var receiver crypto.Address
+			copy(receiver[:], vm.Memory[receiverPtr:receiverPtr+crypto.AddressLength])
+
+			receiverAcc, err := ctx.state.GetAccount(receiver)
+			if err != nil {
+				panic(err)
+			}
+			if receiverAcc == nil {
+				err := ctx.state.CallFrame.CreateAccount(ctx.params.Callee, receiver)
+				if err != nil {
+					panic(err)
+				}
+			}
+			acc, err := ctx.state.GetAccount(ctx.params.Callee)
+			if err != nil {
+				panic(err)
+			}
+			balance := acc.Balance
+			err = acc.AddToBalance(balance)
+			if err != nil {
+				panic(err)
+			}
+
+			err = ctx.state.CallFrame.UpdateAccount(acc)
+			if err != nil {
+				panic(err)
+			}
+			err = ctx.state.CallFrame.RemoveAccount(ctx.params.Callee)
+			if err != nil {
+				panic(err)
+			}
+			panic(errors.Codes.None)
+		}
+
 	case "call", "callCode", "callDelegate", "callStatic":
 		return func(vm *lifeExec.VirtualMachine) int64 {
 			gasLimit := big.NewInt(vm.GetCurrentFrame().Locals[0])
 			addressPtr := uint32(vm.GetCurrentFrame().Locals[1])
-			valuePtr := int(uint32(vm.GetCurrentFrame().Locals[2]))
-			dataPtr := uint32(vm.GetCurrentFrame().Locals[3])
-			dataLen := uint32(vm.GetCurrentFrame().Locals[4])
+			i := 2
+			var valuePtr int
+			if field == "call" || field == "callCode" {
+				valuePtr = int(uint32(vm.GetCurrentFrame().Locals[i]))
+				i++
+			}
+			dataPtr := uint32(vm.GetCurrentFrame().Locals[i])
+			dataLen := uint32(vm.GetCurrentFrame().Locals[i+1])
 
 			// TODO: avoid panic? Or at least panic with coded out-of-bounds
 			target := crypto.MustAddressFromBytes(vm.Memory[addressPtr : addressPtr+crypto.AddressLength])
