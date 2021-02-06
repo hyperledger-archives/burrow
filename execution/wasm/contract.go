@@ -1,10 +1,12 @@
 package wasm
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"math/big"
 
+	"github.com/go-interpreter/wagon/wasm/leb128"
 	lifeExec "github.com/perlin-network/life/exec"
 	hex "github.com/tmthrgd/go-hex"
 
@@ -43,10 +45,11 @@ func (c *Contract) execute(state engine.State, params engine.CallParams) ([]byte
 		params:   params,
 		code:     c.code,
 	}
+
 	// panics in ResolveFunc() will be recovered for us, no need for our own
-	vm, err := lifeExec.NewVirtualMachine(c.code, c.vm.vmConfig, ctx, nil)
+	vm, err := lifeExec.NewVirtualMachine(c.code[0:int(wasmSize(c.code))], c.vm.vmConfig, ctx, nil)
 	if err != nil {
-		return nil, errors.Errorf(errors.Codes.InvalidContract, "%s: %v", errHeader, err)
+		return nil, errors.Errorf(errors.Codes.InvalidContract, "%s: motherfucker %v", errHeader, err)
 	}
 
 	entryID, ok := vm.GetFunctionExport("main")
@@ -657,4 +660,32 @@ func (ctx *context) ResolveFunc(module, field string) lifeExec.FunctionImport {
 	default:
 		panic(fmt.Sprintf("unknown function %s", field))
 	}
+}
+
+// When deploying wasm code, the abi encoded arguments to the constructor are added to the code. Wagon
+// does not like seeing this data, so strip this off. We have to walk the wasm format to the last section
+
+// There might be a better solution to this.
+func wasmSize(code []byte) int64 {
+	reader := bytes.NewReader(code)
+	top := int64(8)
+	for {
+		reader.Seek(top, 0)
+		id, err := reader.ReadByte()
+		if err != nil || id == 0 || id > 11 {
+			// invalid section id
+			break
+		}
+		size, err := leb128.ReadVarUint32(reader)
+		if err != nil {
+			break
+		}
+		pos, _ := reader.Seek(0, 1)
+		if pos+int64(size) > int64(len(code)) {
+			break
+		}
+		top = pos + int64(size)
+	}
+
+	return top
 }
