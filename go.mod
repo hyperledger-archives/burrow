@@ -14,6 +14,7 @@ require (
 	github.com/elgs/gojq v0.0.0-20201120033525-b5293fef2759
 	github.com/elgs/gosplitargs v0.0.0-20161028071935-a491c5eeb3c8 // indirect
 	github.com/fatih/color v1.10.0
+	github.com/go-interpreter/wagon v0.6.0
 	github.com/go-kit/kit v0.10.0
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/gogo/protobuf v1.3.2
