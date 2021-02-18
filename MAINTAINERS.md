@@ -5,7 +5,7 @@ Maintainers
 
 | Name | GitHub | email
 |------|--------|-------------------
-| Greg Hill | gregdhill |  <greg.hill@monax.io>
+| Greg Hill | gregdhill |  <gregorydhill@outlook.com>
 | Sean Young | seanyoung |  <sean@mess.org>
 | Casey Kuhlman | compleatang | <casey@monax.io>
 | Silas Davis | silasdavis | <silas@monax.io>
