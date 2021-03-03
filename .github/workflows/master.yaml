@@ -3,6 +3,7 @@ on:
   push:
     branches:
     - master
+    - release
 
 jobs:
   cover:

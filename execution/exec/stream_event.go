@@ -90,11 +90,16 @@ type BlockAccumulator struct {
 	continuity ContinuityOpt
 }
 
-func NewBlockAccumulator(continuityOptions ...ContinuityOpt) *BlockAccumulator {
+func GetContinuity(continuityOptions ...ContinuityOpt) ContinuityOpt {
 	continuity := Continuous
 	for _, opt := range continuityOptions {
 		continuity |= opt
 	}
+	return continuity
+}
+
+func NewBlockAccumulator(continuityOptions ...ContinuityOpt) *BlockAccumulator {
+	continuity := GetContinuity(continuityOptions...)
 	return &BlockAccumulator{
 		continuity: continuity,
 		stack: TxStack{

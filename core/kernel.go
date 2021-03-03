@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/dump"
+	"github.com/hyperledger/burrow/rpc/web3"
 
 	// GRPC Codec
 	_ "github.com/hyperledger/burrow/encoding"
@@ -52,7 +53,7 @@ type Kernel struct {
 	// Expose these public-facing interfaces to allow programmatic extension of the Kernel by other projects
 	Emitter        *event.Emitter
 	Service        *rpc.Service
-	EthService     *rpc.EthService
+	EthService     *web3.EthService
 	Launchers      []process.Launcher
 	State          *state.State
 	Blockchain     *bcm.Blockchain

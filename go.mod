@@ -31,6 +31,9 @@ require (
 	github.com/monax/relic v2.0.0+incompatible
 	github.com/perlin-network/life v0.0.0-20191203030451-05c0e0f7eaea
 	github.com/pkg/errors v0.9.1
+	github.com/pointlander/compress v1.1.0 // indirect
+	github.com/pointlander/jetset v1.0.0 // indirect
+	github.com/pointlander/peg v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.9.0
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/common v0.15.0

@@ -87,14 +87,18 @@ func (tx *Tx) SignBytes(enc Envelope_EncodingType) ([]byte, error) {
 func (tx *Tx) RLPRawTx() (*EthRawTx, error) {
 	switch payload := tx.Payload.(type) {
 	case *payload.CallTx:
+		var to []byte
+		if payload.Address != nil {
+			to = payload.Address.Bytes()
+		}
 		return &EthRawTx{
 			Sequence: payload.Input.Sequence,
 			GasPrice: payload.GasPrice,
 			GasLimit: payload.GasLimit,
-			To:       payload.Address.Bytes(),
+			To:       to,
 			Amount:   balance.NativeToWei(payload.Input.Amount),
 			Data:     payload.Data.Bytes(),
-			ChainID:  crypto.GetEthChainID(tx.ChainID),
+			chainID:  crypto.GetEthChainID(tx.ChainID),
 		}, nil
 	default:
 		return nil, fmt.Errorf("tx type %v not supported for rlp encoding", tx.Payload.Type())

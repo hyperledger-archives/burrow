@@ -24,6 +24,7 @@ BIN_PATH?=$(GOPATH)/bin
 HELM_PATH?=helm/package
 HELM_PACKAGE=$(HELM_PATH)/burrow-$(VERSION).tgz
 ARCH?=linux-amd64
+PID_DIR=.pid
 
 export GO111MODULE=on
 
@@ -226,9 +227,38 @@ test_integration_vent:
 	# Include sqlite adapter with tests - will build with CGO but that's probably fine
 	go test -count=1 -v -tags 'integration sqlite' ./vent/...
 
-.PHONY:	test_integration_vent_postgres
-test_integration_vent_postgres:
-	docker-compose run burrow make test_integration_vent
+.PHONY:	test_integration_vent_complete
+test_integration_vent_complete:
+	docker-compose run burrow make test_integration_vent test_integration_vent_ethereum
+
+.PHONY:	test_integration_vent_ethereum
+test_integration_vent_ethereum: start_ganache
+	go test -count=1 -v -tags 'integration !sqlite ethereum' ./vent/...
+	$(MAKE) stop_ganache
+
+.PHONY:	test_integration_ethereum
+test_integration_ethereum: start_ganache
+	go test -v -tags 'integration ethereum' ./rpc/...
+	$(MAKE) stop_ganache
+
+$(PID_DIR)/ganache.pid:
+	mkdir -p $(PID_DIR)
+	yarn --cwd vent/test/eth install
+	@echo "Starting ganache in background..."
+	{ yarn --cwd vent/test/eth ganache & echo $$! > $@; }
+	@sleep 3
+	@echo "Ganache process started (pid at $@)"
+
+.PHONY: start_ganache
+start_ganache: $(PID_DIR)/ganache.pid
+
+.PHONY: stop_ganache
+stop_ganache: $(PID_DIR)/ganache.pid
+	@kill $(shell cat $<) && echo "Ganache process stopped." && rm $< || rm $<
+
+.PHONY: postgres
+postgres:
+	docker-compose up
 
 .PHONY: test_restore
 test_restore:
@@ -241,7 +271,7 @@ test_integration:
 	@go test -count=1 -v -tags integration ./integration/...
 
 .PHONY: test_integration_all
-test_integration_all: test_keys test_deploy test_integration_vent_postgres test_restore test_truffle test_integration
+test_integration_all: test_keys test_deploy test_integration_vent_complete test_restore test_truffle test_integration
 
 .PHONY: test_integration_all_no_postgres
 test_integration_all_no_postgres: test_keys test_deploy test_integration_vent test_restore test_truffle test_integration

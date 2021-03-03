@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/encoding"
+	"github.com/hyperledger/burrow/rpc/web3/ethclient"
+	"google.golang.org/grpc"
 
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/evm/abi"
@@ -14,7 +16,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func NewTransactClient(t testing.TB, listenAddress string) rpctransact.TransactClient {
+const gasLimit = ethclient.BasicGasLimit * 100
+
+type TransactClient interface {
+	CallTxSync(ctx context.Context, in *payload.CallTx, opts ...grpc.CallOption) (*exec.TxExecution, error)
+}
+
+func NewBurrowTransactClient(t testing.TB, listenAddress string) rpctransact.TransactClient {
 	t.Helper()
 
 	conn, err := encoding.GRPCDial(listenAddress)
@@ -22,18 +30,16 @@ func NewTransactClient(t testing.TB, listenAddress string) rpctransact.TransactC
 	return rpctransact.NewTransactClient(conn)
 }
 
-func CreateContract(t testing.TB, cli rpctransact.TransactClient, inputAddress crypto.Address) *exec.TxExecution {
+func CreateContract(t testing.TB, cli TransactClient, inputAddress crypto.Address) *exec.TxExecution {
 	t.Helper()
 
 	txe, err := cli.CallTxSync(context.Background(), &payload.CallTx{
 		Input: &payload.TxInput{
 			Address: inputAddress,
-			Amount:  2,
 		},
 		Address:  nil,
 		Data:     Bytecode_EventsTest,
-		Fee:      2,
-		GasLimit: 10000,
+		GasLimit: gasLimit,
 	})
 	require.NoError(t, err)
 
@@ -44,27 +50,27 @@ func CreateContract(t testing.TB, cli rpctransact.TransactClient, inputAddress c
 	return txe
 }
 
-func CallRemoveEvent(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address,
+func CallRemoveEvent(t testing.TB, cli TransactClient, inputAddress, contractAddress crypto.Address,
 	name string) *exec.TxExecution {
 	return Call(t, cli, inputAddress, contractAddress, "removeThing", name)
 }
 
-func CallRemoveEvents(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address,
+func CallRemoveEvents(t testing.TB, cli TransactClient, inputAddress, contractAddress crypto.Address,
 	name string) *exec.TxExecution {
 	return Call(t, cli, inputAddress, contractAddress, "removeThings", name)
 }
 
-func CallAddEvent(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address,
+func CallAddEvent(t testing.TB, cli TransactClient, inputAddress, contractAddress crypto.Address,
 	name, description string) *exec.TxExecution {
 	return Call(t, cli, inputAddress, contractAddress, "addThing", name, description)
 }
 
-func CallAddEvents(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address,
+func CallAddEvents(t testing.TB, cli TransactClient, inputAddress, contractAddress crypto.Address,
 	name, description string) *exec.TxExecution {
 	return Call(t, cli, inputAddress, contractAddress, "addThings", name, description)
 }
 
-func Call(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAddress crypto.Address,
+func Call(t testing.TB, cli TransactClient, inputAddress, contractAddress crypto.Address,
 	functionName string, args ...interface{}) *exec.TxExecution {
 	t.Helper()
 
@@ -77,12 +83,10 @@ func Call(t testing.TB, cli rpctransact.TransactClient, inputAddress, contractAd
 	txe, err := cli.CallTxSync(context.Background(), &payload.CallTx{
 		Input: &payload.TxInput{
 			Address: inputAddress,
-			Amount:  2,
 		},
 		Address:  &contractAddress,
 		Data:     data,
-		Fee:      2,
-		GasLimit: 1000000,
+		GasLimit: gasLimit,
 	})
 	require.NoError(t, err)
 

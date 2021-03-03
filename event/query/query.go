@@ -37,6 +37,10 @@ func (m *MatchError) Error() string {
 	return fmt.Sprintf("matching error occurred with tagged: %v", m.Cause)
 }
 
+func IsEmpty(query Query) bool {
+	return query.String() == ""
+}
+
 // Condition represents a single condition within a query and consists of tag
 // (e.g. "tx.gas"), operator (e.g. "=") and operand (e.g. "7").
 type Condition struct {
@@ -54,11 +58,8 @@ func New(s string) (*PegQuery, error) {
 	p.Expression.explainer = func(format string, args ...interface{}) {
 		fmt.Printf(format, args...)
 	}
-	err := p.Init()
-	if err != nil {
-		return nil, err
-	}
-	err = p.Parse()
+	p.Init()
+	err := p.Parse()
 	if err != nil {
 		return nil, err
 	}

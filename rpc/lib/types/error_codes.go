@@ -1,8 +1,8 @@
 package types
 
 import (
+	"fmt"
 	"net/http"
-	"strconv"
 )
 
 // From JSONRPC 2.0 spec
@@ -14,7 +14,9 @@ const (
 	RPCErrorCodeMethodNotFound RPCErrorCode = -32601
 	RPCErrorCodeInvalidParams  RPCErrorCode = -32602
 	RPCErrorCodeInternalError  RPCErrorCode = -32603
-	RPCErrorCodeServerError    RPCErrorCode = -32000
+	// Available for custom server-defined errors
+	RPCErrorCodeServerErrorStart RPCErrorCode = -32000
+	RPCErrorCodeServerErrorEnd   RPCErrorCode = -32099
 )
 
 func (code RPCErrorCode) String() string {
@@ -29,11 +31,16 @@ func (code RPCErrorCode) String() string {
 		return "Invalid Params"
 	case RPCErrorCodeInternalError:
 		return "Internal Error"
-	case RPCErrorCodeServerError:
-		return "Server Error"
 	default:
-		return strconv.FormatInt(int64(code), 10)
+		if code.IsServerError() {
+			return fmt.Sprintf("Server Error %d", code)
+		}
+		return fmt.Sprintf("Unknown Error %d", code)
 	}
+}
+
+func (code RPCErrorCode) IsServerError() bool {
+	return code >= RPCErrorCodeServerErrorStart && code <= RPCErrorCodeServerErrorEnd
 }
 
 func (code RPCErrorCode) HTTPStatusCode() int {

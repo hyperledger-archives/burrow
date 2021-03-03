@@ -14,94 +14,90 @@ import (
 	"github.com/hyperledger/burrow/rpc/rpcinfo"
 )
 
-type RPCClient interface {
-	Call(method string, params map[string]interface{}, result interface{}) (interface{}, error)
-}
-
-func Status(client RPCClient) (*rpc.ResultStatus, error) {
+func Status(client rpc.Client) (*rpc.ResultStatus, error) {
 	res := new(rpc.ResultStatus)
-	_, err := client.Call(rpcinfo.Status, pmap(), res)
+	err := client.Call(rpcinfo.Status, pmap(), res)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func ChainId(client RPCClient) (*rpc.ResultChainId, error) {
+func ChainId(client rpc.Client) (*rpc.ResultChainId, error) {
 	res := new(rpc.ResultChainId)
-	_, err := client.Call(rpcinfo.ChainID, pmap(), &res)
+	err := client.Call(rpcinfo.ChainID, pmap(), &res)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func Account(client RPCClient, address crypto.Address) (*acm.Account, error) {
+func Account(client rpc.Client, address crypto.Address) (*acm.Account, error) {
 	res := new(rpc.ResultAccount)
-	_, err := client.Call(rpcinfo.Account, pmap("address", address), res)
+	err := client.Call(rpcinfo.Account, pmap("address", address), res)
 	if err != nil {
 		return nil, err
 	}
 	return res.Account, nil
 }
 
-func DumpStorage(client RPCClient, address crypto.Address) (*rpc.ResultDumpStorage, error) {
+func DumpStorage(client rpc.Client, address crypto.Address) (*rpc.ResultDumpStorage, error) {
 	res := new(rpc.ResultDumpStorage)
-	_, err := client.Call(rpcinfo.DumpStorage, pmap("address", address), res)
+	err := client.Call(rpcinfo.DumpStorage, pmap("address", address), res)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func Storage(client RPCClient, address crypto.Address, key []byte) ([]byte, error) {
+func Storage(client rpc.Client, address crypto.Address, key []byte) ([]byte, error) {
 	res := new(rpc.ResultStorage)
-	_, err := client.Call(rpcinfo.Storage, pmap("address", address, "key", key), res)
+	err := client.Call(rpcinfo.Storage, pmap("address", address, "key", key), res)
 	if err != nil {
 		return nil, err
 	}
 	return res.Value, nil
 }
 
-func Name(client RPCClient, name string) (*names.Entry, error) {
+func Name(client rpc.Client, name string) (*names.Entry, error) {
 	res := new(rpc.ResultName)
-	_, err := client.Call(rpcinfo.Name, pmap("name", name), res)
+	err := client.Call(rpcinfo.Name, pmap("name", name), res)
 	if err != nil {
 		return nil, err
 	}
 	return res.Entry, nil
 }
 
-func Names(client RPCClient, regex string) ([]*names.Entry, error) {
+func Names(client rpc.Client, regex string) ([]*names.Entry, error) {
 	res := new(rpc.ResultNames)
-	_, err := client.Call(rpcinfo.Names, pmap("regex", regex), res)
+	err := client.Call(rpcinfo.Names, pmap("regex", regex), res)
 	if err != nil {
 		return nil, err
 	}
 	return res.Names, nil
 }
 
-func Blocks(client RPCClient, minHeight, maxHeight int) (*rpc.ResultBlocks, error) {
+func Blocks(client rpc.Client, minHeight, maxHeight int) (*rpc.ResultBlocks, error) {
 	res := new(rpc.ResultBlocks)
-	_, err := client.Call(rpcinfo.Blocks, pmap("minHeight", minHeight, "maxHeight", maxHeight), res)
+	err := client.Call(rpcinfo.Blocks, pmap("minHeight", minHeight, "maxHeight", maxHeight), res)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func Block(client RPCClient, height int) (*rpc.ResultBlock, error) {
+func Block(client rpc.Client, height int) (*rpc.ResultBlock, error) {
 	res := new(rpc.ResultBlock)
-	_, err := client.Call(rpcinfo.Block, pmap("height", height), res)
+	err := client.Call(rpcinfo.Block, pmap("height", height), res)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func UnconfirmedTxs(client RPCClient, maxTxs int) (*rpc.ResultUnconfirmedTxs, error) {
+func UnconfirmedTxs(client rpc.Client, maxTxs int) (*rpc.ResultUnconfirmedTxs, error) {
 	res := new(rpc.ResultUnconfirmedTxs)
-	_, err := client.Call(rpcinfo.UnconfirmedTxs, pmap("maxTxs", maxTxs), res)
+	err := client.Call(rpcinfo.UnconfirmedTxs, pmap("maxTxs", maxTxs), res)
 	if err != nil {
 		return nil, err
 	}
@@ -109,18 +105,18 @@ func UnconfirmedTxs(client RPCClient, maxTxs int) (*rpc.ResultUnconfirmedTxs, er
 	return resCon, nil
 }
 
-func Validators(client RPCClient) (*rpc.ResultValidators, error) {
+func Validators(client rpc.Client) (*rpc.ResultValidators, error) {
 	res := new(rpc.ResultValidators)
-	_, err := client.Call(rpcinfo.Validators, pmap(), res)
+	err := client.Call(rpcinfo.Validators, pmap(), res)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func Consensus(client RPCClient) (*rpc.ResultConsensusState, error) {
+func Consensus(client rpc.Client) (*rpc.ResultConsensusState, error) {
 	res := new(rpc.ResultConsensusState)
-	_, err := client.Call(rpcinfo.Consensus, pmap(), res)
+	err := client.Call(rpcinfo.Consensus, pmap(), res)
 	if err != nil {
 		return nil, err
 	}
@@ -128,14 +124,14 @@ func Consensus(client RPCClient) (*rpc.ResultConsensusState, error) {
 }
 
 func pmap(keyvals ...interface{}) map[string]interface{} {
-	pm, err := paramsMap(keyvals...)
+	pm, err := ParamsToMap(keyvals...)
 	if err != nil {
 		panic(err)
 	}
 	return pm
 }
 
-func paramsMap(orderedKeyVals ...interface{}) (map[string]interface{}, error) {
+func ParamsToMap(orderedKeyVals ...interface{}) (map[string]interface{}, error) {
 	if len(orderedKeyVals)%2 != 0 {
 		return nil, fmt.Errorf("mapAndValues requires a even length list of"+
 			" keys and values but got: %v (length %v)",

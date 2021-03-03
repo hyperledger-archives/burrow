@@ -40,7 +40,7 @@ func TestLocalMulti(t *testing.T) {
 	expectedSolcResponse := BlankSolcResponse()
 	actualOutput, err := exec.Command("solc", "--combined-json", "bin,abi", "contractImport1.sol").CombinedOutput()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("solc failed %v: %s", err, actualOutput)
 	}
 
 	warning, responseJSON := extractWarningJSON(strings.TrimSpace(string(actualOutput)))
@@ -85,7 +85,7 @@ func TestLocalSingle(t *testing.T) {
 	shellCmd := exec.Command("solc", "--combined-json", "bin,abi", "simpleContract.sol")
 	actualOutput, err := shellCmd.CombinedOutput()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("solc failed %v: %s", err, actualOutput)
 	}
 
 	warning, responseJSON := extractWarningJSON(strings.TrimSpace(string(actualOutput)))

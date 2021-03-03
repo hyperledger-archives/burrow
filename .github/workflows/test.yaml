@@ -36,7 +36,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - run: make test_integration_vent_postgres
+    - run: make test_integration_ethereum
+    - run: make test_integration_vent_complete
 
   docker:
     runs-on: ubuntu-latest

@@ -38,7 +38,7 @@ func TestServer(t *testing.T) {
 
 			cfg.SpecFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/sqlsol_view.json"}
 			cfg.AbiFileOrDirs = []string{os.Getenv("GOPATH") + "/src/github.com/hyperledger/burrow/vent/test/EventsTest.abi"}
-			cfg.GRPCAddr = kern.GRPCListenAddress().String()
+			cfg.ChainAddress = kern.GRPCListenAddress().String()
 
 			log := logging.NewNoopLogger()
 			consumer := service.NewConsumer(cfg, log, make(chan types.EventData))

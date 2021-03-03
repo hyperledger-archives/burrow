@@ -1,4 +1,4 @@
-// +build integration sqlite
+// +build integration,sqlite
 
 package sqldb_test
 

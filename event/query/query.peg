@@ -14,13 +14,16 @@ e <- eor !.
 
 eor <- eand ( or eand { p.Operator(OpOr) })*
 
-eand <- condition ( and condition { p.Operator(OpAnd) })*
+eand <- enot ( and enot { p.Operator(OpAnd) })*
+
+enot <- not condition { p.Operator(OpNot) } / condition
 
 condition <- tag sp (le (number / time / date) { p.Operator(OpLessEqual) }
                       / ge (number / time / date) { p.Operator(OpGreaterEqual) }
                       / l (number / time / date) { p.Operator(OpLess) }
                       / g (number / time / date) { p.Operator(OpGreater) }
                       / equal (number / time / date / qvalue) { p.Operator(OpEqual) }
+                      / ne (number / time / date / qvalue) { p.Operator(OpNotEqual) }
                       / contains qvalue { p.Operator(OpContains) }
                       ) sp / open eor close
 
@@ -45,7 +48,9 @@ day <- ('0' / '1' / '2' / '3') digit
 
 and <- "AND" sp
 or <- "OR" sp
+not <- "NOT" sp
 equal <- "=" sp
+ne <- "!=" sp
 contains <- "CONTAINS" sp
 le <- "<=" sp
 ge <- ">=" sp

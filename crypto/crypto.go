@@ -74,3 +74,7 @@ type Signer interface {
 type Signable interface {
 	SignBytes(chainID string) ([]byte, error)
 }
+
+func (pk *PrivateKey) GetAddress() Address {
+	return pk.GetPublicKey().GetAddress()
+}

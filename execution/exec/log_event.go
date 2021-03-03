@@ -67,8 +67,8 @@ func (log *LogEvent) GetTopic(i int) Word256 {
 	return Word256{}
 }
 
-func (log *LogEvent) SolidityEventID() abi.EventID {
+func SolidityEventID(topics []Word256) abi.EventID {
 	var eventID abi.EventID
-	copy(eventID[:], log.Topics[0].Bytes())
+	copy(eventID[:], topics[0].Bytes())
 	return eventID
 }

@@ -1,4 +1,4 @@
-// +build integration
+// +build integration,!ethereum
 
 package service_test
 
@@ -25,7 +25,7 @@ func TestPostgresConsumer(t *testing.T) {
 	defer shutdown()
 	inputAddress := privateAccounts[0].GetAddress()
 	grpcAddress := kern.GRPCListenAddress().String()
-	tcli := test.NewTransactClient(t, grpcAddress)
+	tcli := test.NewBurrowTransactClient(t, grpcAddress)
 
 	t.Parallel()
 	time.Sleep(2 * time.Second)
@@ -48,7 +48,7 @@ func TestPostgresConsumer(t *testing.T) {
 		})
 
 		t.Run("PostgresTriggers", func(t *testing.T) {
-			tCli := test.NewTransactClient(t, kern.GRPCListenAddress().String())
+			tCli := test.NewBurrowTransactClient(t, kern.GRPCListenAddress().String())
 			create := test.CreateContract(t, tCli, inputAddress)
 
 			// generate events

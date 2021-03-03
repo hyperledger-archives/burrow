@@ -108,20 +108,20 @@ func testSetBlock(t *testing.T, cfg *config.VentConfig) {
 			require.NoError(t, err)
 
 			// new
-			str, dat := getBlock()
-			err = db.SetBlock(test.ChainID, str, dat)
+			eventTables, eventData := getBlock()
+			err = db.SetBlock(test.ChainID, eventTables, eventData)
 			require.NoError(t, err)
 
 			// read
 			_, err = db.LastBlockHeight(test.ChainID)
 			require.NoError(t, err)
 
-			_, err = db.GetBlock(test.ChainID, dat.BlockHeight)
+			_, err = db.GetBlock(test.ChainID, eventData.BlockHeight)
 			require.NoError(t, err)
 
 			// alter
-			str, dat = getAlterBlock()
-			err = db.SetBlock(test.ChainID, str, dat)
+			eventTables, eventData = getAlterBlock()
+			err = db.SetBlock(test.ChainID, eventTables, eventData)
 			require.NoError(t, err)
 
 			//restore
