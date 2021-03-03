@@ -23,6 +23,15 @@ func TestMatches(t *testing.T) {
 		err     bool
 		matches bool
 	}{
+		// This one is debatable, we could match <nil> != 1, but it's likely to be a mistake so we will have nil matches nothing for now
+		{"Address = '12345' OR Height != 1", map[string]interface{}{"Height": nil, "Address": "54321"}, false, false},
+		{"Address = '12345' OR Height != 1", map[string]interface{}{"Height": 1, "Address": "54321"}, false, false},
+		{"Address = '12345' OR Height != 1", map[string]interface{}{"Height": 2, "Address": "54321"}, false, true},
+		{"Address = '12345' OR Height != 1", map[string]interface{}{"Height": 1, "Address": "12345"}, false, true},
+		{"(NOT (Height < 4)) OR Height = 1", map[string]interface{}{"Height": 1}, false, true},
+		{"(NOT (Height < 4)) OR Height = 1", map[string]interface{}{"Height": 3}, false, false},
+		{"NOT (Height = 4)", map[string]interface{}{"Height": 3}, false, true},
+		{"Height != 4", map[string]interface{}{"Height": 3}, false, true},
 		{"Height CONTAINS '2'", map[string]interface{}{"Height": uint64(12)}, false, true},
 		{"Height CONTAINS '2'", map[string]interface{}{"Height": uint64(11)}, false, false},
 		{"foo > 10", map[string]interface{}{"foo": 11}, false, true},

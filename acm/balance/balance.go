@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	eth = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+	ethInWei = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 )
 
 type Balances []Balance
@@ -134,9 +134,9 @@ func (bs Balances) HasPower() bool {
 func NativeToWei(n uint64) *big.Int {
 	// 1 native unit to 1 ether (wei)
 	x := new(big.Int).SetUint64(n)
-	return new(big.Int).Mul(x, eth)
+	return new(big.Int).Mul(x, ethInWei)
 }
 
 func WeiToNative(x *big.Int) *big.Int {
-	return new(big.Int).Div(x, eth)
+	return new(big.Int).Div(x, ethInWei)
 }

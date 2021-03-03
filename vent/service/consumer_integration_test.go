@@ -30,9 +30,13 @@ const (
 
 var tables = types.DefaultSQLTableNames
 
-func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli rpctransact.TransactClient, inputAddress crypto.Address) {
+func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli test.TransactClient,
+	inputAddress crypto.Address) {
+
 	create := test.CreateContract(t, tcli, inputAddress)
-	eventColumnName := "EventTest"
+	eventTestTableName := "EventTest"
+	require.True(t, create.Receipt.CreatesContract)
+	cfg.WatchAddresses = []crypto.Address{create.Receipt.ContractAddress}
 
 	t.Run("view mode", func(t *testing.T) {
 		// create test db
@@ -61,8 +65,8 @@ func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli rpc
 		runConsumer(t, cfg)
 
 		// test data stored in database for two different block ids
-		ensureEvents(t, db, chainID, eventColumnName, txeA.Height, 1)
-		eventData := ensureEvents(t, db, chainID, eventColumnName, txeB.Height, 1)
+		ensureEvents(t, db, chainID, eventTestTableName, txeA.Height, 1)
+		eventData := ensureEvents(t, db, chainID, eventTestTableName, txeB.Height, 1)
 
 		// block & tx raw data also persisted
 		if cfg.SpecOpt&sqlsol.Block > 0 {
@@ -90,7 +94,7 @@ func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli rpc
 		description := "Description of TestEvent5"
 		txeC := test.CallAddEvents(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
 		runConsumer(t, cfg)
-		ensureEvents(t, db, chainID, eventColumnName, txeC.Height, 2)
+		ensureEvents(t, db, chainID, eventTestTableName, txeC.Height, 2)
 	})
 
 }
@@ -126,14 +130,14 @@ func testDeleteEvent(t *testing.T, chainID string, cfg *config.VentConfig, tcli 
 	// delete not allowed on log mode
 }
 
-func ensureEvents(t *testing.T, db *sqldb.SQLDB, chainID, column string, height, numEvents uint64) types.EventData {
+func ensureEvents(t *testing.T, db *sqldb.SQLDB, chainID, table string, height, numEvents uint64) types.EventData {
 	eventData, err := db.GetBlock(chainID, height)
 	require.NoError(t, err)
 	require.Equal(t, height, eventData.BlockHeight)
 	require.Equal(t, 3, len(eventData.Tables))
 
 	// Check the number of rows
-	tblData := eventData.Tables[column]
+	tblData := eventData.Tables[table]
 	require.Equal(t, numEvents, uint64(len(tblData)))
 
 	if numEvents > 0 && len(tblData) > 0 {

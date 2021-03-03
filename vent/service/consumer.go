@@ -7,39 +7,33 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger/burrow/encoding"
-
-	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc/lib/jsonrpc"
+	"github.com/hyperledger/burrow/vent/chain/burrow"
+	"github.com/hyperledger/burrow/vent/chain/ethereum"
 
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
-	"github.com/hyperledger/burrow/rpc/rpcquery"
+	"github.com/hyperledger/burrow/vent/chain"
 	"github.com/hyperledger/burrow/vent/config"
 	"github.com/hyperledger/burrow/vent/sqldb"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/types"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 )
 
 // Consumer contains basic configuration for consumer to run
 type Consumer struct {
-	Config         *config.VentConfig
-	Logger         *logging.Logger
-	DB             *sqldb.SQLDB
-	GRPCConnection *grpc.ClientConn
+	Config *config.VentConfig
+	Logger *logging.Logger
+	DB     *sqldb.SQLDB
+	Chain  chain.Chain
 	// external events channel used for when vent is leveraged as a library
-	EventsChannel chan types.EventData
-	Done          chan struct{}
-	shutdownOnce  sync.Once
-	Status
-}
-
-// Status announcement
-type Status struct {
+	EventsChannel       chan types.EventData
+	Done                chan struct{}
+	shutdownOnce        sync.Once
 	LastProcessedHeight uint64
-	Burrow              *rpc.ResultStatus
 }
 
 // NewConsumer constructs a new consumer configuration.
@@ -62,21 +56,14 @@ func (c *Consumer) Run(projection *sqlsol.Projection, stream bool) error {
 
 	c.Logger.InfoMsg("Connecting to Burrow gRPC server")
 
-	c.GRPCConnection, err = encoding.GRPCDial(c.Config.GRPCAddr)
+	c.Chain, err = c.connectToChain()
 	if err != nil {
-		return errors.Wrapf(err, "Error connecting to Burrow gRPC server at %s", c.Config.GRPCAddr)
+		return errors.Wrapf(err, "Error connecting to Burrow gRPC server at %s", c.Config.ChainAddress)
 	}
-	defer c.GRPCConnection.Close()
+	defer c.Chain.Close()
 	defer close(c.EventsChannel)
 
-	// get the chain ID to compare with the one stored in the db
-	qCli := rpcquery.NewQueryClient(c.GRPCConnection)
-	c.Status.Burrow, err = qCli.Status(context.Background(), &rpcquery.StatusParam{})
-	if err != nil {
-		return errors.Wrapf(err, "Error getting chain status")
-	}
-
-	abiProvider, err := NewAbiProvider(c.Config.AbiFileOrDirs, rpcquery.NewQueryClient(c.GRPCConnection), c.Logger)
+	abiProvider, err := NewAbiProvider(c.Config.AbiFileOrDirs, c.Chain, c.Logger)
 	if err != nil {
 		return errors.Wrapf(err, "Error loading ABIs")
 	}
@@ -101,14 +88,14 @@ func (c *Consumer) Run(projection *sqlsol.Projection, stream bool) error {
 	}
 	defer c.DB.Close()
 
-	err = c.DB.Init(c.Burrow.ChainID, c.Burrow.BurrowVersion)
+	err = c.DB.Init(c.Chain.GetChainID(), c.Chain.GetVersion())
 	if err != nil {
 		return fmt.Errorf("could not clean tables after ChainID change: %v", err)
 	}
 
 	c.Logger.InfoMsg("Synchronizing config and database projection structures")
 
-	err = c.DB.SynchronizeDB(c.Burrow.ChainID, projection.Tables)
+	err = c.DB.SynchronizeDB(c.Chain.GetChainID(), projection.Tables)
 	if err != nil {
 		return errors.Wrap(err, "Error trying to synchronize database")
 	}
@@ -126,17 +113,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, stream bool) error {
 
 		c.Logger.InfoMsg("Getting last processed block number from SQL log table")
 
-		// NOTE [Silas]: I am preserving the comment below that dates from the early days of Vent. I have looked at the
-		// bosmarmot git history and I cannot see why the original author thought that it was the case that there was
-		// no way of knowing if the last block of events was committed since the block and its associated log is
-		// committed atomically in a transaction and this is a core part of he design of Vent - in order that it does not
-		// repeat
-
-		// [ORIGINAL COMMENT]
-		// right now there is no way to know if the last block of events was completely read
-		// so we have to begin processing from the last block number stored in database
-		// and update event data if already present
-		fromBlock, err := c.DB.LastBlockHeight(c.Burrow.ChainID)
+		fromBlock, err := c.DB.LastBlockHeight(c.Chain.GetChainID())
 		if err != nil {
 			errCh <- errors.Wrapf(err, "Error trying to get last processed block number")
 			return
@@ -149,8 +126,12 @@ func (c *Consumer) Run(projection *sqlsol.Projection, stream bool) error {
 			startingBlock++
 		}
 
+		// Allows us skip historical/checkpointed state
+		if startingBlock < c.Config.MinimumHeight {
+			startingBlock = c.Config.MinimumHeight
+		}
+
 		// setup block range to get needed blocks server side
-		cli := rpcevents.NewExecutionEventsClient(c.GRPCConnection)
 		var end *rpcevents.Bound
 		if stream {
 			end = rpcevents.StreamBound()
@@ -162,19 +143,13 @@ func (c *Consumer) Run(projection *sqlsol.Projection, stream bool) error {
 			BlockRange: rpcevents.NewBlockRange(rpcevents.AbsoluteBound(startingBlock), end),
 		}
 
-		// gets blocks in given range based on last processed block taken from database
-		stream, err := cli.Stream(context.Background(), request)
-		if err != nil {
-			errCh <- errors.Wrapf(err, "Error connecting to block stream")
-			return
-		}
-
-		// get blocks
-
 		c.Logger.TraceMsg("Waiting for blocks...")
 
-		err = rpcevents.ConsumeBlockExecutions(stream,
-			NewBlockConsumer(projection, c.Config.SpecOpt, abiProvider.GetEventAbi, eventCh, c.Done, c.Logger))
+		// gets blocks in given range based on last processed block taken from database
+		consumer := NewBlockConsumer(c.Chain.GetChainID(), projection, c.Config.SpecOpt, abiProvider.GetEventAbi,
+			eventCh, c.Done, c.Logger)
+
+		err = c.Chain.ConsumeBlocks(context.Background(), request.BlockRange, consumer)
 
 		if err != nil {
 			if err == io.EOF {
@@ -194,7 +169,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, stream bool) error {
 		select {
 		// Process block events
 		case blk := <-eventCh:
-			c.Status.LastProcessedHeight = blk.BlockHeight
+			c.LastProcessedHeight = blk.BlockHeight
 			err := c.commitBlock(projection, blk)
 			if err != nil {
 				c.Logger.InfoMsg("error committing block", "err", err)
@@ -221,7 +196,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, stream bool) error {
 
 func (c *Consumer) commitBlock(projection *sqlsol.Projection, blockEvents types.EventData) error {
 	// upsert rows in specific SQL event tables and update block number
-	if err := c.DB.SetBlock(c.Burrow.ChainID, projection.Tables, blockEvents); err != nil {
+	if err := c.DB.SetBlock(c.Chain.GetChainID(), projection.Tables, blockEvents); err != nil {
 		return fmt.Errorf("error upserting rows in database: %v", err)
 	}
 
@@ -249,11 +224,11 @@ func (c *Consumer) Health() error {
 	}
 
 	// check grpc connection status
-	if c.GRPCConnection == nil {
+	if c.Chain == nil {
 		return errors.New("grpc disconnected")
 	}
 
-	if grpcState := c.GRPCConnection.GetState(); grpcState != connectivity.Ready {
+	if grpcState := c.Chain.Connectivity(); grpcState != connectivity.Ready {
 		return errors.New("grpc connection not ready")
 	}
 
@@ -265,48 +240,24 @@ func (c *Consumer) Shutdown() {
 	c.shutdownOnce.Do(func() {
 		c.Logger.InfoMsg("Shutting down vent consumer...")
 		close(c.Done)
-		c.GRPCConnection.Close()
+		err := c.Chain.Close()
+		if err != nil {
+			c.Logger.InfoMsg("Could not close Chain connection", structure.ErrorKey, err)
+		}
 	})
 }
 
-func (c *Consumer) updateStatus(qcli rpcquery.QueryClient) {
-	stat, err := qcli.Status(context.Background(), &rpcquery.StatusParam{})
-	if err != nil {
-		c.Logger.InfoMsg("could not get blockchain status", "err", err)
-		return
-	}
-	c.Status.Burrow = stat
-}
-
-func (c *Consumer) statusMessage() []interface{} {
-	var catchUpRatio float64
-	if c.Burrow.SyncInfo.LatestBlockHeight > 0 {
-		catchUpRatio = float64(c.LastProcessedHeight) / float64(c.Burrow.SyncInfo.LatestBlockHeight)
-	}
-	return []interface{}{
-		"msg", "status",
-		"last_processed_height", c.LastProcessedHeight,
-		"fraction_caught_up", catchUpRatio,
-		"burrow_latest_block_height", c.Burrow.SyncInfo.LatestBlockHeight,
-		"burrow_latest_block_duration", c.Burrow.SyncInfo.LatestBlockDuration,
-		"burrow_latest_block_hash", c.Burrow.SyncInfo.LatestBlockHash,
-		"burrow_latest_app_hash", c.Burrow.SyncInfo.LatestAppHash,
-		"burrow_latest_block_time", c.Burrow.SyncInfo.LatestBlockTime,
-		"burrow_latest_block_seen_time", c.Burrow.SyncInfo.LatestBlockSeenTime,
-		"burrow_node_info", c.Burrow.NodeInfo,
-		"burrow_catching_up", c.Burrow.CatchingUp,
-	}
+func (c *Consumer) StatusMessage(ctx context.Context) []interface{} {
+	return c.Chain.StatusMessage(context.Background(), c.LastProcessedHeight)
 }
 
 func (c *Consumer) announceEvery(doneCh <-chan struct{}) {
 	if c.Config.AnnounceEvery != 0 {
-		qcli := rpcquery.NewQueryClient(c.GRPCConnection)
 		ticker := time.NewTicker(c.Config.AnnounceEvery)
 		for {
 			select {
 			case <-ticker.C:
-				c.updateStatus(qcli)
-				c.Logger.InfoMsg("Announcement", c.statusMessage()...)
+				c.Logger.InfoMsg("Announcement", c.StatusMessage(context.Background())...)
 			case <-doneCh:
 				ticker.Stop()
 				return
@@ -322,4 +273,21 @@ func finished(doneCh chan struct{}) bool {
 	default:
 		return false
 	}
+}
+
+func (c *Consumer) connectToChain() (chain.Chain, error) {
+	filter := &chain.Filter{
+		Addresses: c.Config.WatchAddresses,
+	}
+	c.Logger.InfoMsg("Attempting to detect chain type running on %s", c.Config.ChainAddress)
+	burrowChain, burrowErr := burrow.New(c.Config.ChainAddress, filter)
+	if burrowErr != nil {
+		ethereumChain, ethErr := ethereum.New(jsonrpc.NewClient(c.Config.ChainAddress), filter, c.Logger)
+		if ethErr != nil {
+			return nil, fmt.Errorf("could not connect to either Burrow or Ethereum chain, "+
+				"Burrow error: %v, Ethereum error: %v", burrowErr, ethErr)
+		}
+		return ethereumChain, nil
+	}
+	return burrowChain, nil
 }

@@ -17,8 +17,6 @@ func StartServer(service *rpc.Service, pattern string, listener net.Listener, lo
 	logger = logger.With(structure.ComponentKey, "RPC_Info")
 	routes := GetRoutes(service)
 	mux := http.NewServeMux()
-	wm := server.NewWebsocketManager(routes, logger)
-	mux.HandleFunc(pattern, wm.WebsocketHandler)
 	server.RegisterRPCFuncs(mux, routes, logger)
 	srv, err := server.StartHTTPServer(listener, mux, logger)
 	if err != nil {

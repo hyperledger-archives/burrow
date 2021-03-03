@@ -118,7 +118,12 @@ func (sig *Signature) String() string {
 }
 
 func GetEthChainID(chainID string) *big.Int {
-	return new(big.Int).SetBytes(Keccak256([]byte(chainID)))
+	b := new(big.Int)
+	id, ok := b.SetString(chainID, 10)
+	if ok {
+		return id
+	}
+	return b.SetBytes([]byte(chainID))
 }
 
 func GetEthSignatureRecoveryID(chainID string, parity *big.Int) *big.Int {

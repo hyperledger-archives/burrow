@@ -143,7 +143,7 @@ func TendermintLauncher(kern *Kernel) process.Launcher {
 			nodeRegState := kern.State
 			validatorState := kern.State
 			kern.Service = rpc.NewService(accountState, nameRegState, nodeRegState, kern.Blockchain, validatorState, nodeView, kern.Logger)
-			kern.EthService = rpc.NewEthService(accountState, eventsState, kern.Blockchain, validatorState, nodeView, kern.Transactor, kern.keyStore, kern.Logger)
+			kern.EthService = web3.NewEthService(accountState, eventsState, kern.Blockchain, validatorState, nodeView, kern.Transactor, kern.keyStore, kern.Logger)
 
 			if err := kern.Node.Start(); err != nil {
 				return nil, fmt.Errorf("%s error starting Tendermint node: %v", errHeader, err)

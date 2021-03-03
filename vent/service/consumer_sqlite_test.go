@@ -1,4 +1,4 @@
-// +build integration sqlite
+// +build integration,sqlite
 
 package service_test
 
@@ -18,7 +18,7 @@ func TestSqliteConsumer(t *testing.T) {
 	defer shutdown()
 	inputAddress := privateAccounts[0].GetAddress()
 	grpcAddress := kern.GRPCListenAddress().String()
-	tcli := test.NewTransactClient(t, grpcAddress)
+	tcli := test.NewBurrowTransactClient(t, grpcAddress)
 
 	t.Parallel()
 	time.Sleep(2 * time.Second)

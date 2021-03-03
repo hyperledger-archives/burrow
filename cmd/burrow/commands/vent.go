@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/config/source"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/vent/config"
@@ -29,9 +30,11 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				cfg := config.DefaultVentConfig()
 
 				dbOpts := sqlDBOpts(cmd, cfg)
-				grpcAddrOpt := cmd.StringOpt("grpc-addr", cfg.GRPCAddr, "Address to connect to the Hyperledger Burrow gRPC server")
-				httpAddrOpt := cmd.StringOpt("http-addr", cfg.HTTPAddr, "Address to bind the HTTP server")
+				grpcAddrOpt := cmd.StringOpt("chain-addr", cfg.ChainAddress, "Address to connect to the Hyperledger Burrow gRPC server")
+				httpAddrOpt := cmd.StringOpt("http-addr", cfg.HTTPListenAddress, "Address to bind the HTTP server")
 				logLevelOpt := cmd.StringOpt("log-level", cfg.LogLevel, "Logging level (error, warn, info, debug)")
+				watchAddressesOpt := cmd.StringsOpt("watch", nil, "Add contract address to global watch filter")
+				minimumHeightOpt := cmd.IntOpt("minimum-height", 0, "Add contract address to global watch filter")
 				abiFileOpt := cmd.StringsOpt("abi", cfg.AbiFileOrDirs, "EVM Contract ABI file or folder")
 				specFileOrDirOpt := cmd.StringsOpt("spec", cfg.SpecFileOrDirs, "SQLSol specification file or folder")
 				dbBlockOpt := cmd.BoolOpt("blocks", false, "Create block tables and persist related data")
@@ -44,9 +47,18 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					cfg.DBAdapter = *dbOpts.adapter
 					cfg.DBURL = *dbOpts.url
 					cfg.DBSchema = *dbOpts.schema
-					cfg.GRPCAddr = *grpcAddrOpt
-					cfg.HTTPAddr = *httpAddrOpt
+					cfg.ChainAddress = *grpcAddrOpt
+					cfg.HTTPListenAddress = *httpAddrOpt
 					cfg.LogLevel = *logLevelOpt
+					cfg.WatchAddresses = make([]crypto.Address, len(*watchAddressesOpt))
+					cfg.MinimumHeight = uint64(*minimumHeightOpt)
+					var err error
+					for i, wa := range *watchAddressesOpt {
+						cfg.WatchAddresses[i], err = crypto.AddressFromHexString(wa)
+						if err != nil {
+							output.Fatalf("could not parse watch address: %w", err)
+						}
+					}
 					cfg.AbiFileOrDirs = *abiFileOpt
 					cfg.SpecFileOrDirs = *specFileOrDirOpt
 					if *dbBlockOpt {
@@ -65,8 +77,10 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					}
 				}
 
-				cmd.Spec = "--spec=<spec file or dir> [--abi=<abi file or dir>] [--db-adapter] [--db-url] [--db-schema] " +
-					"[--blocks] [--txs] [--grpc-addr] [--http-addr] [--log-level] [--announce-every=<duration>]"
+				cmd.Spec = "--spec=<spec file or dir>... [--abi=<abi file or dir>...] " +
+					"[--watch=<contract address>...] [--minimum-height=<lowest height from which to read>] " +
+					"[--db-adapter] [--db-url] [--db-schema] [--blocks] [--txs] [--chain-addr] [--http-addr] " +
+					"[--log-level] [--announce-every=<duration>]"
 
 				cmd.Action = func() {
 					log, err := logconfig.New().NewLogger()

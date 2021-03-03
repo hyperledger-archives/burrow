@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/tmthrgd/go-hex"
-
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/encoding/rlp"
+	"github.com/tmthrgd/go-hex"
 )
 
 // Order matters for serialisation
@@ -19,14 +18,19 @@ type EthRawTx struct {
 	To       []byte   `json:"to"`
 	Amount   *big.Int `json:"value"`
 	Data     []byte   `json:"data"`
-	ChainID  *big.Int `json:"chainID"`
-
+	// Signature
 	V *big.Int
 	R *big.Int
 	S *big.Int
+	// Included in hash but not part of serialised message
+	chainID *big.Int
 }
 
-func RawTxFromEnvelope(txEnv *Envelope) (*EthRawTx, error) {
+func NewEthRawTx(chainID string) *EthRawTx {
+	return &EthRawTx{chainID: crypto.GetEthChainID(chainID)}
+}
+
+func EthRawTxFromEnvelope(txEnv *Envelope) (*EthRawTx, error) {
 	if txEnv.GetEncoding() != Envelope_RLP {
 		return nil, fmt.Errorf("can only form EthRawTx from RLP-encoded Envelope")
 	}
@@ -60,7 +64,7 @@ func (tx *EthRawTx) RecoverPublicKey() (*crypto.PublicKey, *crypto.Signature, er
 		return nil, nil, fmt.Errorf("EthRawTx does not appear to be signed")
 	}
 	ethSig := crypto.EIP155Signature{
-		crypto.Secp256k1Signature{
+		Secp256k1Signature: crypto.Secp256k1Signature{
 			V: *tx.V,
 			R: *tx.R,
 			S: *tx.S,
@@ -99,7 +103,7 @@ func (tx *EthRawTx) SignBytes() ([]byte, error) {
 		tx.To,
 		tx.Amount,
 		tx.Data,
-		tx.ChainID,
+		tx.chainID,
 		uint(0), uint(0),
 	})
 }

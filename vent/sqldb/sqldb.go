@@ -353,7 +353,9 @@ loop:
 
 			// Perform row action
 			db.Log.InfoMsg("msg", "action", row.Action, "query", sqlQuery, "value", queryVal.Values)
-			if _, err = tx.Exec(sqlQuery, queryVal.Pointers...); err != nil {
+			_, err = tx.Exec(sqlQuery, queryVal.Pointers...)
+			if err != nil {
+				err = fmt.Errorf("could not execute query '%s': %w", sqlQuery, err)
 				db.Log.InfoMsg(fmt.Sprintf("error performing %s on row", row.Action), "err", err, "value", queryVal.Values)
 				break loop // exits from all loops -> continue in close log stmt
 			}

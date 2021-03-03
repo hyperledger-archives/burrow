@@ -1,6 +1,8 @@
 package errors
 
 import (
+	"math/big"
+
 	"github.com/hyperledger/burrow/crypto"
 )
 
@@ -55,6 +57,13 @@ func (m *Maybe) Bytes(value []byte, err error) []byte {
 }
 
 func (m *Maybe) Address(value crypto.Address, err error) crypto.Address {
+	if err != nil {
+		m.PushError(err)
+	}
+	return value
+}
+
+func (m *Maybe) BigInt(value *big.Int, err error) *big.Int {
 	if err != nil {
 		m.PushError(err)
 	}

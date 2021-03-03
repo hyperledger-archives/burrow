@@ -150,7 +150,7 @@ func UpdateName(cli rpctransact.TransactClient, inputAddress crypto.Address, nam
 //-------------------------------------------------------------------------------
 // some default transaction functions
 
-func MakeDefaultCallTx(t *testing.T, client infoclient.RPCClient, addr *crypto.Address, code []byte, amt, gasLim,
+func MakeDefaultCallTx(t *testing.T, client rpc.Client, addr *crypto.Address, code []byte, amt, gasLim,
 	fee uint64) *txs.Envelope {
 	sequence := GetSequence(t, client, PrivateAccounts[0].GetAddress())
 	tx := payload.NewCallTxWithSequence(PrivateAccounts[0].GetPublicKey(), addr, code, amt, gasLim, fee, sequence+1)
@@ -163,7 +163,7 @@ func MakeDefaultCallTx(t *testing.T, client infoclient.RPCClient, addr *crypto.A
 // rpc call wrappers (fail on err)
 
 // get an account's sequence number
-func GetSequence(t *testing.T, client infoclient.RPCClient, addr crypto.Address) uint64 {
+func GetSequence(t *testing.T, client rpc.Client, addr crypto.Address) uint64 {
 	acc, err := infoclient.Account(client, addr)
 	if err != nil {
 		t.Fatal(err)
@@ -175,7 +175,7 @@ func GetSequence(t *testing.T, client infoclient.RPCClient, addr crypto.Address)
 }
 
 // get the account
-func GetAccount(t *testing.T, client infoclient.RPCClient, addr crypto.Address) *acm.Account {
+func GetAccount(t *testing.T, client rpc.Client, addr crypto.Address) *acm.Account {
 	ac, err := infoclient.Account(client, addr)
 	if err != nil {
 		t.Fatal(err)
@@ -184,7 +184,7 @@ func GetAccount(t *testing.T, client infoclient.RPCClient, addr crypto.Address) 
 }
 
 // dump all storage for an account. currently unused
-func DumpStorage(t *testing.T, client infoclient.RPCClient, addr crypto.Address) *rpc.ResultDumpStorage {
+func DumpStorage(t *testing.T, client rpc.Client, addr crypto.Address) *rpc.ResultDumpStorage {
 	resp, err := infoclient.DumpStorage(client, addr)
 	if err != nil {
 		t.Fatal(err)
@@ -192,7 +192,7 @@ func DumpStorage(t *testing.T, client infoclient.RPCClient, addr crypto.Address)
 	return resp
 }
 
-func GetStorage(t *testing.T, client infoclient.RPCClient, addr crypto.Address, key []byte) []byte {
+func GetStorage(t *testing.T, client rpc.Client, addr crypto.Address, key []byte) []byte {
 	resp, err := infoclient.Storage(client, addr, key)
 	if err != nil {
 		t.Fatal(err)

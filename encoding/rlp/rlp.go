@@ -90,15 +90,22 @@ func Decode(src []byte, dst interface{}) error {
 			}
 		}
 	case reflect.Struct:
-		if val.NumField() != len(fields) {
-			return fmt.Errorf("wrong number of fields; have %d, want %d", len(fields), val.NumField())
-		}
+		rt := val.Type()
+		numExportedFields := 0
 		for i := 0; i < val.NumField(); i++ {
-			err := decodeField(val.Field(i), fields[i])
-			if err != nil {
-				return err
+			// Skip unexported fields
+			if rt.Field(i).PkgPath == "" {
+				err := decodeField(val.Field(i), fields[numExportedFields])
+				if err != nil {
+					return err
+				}
+				numExportedFields++
 			}
 		}
+		if numExportedFields != len(fields) {
+			return fmt.Errorf("wrong number of fields; have %d, want %d", len(fields), numExportedFields)
+		}
+
 	default:
 		return fmt.Errorf("cannot decode into unsupported type %v", reflect.TypeOf(dst))
 	}
@@ -146,11 +153,11 @@ func encodeLength(n int, offset magicOffset) []byte {
 	if n <= ShortLength {
 		return []uint8{uint8(offset) + uint8(n)}
 	}
-
 	i := uint64(n)
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, i)
-	byteLengthOfLength := bits.Len64(i)/8 + 1
+	// Byte-wise ceiling
+	byteLengthOfLength := (bits.Len64(i) + 7) / 8
 	// > If a string is more than 55 bytes long, the RLP encoding consists of a single byte with value 0xb7
 	// > plus the length in bytes of the length of the string in binary form, followed by the length of the string,
 	// > followed by the string
@@ -186,12 +193,18 @@ func encodeList(val reflect.Value) ([]byte, error) {
 func encodeStruct(val reflect.Value) ([]byte, error) {
 	out := make([][]byte, 0)
 
+	rt := val.Type()
+
 	for i := 0; i < val.NumField(); i++ {
-		data, err := encode(val.Field(i))
-		if err != nil {
-			return nil, err
+		field := val.Field(i)
+		// Skip unexported fields
+		if rt.Field(i).PkgPath == "" {
+			data, err := encode(field)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, data)
 		}
-		out = append(out, data)
 	}
 	sum := bytes.Join(out, []byte{})
 	length := encodeLength(len(sum), SliceOffset)
