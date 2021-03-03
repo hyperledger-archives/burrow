@@ -1,4 +1,4 @@
-name: master
+name: develop
 on:
   push:
     branches:
@@ -39,4 +39,4 @@ jobs:
         version=$(./scripts/local_version.sh)
         echo ${DOCKER_PASS_DEV} | docker login --username ${DOCKER_USER_DEV} ${DOCKER_REPO_DEV} --password-stdin
         docker tag ${DOCKER_REPO}:${version} ${DOCKER_REPO_DEV}:${version}
-        docker push ${DOCKER_REPO_DEV}
+        docker push --all-tags ${DOCKER_REPO_DEV}
