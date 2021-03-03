@@ -61,7 +61,7 @@ jobs:
         export tag=$(git tag --points-at HEAD)
         echo ${DOCKER_PASS} | docker login --username ${DOCKER_USER} --password-stdin
         docker tag ${DOCKER_REPO}:${tag#v} ${DOCKER_REPO}:latest
-        docker push ${DOCKER_REPO}
+        docker push --all-tags ${DOCKER_REPO}
 
   charts:
     runs-on: ubuntu-latest

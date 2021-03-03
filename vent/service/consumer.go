@@ -279,7 +279,7 @@ func (c *Consumer) connectToChain() (chain.Chain, error) {
 	filter := &chain.Filter{
 		Addresses: c.Config.WatchAddresses,
 	}
-	c.Logger.InfoMsg("Attempting to detect chain type running on %s", c.Config.ChainAddress)
+	c.Logger.InfoMsg("Attempting to detect chain type", "chain_address", c.Config.ChainAddress)
 	burrowChain, burrowErr := burrow.New(c.Config.ChainAddress, filter)
 	if burrowErr != nil {
 		ethereumChain, ethErr := ethereum.New(jsonrpc.NewClient(c.Config.ChainAddress), filter, c.Logger)
