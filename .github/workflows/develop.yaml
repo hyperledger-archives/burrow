@@ -31,6 +31,7 @@ jobs:
     - run: make docker_build
     - name: publish monax
       env:
+        DOCKER_REPO: "hyperledger/burrow"
         DOCKER_REPO_DEV: "quay.io/monax/burrow"
         DOCKER_PASS_DEV: ${{ secrets.DOCKER_PASS_DEV }}
         DOCKER_USER_DEV: ${{ secrets.DOCKER_USER_DEV }}
