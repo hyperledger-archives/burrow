@@ -1,0 +1,60 @@
+BurrowDir = ".burrow"
+
+[Tendermint]
+  Enabled = true
+  Seeds = ""
+  SeedMode = false
+  PersistentPeers = ""
+  ListenHost = "0.0.0.0"
+  ListenPort = "26656"
+  ExternalAddress = ""
+  AddrBookStrict = false
+  Moniker = ""
+  IdentifyPeers = false
+  AuthorizedPeers = ""
+  CreateEmptyBlocks = "5m"
+
+[Execution]
+  TimeoutFactor = 0.33
+  CallStackMaxDepth = 0
+  DataStackInitialCapacity = 1024
+  DataStackMaxDepth = 0
+
+[Keys]
+  GRPCServiceEnabled = true
+  AllowBadFilePermissions = true
+  RemoteAddress = ""
+  KeysDirectory = "keys"
+
+[RPC]
+  [RPC.Info]
+    Enabled = true
+    ListenHost = "0.0.0.0"
+    ListenPort = "26658"
+  [RPC.Profiler]
+    Enabled = false
+    ListenHost = "0.0.0.0"
+    ListenPort = "6060"
+  [RPC.GRPC]
+    Enabled = true
+    ListenHost = "0.0.0.0"
+    ListenPort = "10997"
+  [RPC.Metrics]
+    Enabled = false
+    ListenHost = "0.0.0.0"
+    ListenPort = "9102"
+    MetricsPath = "/metrics"
+    BlockSampleSize = 100
+  [RPC.Web3]
+    Enabled = true
+    ListenHost = "0.0.0.0"
+    ListenPort = "26660"
+
+[Logging]
+  Trace = false
+  NonBlocking = false
+  [Logging.RootSink]
+    [Logging.RootSink.Output]
+      OutputType = "stdout"
+      Format = "json"
+
