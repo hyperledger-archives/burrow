@@ -2,12 +2,12 @@
 # yarn lockfile v1
 
 
-"@grpc/grpc-js@^1.2.4":
-  version "1.2.4"
-  resolved "https://registry.yarnpkg.com/@grpc/grpc-js/-/grpc-js-1.2.4.tgz#04f0bbefb2636296d17e821f3d52152fbe2f6989"
-  integrity sha512-z+EI20HYHLd3/uERtwOqP8Q4EPhGbz5RKUpiyo6xPWfR3pcjpf8sfNvY9XytDQ4xo1wNz7NqH1kh2UBonwzbfg==
+"@grpc/grpc-js@^1.2.10":
+  version "1.2.10"
+  resolved "https://registry.npmjs.org/@grpc/grpc-js/-/grpc-js-1.2.10.tgz#f316d29a45fcc324e923d593cb849d292b1ed598"
+  integrity sha512-wj6GkNiorWYaPiIZ767xImmw7avMMVUweTvPFg4mJWOxz2180DKwfuxhJJZ7rpc1+7D3mX/v8vJdxTuIo71Ieg==
   dependencies:
-    "@types/node" "^12.12.47"
+    "@types/node" ">=12.12.47"
     google-auth-library "^6.1.1"
     semver "^6.2.0"
 
@@ -35,10 +35,10 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-13.13.2.tgz#160d82623610db590a64e8ca81784e11117e5a54"
   integrity sha512-LB2R1Oyhpg8gu4SON/mfforE525+Hi/M1ineICEDftqNVTyFg1aRIeGuTvXAoWHc4nbrFncWtJgMmoyRvuGh7A==
 
-"@types/node@^12.12.47":
-  version "12.19.15"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.19.15.tgz#0de7e978fb43db62da369db18ea088a63673c182"
-  integrity sha512-lowukE3GUI+VSYSu6VcBXl14d61Rp5hA1D+61r16qnwC0lYNSqdxcvRh0pswejorHfS+HgwBasM8jLXz0/aOsw==
+"@types/node@>=12.12.47":
+  version "14.14.33"
+  resolved "https://registry.npmjs.org/@types/node/-/node-14.14.33.tgz#9e4f8c64345522e4e8ce77b334a8aaa64e2b6c78"
+  integrity sha512-oJqcTrgPUF29oUP8AsUqbXGJNuPutsetaa9kTQAQce5Lx5dTYWV02ScBiT/k1BX/Z7pKeqedmvp39Wu4zR7N7g==
 
 "@ungap/promise-all-settled@1.1.2":
   version "1.1.2"
@@ -1216,10 +1216,10 @@ grpc-tools@^1.10.0:
   dependencies:
     node-pre-gyp "^0.15.0"
 
-"grpc_tools_node_protoc_ts@ ^5.1.1":
-  version "5.1.1"
-  resolved "https://registry.yarnpkg.com/grpc_tools_node_protoc_ts/-/grpc_tools_node_protoc_ts-5.1.1.tgz#199fff9a2143cf672adc693c1774ef20ecf48258"
-  integrity sha512-IR+629LMKQnwLQxAnNz9GTLKSWX+d0HcO8JNeU+Vf2dW3d2pdM4ue7Vsx/gvXClcrywx3/pbPkXVeJNC8MkEcg==
+grpc_tools_node_protoc_ts@^5.1.3:
+  version "5.1.3"
+  resolved "https://registry.npmjs.org/grpc_tools_node_protoc_ts/-/grpc_tools_node_protoc_ts-5.1.3.tgz#c24d6470b6f0204a7ec920cee0f057fcb11eea66"
+  integrity sha512-BiElSWEmRgrhWFV/+yFtRiqxC3D/nrk1g0GezJ/9ZrJxUvu/0sBVeqe4rTmkFFqQVZTRX1+MNOVeOJKDmQ41Xg==
   dependencies:
     google-protobuf "3.12.4"
     handlebars "4.7.6"

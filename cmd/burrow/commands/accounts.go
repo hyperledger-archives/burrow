@@ -43,7 +43,8 @@ func Accounts(output Output) func(cmd *cli.Cmd) {
 				output.Printf("Account: %s\n  Sequence: %d",
 					acc.Address.String(), acc.Sequence)
 
-				if len(acc.PublicKey.PublicKey) > 0 {
+				publicKey := acc.GetPublicKey()
+				if publicKey != nil && len(publicKey.PublicKey) > 0 {
 					output.Printf("  Public Key: %s\n", acc.PublicKey.String())
 				}
 				if acc.WASMCode != nil && len(acc.WASMCode) > 0 {
