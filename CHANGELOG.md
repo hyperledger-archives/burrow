@@ -1,5 +1,5 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
-## [Unreleased]
+## [0.31.0]
 ### Changed
 - [Tendermint] Upgraded to Tendermint 0.34.3
 - [Docker] Image will now start testnet by default
@@ -701,7 +701,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
-[Unreleased]: https://github.com/hyperledger/burrow/compare/v0.30.5...HEAD
+[0.31.0]: https://github.com/hyperledger/burrow/compare/v0.30.5...v0.31.0
 [0.30.5]: https://github.com/hyperledger/burrow/compare/v0.30.4...v0.30.5
 [0.30.4]: https://github.com/hyperledger/burrow/compare/v0.30.3...v0.30.4
 [0.30.3]: https://github.com/hyperledger/burrow/compare/v0.30.2...v0.30.3
