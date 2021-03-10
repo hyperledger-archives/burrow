@@ -252,5 +252,5 @@ func TestGovernance(t *testing.T) {
 	// created by github.com/hyperledger/burrow/vendor/github.com/tendermint/tendermint/consensus.(*ConsensusReactor).AddPeer
 	// /home/sean/go/src/github.com/hyperledger/burrow/vendor/github.com/tendermint/tendermint/consensus/reactor.go:171 +0x23a
 
-	time.Sleep(4 * time.Second)
+	time.Sleep(20 * time.Second)
 }
