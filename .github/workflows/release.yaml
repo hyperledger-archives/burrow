@@ -36,9 +36,12 @@ jobs:
       run: |
         git config --global user.email "${GITHUB_ACTOR}"
         git config --global user.name "${GITHUB_ACTOR}"
-        yarn --cwd js install
-        yarn --cwd js version --no-git-tag-version --new-version $(git describe --tags)
-        make publish_js
+        cd js
+        yarn install
+        yarn version --no-git-tag-version --new-version $(git describe --tags)
+        yarn build
+        yarn publish --access public
+
 
   docker:
     name: docker
