@@ -47,6 +47,6 @@ jobs:
         DOCKER_USER: ${{ secrets.DOCKER_USER }}
       run: |
         version=$(./scripts/local_version.sh)
-        echo ${DOCKER_PASS} | docker login --username ${DOCKER_USER} ${DOCKER_REPO} --password-stdin
+        echo ${DOCKER_PASS} | docker login --username ${DOCKER_USER} --password-stdin
         docker tag ${DOCKER_REPO}:${version} ${DOCKER_REPO}:latest
         docker push ${DOCKER_REPO}:latest
