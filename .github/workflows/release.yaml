@@ -29,7 +29,9 @@ jobs:
     - run: git fetch --unshallow --prune
     - uses: actions/setup-node@v1
       with:
+        always-auth: true
         node-version: '14.x'
+        registry-url: 'https://registry.npmjs.org'
     - name: publish
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
