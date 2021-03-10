@@ -210,11 +210,6 @@ yarn_install:
 test_js:
 	@cd ${BURROW_TS_PATH} && yarn test
 
-.PHONY: publish_js
-publish_js:
-	yarn build
-	yarn publish --access public
-
 .PHONY: test
 test: check bin/solc bin/solang
 	@tests/scripts/bin_wrapper.sh go test ./... ${GO_TEST_ARGS}
