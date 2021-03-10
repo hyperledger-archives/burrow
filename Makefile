@@ -210,6 +210,11 @@ yarn_install:
 test_js:
 	@cd ${BURROW_TS_PATH} && yarn test
 
+.PHONY: publish_js
+publish_js:
+	yarn build
+	yarn publish --access public
+
 .PHONY: test
 test: check bin/solc bin/solang
 	@tests/scripts/bin_wrapper.sh go test ./... ${GO_TEST_ARGS}
@@ -348,9 +353,12 @@ bin/helm:
 	mkdir -p bin
 	curl https://get.helm.sh/helm-v3.0.2-$(ARCH).tar.gz | tar xvzO $(ARCH)/helm > bin/helm && chmod +x bin/helm
 
+
+// TODO: reinstate
+
 .PHONY: helm_deps
 helm_deps: bin/helm
-	@bin/helm repo add --username "$(CM_USERNAME)" --password "$(CM_PASSWORD)" chartmuseum $(CM_URL)
+	@bin/helm repo add --username "$(HELM_USERNAME)" --password "$(HELM_PASSWORD)" chartmuseum $(HELM_URL)
 
 .PHONY: helm_test
 helm_test: bin/helm

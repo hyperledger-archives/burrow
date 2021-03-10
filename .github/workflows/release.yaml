@@ -21,7 +21,6 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# TODO: convert this to yarn equivalent publish
   js:
     name: npm
     runs-on: ubuntu-latest
@@ -31,19 +30,15 @@ jobs:
     - uses: actions/setup-node@v1
       with:
         node-version: '14.x'
-    - run: echo ::set-env name=RELEASE_VERSION::${GITHUB_REF:10}
     - name: publish
       env:
-        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       run: |
         git config --global user.email "${GITHUB_ACTOR}"
         git config --global user.name "${GITHUB_ACTOR}"
-        cd js
-        npm install
-        npm run build
-        npm version $RELEASE_VERSION
-        npm config set '//registry.npmjs.org/:_authToken' "${NPM_TOKEN}"
-        npm publish --access public .
+        yarn --cwd js install
+        yarn --cwd js version --no-git-tag-version --new-version $(git describe --tags)
+        make publish_js
 
   docker:
     name: docker
@@ -63,14 +58,15 @@ jobs:
         docker tag ${DOCKER_REPO}:${tag#v} ${DOCKER_REPO}:latest
         docker push --all-tags ${DOCKER_REPO}
 
-  charts:
-    runs-on: ubuntu-latest
-    env:
-      CM_USERNAME: ${{ secrets.CM_USERNAME }}
-      CM_PASSWORD: ${{ secrets.CM_PASSWORD }}
-      CM_URL:  ${{ secrets.CM_URL }}
-    steps:
-    - uses: actions/checkout@v2
-    - run: git fetch --unshallow --prune
-    - run: make helm_deps
-    - run: make helm_push
+# TODO: reinstate
+#  charts:
+#    runs-on: ubuntu-latest
+#    env:
+#      HELM_USERNAME: ${{ secrets.CM_USERNAME }}
+#      HELM_PASSWORD: ${{ secrets.CM_PASSWORD }}
+#      HELM_URL:  ${{ secrets.CM_URL }}
+#    steps:
+#    - uses: actions/checkout@v2
+#    - run: git fetch --unshallow --prune
+#    - run: make helm_deps
+#    - run: make helm_push
