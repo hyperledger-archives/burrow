@@ -29,9 +29,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: make docker_build
-    - name: publish
+    - name: publish monax
       env:
-        DOCKER_REPO: "hyperledger/burrow"
         DOCKER_REPO_DEV: "quay.io/monax/burrow"
         DOCKER_PASS_DEV: ${{ secrets.DOCKER_PASS_DEV }}
         DOCKER_USER_DEV: ${{ secrets.DOCKER_USER_DEV }}
@@ -40,3 +39,13 @@ jobs:
         echo ${DOCKER_PASS_DEV} | docker login --username ${DOCKER_USER_DEV} ${DOCKER_REPO_DEV} --password-stdin
         docker tag ${DOCKER_REPO}:${version} ${DOCKER_REPO_DEV}:${version}
         docker push --all-tags ${DOCKER_REPO_DEV}
+    - name: publish hyperledger
+      env:
+        DOCKER_REPO: "hyperledger/burrow"
+        DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
+        DOCKER_USER: ${{ secrets.DOCKER_USER }}
+      run: |
+        version=$(./scripts/local_version.sh)
+        echo ${DOCKER_PASS} | docker login --username ${DOCKER_USER} ${DOCKER_REPO} --password-stdin
+        docker tag ${DOCKER_REPO}:${version} ${DOCKER_REPO}:latest
+        docker push ${DOCKER_REPO}:latest
