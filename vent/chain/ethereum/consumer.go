@@ -68,13 +68,14 @@ func (c *consumer) Consume() error {
 		if err != nil {
 			return err
 		}
+		time.Sleep(c.backoffDuration)
 	}
 
 	return nil
 }
 
 func (c *consumer) ConsumeInBatches(start, end uint64) error {
-	for batchStart := start; batchStart < end; batchStart += c.blockBatchSize {
+	for batchStart := start; batchStart <= end; batchStart += c.blockBatchSize {
 		batchEnd := batchStart + c.blockBatchSize
 		if batchEnd > end {
 			batchEnd = end
