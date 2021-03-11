@@ -40,9 +40,8 @@ jobs:
         git config --global user.name "${GITHUB_ACTOR}"
         cd js
         yarn install
-        yarn version --no-git-tag-version --new-version $(git describe --tags)
         yarn build
-        yarn publish --access public
+        yarn publish --access public --non-interactive --no-git-tag-version --new-version $(git describe --tags)
 
 
   docker:

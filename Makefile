@@ -79,10 +79,10 @@ PROTO_GEN_TS_PATH = ${BURROW_TS_PATH}/proto
 NODE_BIN = ${BURROW_TS_PATH}/node_modules/.bin
 
 # To access Tendermint bundled protobuf files from go module cache
-TENDERMINT_MOD=github.com/tendermint/tendermint
-TENDERMINT_VERSION=$(shell go list -m -f '{{ .Version }}' $(TENDERMINT_MOD))
-TENDERMINT_SRC=$(shell go env GOMODCACHE)/$(TENDERMINT_MOD)@$(TENDERMINT_VERSION)
-TENDERMINT_PROTO=$(TENDERMINT_SRC)/proto
+TENDERMINT_MOD?=github.com/tendermint/tendermint
+TENDERMINT_VERSION?=$(shell go list -m -f '{{ .Version }}' $(TENDERMINT_MOD))
+TENDERMINT_SRC?=$(shell go env GOMODCACHE)/$(TENDERMINT_MOD)@$(TENDERMINT_VERSION)
+TENDERMINT_PROTO?=$(TENDERMINT_SRC)/proto
 
 PROTO_FILES = $(shell find . $(TENDERMINT_PROTO) -path $(BURROW_TS_PATH) -prune -o -path ./node_modules -prune -o -type f -name '*.proto' -print)
 PROTO_GO_FILES = $(patsubst %.proto, %.pb.go, $(PROTO_FILES))
