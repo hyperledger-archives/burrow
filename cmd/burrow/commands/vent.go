@@ -34,7 +34,7 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				httpAddrOpt := cmd.StringOpt("http-addr", cfg.HTTPListenAddress, "Address to bind the HTTP server")
 				logLevelOpt := cmd.StringOpt("log-level", cfg.LogLevel, "Logging level (error, warn, info, debug)")
 				watchAddressesOpt := cmd.StringsOpt("watch", nil, "Add contract address to global watch filter")
-				minimumHeightOpt := cmd.IntOpt("minimum-height", 0, "Add contract address to global watch filter")
+				minimumHeightOpt := cmd.IntOpt("minimum-height", 0, "Only process block greater than or equal to height passed")
 				abiFileOpt := cmd.StringsOpt("abi", cfg.AbiFileOrDirs, "EVM Contract ABI file or folder")
 				specFileOrDirOpt := cmd.StringsOpt("spec", cfg.SpecFileOrDirs, "SQLSol specification file or folder")
 				dbBlockOpt := cmd.BoolOpt("blocks", false, "Create block tables and persist related data")
