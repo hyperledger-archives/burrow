@@ -83,13 +83,13 @@ func TestGetColumn(t *testing.T) {
 		column, err := projection.GetColumn("TEST_TABLE", "Block")
 		require.NoError(t, err)
 		require.Equal(t, "Block", column.Name)
-		require.Equal(t, types.SQLColumnTypeBigInt, column.Type)
+		require.Equal(t, types.SQLColumnTypeNumeric, column.Type)
 		require.Equal(t, false, column.Primary)
 
 		column, err = projection.GetColumn("TEST_TABLE", "Instance")
 		require.NoError(t, err)
 		require.Equal(t, "Instance", column.Name)
-		require.Equal(t, types.SQLColumnTypeBigInt, column.Type)
+		require.Equal(t, types.SQLColumnTypeNumeric, column.Type)
 		require.Equal(t, false, column.Primary)
 
 	})

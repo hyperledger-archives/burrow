@@ -1,30 +1,26 @@
-name: develop
+name: master
 on:
   push:
     branches:
-      - develop
-    tags-ignore:
-      - 'v*'
+      - master
 
 jobs:
-  js:
-    name: npm
+  cover:
+    name: coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - run: git fetch --unshallow --prune
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-go@v1
         with:
-          always-auth: true
-          node-version: '14.x'
-          registry-url: 'https://registry.npmjs.org'
-      - name: publish
+          go-version: 1.15
+        id: go
+      - uses: actions/checkout@v2
+      - run: make test
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          git config --global user.email "${GITHUB_ACTOR}"
-          git config --global user.name "${GITHUB_ACTOR}"
-          make publish_js
+          GO_TEST_ARGS: "-coverprofile=coverage.txt -covermode=atomic"
+      - uses: codecov/codecov-action@v1.0.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.txt
 
   docker:
     name: docker
