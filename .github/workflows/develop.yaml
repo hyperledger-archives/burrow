@@ -4,6 +4,8 @@ on:
     branches:
     - master
     - release
+    tags-ignore:
+      - 'v*'
 
 jobs:
   cover:
@@ -22,6 +24,25 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.txt
+
+  js:
+    name: npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: git fetch --unshallow --prune
+      - uses: actions/setup-node@v1
+        with:
+          always-auth: true
+          node-version: '14.x'
+          registry-url: 'https://registry.npmjs.org'
+      - name: publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          git config --global user.email "${GITHUB_ACTOR}"
+          git config --global user.name "${GITHUB_ACTOR}"
+          make publish_js
 
   docker:
     name: docker
