@@ -1,6 +1,6 @@
 import BN from 'bn.js';
 
-export const recApply = function<A, B> (func: (input: A) => B, args: A | A[]): B | B[] {
+export const recApply = function <A, B>(func: (input: A) => B, args: A | A[]): B | B[] {
   if (Array.isArray(args)) {
     let next: any = [];
     for (let i = 0; i < args.length; i++) {
@@ -34,7 +34,16 @@ export const bytesTA = function (arg: string) {
 }
 
 export const numberTB = function (arg: BN) {
-  return arg.toNumber();
+  let res: BN | number;
+  try {
+    // number is limited to 53 bits, BN will throw Error
+    res = arg.toNumber();
+  }
+  catch {
+    // arg does not fit into number type, so keep it as BN
+    res = arg;
+  }
+  return res;
 }
 
 export const abiToBurrow = function (puts: string[], args: Array<any>) {
@@ -45,7 +54,7 @@ export const abiToBurrow = function (puts: string[], args: Array<any>) {
     } else if (/bytes/i.test(puts[i])) {
       out.push(recApply<Buffer, string>(bytesTB, args[i]));
     } else if (/int/i.test(puts[i])) {
-      out.push(recApply<BN, number>(numberTB, args[i]));
+      out.push(recApply<BN, BN | number>(numberTB, args[i]));
     } else {
       out.push(args[i]);
     }
