@@ -7,18 +7,23 @@ import (
 	"math/rand"
 	"path"
 	"runtime"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/rpc/rpctransact"
+	"github.com/hyperledger/burrow/vent/chain/ethereum"
 	"github.com/hyperledger/burrow/vent/config"
 	"github.com/hyperledger/burrow/vent/service"
 	"github.com/hyperledger/burrow/vent/sqldb"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/test"
 	"github.com/hyperledger/burrow/vent/types"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
 )
@@ -30,6 +35,9 @@ const (
 
 var tables = types.DefaultSQLTableNames
 
+// Tweak logger for debug purposes here
+var logger = logconfig.Sink().Terminal().FilterScope(ethereum.EthereumConsumerScope).LoggingConfig().WithTrace().MustLogger()
+
 func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli test.TransactClient,
 	inputAddress crypto.Address) {
 
@@ -38,6 +46,7 @@ func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli tes
 	require.True(t, create.Receipt.CreatesContract)
 	cfg.WatchAddresses = []crypto.Address{create.Receipt.ContractAddress}
 
+	// TODO: strengthen this test to count events in and out
 	t.Run("view mode", func(t *testing.T) {
 		// create test db
 		db, closeDB := test.NewTestDB(t, cfg)
@@ -64,7 +73,7 @@ func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli tes
 		// Run the consumer
 		runConsumer(t, cfg)
 
-		// test data stored in database for two different block ids
+		// test data stored in database for two different block heights
 		ensureEvents(t, db, chainID, eventTestTableName, txeA.Height, 1)
 		eventData := ensureEvents(t, db, chainID, eventTestTableName, txeB.Height, 1)
 
@@ -95,6 +104,43 @@ func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli tes
 		txeC := test.CallAddEvents(t, tcli, inputAddress, create.Receipt.ContractAddress, name, description)
 		runConsumer(t, cfg)
 		ensureEvents(t, db, chainID, eventTestTableName, txeC.Height, 2)
+	})
+
+	t.Run("continuity", func(t *testing.T) {
+		batches := 20
+		batchSize := 5
+		totalTx := batches * batchSize
+		db, closeDB := test.NewTestDB(t, cfg)
+		defer closeDB()
+		resolveSpec(cfg, testLogSpec)
+
+		receipts := make(chan *exec.TxExecution, totalTx)
+		wg := new(sync.WaitGroup)
+		wg.Add(totalTx)
+
+		for i := 0; i < batches; i++ {
+			for j := 0; j < batchSize; j++ {
+				name := fmt.Sprintf("Continuity_%d_%d", i, j)
+				go func() {
+					receipts <- test.CallAddEvent(t, tcli, inputAddress, create.Receipt.ContractAddress, name, "Blah")
+					wg.Done()
+				}()
+			}
+		}
+
+		wg.Wait()
+		close(receipts)
+		runConsumer(t, cfg)
+
+		txeByHeight := make(map[uint64][]*exec.TxExecution)
+		for txe := range receipts {
+			txeByHeight[txe.Height] = append(txeByHeight[txe.Height], txe)
+		}
+
+		for height, txes := range txeByHeight {
+			ensureEvents(t, db, chainID, eventTestTableName, height, uint64(len(txes)))
+		}
+
 	})
 
 }
@@ -138,20 +184,41 @@ func ensureEvents(t *testing.T, db *sqldb.SQLDB, chainID, table string, height, 
 
 	// Check the number of rows
 	tblData := eventData.Tables[table]
-	require.Equal(t, numEvents, uint64(len(tblData)))
+	if !assert.Equal(t, numEvents, uint64(len(tblData))) {
+		t.Fatal(logconfig.JSONString(tblData))
+	}
 
 	if numEvents > 0 && len(tblData) > 0 {
 		// Expect data in the EventTest table
 		require.Equal(t, "LogEvent", tblData[0].RowData["_eventtype"].(string))
 		require.Equal(t, "UpdateTestEvents", tblData[0].RowData["_eventname"].(string))
-		for i := 0; i < len(tblData); i++ {
-			require.Equal(t, fmt.Sprintf("%d", i), tblData[i].RowData["_eventindex"].(string))
+		lastTxIndex := ""
+		var eventIndex uint64
+		for _, datum := range tblData {
+			txIndex := datum.RowData["_txindex"].(string)
+			if lastTxIndex != txIndex {
+				eventIndex = 0
+				lastTxIndex = txIndex
+			}
+
+			good := rowEqual(t, datum.RowData, "_height", height) &&
+				rowEqual(t, datum.RowData, "_eventindex", eventIndex)
+			if !good {
+				t.Fatal(logconfig.JSONString(tblData))
+			}
+
+			assert.Equal(t, fmt.Sprintf("%d", height), datum.RowData["_height"])
+			eventIndex++
 		}
 	} else if numEvents > 0 && len(tblData) == 0 {
 		require.Failf(t, "no events found", "expected %d", numEvents)
 	}
 
 	return eventData
+}
+
+func rowEqual(t *testing.T, row map[string]interface{}, key string, expectedIndex uint64) bool {
+	return assert.Equal(t, strconv.FormatUint(expectedIndex, 10), row[key].(string))
 }
 
 func testResume(t *testing.T, cfg *config.VentConfig) {
@@ -210,7 +277,7 @@ func resolveSpec(cfg *config.VentConfig, specFile string) {
 // Run consumer to listen to events
 func runConsumer(t *testing.T, cfg *config.VentConfig) chan types.EventData {
 	ch := make(chan types.EventData, 100)
-	consumer := service.NewConsumer(cfg, logging.NewNoopLogger(), ch)
+	consumer := service.NewConsumer(cfg, logger, ch)
 
 	projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, cfg.SpecOpt)
 	require.NoError(t, err)

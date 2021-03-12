@@ -262,9 +262,10 @@ start_ganache: $(PID_DIR)/ganache.pid
 stop_ganache: $(PID_DIR)/ganache.pid
 	@kill $(shell cat $<) && echo "Ganache process stopped." && rm $< || rm $<
 
+# For local debug
 .PHONY: postgres
 postgres:
-	docker-compose up
+	docker run -e POSTGRES_HOST_AUTH_METHOD=trust -p 5432:5432 postgres:11-alpine
 
 .PHONY: test_restore
 test_restore:

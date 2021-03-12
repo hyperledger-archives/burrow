@@ -21,6 +21,26 @@ import (
 	cli "github.com/jawher/mow.cli"
 )
 
+type LogLevel string
+
+const (
+	LogLevelNone  LogLevel = "none"
+	LogLevelInfo  LogLevel = "info"
+	LogLevelTrace LogLevel = "trace"
+)
+
+func logConfig(level LogLevel) *logconfig.LoggingConfig {
+	logConf := logconfig.New()
+	switch level {
+	case LogLevelNone:
+		return logConf.None()
+	case LogLevelTrace:
+		return logConf.WithTrace()
+	default:
+		return logConf
+	}
+}
+
 // Vent consumes EVM events and commits to a DB
 func Vent(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
@@ -32,7 +52,7 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				dbOpts := sqlDBOpts(cmd, cfg)
 				grpcAddrOpt := cmd.StringOpt("chain-addr", cfg.ChainAddress, "Address to connect to the Hyperledger Burrow gRPC server")
 				httpAddrOpt := cmd.StringOpt("http-addr", cfg.HTTPListenAddress, "Address to bind the HTTP server")
-				logLevelOpt := cmd.StringOpt("log-level", cfg.LogLevel, "Logging level (error, warn, info, debug)")
+				logLevelOpt := cmd.StringOpt("log-level", string(LogLevelInfo), "Logging level (none, info, trace)")
 				watchAddressesOpt := cmd.StringsOpt("watch", nil, "Add contract address to global watch filter")
 				minimumHeightOpt := cmd.IntOpt("minimum-height", 0, "Only process block greater than or equal to height passed")
 				abiFileOpt := cmd.StringsOpt("abi", cfg.AbiFileOrDirs, "EVM Contract ABI file or folder")
@@ -49,7 +69,6 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					cfg.DBSchema = *dbOpts.schema
 					cfg.ChainAddress = *grpcAddrOpt
 					cfg.HTTPListenAddress = *httpAddrOpt
-					cfg.LogLevel = *logLevelOpt
 					cfg.WatchAddresses = make([]crypto.Address, len(*watchAddressesOpt))
 					cfg.MinimumHeight = uint64(*minimumHeightOpt)
 					var err error
@@ -83,14 +102,17 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					"[--log-level] [--announce-every=<duration>]"
 
 				cmd.Action = func() {
-					log, err := logconfig.New().NewLogger()
+					logger, err := logConfig(LogLevel(*logLevelOpt)).Logger()
 					if err != nil {
 						output.Fatalf("failed to load logger: %v", err)
 					}
 
-					log = log.With("service", "vent")
-					consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
-					server := service.NewServer(cfg, log, consumer)
+					logger = logger.With("service", "vent")
+					consumer := service.NewConsumer(cfg, logger, make(chan types.EventData))
+					if err != nil {
+						output.Fatalf("Could not create Vent Consumer: %v", err)
+					}
+					server := service.NewServer(cfg, logger, consumer)
 
 					projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, cfg.SpecOpt)
 					if err != nil {
@@ -194,7 +216,7 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				}
 
 				cmd.Action = func() {
-					log, err := logconfig.New().NewLogger()
+					log, err := logconfig.New().Logger()
 					if err != nil {
 						output.Fatalf("failed to load logger: %v", err)
 					}

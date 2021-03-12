@@ -7,7 +7,6 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/exec"
-	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/web3"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -18,12 +17,21 @@ const BasicGasLimit = 21000
 
 // Provides a partial implementation of the GRPC-generated TransactClient suitable for testing Vent on Ethereum
 type TransactClient struct {
-	client   rpc.Client
+	client   ethClient
 	chainID  string
 	accounts []acm.AddressableSigner
 }
 
-func NewTransactClient(client rpc.Client) *TransactClient {
+type ethClient interface {
+	AwaitTransaction(ctx context.Context, txHash string) (*Receipt, error)
+	SendTransaction(tx *EthSendTransactionParam) (string, error)
+	SendRawTransaction(txHex string) (string, error)
+	GetTransactionCount(address crypto.Address) (string, error)
+	NetVersion() (string, error)
+	GasPrice() (string, error)
+}
+
+func NewTransactClient(client ethClient) *TransactClient {
 	return &TransactClient{
 		client: client,
 	}
@@ -48,7 +56,8 @@ func (cli *TransactClient) CallTxSync(ctx context.Context, tx *payload.CallTx,
 		}
 	}
 
-	err := cli.completeTx(tx)
+	// Only set nonce for tx we sign, otherwise let server do it
+	err := cli.completeTx(tx, signer != nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not set values on transaction")
 	}
@@ -64,7 +73,7 @@ func (cli *TransactClient) CallTxSync(ctx context.Context, tx *payload.CallTx,
 	}
 
 	fmt.Printf("Waiting for tranasaction %s to be confirmed...\n", txHash)
-	receipt, err := AwaitTransaction(ctx, cli.client, txHash)
+	receipt, err := cli.client.AwaitTransaction(ctx, txHash)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +120,7 @@ func (cli *TransactClient) SendTransaction(tx *payload.CallTx) (string, error) {
 		Nonce:    nonce,
 	}
 
-	return EthSendTransaction(cli.client, param)
+	return cli.client.SendTransaction(param)
 }
 
 func (cli *TransactClient) SendRawTransaction(tx *payload.CallTx, signer acm.AddressableSigner) (string, error) {
@@ -138,13 +147,13 @@ func (cli *TransactClient) SendRawTransaction(tx *payload.CallTx, signer acm.Add
 		return "", fmt.Errorf("could not marshal Ethereum raw transaction: %w", err)
 	}
 
-	return EthSendRawTransaction(cli.client, web3.HexEncoder.BytesTrim(bs))
+	return cli.client.SendRawTransaction(web3.HexEncoder.BytesTrim(bs))
 }
 
 func (cli *TransactClient) GetChainID() (string, error) {
 	if cli.chainID == "" {
 		var err error
-		cli.chainID, err = NetVersion(cli.client)
+		cli.chainID, err = cli.client.NetVersion()
 		if err != nil {
 			return "", fmt.Errorf("TransactClient could not get ChainID: %w", err)
 		}
@@ -153,7 +162,7 @@ func (cli *TransactClient) GetChainID() (string, error) {
 }
 
 func (cli *TransactClient) GetGasPrice() (uint64, error) {
-	gasPrice, err := EthGasPrice(cli.client)
+	gasPrice, err := cli.client.GasPrice()
 	if err != nil {
 		return 0, fmt.Errorf("could not get gas price: %w", err)
 	}
@@ -162,7 +171,7 @@ func (cli *TransactClient) GetGasPrice() (uint64, error) {
 }
 
 func (cli *TransactClient) GetTransactionCount(address crypto.Address) (uint64, error) {
-	count, err := EthGetTransactionCount(cli.client, address)
+	count, err := cli.client.GetTransactionCount(address)
 	if err != nil {
 		return 0, fmt.Errorf("could not get transaction acount for address %s: %w", address, err)
 	}
@@ -170,7 +179,7 @@ func (cli *TransactClient) GetTransactionCount(address crypto.Address) (uint64, 
 	return d.Uint64(count), d.Err()
 }
 
-func (cli *TransactClient) completeTx(tx *payload.CallTx) error {
+func (cli *TransactClient) completeTx(tx *payload.CallTx, setNonce bool) error {
 	if tx.GasLimit == 0 {
 		tx.GasLimit = BasicGasLimit
 	}
@@ -181,7 +190,7 @@ func (cli *TransactClient) completeTx(tx *payload.CallTx) error {
 			return err
 		}
 	}
-	if tx.Input.Sequence == 0 {
+	if setNonce && tx.Input.Sequence == 0 {
 		tx.Input.Sequence, err = cli.GetTransactionCount(tx.Input.Address)
 		if err != nil {
 			return err

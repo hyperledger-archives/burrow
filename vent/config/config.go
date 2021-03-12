@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/types"
 )
@@ -17,7 +18,7 @@ type VentConfig struct {
 	DBSchema          string
 	ChainAddress      string
 	HTTPListenAddress string
-	LogLevel          string
+	LogConfig         *logconfig.LoggingConfig
 	// Global contracts to watch specified as hex
 	WatchAddresses []crypto.Address
 	MinimumHeight  uint64
@@ -36,7 +37,6 @@ func DefaultVentConfig() *VentConfig {
 		DBSchema:          "vent",
 		ChainAddress:      "localhost:10997",
 		HTTPListenAddress: "0.0.0.0:8080",
-		LogLevel:          "debug",
 		SpecOpt:           sqlsol.None,
 		AnnounceEvery:     time.Second * 5,
 	}

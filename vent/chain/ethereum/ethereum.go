@@ -17,14 +17,15 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
-	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/vent/types"
 	"google.golang.org/grpc/connectivity"
 )
 
+const DefaultMaxBlockBatchSize = 100
+
 type Chain struct {
-	client  rpc.Client
+	client  EthClient
 	filter  *chain.Filter
 	chainID string
 	version string
@@ -33,13 +34,21 @@ type Chain struct {
 
 var _ chain.Chain = (*Chain)(nil)
 
+type EthClient interface {
+	GetLogs(filter *ethclient.Filter) ([]*ethclient.EthLog, error)
+	BlockNumber() (uint64, error)
+	NetVersion() (string, error)
+	Web3ClientVersion() (string, error)
+	Syncing() (bool, error)
+}
+
 // We rely on this failing if the chain is not an Ethereum Chain
-func New(client rpc.Client, filter *chain.Filter, logger *logging.Logger) (*Chain, error) {
-	chainID, err := ethclient.NetVersion(client)
+func New(client EthClient, filter *chain.Filter, logger *logging.Logger) (*Chain, error) {
+	chainID, err := client.NetVersion()
 	if err != nil {
 		return nil, fmt.Errorf("could not get Ethereum ChainID: %w", err)
 	}
-	version, err := ethclient.Web3ClientVersion(client)
+	version, err := client.Web3ClientVersion()
 	if err != nil {
 		return nil, fmt.Errorf("could not get Ethereum node version: %w", err)
 	}
@@ -75,12 +84,12 @@ func (c *Chain) GetChainID() string {
 }
 
 func (c *Chain) ConsumeBlocks(ctx context.Context, in *rpcevents.BlockRange, consumer func(chain.Block) error) error {
-	return Consume(c.client, c.filter, in, c.logger, consumer)
+	return Consume(c.client, c.filter, in, 3, c.logger, consumer)
 }
 
 func (c *Chain) Connectivity() connectivity.State {
 	// TODO: better connectivity information
-	_, err := ethclient.EthSyncing(c.client)
+	_, err := c.client.Syncing()
 	if err != nil {
 		return connectivity.TransientFailure
 	}

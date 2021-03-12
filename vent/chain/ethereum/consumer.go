@@ -10,20 +10,20 @@ import (
 	"github.com/hyperledger/burrow/rpc/lib/types"
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/web3/ethclient"
 	"github.com/hyperledger/burrow/vent/chain"
 )
 
+const EthereumConsumerScope = "EthereumConsumer"
+
 const (
 	defaultMaxRetires = 5
-	defaultMaxBlocks  = 1000
 	backoffBase       = 10 * time.Millisecond
 )
 
 type consumer struct {
-	client     rpc.Client
+	client     EthClient
 	filter     *chain.Filter
 	blockRange *rpcevents.BlockRange
 	logger     *logging.Logger
@@ -37,18 +37,18 @@ type consumer struct {
 	blockBatchSize    uint64
 }
 
-func Consume(client rpc.Client, filter *chain.Filter, blockRange *rpcevents.BlockRange, logger *logging.Logger,
-	consume func(block chain.Block) error) error {
+func Consume(client EthClient, filter *chain.Filter, blockRange *rpcevents.BlockRange, maxBlockBatchSize uint64,
+	logger *logging.Logger, consume func(block chain.Block) error) error {
 	c := consumer{
 		client:            client,
 		filter:            filter,
 		blockRange:        blockRange,
-		logger:            logger,
+		logger:            logger.WithScope(EthereumConsumerScope),
 		consumer:          consume,
 		backoffDuration:   backoffBase,
 		maxRetries:        defaultMaxRetires,
-		maxBlockBatchSize: defaultMaxBlocks,
-		blockBatchSize:    defaultMaxBlocks,
+		maxBlockBatchSize: maxBlockBatchSize,
+		blockBatchSize:    maxBlockBatchSize,
 	}
 	return c.Consume()
 }
@@ -58,6 +58,7 @@ func (c *consumer) Consume() error {
 	if err != nil {
 		return err
 	}
+	c.logger.TraceMsg("Consume", "start", start, "end", end, "streaming", streaming)
 
 	for c.nextBlockHeight <= end || streaming {
 		err = c.ConsumeInBatches(start, end)
@@ -75,12 +76,14 @@ func (c *consumer) Consume() error {
 }
 
 func (c *consumer) ConsumeInBatches(start, end uint64) error {
+	c.logger.TraceMsg("ConsumeInBatches", "start", start, "end", end)
 	for batchStart := start; batchStart <= end; batchStart += c.blockBatchSize {
 		batchEnd := batchStart + c.blockBatchSize
+		c.logger.TraceMsg("Consuming batch", "batch_start", batchStart, "batch_end", batchEnd)
 		if batchEnd > end {
 			batchEnd = end
 		}
-		logs, err := ethclient.EthGetLogs(c.client, &ethclient.Filter{
+		logs, err := c.client.GetLogs(&ethclient.Filter{
 			BlockRange: rpcevents.AbsoluteRange(batchStart, batchEnd),
 			Addresses:  c.filter.Addresses,
 			Topics:     c.filter.Topics,
@@ -102,6 +105,7 @@ func (c *consumer) ConsumeInBatches(start, end uint64) error {
 		if lastBlock != nil {
 			c.nextBlockHeight = lastBlock.GetHeight() + 1
 		}
+		c.logger.TraceMsg("Finished consuming batch", "next_block_height", c.nextBlockHeight)
 	}
 	return nil
 }
@@ -109,7 +113,7 @@ func (c *consumer) ConsumeInBatches(start, end uint64) error {
 func (c *consumer) bounds() (start uint64, end uint64, streaming bool, err error) {
 	var latestHeight uint64
 
-	latestHeight, err = ethclient.EthBlockNumber(c.client)
+	latestHeight, err = c.client.BlockNumber()
 	if err != nil {
 		err = fmt.Errorf("could not get latest height: %w", err)
 		return

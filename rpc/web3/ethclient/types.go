@@ -62,8 +62,8 @@ func (f *Filter) EthFilter() *EthFilter {
 		addresses[i] = web3.HexEncoder.Address(a)
 	}
 	return &EthFilter{
-		FromBlock: ethLogBound(f.GetStart()),
-		ToBlock:   ethLogBound(f.GetEnd()),
+		FromBlock: logBound(f.GetStart()),
+		ToBlock:   logBound(f.GetEnd()),
 		Addresses: addresses,
 		Topics:    topics,
 	}
