@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/event/query"
@@ -140,7 +141,7 @@ func (b *Block) GetMetadata(columns types.SQLColumnNames) (map[string]interface{
 	}
 
 	return map[string]interface{}{
-		columns.Height:      fmt.Sprintf("%v", b.Height),
+		columns.Height:      strconv.FormatUint(b.Height, 10),
 		columns.TimeStamp:   b.Header.GetTime(),
 		columns.BlockHeader: string(blockHeader),
 	}, nil

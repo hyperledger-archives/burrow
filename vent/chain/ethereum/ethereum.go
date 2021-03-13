@@ -2,8 +2,11 @@ package ethereum
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
+	"time"
 
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/event/query"
@@ -22,14 +25,13 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 
-const DefaultMaxBlockBatchSize = 100
-
 type Chain struct {
-	client  EthClient
-	filter  *chain.Filter
-	chainID string
-	version string
-	logger  *logging.Logger
+	client         EthClient
+	filter         *chain.Filter
+	chainID        string
+	version        string
+	consumerConfig *chain.BlockConsumerConfig
+	logger         *logging.Logger
 }
 
 var _ chain.Chain = (*Chain)(nil)
@@ -37,13 +39,15 @@ var _ chain.Chain = (*Chain)(nil)
 type EthClient interface {
 	GetLogs(filter *ethclient.Filter) ([]*ethclient.EthLog, error)
 	BlockNumber() (uint64, error)
+	GetBlockByNumber(height string) (*ethclient.Block, error)
 	NetVersion() (string, error)
 	Web3ClientVersion() (string, error)
 	Syncing() (bool, error)
 }
 
 // We rely on this failing if the chain is not an Ethereum Chain
-func New(client EthClient, filter *chain.Filter, logger *logging.Logger) (*Chain, error) {
+func New(client EthClient, filter *chain.Filter, consumerConfig *chain.BlockConsumerConfig,
+	logger *logging.Logger) (*Chain, error) {
 	chainID, err := client.NetVersion()
 	if err != nil {
 		return nil, fmt.Errorf("could not get Ethereum ChainID: %w", err)
@@ -53,11 +57,12 @@ func New(client EthClient, filter *chain.Filter, logger *logging.Logger) (*Chain
 		return nil, fmt.Errorf("could not get Ethereum node version: %w", err)
 	}
 	return &Chain{
-		client:  client,
-		filter:  filter,
-		chainID: chainID,
-		version: version,
-		logger:  logger,
+		client:         client,
+		filter:         filter,
+		chainID:        chainID,
+		version:        version,
+		consumerConfig: consumerConfig,
+		logger:         logger,
 	}, nil
 }
 
@@ -84,7 +89,7 @@ func (c *Chain) GetChainID() string {
 }
 
 func (c *Chain) ConsumeBlocks(ctx context.Context, in *rpcevents.BlockRange, consumer func(chain.Block) error) error {
-	return Consume(c.client, c.filter, in, 3, c.logger, consumer)
+	return Consume(c.client, c.filter, in, c.consumerConfig, c.logger, consumer)
 }
 
 func (c *Chain) Connectivity() connectivity.State {
@@ -102,12 +107,14 @@ func (c *Chain) Close() error {
 }
 
 type Block struct {
+	client       EthClient
 	Height       uint64
 	Transactions []chain.Transaction
 }
 
-func NewEthereumBlock(log *Event) *Block {
+func newBlock(client EthClient, log *Event) *Block {
 	return &Block{
+		client:       client,
 		Height:       log.Height,
 		Transactions: []chain.Transaction{NewEthereumTransaction(log)},
 	}
@@ -124,9 +131,20 @@ func (b *Block) GetTxs() []chain.Transaction {
 }
 
 func (b *Block) GetMetadata(columns types.SQLColumnNames) (map[string]interface{}, error) {
+	block, err := b.client.GetBlockByNumber(web3.HexEncoder.Uint64(b.Height))
+	if err != nil {
+		return nil, err
+	}
+	d := new(web3.HexDecoder)
+	blockHeader, err := json.Marshal(block)
+	if err != nil {
+		return nil, fmt.Errorf("could not serialise block header: %w", err)
+	}
 	return map[string]interface{}{
-		columns.Height: fmt.Sprintf("%v", b.Height),
-	}, nil
+		columns.Height:      strconv.FormatUint(b.Height, 10),
+		columns.TimeStamp:   time.Unix(d.Int64(block.Timestamp), 0),
+		columns.BlockHeader: string(blockHeader),
+	}, d.Err()
 }
 
 func (b *Block) appendTransaction(log *Event) {
@@ -204,7 +222,7 @@ type Event struct {
 
 var _ chain.Event = (*Event)(nil)
 
-func NewEthereumEvent(log *ethclient.EthLog) (*Event, error) {
+func newEvent(log *ethclient.EthLog) (*Event, error) {
 	d := new(web3.HexDecoder)
 	topics := make([]binary.Word256, len(log.Topics))
 	for i, t := range log.Topics {

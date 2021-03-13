@@ -169,7 +169,7 @@ build_burrow_debug:
 .PHONY: install
 install: build_burrow
 	mkdir -p ${BIN_PATH}
-	install -T ${REPO}/bin/burrow ${BIN_PATH}/burrow
+	install ${REPO}/bin/burrow ${BIN_PATH}/burrow
 
 # build burrow with checks for race conditions
 .PHONY: build_race_db

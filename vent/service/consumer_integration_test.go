@@ -36,7 +36,7 @@ const (
 var tables = types.DefaultSQLTableNames
 
 // Tweak logger for debug purposes here
-var logger = logconfig.Sink().Terminal().FilterScope(ethereum.EthereumConsumerScope).LoggingConfig().WithTrace().MustLogger()
+var logger = logconfig.Sink().Terminal().FilterScope(ethereum.ConsumerScope).LoggingConfig().WithTrace().MustLogger()
 
 func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli test.TransactClient,
 	inputAddress crypto.Address) {

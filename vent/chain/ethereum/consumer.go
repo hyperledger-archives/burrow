@@ -15,12 +15,7 @@ import (
 	"github.com/hyperledger/burrow/vent/chain"
 )
 
-const EthereumConsumerScope = "EthereumConsumer"
-
-const (
-	defaultMaxRetires = 5
-	backoffBase       = 10 * time.Millisecond
-)
+const ConsumerScope = "EthereumConsumer"
 
 type consumer struct {
 	client     EthClient
@@ -29,26 +24,28 @@ type consumer struct {
 	logger     *logging.Logger
 	consumer   func(block chain.Block) error
 	// Next unconsumed height
-	nextBlockHeight   uint64
-	retries           uint64
-	backoffDuration   time.Duration
-	maxRetries        uint64
-	maxBlockBatchSize uint64
-	blockBatchSize    uint64
+	nextBlockHeight     uint64
+	retries             uint64
+	baseBackoffDuration time.Duration
+	backoffDuration     time.Duration
+	maxRetries          uint64
+	maxBlockBatchSize   uint64
+	blockBatchSize      uint64
 }
 
-func Consume(client EthClient, filter *chain.Filter, blockRange *rpcevents.BlockRange, maxBlockBatchSize uint64,
+func Consume(client EthClient, filter *chain.Filter, blockRange *rpcevents.BlockRange, config *chain.BlockConsumerConfig,
 	logger *logging.Logger, consume func(block chain.Block) error) error {
 	c := consumer{
-		client:            client,
-		filter:            filter,
-		blockRange:        blockRange,
-		logger:            logger.WithScope(EthereumConsumerScope),
-		consumer:          consume,
-		backoffDuration:   backoffBase,
-		maxRetries:        defaultMaxRetires,
-		maxBlockBatchSize: maxBlockBatchSize,
-		blockBatchSize:    maxBlockBatchSize,
+		client:              client,
+		filter:              filter,
+		blockRange:          blockRange,
+		logger:              logger.WithScope(ConsumerScope),
+		consumer:            consume,
+		baseBackoffDuration: config.BaseBackoffDuration,
+		backoffDuration:     config.BaseBackoffDuration,
+		maxRetries:          config.MaxRetries,
+		maxBlockBatchSize:   config.MaxBlockBatchSize,
+		blockBatchSize:      config.MaxBlockBatchSize,
 	}
 	return c.Consume()
 }
@@ -98,7 +95,7 @@ func (c *consumer) ConsumeInBatches(start, end uint64) error {
 		}
 		// Request was successful
 		c.recover()
-		lastBlock, err := consumeBlocksFromLogs(logs, c.consumer)
+		lastBlock, err := consumeBlocksFromLogs(c.client, logs, c.consumer)
 		if err != nil {
 			return fmt.Errorf("could not consume ethereum logs: %w", err)
 		}
@@ -132,10 +129,13 @@ func (c *consumer) handleError(end uint64, err error) error {
 		// If we have a custom server error maybe our batch size is too large or maybe we should wait
 		if rpcError.IsServerError() {
 			c.retries++
+			c.logger.InfoMsg("caught Ethereum server error, backing off...",
+				structure.ErrorKey, err, "retry", c.retries, "backoff", c.backoffDuration.String())
 			if c.retries <= c.maxRetries {
 				// Server may throw if batch too large or request takes too long
 				c.backoff()
-				c.logger.InfoMsg("Ethereum block consumer retrying after Ethereum Server Error", structure.ErrorKey, rpcError)
+				c.logger.InfoMsg("Ethereum block consumer retrying after Ethereum Server Error",
+					structure.ErrorKey, rpcError)
 				return c.ConsumeInBatches(c.nextBlockHeight, end)
 			}
 		}
@@ -162,24 +162,25 @@ func (c *consumer) recover() {
 		c.blockBatchSize += delta
 	}
 	// Reset retries and backoff
-	c.backoffDuration = backoffBase
+	c.backoffDuration = c.baseBackoffDuration
 	c.retries = 0
 }
 
-func consumeBlocksFromLogs(logs []*ethclient.EthLog, consumer func(block chain.Block) error) (chain.Block, error) {
+func consumeBlocksFromLogs(client EthClient, logs []*ethclient.EthLog,
+	consumer func(block chain.Block) error) (chain.Block, error) {
 	if len(logs) == 0 {
 		return nil, nil
 	}
-	log, err := NewEthereumEvent(logs[0])
+	log, err := newEvent(logs[0])
 	if err != nil {
 		return nil, fmt.Errorf("could not deserialise ethereum event: %w", err)
 	}
-	block := NewEthereumBlock(log)
+	block := newBlock(client, log)
 	txHash := log.TransactionHash
 	indexInBlock := log.IndexInBlock
 
 	for i := 1; i < len(logs); i++ {
-		log, err = NewEthereumEvent(logs[i])
+		log, err = newEvent(logs[i])
 		if err != nil {
 			return nil, fmt.Errorf("could not deserialise ethereum event: %w", err)
 		}
@@ -190,7 +191,7 @@ func consumeBlocksFromLogs(logs []*ethclient.EthLog, consumer func(block chain.B
 				return nil, err
 			}
 			// Establish new block
-			block = NewEthereumBlock(log)
+			block = newBlock(client, log)
 		} else {
 			if log.IndexInBlock <= indexInBlock {
 				return nil, fmt.Errorf("event LogIndex is non-increasing within block, "+

@@ -63,7 +63,7 @@ func TestNonExistentTransaction(t *testing.T) {
 	require.Equal(t, "", tx.BlockHash)
 }
 
-func TestEthGetLogs(t *testing.T) {
+func TestEthClient_GetLogs(t *testing.T) {
 	// TODO: make this test generate its own fixutres
 	filter := &Filter{
 		BlockRange: rpcevents.AbsoluteRange(1, 34340),
@@ -77,6 +77,14 @@ func TestEthGetLogs(t *testing.T) {
 	bs, err := json.Marshal(result)
 	require.NoError(t, err)
 	fmt.Printf("%s\n", string(bs))
+}
+
+func TestEthClient_GetBlockByNumber(t *testing.T) {
+	block, err := client.GetBlockByNumber("latest")
+	require.NoError(t, err)
+	d := new(web3.HexDecoder)
+	assert.Greater(t, d.Uint64(block.Number), uint64(0))
+	require.NoError(t, d.Err())
 }
 
 func TestNetVersion(t *testing.T) {

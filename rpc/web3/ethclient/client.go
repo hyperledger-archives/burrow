@@ -19,6 +19,7 @@ const (
 	EthSendRawTransactionMethod    = "eth_sendRawTransaction"
 	EthGetTransactionCountMethod   = "eth_getTransactionCount"
 	EthAccountsMethod              = "eth_accounts"
+	EthGetBlockByNumberMethod      = "eth_getBlockByNumber"
 	EthGetTransactionByHashMethod  = "eth_getTransactionByHash"
 	EthGetTransactionReceiptMethod = "eth_getTransactionReceipt"
 	EthGasPriceMethod              = "eth_gasPrice"
@@ -80,6 +81,15 @@ func (c *EthClient) Accounts() ([]string, error) {
 		return nil, err
 	}
 	return accounts, nil
+}
+
+func (c *EthClient) GetBlockByNumber(height string) (*Block, error) {
+	block := new(Block)
+	err := c.Call(EthGetBlockByNumberMethod, []interface{}{height, false}, block)
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
 }
 
 func (c *EthClient) GetTransactionByHash(txHash string) (*web3.Transaction, error) {

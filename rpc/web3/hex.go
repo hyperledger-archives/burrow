@@ -1,7 +1,6 @@
 package web3
 
 import (
-	"bytes"
 	bin "encoding/binary"
 	"fmt"
 	"math/big"
@@ -69,6 +68,14 @@ func (d *HexDecoder) Uint64(hs string) uint64 {
 	return bi.Uint64()
 }
 
+func (d *HexDecoder) Int64(hs string) int64 {
+	bi := d.BigInt(hs)
+	if !bi.IsInt64() {
+		d.pushErr(fmt.Errorf("%v is not int64", bi))
+	}
+	return bi.Int64()
+}
+
 type hexEncoder struct {
 }
 
@@ -82,13 +89,14 @@ func (e *hexEncoder) BytesTrim(bs []byte) string {
 	if len(bs) == 0 {
 		return ""
 	}
+	str := hex.EncodeToString(bs)
 	// Ethereum expects leading zeros to be removed from RLP encodings (SMH)
-	bs = bytes.TrimLeft(bs, "\x00")
-	if len(bs) == 0 {
+	str = strings.TrimLeft(str, "0")
+	if len(str) == 0 {
 		// Special case for zero
 		return "0x0"
 	}
-	return e.Bytes(bs)
+	return "0x" + str
 }
 
 func (e *hexEncoder) BigInt(x big.Int) string {
