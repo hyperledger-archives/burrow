@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 export this="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$this/../tests/test_runner.sh"

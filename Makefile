@@ -10,7 +10,7 @@
 
 # ----------------------------------------------------------
 
-SHELL := /bin/bash
+SHELL := /usr/bin/env bash
 REPO := $(shell pwd)
 
 # Our own Go files containing the compiled bytecode of solidity files as a constant
