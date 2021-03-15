@@ -15,7 +15,7 @@ import (
 
 func TestEthTransactClient_CallTxSync(t *testing.T) {
 	pk := web3test.GetPrivateKey(t)
-	cli := NewTransactClient(web3test.GetChainRPCClient()).WithAccounts(pk)
+	cli := NewTransactClient(NewEthClient(web3test.GetChainRPCClient())).WithAccounts(pk)
 	input := pk.GetAddress()
 	gasPrice, err := cli.GetGasPrice()
 	require.NoError(t, err)

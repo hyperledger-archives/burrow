@@ -62,8 +62,8 @@ func (f *Filter) EthFilter() *EthFilter {
 		addresses[i] = web3.HexEncoder.Address(a)
 	}
 	return &EthFilter{
-		FromBlock: ethLogBound(f.GetStart()),
-		ToBlock:   ethLogBound(f.GetEnd()),
+		FromBlock: logBound(f.GetStart()),
+		ToBlock:   logBound(f.GetEnd()),
 		Addresses: addresses,
 		Topics:    topics,
 	}
@@ -106,4 +106,45 @@ type EthFilter struct {
 	Addresses []string `json:"address,omitempty"`
 	// Array of 32 Bytes DATA topics. Topics are order-dependent. Each topic can also be an array of DATA with 'or' options
 	Topics []string `json:"topics,omitempty"`
+}
+
+type Block struct {
+	// Hex representation of a Keccak 256 hash
+	Sha3Uncles string `json:"sha3Uncles"`
+	// Hex representation of a Keccak 256 hash
+	TransactionsRoot string `json:"transactionsRoot"`
+	// Hex representation of a Keccak 256 hash
+	ParentHash string `json:"parentHash"`
+	// The address of the beneficiary to whom the mining rewards were given or null when its the pending block
+	Miner string `json:"miner"`
+	// Integer of the difficulty for this block
+	Difficulty string `json:"difficulty"`
+	// The total used gas by all transactions in this block
+	GasUsed string `json:"gasUsed"`
+	// The unix timestamp for when the block was collated
+	Timestamp string `json:"timestamp"`
+	// Array of transaction objects, or 32 Bytes transaction hashes depending on the last given parameter
+	Transactions []string `json:"transactions"`
+	// The block number or null when its the pending block
+	Number string `json:"number"`
+	// The block hash or null when its the pending block
+	Hash string `json:"hash"`
+	// Array of uncle hashes
+	Uncles []string `json:"uncles"`
+	// Hex representation of a Keccak 256 hash
+	ReceiptsRoot string `json:"receiptsRoot"`
+	// The 'extra data' field of this block
+	ExtraData string `json:"extraData"`
+	// Hex representation of a Keccak 256 hash
+	StateRoot string `json:"stateRoot"`
+	// Integer of the total difficulty of the chain until this block
+	TotalDifficulty string `json:"totalDifficulty"`
+	// Integer the size of this block in bytes
+	Size string `json:"size"`
+	// The maximum gas allowed in this block
+	GasLimit string `json:"gasLimit"`
+	// Randomly selected number to satisfy the proof-of-work or null when its the pending block
+	Nonce string `json:"nonce"`
+	// The bloom filter for the logs of the block or null when its the pending block
+	LogsBloom string `json:"logsBloom"`
 }

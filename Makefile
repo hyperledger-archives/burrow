@@ -169,7 +169,7 @@ build_burrow_debug:
 .PHONY: install
 install: build_burrow
 	mkdir -p ${BIN_PATH}
-	install -T ${REPO}/bin/burrow ${BIN_PATH}/burrow
+	install ${REPO}/bin/burrow ${BIN_PATH}/burrow
 
 # build burrow with checks for race conditions
 .PHONY: build_race_db
@@ -262,9 +262,10 @@ start_ganache: $(PID_DIR)/ganache.pid
 stop_ganache: $(PID_DIR)/ganache.pid
 	@kill $(shell cat $<) && echo "Ganache process stopped." && rm $< || rm $<
 
+# For local debug
 .PHONY: postgres
 postgres:
-	docker-compose up
+	docker run -e POSTGRES_HOST_AUTH_METHOD=trust -p 5432:5432 postgres:11-alpine
 
 .PHONY: test_restore
 test_restore:

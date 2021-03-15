@@ -71,7 +71,7 @@ func Dump(output Output) func(cmd *cli.Cmd) {
 				}
 
 				// Include all logging by default
-				logger, err := logconfig.New().NewLogger()
+				logger, err := logconfig.New().Logger()
 				if err != nil {
 					output.Fatalf("could not make logger: %v", err)
 				}

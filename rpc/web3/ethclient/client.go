@@ -19,6 +19,7 @@ const (
 	EthSendRawTransactionMethod    = "eth_sendRawTransaction"
 	EthGetTransactionCountMethod   = "eth_getTransactionCount"
 	EthAccountsMethod              = "eth_accounts"
+	EthGetBlockByNumberMethod      = "eth_getBlockByNumber"
 	EthGetTransactionByHashMethod  = "eth_getTransactionByHash"
 	EthGetTransactionReceiptMethod = "eth_getTransactionReceipt"
 	EthGasPriceMethod              = "eth_gasPrice"
@@ -29,81 +30,98 @@ const (
 // Adjust the polling frequency of AwaitTransaction
 const awaitTransactionSleep = 200 * time.Millisecond
 
-func EthSendTransaction(client rpc.Client, tx *EthSendTransactionParam) (string, error) {
+type EthClient struct {
+	rpc.Client
+}
+
+func NewEthClient(cli rpc.Client) *EthClient {
+	return &EthClient{Client: cli}
+}
+
+func (c *EthClient) SendTransaction(tx *EthSendTransactionParam) (string, error) {
 	hash := new(string)
-	err := client.Call(EthSendTransactionMethod, []*EthSendTransactionParam{tx}, &hash)
+	err := c.Call(EthSendTransactionMethod, []*EthSendTransactionParam{tx}, &hash)
 	if err != nil {
 		return "", err
 	}
 	return *hash, nil
 }
 
-func EthSendRawTransaction(client rpc.Client, txHex string) (string, error) {
+func (c *EthClient) SendRawTransaction(txHex string) (string, error) {
 	hash := new(string)
-	err := client.Call(EthSendRawTransactionMethod, []string{txHex}, &hash)
+	err := c.Call(EthSendRawTransactionMethod, []string{txHex}, &hash)
 	if err != nil {
 		return "", err
 	}
 	return *hash, nil
 }
 
-func EthGetTransactionCount(client rpc.Client, address crypto.Address) (string, error) {
+func (c *EthClient) GetTransactionCount(address crypto.Address) (string, error) {
 	var count string
-	err := client.Call(EthGetTransactionCountMethod, []string{web3.HexEncoder.Address(address), "latest"}, &count)
+	err := c.Call(EthGetTransactionCountMethod, []string{web3.HexEncoder.Address(address), "latest"}, &count)
 	if err != nil {
 		return "", err
 	}
 	return count, nil
 }
 
-func EthGetLogs(client rpc.Client, filter *Filter) ([]*EthLog, error) {
+func (c *EthClient) GetLogs(filter *Filter) ([]*EthLog, error) {
 	var logs []*EthLog
-	err := client.Call(EthGetLogsMethod, []*EthFilter{filter.EthFilter()}, &logs)
+	err := c.Call(EthGetLogsMethod, []*EthFilter{filter.EthFilter()}, &logs)
 	if err != nil {
 		return nil, err
 	}
 	return logs, nil
 }
 
-func EthAccounts(client rpc.Client) ([]string, error) {
+func (c *EthClient) Accounts() ([]string, error) {
 	var accounts []string
-	err := client.Call(EthAccountsMethod, nil, &accounts)
+	err := c.Call(EthAccountsMethod, nil, &accounts)
 	if err != nil {
 		return nil, err
 	}
 	return accounts, nil
 }
 
-func EthGetTransactionByHash(client rpc.Client, txHash string) (*web3.Transaction, error) {
+func (c *EthClient) GetBlockByNumber(height string) (*Block, error) {
+	block := new(Block)
+	err := c.Call(EthGetBlockByNumberMethod, []interface{}{height, false}, block)
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
+}
+
+func (c *EthClient) GetTransactionByHash(txHash string) (*web3.Transaction, error) {
 	tx := new(web3.Transaction)
-	err := client.Call(EthGetTransactionByHashMethod, []string{txHash}, tx)
+	err := c.Call(EthGetTransactionByHashMethod, []string{txHash}, tx)
 	if err != nil {
 		return nil, err
 	}
 	return tx, nil
 }
 
-func EthGetTransactionReceipt(client rpc.Client, txHash string) (*Receipt, error) {
+func (c *EthClient) GetTransactionReceipt(txHash string) (*Receipt, error) {
 	tx := new(Receipt)
-	err := client.Call(EthGetTransactionReceiptMethod, []string{txHash}, tx)
+	err := c.Call(EthGetTransactionReceiptMethod, []string{txHash}, tx)
 	if err != nil {
 		return nil, err
 	}
 	return tx, nil
 }
 
-func EthSyncing(client rpc.Client) (bool, error) {
+func (c *EthClient) Syncing() (bool, error) {
 	syncing := new(bool)
-	err := client.Call(EthSyncingMethod, nil, syncing)
+	err := c.Call(EthSyncingMethod, nil, syncing)
 	if err != nil {
 		return false, err
 	}
 	return *syncing, nil
 }
 
-func EthBlockNumber(client rpc.Client) (uint64, error) {
+func (c *EthClient) BlockNumber() (uint64, error) {
 	latestBlock := new(string)
-	err := client.Call(EthBlockNumberMethod, nil, latestBlock)
+	err := c.Call(EthBlockNumberMethod, nil, latestBlock)
 	if err != nil {
 		return 0, err
 	}
@@ -111,9 +129,9 @@ func EthBlockNumber(client rpc.Client) (uint64, error) {
 	return d.Uint64(*latestBlock), d.Err()
 }
 
-func EthGasPrice(client rpc.Client) (string, error) {
+func (c *EthClient) GasPrice() (string, error) {
 	gasPrice := new(string)
-	err := client.Call(EthGasPriceMethod, nil, gasPrice)
+	err := c.Call(EthGasPriceMethod, nil, gasPrice)
 	if err != nil {
 		return "", err
 	}
@@ -121,18 +139,18 @@ func EthGasPrice(client rpc.Client) (string, error) {
 }
 
 // AKA ChainID
-func NetVersion(client rpc.Client) (string, error) {
+func (c *EthClient) NetVersion() (string, error) {
 	version := new(string)
-	err := client.Call(NetVersionMethod, nil, version)
+	err := c.Call(NetVersionMethod, nil, version)
 	if err != nil {
 		return "", err
 	}
 	return *version, nil
 }
 
-func Web3ClientVersion(client rpc.Client) (string, error) {
+func (c *EthClient) Web3ClientVersion() (string, error) {
 	version := new(string)
-	err := client.Call(Web3ClientVersionMethod, nil, version)
+	err := c.Call(Web3ClientVersionMethod, nil, version)
 	if err != nil {
 		return "", err
 	}
@@ -140,9 +158,9 @@ func Web3ClientVersion(client rpc.Client) (string, error) {
 }
 
 // Wait for a transaction to be mined/confirmed
-func AwaitTransaction(ctx context.Context, client rpc.Client, txHash string) (*Receipt, error) {
+func (c *EthClient) AwaitTransaction(ctx context.Context, txHash string) (*Receipt, error) {
 	for {
-		tx, err := EthGetTransactionReceipt(client, txHash)
+		tx, err := c.GetTransactionReceipt(txHash)
 		if err != nil {
 			return nil, fmt.Errorf("AwaitTransaction failed to get ethereum transaction: %w", err)
 		}
@@ -164,7 +182,7 @@ func AwaitTransaction(ctx context.Context, client rpc.Client, txHash string) (*R
 	}
 }
 
-func ethLogBound(bound *rpcevents.Bound) string {
+func logBound(bound *rpcevents.Bound) string {
 	if bound == nil {
 		return ""
 	}

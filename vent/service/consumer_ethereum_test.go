@@ -13,7 +13,7 @@ import (
 
 func TestEthereumConsumer(t *testing.T) {
 	pk := web3test.GetPrivateKey(t)
-	tcli := ethclient.NewTransactClient(web3test.GetChainRPCClient())
+	tcli := ethclient.NewTransactClient(ethclient.NewEthClient(web3test.GetChainRPCClient()))
 	chainID, err := tcli.GetChainID()
 	require.NoError(t, err)
 	testConsumer(t, chainID, test.PostgresVentConfig(web3test.GetChainRemote()), tcli, pk.GetAddress())

@@ -17,10 +17,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var client = web3test.GetChainRPCClient()
+var client = NewEthClient(web3test.GetChainRPCClient())
 
 func TestEthAccounts(t *testing.T) {
-	accounts, err := EthAccounts(client)
+	accounts, err := client.Accounts()
 	require.NoError(t, err)
 	fmt.Println(accounts)
 }
@@ -34,15 +34,15 @@ func TestEthSendTransaction(t *testing.T) {
 		Gas:  web3.HexEncoder.Uint64(999999),
 		Data: web3.HexEncoder.BytesTrim(solidity.Bytecode_EventEmitter),
 	}
-	txHash, err := EthSendTransaction(client, param)
+	txHash, err := client.SendTransaction(param)
 	require.NoError(t, err)
 	require.NotEmpty(t, txHash)
 
-	tx, err := EthGetTransactionByHash(client, txHash)
+	tx, err := client.GetTransactionByHash(txHash)
 	require.NoError(t, err)
 	assert.Greater(t, d.Uint64(tx.BlockNumber), uint64(0))
 
-	receipt, err := EthGetTransactionReceipt(client, txHash)
+	receipt, err := client.GetTransactionReceipt(txHash)
 	require.NoError(t, err)
 	assert.Equal(t, txHash, receipt.TransactionHash)
 
@@ -51,19 +51,19 @@ func TestEthSendTransaction(t *testing.T) {
 
 func TestNonExistentTransaction(t *testing.T) {
 	txHash := "0x990258f47aba0cf913c14cc101ddf5b589c04765429d5709f643c891442bfcf7"
-	receipt, err := EthGetTransactionReceipt(client, txHash)
+	receipt, err := client.GetTransactionReceipt(txHash)
 	require.NoError(t, err)
 	require.Equal(t, "", receipt.TransactionHash)
 	require.Equal(t, "", receipt.BlockNumber)
 	require.Equal(t, "", receipt.BlockHash)
-	tx, err := EthGetTransactionByHash(client, txHash)
+	tx, err := client.GetTransactionByHash(txHash)
 	require.NoError(t, err)
 	require.Equal(t, "", tx.Hash)
 	require.Equal(t, "", tx.BlockNumber)
 	require.Equal(t, "", tx.BlockHash)
 }
 
-func TestEthGetLogs(t *testing.T) {
+func TestEthClient_GetLogs(t *testing.T) {
 	// TODO: make this test generate its own fixutres
 	filter := &Filter{
 		BlockRange: rpcevents.AbsoluteRange(1, 34340),
@@ -72,33 +72,41 @@ func TestEthGetLogs(t *testing.T) {
 			crypto.MustAddressFromHexString("f73aaa468496a87675d27638878a1600b0db3c71"),
 		},
 	}
-	result, err := EthGetLogs(client, filter)
+	result, err := client.GetLogs(filter)
 	require.NoError(t, err)
 	bs, err := json.Marshal(result)
 	require.NoError(t, err)
 	fmt.Printf("%s\n", string(bs))
 }
 
+func TestEthClient_GetBlockByNumber(t *testing.T) {
+	block, err := client.GetBlockByNumber("latest")
+	require.NoError(t, err)
+	d := new(web3.HexDecoder)
+	assert.Greater(t, d.Uint64(block.Number), uint64(0))
+	require.NoError(t, d.Err())
+}
+
 func TestNetVersion(t *testing.T) {
-	chainID, err := NetVersion(client)
+	chainID, err := client.NetVersion()
 	require.NoError(t, err)
 	require.NotEmpty(t, chainID)
 }
 
 func TestWeb3ClientVersion(t *testing.T) {
-	version, err := Web3ClientVersion(client)
+	version, err := client.Web3ClientVersion()
 	require.NoError(t, err)
 	require.NotEmpty(t, version)
 }
 
 func TestEthSyncing(t *testing.T) {
-	result, err := EthSyncing(client)
+	result, err := client.Syncing()
 	require.NoError(t, err)
 	fmt.Printf("%#v\n", result)
 }
 
 func TestEthBlockNumber(t *testing.T) {
-	height, err := EthBlockNumber(client)
+	height, err := client.BlockNumber()
 	require.NoError(t, err)
 	require.Greater(t, height, uint64(0))
 }

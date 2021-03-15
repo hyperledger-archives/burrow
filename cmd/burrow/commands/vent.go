@@ -21,6 +21,26 @@ import (
 	cli "github.com/jawher/mow.cli"
 )
 
+type LogLevel string
+
+const (
+	LogLevelNone  LogLevel = "none"
+	LogLevelInfo  LogLevel = "info"
+	LogLevelTrace LogLevel = "trace"
+)
+
+func logConfig(level LogLevel) *logconfig.LoggingConfig {
+	logConf := logconfig.New()
+	switch level {
+	case LogLevelNone:
+		return logConf.None()
+	case LogLevelTrace:
+		return logConf.WithTrace()
+	default:
+		return logConf
+	}
+}
+
 // Vent consumes EVM events and commits to a DB
 func Vent(output Output) func(cmd *cli.Cmd) {
 	return func(cmd *cli.Cmd) {
@@ -32,9 +52,14 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				dbOpts := sqlDBOpts(cmd, cfg)
 				grpcAddrOpt := cmd.StringOpt("chain-addr", cfg.ChainAddress, "Address to connect to the Hyperledger Burrow gRPC server")
 				httpAddrOpt := cmd.StringOpt("http-addr", cfg.HTTPListenAddress, "Address to bind the HTTP server")
-				logLevelOpt := cmd.StringOpt("log-level", cfg.LogLevel, "Logging level (error, warn, info, debug)")
+				logLevelOpt := cmd.StringOpt("log-level", string(LogLevelInfo), "Logging level (none, info, trace)")
 				watchAddressesOpt := cmd.StringsOpt("watch", nil, "Add contract address to global watch filter")
 				minimumHeightOpt := cmd.IntOpt("minimum-height", 0, "Only process block greater than or equal to height passed")
+				maxRetriesOpt := cmd.IntOpt("max-retries", int(cfg.BlockConsumerConfig.MaxRetries), "Maximum number of retries when consuming blocks")
+				backoffDurationOpt := cmd.StringOpt("backoff", "",
+					"The minimum duration to wait before asking for new blocks - increases exponentially when errors occur. Values like 200ms, 1s, 2m")
+				batchSizeOpt := cmd.IntOpt("batch-size", int(cfg.BlockConsumerConfig.MaxBlockBatchSize),
+					"The maximum number of blocks from which to request events in a single call - will reduce logarithmically to 1 when errors occur.")
 				abiFileOpt := cmd.StringsOpt("abi", cfg.AbiFileOrDirs, "EVM Contract ABI file or folder")
 				specFileOrDirOpt := cmd.StringsOpt("spec", cfg.SpecFileOrDirs, "SQLSol specification file or folder")
 				dbBlockOpt := cmd.BoolOpt("blocks", false, "Create block tables and persist related data")
@@ -43,16 +68,21 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				announceEveryOpt := cmd.StringOpt("announce-every", "5s", "Announce vent status every period as a Go duration, e.g. 1ms, 3s, 1h")
 
 				cmd.Before = func() {
+					var err error
 					// Rather annoying boilerplate here... but there is no way to pass mow.cli a pointer for it to fill you value
 					cfg.DBAdapter = *dbOpts.adapter
 					cfg.DBURL = *dbOpts.url
 					cfg.DBSchema = *dbOpts.schema
 					cfg.ChainAddress = *grpcAddrOpt
 					cfg.HTTPListenAddress = *httpAddrOpt
-					cfg.LogLevel = *logLevelOpt
 					cfg.WatchAddresses = make([]crypto.Address, len(*watchAddressesOpt))
 					cfg.MinimumHeight = uint64(*minimumHeightOpt)
-					var err error
+					cfg.BlockConsumerConfig.MaxRetries = uint64(*maxRetriesOpt)
+					cfg.BlockConsumerConfig.BaseBackoffDuration, err = parseDuration(*backoffDurationOpt)
+					if err != nil {
+						output.Fatalf("could not parse backoff duration: %w", err)
+					}
+					cfg.BlockConsumerConfig.MaxBlockBatchSize = uint64(*batchSizeOpt)
 					for i, wa := range *watchAddressesOpt {
 						cfg.WatchAddresses[i], err = crypto.AddressFromHexString(wa)
 						if err != nil {
@@ -68,29 +98,31 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 						cfg.SpecOpt |= sqlsol.Tx
 					}
 
-					if *announceEveryOpt != "" {
-						var err error
-						cfg.AnnounceEvery, err = time.ParseDuration(*announceEveryOpt)
-						if err != nil {
-							output.Fatalf("could not parse announce-every duration %s: %v", *announceEveryOpt, err)
-						}
+					cfg.AnnounceEvery, err = parseDuration(*announceEveryOpt)
+					if err != nil {
+						output.Fatalf("could not parse announce-every duration %s: %v", *announceEveryOpt, err)
 					}
 				}
 
 				cmd.Spec = "--spec=<spec file or dir>... [--abi=<abi file or dir>...] " +
 					"[--watch=<contract address>...] [--minimum-height=<lowest height from which to read>] " +
+					"[--max-retries=<max block request retries>] [--backoff=<minimum backoff duration>] " +
+					"[--batch-size=<minimum block batch size>] " +
 					"[--db-adapter] [--db-url] [--db-schema] [--blocks] [--txs] [--chain-addr] [--http-addr] " +
 					"[--log-level] [--announce-every=<duration>]"
 
 				cmd.Action = func() {
-					log, err := logconfig.New().NewLogger()
+					logger, err := logConfig(LogLevel(*logLevelOpt)).Logger()
 					if err != nil {
 						output.Fatalf("failed to load logger: %v", err)
 					}
 
-					log = log.With("service", "vent")
-					consumer := service.NewConsumer(cfg, log, make(chan types.EventData))
-					server := service.NewServer(cfg, log, consumer)
+					logger = logger.With("service", "vent")
+					consumer := service.NewConsumer(cfg, logger, make(chan types.EventData))
+					if err != nil {
+						output.Fatalf("Could not create Vent Consumer: %v", err)
+					}
+					server := service.NewServer(cfg, logger, consumer)
 
 					projection, err := sqlsol.SpecLoader(cfg.SpecFileOrDirs, cfg.SpecOpt)
 					if err != nil {
@@ -194,7 +226,7 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				}
 
 				cmd.Action = func() {
-					log, err := logconfig.New().NewLogger()
+					log, err := logconfig.New().Logger()
 					if err != nil {
 						output.Fatalf("failed to load logger: %v", err)
 					}
@@ -228,6 +260,13 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				}
 			})
 	}
+}
+
+func parseDuration(duration string) (time.Duration, error) {
+	if duration == "" {
+		return 0, nil
+	}
+	return time.ParseDuration(duration)
 }
 
 type dbOpts struct {

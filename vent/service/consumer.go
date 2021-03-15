@@ -7,14 +7,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger/burrow/rpc/lib/jsonrpc"
-	"github.com/hyperledger/burrow/vent/chain/burrow"
-	"github.com/hyperledger/burrow/vent/chain/ethereum"
-
+	"github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
+	"github.com/hyperledger/burrow/rpc/lib/jsonrpc"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
+	"github.com/hyperledger/burrow/rpc/web3/ethclient"
 	"github.com/hyperledger/burrow/vent/chain"
+	"github.com/hyperledger/burrow/vent/chain/burrow"
+	"github.com/hyperledger/burrow/vent/chain/ethereum"
 	"github.com/hyperledger/burrow/vent/config"
 	"github.com/hyperledger/burrow/vent/sqldb"
 	"github.com/hyperledger/burrow/vent/sqlsol"
@@ -40,6 +41,7 @@ type Consumer struct {
 // The event channel will be passed a collection of rows generated from all of the events in a single block
 // It will be closed by the consumer when it is finished
 func NewConsumer(cfg *config.VentConfig, log *logging.Logger, eventChannel chan types.EventData) *Consumer {
+	cfg.BlockConsumerConfig.Complete()
 	return &Consumer{
 		Config:        cfg,
 		Logger:        log,
@@ -280,14 +282,28 @@ func (c *Consumer) connectToChain() (chain.Chain, error) {
 		Addresses: c.Config.WatchAddresses,
 	}
 	c.Logger.InfoMsg("Attempting to detect chain type", "chain_address", c.Config.ChainAddress)
-	burrowChain, burrowErr := burrow.New(c.Config.ChainAddress, filter)
-	if burrowErr != nil {
-		ethereumChain, ethErr := ethereum.New(jsonrpc.NewClient(c.Config.ChainAddress), filter, c.Logger)
-		if ethErr != nil {
-			return nil, fmt.Errorf("could not connect to either Burrow or Ethereum chain, "+
-				"Burrow error: %v, Ethereum error: %v", burrowErr, ethErr)
-		}
-		return ethereumChain, nil
+	burrowChain, burrowErr := dialBurrow(c.Config.ChainAddress, filter)
+	if burrowErr == nil {
+		return burrowChain, nil
 	}
-	return burrowChain, nil
+	ethChain, ethErr := dialEthereum(c.Config.ChainAddress, filter, &c.Config.BlockConsumerConfig, c.Logger)
+	if ethErr != nil {
+		return nil, fmt.Errorf("could not connect to either Burrow or Ethereum chain, "+
+			"Burrow error: %v, Ethereum error: %v", burrowErr, ethErr)
+	}
+	return ethChain, nil
+}
+
+func dialBurrow(chainAddress string, filter *chain.Filter) (*burrow.Chain, error) {
+	conn, err := encoding.GRPCDial(chainAddress)
+	if err != nil {
+		return nil, err
+	}
+	return burrow.New(conn, filter)
+}
+
+func dialEthereum(chainAddress string, filter *chain.Filter, consumerConfig *chain.BlockConsumerConfig,
+	logger *logging.Logger) (*ethereum.Chain, error) {
+	client := ethclient.NewEthClient(jsonrpc.NewClient(chainAddress))
+	return ethereum.New(client, filter, consumerConfig, logger)
 }

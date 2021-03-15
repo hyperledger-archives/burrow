@@ -15,7 +15,7 @@ func TestConsumeBlocks(t *testing.T) {
 	err := json.Unmarshal([]byte(ethLogsJSON), &logs)
 	require.NoError(t, err)
 	var blocks []chain.Block
-	lastBlock, err := consumeBlocksFromLogs(logs, func(block chain.Block) error {
+	lastBlock, err := consumeBlocksFromLogs(nil, logs, func(block chain.Block) error {
 		blocks = append(blocks, block)
 		return nil
 	})

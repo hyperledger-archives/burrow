@@ -2,8 +2,11 @@ package ethereum
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
+	"time"
 
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/event/query"
@@ -17,38 +20,49 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
-	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/vent/types"
 	"google.golang.org/grpc/connectivity"
 )
 
 type Chain struct {
-	client  rpc.Client
-	filter  *chain.Filter
-	chainID string
-	version string
-	logger  *logging.Logger
+	client         EthClient
+	filter         *chain.Filter
+	chainID        string
+	version        string
+	consumerConfig *chain.BlockConsumerConfig
+	logger         *logging.Logger
 }
 
 var _ chain.Chain = (*Chain)(nil)
 
+type EthClient interface {
+	GetLogs(filter *ethclient.Filter) ([]*ethclient.EthLog, error)
+	BlockNumber() (uint64, error)
+	GetBlockByNumber(height string) (*ethclient.Block, error)
+	NetVersion() (string, error)
+	Web3ClientVersion() (string, error)
+	Syncing() (bool, error)
+}
+
 // We rely on this failing if the chain is not an Ethereum Chain
-func New(client rpc.Client, filter *chain.Filter, logger *logging.Logger) (*Chain, error) {
-	chainID, err := ethclient.NetVersion(client)
+func New(client EthClient, filter *chain.Filter, consumerConfig *chain.BlockConsumerConfig,
+	logger *logging.Logger) (*Chain, error) {
+	chainID, err := client.NetVersion()
 	if err != nil {
 		return nil, fmt.Errorf("could not get Ethereum ChainID: %w", err)
 	}
-	version, err := ethclient.Web3ClientVersion(client)
+	version, err := client.Web3ClientVersion()
 	if err != nil {
 		return nil, fmt.Errorf("could not get Ethereum node version: %w", err)
 	}
 	return &Chain{
-		client:  client,
-		filter:  filter,
-		chainID: chainID,
-		version: version,
-		logger:  logger,
+		client:         client,
+		filter:         filter,
+		chainID:        chainID,
+		version:        version,
+		consumerConfig: consumerConfig,
+		logger:         logger,
 	}, nil
 }
 
@@ -75,12 +89,12 @@ func (c *Chain) GetChainID() string {
 }
 
 func (c *Chain) ConsumeBlocks(ctx context.Context, in *rpcevents.BlockRange, consumer func(chain.Block) error) error {
-	return Consume(c.client, c.filter, in, c.logger, consumer)
+	return Consume(c.client, c.filter, in, c.consumerConfig, c.logger, consumer)
 }
 
 func (c *Chain) Connectivity() connectivity.State {
 	// TODO: better connectivity information
-	_, err := ethclient.EthSyncing(c.client)
+	_, err := c.client.Syncing()
 	if err != nil {
 		return connectivity.TransientFailure
 	}
@@ -93,12 +107,14 @@ func (c *Chain) Close() error {
 }
 
 type Block struct {
+	client       EthClient
 	Height       uint64
 	Transactions []chain.Transaction
 }
 
-func NewEthereumBlock(log *Event) *Block {
+func newBlock(client EthClient, log *Event) *Block {
 	return &Block{
+		client:       client,
 		Height:       log.Height,
 		Transactions: []chain.Transaction{NewEthereumTransaction(log)},
 	}
@@ -115,9 +131,20 @@ func (b *Block) GetTxs() []chain.Transaction {
 }
 
 func (b *Block) GetMetadata(columns types.SQLColumnNames) (map[string]interface{}, error) {
+	block, err := b.client.GetBlockByNumber(web3.HexEncoder.Uint64(b.Height))
+	if err != nil {
+		return nil, err
+	}
+	d := new(web3.HexDecoder)
+	blockHeader, err := json.Marshal(block)
+	if err != nil {
+		return nil, fmt.Errorf("could not serialise block header: %w", err)
+	}
 	return map[string]interface{}{
-		columns.Height: fmt.Sprintf("%v", b.Height),
-	}, nil
+		columns.Height:      strconv.FormatUint(b.Height, 10),
+		columns.TimeStamp:   time.Unix(d.Int64(block.Timestamp), 0),
+		columns.BlockHeader: string(blockHeader),
+	}, d.Err()
 }
 
 func (b *Block) appendTransaction(log *Event) {
@@ -195,7 +222,7 @@ type Event struct {
 
 var _ chain.Event = (*Event)(nil)
 
-func NewEthereumEvent(log *ethclient.EthLog) (*Event, error) {
+func newEvent(log *ethclient.EthLog) (*Event, error) {
 	d := new(web3.HexDecoder)
 	topics := make([]binary.Word256, len(log.Topics))
 	for i, t := range log.Topics {

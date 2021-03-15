@@ -34,7 +34,7 @@ func (kern *Kernel) LoadKeysFromConfig(conf *keys.KeysConfig) (err error) {
 
 // LoadLoggerFromConfig adds a logging configuration to the kernel
 func (kern *Kernel) LoadLoggerFromConfig(conf *logconfig.LoggingConfig) error {
-	logger, err := conf.NewLogger()
+	logger, err := conf.Logger()
 	kern.SetLogger(logger)
 	return err
 }

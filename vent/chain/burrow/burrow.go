@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/event/query"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
@@ -33,11 +33,7 @@ type Chain struct {
 
 var _ chain.Chain = (*Chain)(nil)
 
-func New(grpcAddr string, filter *chain.Filter) (*Chain, error) {
-	conn, err := encoding.GRPCDial(grpcAddr)
-	if err != nil {
-		return nil, err
-	}
+func New(conn *grpc.ClientConn, filter *chain.Filter) (*Chain, error) {
 	client := rpcquery.NewQueryClient(conn)
 	status, err := client.Status(context.Background(), &rpcquery.StatusParam{})
 	if err != nil {
@@ -145,7 +141,7 @@ func (b *Block) GetMetadata(columns types.SQLColumnNames) (map[string]interface{
 	}
 
 	return map[string]interface{}{
-		columns.Height:      fmt.Sprintf("%v", b.Height),
+		columns.Height:      strconv.FormatUint(b.Height, 10),
 		columns.TimeStamp:   b.Header.GetTime(),
 		columns.BlockHeader: string(blockHeader),
 	}, nil

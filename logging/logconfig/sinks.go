@@ -6,6 +6,7 @@ import (
 
 	"github.com/eapache/channels"
 	"github.com/go-kit/kit/log"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/loggers"
 	"github.com/hyperledger/burrow/logging/structure"
 )
@@ -159,19 +160,42 @@ func Sink() *SinkConfig {
 	return &SinkConfig{}
 }
 
-func (sinkConfig *SinkConfig) AddSinks(sinks ...*SinkConfig) *SinkConfig {
-	sinkConfig.Sinks = append(sinkConfig.Sinks, sinks...)
-	return sinkConfig
+func (sc *SinkConfig) MustLogger() *logging.Logger {
+	return sc.LoggingConfig().MustLogger()
 }
 
-func (sinkConfig *SinkConfig) SetTransform(transform *TransformConfig) *SinkConfig {
-	sinkConfig.Transform = transform
-	return sinkConfig
+func (sc *SinkConfig) Logger() (*logging.Logger, error) {
+	return sc.LoggingConfig().Logger()
 }
 
-func (sinkConfig *SinkConfig) SetOutput(output *OutputConfig) *SinkConfig {
-	sinkConfig.Output = output
-	return sinkConfig
+// Wrap this sink as RootSink of LoggingCOnfig
+func (sc *SinkConfig) LoggingConfig() *LoggingConfig {
+	lc := New()
+	lc.RootSink = sc
+	return lc
+}
+
+func (sc *SinkConfig) AddSinks(sinks ...*SinkConfig) *SinkConfig {
+	sc.Sinks = append(sc.Sinks, sinks...)
+	return sc
+}
+
+func (sc *SinkConfig) SetTransform(transform *TransformConfig) *SinkConfig {
+	sc.Transform = transform
+	return sc
+}
+
+func (sc *SinkConfig) FilterScope(scope string) *SinkConfig {
+	return sc.SetTransform(FilterTransform(IncludeWhenAllMatch, structure.ScopeKey, scope))
+}
+
+func (sc *SinkConfig) Terminal() *SinkConfig {
+	return sc.SetOutput(StderrOutput().SetFormat(TerminalFormat))
+}
+
+func (sc *SinkConfig) SetOutput(output *OutputConfig) *SinkConfig {
+	sc.Output = output
+	return sc
 }
 
 func (outputConfig *OutputConfig) SetFormat(format string) *OutputConfig {
@@ -298,8 +322,11 @@ func VectoriseTransform() *TransformConfig {
 }
 
 // Logger formation
-func (sinkConfig *SinkConfig) BuildLogger() (log.Logger, map[string]*loggers.CaptureLogger, error) {
-	return BuildLoggerFromSinkConfig(sinkConfig, make(map[string]*loggers.CaptureLogger))
+func (sc *SinkConfig) BuildLogger() (log.Logger, map[string]*loggers.CaptureLogger, error) {
+	if sc == nil {
+		return log.NewNopLogger(), nil, nil
+	}
+	return BuildLoggerFromSinkConfig(sc, make(map[string]*loggers.CaptureLogger))
 }
 
 func BuildLoggerFromSinkConfig(sinkConfig *SinkConfig, captures map[string]*loggers.CaptureLogger) (log.Logger,

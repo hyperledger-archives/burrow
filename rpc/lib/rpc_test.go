@@ -78,7 +78,7 @@ func TestMain(m *testing.M) {
 
 // launch unix and tcp servers
 func setup() {
-	logger, err := logconfig.New().NewLogger()
+	logger, err := logconfig.New().Logger()
 	if err != nil {
 		panic(err)
 	}

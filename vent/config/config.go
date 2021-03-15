@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/vent/chain"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/types"
 )
@@ -12,12 +13,12 @@ const DefaultPostgresDBURL = "postgres://postgres@localhost:5432/postgres?sslmod
 
 // VentConfig is a set of configuration parameters
 type VentConfig struct {
-	DBAdapter         string
-	DBURL             string
-	DBSchema          string
-	ChainAddress      string
-	HTTPListenAddress string
-	LogLevel          string
+	DBAdapter           string
+	DBURL               string
+	DBSchema            string
+	ChainAddress        string
+	HTTPListenAddress   string
+	BlockConsumerConfig chain.BlockConsumerConfig
 	// Global contracts to watch specified as hex
 	WatchAddresses []crypto.Address
 	MinimumHeight  uint64
@@ -36,7 +37,6 @@ func DefaultVentConfig() *VentConfig {
 		DBSchema:          "vent",
 		ChainAddress:      "localhost:10997",
 		HTTPListenAddress: "0.0.0.0:8080",
-		LogLevel:          "debug",
 		SpecOpt:           sqlsol.None,
 		AnnounceEvery:     time.Second * 5,
 	}
