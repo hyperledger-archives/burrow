@@ -2,9 +2,9 @@
 
 Burrow implements a number of transaction types. Transactions will be ordered by our consensus mechanism (Tendermint) and applied to our application state machine - 
 replicated across all Burrow nodes. Each transaction is applied atomically and runs deterministically. The transactions contain the arguments for an 
-[execution context](https://github.com/hyperledger/burrow/tree/master/execution/contexts).
+[execution context](https://github.com/hyperledger/burrow/tree/main/execution/contexts).
 
-Our transactions are defined in Protobuf [here](https://github.com/hyperledger/burrow/blob/master/protobuf/payload.proto).
+Our transactions are defined in Protobuf [here](https://github.com/hyperledger/burrow/blob/main/protobuf/payload.proto).
 
 Transactions can be built using our GRPC client libraries programmatically, via [burrow.js](js-api.md), or with `burrow deploy` - see our [deployment guide](deploy.md).
 
@@ -38,7 +38,7 @@ Allows [native token](reference/participants.md) to be sent from multiple inputs
 Provides access to a global name registry service that associates a particular string key with a data payload and an owner. The control of the name is guaranteed for 
 the period of the lease which is a determined by a fee.
 
-> A future revision will change the way in which leases are calculated. Currently we use a somewhat historically-rooted fixed fee, see the [`NameCostPerBlock` function](https://github.com/hyperledger/burrow/blob/master/execution/names/names.go#L83).
+> A future revision will change the way in which leases are calculated. Currently we use a somewhat historically-rooted fixed fee, see the [`NameCostPerBlock` function](https://github.com/hyperledger/burrow/blob/main/execution/names/names.go#L83).
 
 ## BondTx
 

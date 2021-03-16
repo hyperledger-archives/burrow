@@ -13,7 +13,7 @@ burrow spec -v1 | burrow configure -s- | burrow start -c-
 
 ## Deploy Artifacts
 
-For this step, we need two things: one or more solidity contracts and a deploy file. Let's take a simple example, found in [this directory](https://github.com/hyperledger/burrow/tree/master/tests/jobs_fixtures/app06-deploy_basic_contract_and_different_solc_types_packed_unpacked).
+For this step, we need two things: one or more solidity contracts and a deploy file. Let's take a simple example, found in [this directory](https://github.com/hyperledger/burrow/tree/main/tests/jobs_fixtures/app06-deploy_basic_contract_and_different_solc_types_packed_unpacked).
 
 We need `deploy.yaml` and `storage.sol` in the same directory with **no other yaml or sol files**.
 

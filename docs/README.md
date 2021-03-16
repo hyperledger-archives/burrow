@@ -1,11 +1,11 @@
 # [Hyperledger Burrow](https://hyperledger.github.io/burrow)
 
-[![CI](https://github.com/hyperledger/burrow/workflows/master/badge.svg)](https://launch-editor.github.com/actions?workflowID=master&event=push&nwo=hyperledger%2Fburrow)
+[![CI](https://github.com/hyperledger/burrow/workflows/main/badge.svg)](https://launch-editor.github.com/actions?workflowID=main&event=push&nwo=hyperledger%2Fburrow)
 [![version](https://img.shields.io/github/tag/hyperledger/burrow.svg)](https://github.com/hyperledger/burrow/releases/latest)
 [![GoDoc](https://godoc.org/github.com/burrow?status.png)](https://godoc.org/github.com/hyperledger/burrow)
 [![license](https://img.shields.io/github/license/hyperledger/burrow.svg)](../LICENSE.md)
 [![LoC](https://tokei.rs/b1/github/hyperledger/burrow?category=lines)](https://github.com/hyperledger/burrow)
-[![codecov](https://codecov.io/gh/hyperledger/burrow/branch/master/graph/badge.svg)](https://codecov.io/gh/hyperledger/burrow)
+[![codecov](https://codecov.io/gh/hyperledger/burrow/branch/main/graph/badge.svg)](https://codecov.io/gh/hyperledger/burrow)
 
 Hyperledger Burrow is a permissioned Ethereum smart-contract blockchain node. It executes Ethereum EVM and WASM smart contract code (usually written in [Solidity](https://solidity.readthedocs.io)) on a permissioned virtual machine. Burrow provides transaction finality and high transaction throughput on a proof-of-stake [Tendermint](https://tendermint.com) consensus engine.
 
@@ -43,7 +43,7 @@ Watch the [Boring into Burrow](https://www.youtube.com/watch?v=OpbjYaGAP4k) talk
 
 ## JavaScript Client
 
-There is a [JavaScript API](https://github.com/hyperledger/burrow/tree/master/js)
+There is a [JavaScript API](https://github.com/hyperledger/burrow/tree/main/js)
 
 ## Project Roadmap
 
@@ -51,6 +51,12 @@ Project information generally updated on a quarterly basis can be found on the [
 
 ## Documentation
 Burrow getting started documentation is available on the [documentation site](https://hyperledger.github.io/burrow) (source markdown files can be found in [docs]()) and programmatic API in [GoDocs](https://godoc.org/github.com/hyperledger/burrow).
+
+## Releases
+
+- **Burrow binaries**: https://github.com/hyperledger/burrow/releases
+- **Burrow.js**: https://www.npmjs.com/package/@hyperledger/burrow
+- **Docker**: https://hub.docker.com/repository/docker/hyperledger/burrow
 
 ## Contribute
 

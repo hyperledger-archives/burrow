@@ -11,8 +11,8 @@ The Burrow deploy toolkit can do a number of things:
 * create proposals or vote for a proposal
 
 burrow deploy needs a script to its commands. This script format bares some similarity to [ansible](https://www.ansible.com/). It
-is in yaml format. The top level structure is an array of [jobs](https://github.com/hyperledger/burrow/blob/master/deploy/def/job.go).
-The different job types are [defined here](https://github.com/hyperledger/burrow/blob/master/deploy/def/jobs.go).
+is in yaml format. The top level structure is an array of [jobs](https://github.com/hyperledger/burrow/blob/main/deploy/def/job.go).
+The different job types are [defined here](https://github.com/hyperledger/burrow/blob/main/deploy/def/jobs.go).
 
 You can invoke burrow from the command line:
 

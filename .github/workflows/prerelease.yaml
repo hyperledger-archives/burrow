@@ -1,26 +1,31 @@
-name: master
+# Force push to 'prerelease' to get a JS/docker build for testing etc
+name: prerelease
 on:
   push:
     branches:
-      - master
+      - prerelease
+    tags-ignore:
+      - 'v*'
 
 jobs:
-  cover:
-    name: coverage
+  js:
+    name: npm
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-go@v1
-        with:
-          go-version: 1.15
-        id: go
       - uses: actions/checkout@v2
-      - run: make test
-        env:
-          GO_TEST_ARGS: "-coverprofile=coverage.txt -covermode=atomic"
-      - uses: codecov/codecov-action@v1.0.2
+      - run: git fetch --unshallow --prune
+      - uses: actions/setup-node@v1
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.txt
+          always-auth: true
+          node-version: '14.x'
+          registry-url: 'https://registry.npmjs.org'
+      - name: publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          git config --global user.email "${GITHUB_ACTOR}"
+          git config --global user.name "${GITHUB_ACTOR}"
+          make publish_js
 
   docker:
     name: docker

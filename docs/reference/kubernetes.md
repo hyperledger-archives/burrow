@@ -4,6 +4,6 @@ Burrow ships a docker image suitable for use in Kubernetes on [Docker Hub](https
 
 ## Helm chart
 
-A helm chart for Burrow with can be found in the main repo [here](https://github.com/hyperledger/burrow/tree/master/helm) (with further documentation).
+A helm chart for Burrow with can be found in the main repo [here](https://github.com/hyperledger/burrow/tree/main/helm) (with further documentation).
 
 The helm chart allows you to bootstrap and run your own pool of validators.

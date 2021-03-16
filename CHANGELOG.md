@@ -354,7 +354,7 @@
 
 ### Added
 - [EVM] Implemented [CREATE2 opcode](https://eips.ethereum.org/EIPS/eip-1014)
-- [EVM] Implemented [EXTCODEHASH opcode](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1052.md)
+- [EVM] Implemented [EXTCODEHASH opcode](https://github.com/ethereum/EIPs/blob/main/EIPS/eip-1052.md)
 - [Accounts] Add account GetStats to query endpoint
 - [Config] Expose AddrBookStrict from Tendermint
 - [Deploy] burrow deploy now prints events generated during transactions
