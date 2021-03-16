@@ -5,6 +5,14 @@ Forked from Docker's [contributing guidelines](https://github.com/docker/docker/
 
 Please always include "signed-off-by" in your commit message and note this constitutes a developer certification you are contributing a patch under Apache 2.0.  Please find a verbatim copy of the Developer Certificate of Origin in this repository [here](.github/DEVELOPER_CERTIFICATE_OF_ORIGIN.md) or on [developercertificate.org](https://developercertificate.org/).
 
+## Branches and releases
+
+All development happens on 'master'. Any other branches should be considered temporary and should have a corresponding pull request where they are the source to help keep track of them. Such branches can be marked WIP/draft.
+
+There is a special branch called 'prereleae' that is solely used to trigger a build of the JS library and docker images with a special prerelease tag based on the commit hash. This can be triggered by force pushing to 'prerelease'. If you would like a prerelease build please ask a maintainer (via an issue or on https://chat.hyperledger.org/channel/burrow) to force push for you. Since this branch may be overwritten at any time it should never be the only home for durable changes.
+
+Commits tagged with a 'v'-prefixed semver tag like `v0.11.1` are official releases and will trigger builds of binaries, JS library, and docker images in CI. We will try to make these regularly but will sometimes batch up a few changes and dependency upgrades (particularly Tendermint).
+
 ## Bug Reporting
 
 A great way to contribute to the project is to send a detailed report when you encounter an issue. We always appreciate a well-written, thorough bug report, and will thank you for it!
@@ -17,15 +25,15 @@ Our [ISSUE_TEMPLATE.md](ISSUE_TEMPLATE.md) will autopopulate the new issue.
 
 ## Contribution Tips and Guidelines
 
-### Pull requests are always welcome (to `develop` rather than `master`).
+### Pull requests are always welcome (always based on the `master` branch)
 
-Not sure if that typo is worth a pull request? Found a bug and know how to fix it? Do it! We will appreciate it. Any significant improvement should be documented as a GitHub issue or discussed in [The Marmot Den](https://slack.monax.io) Slack community prior to beginning.
+Not sure if that typo is worth a pull request? Found a bug and know how to fix it? Do it! We will appreciate it.
 
 We are always thrilled to receive pull requests (and bug reports!) and we do our best to process them quickly. 
 
 ## Conventions
 
-Fork the repository and make changes on your fork in a feature branch (branched from develop), create an issue outlining your feature or a bug, or use an open one.
+Fork the repository and make changes on your fork in a feature branch, create an issue outlining your feature or a bug, or use an open one.
 
     If it's a bug fix branch, name it something-XXXX where XXXX is the number of the issue.
     If it's a feature branch, create an enhancement issue to announce your intentions, and name it something-XXXX where XXXX is the number of the issue.
@@ -42,21 +50,15 @@ Commit messages must start with a short summary (max. 50 chars) written in the i
 
 Code review comments may be added to your pull request. Discuss, then make the suggested modifications and push additional commits to your feature branch. 
 
-Pull requests must be cleanly rebased on top of develop without multiple branches mixed into the PR.
+Pull requests must be cleanly rebased on top of master without multiple branches mixed into the PR.
 
-*Git tip:* If your PR no longer merges cleanly, use `git rebase develop` in your feature branch to update your pull request rather than merge develop.
-
-Before you make a pull request, squash your commits into logical units of work using `git rebase -i` and `git push -f`. A logical unit of work is a consistent set of patches that should be reviewed together: for example, upgrading the version of a vendored dependency and taking advantage of its now available new feature constitute two separate units of work. Implementing a new function and calling it in another file constitute a single logical unit of work. The very high majority of submissions should have a single commit, so if in doubt: squash down to one.
+*Git tip:* If your PR no longer merges cleanly, use `git rebase master` in your feature branch to update your pull request rather than merge master.
 
 After every commit, make sure the test suite passes. Include documentation changes in the same pull request so that a revert would remove all traces of the feature or fix.
 
 ### Merge approval
 
 We use LGTM (Looks Good To Me) in commands on the code review to indicate acceptance. 
-
-## Errors and Log Messages Style
-
-TODO
 
 ## Coding Style
 

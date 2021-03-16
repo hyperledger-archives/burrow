@@ -52,6 +52,12 @@ Project information generally updated on a quarterly basis can be found on the [
 ## Documentation
 Burrow getting started documentation is available on the [documentation site](https://hyperledger.github.io/burrow) (source markdown files can be found in [docs]()) and programmatic API in [GoDocs](https://godoc.org/github.com/hyperledger/burrow).
 
+## Releases
+
+- **Burrow binaries**: https://github.com/hyperledger/burrow/releases
+- **Burrow.js**: https://www.npmjs.com/package/@hyperledger/burrow
+- **Docker**: https://hub.docker.com/repository/docker/hyperledger/burrow
+
 ## Contribute
 
 We welcome any and all contributions. Read the [contributing file](../.github/CONTRIBUTING.md) for more information on making your first Pull Request to Burrow!

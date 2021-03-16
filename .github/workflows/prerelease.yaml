@@ -1,8 +1,9 @@
-name: develop
+# Force push to 'prerelease' to get a JS/docker build for testing etc
+name: prerelease
 on:
   push:
     branches:
-      - develop
+      - prerelease
     tags-ignore:
       - 'v*'
 
