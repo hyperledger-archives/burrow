@@ -4,7 +4,7 @@
 commit=$(git describe --tags)
 dirty=$(git ls-files -m)
 if [[ -n ${dirty} ]]; then
-    commit="$commit+dirty.$(echo ${dirty} | git hash-object --stdin | head -c8)"
+    commit="$commit+dirty.$(echo ${dirty} | git hash-object --stdin | dd bs=8 count=1 status=none)"
 fi
 echo "$commit"
 
