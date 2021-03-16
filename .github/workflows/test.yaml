@@ -3,7 +3,7 @@ on:
   pull_request:
   push:
     branches:
-    - master
+    - main
 
 jobs:
   unit:
@@ -17,7 +17,7 @@ jobs:
     - run: git fetch --unshallow --prune
     - run: make test
     - run: make build
-    - uses: actions/upload-artifact@master
+    - uses: actions/upload-artifact@main
       with:
         name: burrow
         path: bin
@@ -52,7 +52,7 @@ jobs:
     needs: unit
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/download-artifact@master
+    - uses: actions/download-artifact@main
       with:
         name: burrow
         path: bin
@@ -70,7 +70,7 @@ jobs:
     - uses: actions/setup-node@v2
       with:
         node-version: '14'
-    - uses: actions/download-artifact@master
+    - uses: actions/download-artifact@main
       with:
         name: burrow
         path: bin
@@ -85,7 +85,7 @@ jobs:
     needs: unit
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/download-artifact@master
+    - uses: actions/download-artifact@main
       with:
         name: burrow
         path: bin
@@ -100,7 +100,7 @@ jobs:
     needs: unit
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/download-artifact@master
+    - uses: actions/download-artifact@main
       with:
         name: burrow
         path: bin
@@ -118,7 +118,7 @@ jobs:
     - uses: actions/setup-node@v2
       with:
         node-version: '14'
-    - uses: actions/download-artifact@master
+    - uses: actions/download-artifact@main
       with:
         name: burrow
         path: bin
