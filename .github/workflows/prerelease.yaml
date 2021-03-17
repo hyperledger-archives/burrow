@@ -52,5 +52,4 @@ jobs:
         run: |
           version=$(./scripts/local_version.sh)
           echo ${DOCKER_PASS} | docker login --username ${DOCKER_USER} --password-stdin
-          docker tag ${DOCKER_REPO}:${version} ${DOCKER_REPO}:latest
-          docker push ${DOCKER_REPO}:latest
+          docker push --all-tags ${DOCKER_REPO}
