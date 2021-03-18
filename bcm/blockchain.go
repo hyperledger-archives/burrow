@@ -183,7 +183,7 @@ func (bc *Blockchain) GenesisDoc() genesis.GenesisDoc {
 }
 
 func (bc *Blockchain) ChainID() string {
-	return bc.genesisDoc.ChainID()
+	return bc.genesisDoc.GetChainID()
 }
 
 func (bc *Blockchain) LastBlockHeight() uint64 {

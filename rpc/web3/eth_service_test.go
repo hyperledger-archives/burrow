@@ -8,10 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger/burrow/rpc/web3"
-	"github.com/hyperledger/burrow/txs"
-	"github.com/hyperledger/burrow/txs/payload"
-
 	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/evm/abi"
@@ -20,17 +16,23 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc/web3"
+	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/require"
 )
 
 var d = new(web3.HexDecoder).Must()
+
+// Check we can force set a decimal ChainID
+const chainID = "15321"
 
 func TestWeb3Service(t *testing.T) {
 	ctx := context.Background()
 	genesisAccounts := integration.MakePrivateAccounts("burrow", 1)
 	genesisAccounts = append(genesisAccounts, integration.MakeEthereumAccounts("ethereum", 3)...)
 	genesisDoc := integration.TestGenesisDoc(genesisAccounts, 0)
-
+	genesisDoc.ChainID = chainID
 	config, _ := integration.NewTestConfig(genesisDoc)
 	logger := logging.NewNoopLogger()
 	kern, err := integration.TestKernel(genesisAccounts[0], genesisAccounts, config)
@@ -91,7 +93,7 @@ func TestWeb3Service(t *testing.T) {
 		t.Run("NetVersion", func(t *testing.T) {
 			result, err := eth.NetVersion()
 			require.NoError(t, err)
-			require.Equal(t, crypto.GetEthChainID(genesisDoc.ChainID()).String(), result.ChainID)
+			require.Equal(t, web3.HexEncoder.BigInt(crypto.GetEthChainID(genesisDoc.GetChainID())), result.ChainID)
 		})
 
 		t.Run("EthProtocolVersion", func(t *testing.T) {
@@ -104,7 +106,7 @@ func TestWeb3Service(t *testing.T) {
 			result, err := eth.EthChainId()
 			require.NoError(t, err)
 			doc := config.GenesisDoc
-			require.Equal(t, doc.ChainID(), result.ChainId)
+			require.Equal(t, web3.HexEncoder.BigInt(crypto.GetEthChainID(doc.GetChainID())), result.ChainId)
 		})
 	})
 
@@ -118,7 +120,7 @@ func TestWeb3Service(t *testing.T) {
 		before := acc.GetBalance()
 
 		t.Run("EthSendRawTransaction", func(t *testing.T) {
-			txEnv := txs.Enclose(genesisDoc.ChainID(), &payload.CallTx{
+			txEnv := txs.Enclose(chainID, &payload.CallTx{
 				Input: &payload.TxInput{
 					Address:  sender.GetAddress(),
 					Amount:   1,

@@ -26,8 +26,8 @@ type EthRawTx struct {
 	chainID *big.Int
 }
 
-func NewEthRawTx(chainID string) *EthRawTx {
-	return &EthRawTx{chainID: crypto.GetEthChainID(chainID)}
+func NewEthRawTx(chainID *big.Int) *EthRawTx {
+	return &EthRawTx{chainID: chainID}
 }
 
 func EthRawTxFromEnvelope(txEnv *Envelope) (*EthRawTx, error) {

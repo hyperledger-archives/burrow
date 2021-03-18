@@ -226,12 +226,12 @@ func TestGovernance(t *testing.T) {
 			})
 
 			setSequence(t, qcli, tx)
-			_, err := localSignAndBroadcastSync(t, tcli1, genesisDoc.ChainID(), genesisAccounts[0], tx)
+			_, err := localSignAndBroadcastSync(t, tcli1, genesisDoc.GetChainID(), genesisAccounts[0], tx)
 			require.NoError(t, err)
 
 			// Make it a different Tx hash so it can enter cache but keep sequence number
 			tx.AccountUpdates[0].Amounts = balance.New().Power(power).Native(1)
-			_, err = localSignAndBroadcastSync(t, tcli2, genesisDoc.ChainID(), genesisAccounts[0], tx)
+			_, err = localSignAndBroadcastSync(t, tcli2, genesisDoc.GetChainID(), genesisAccounts[0], tx)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "invalid sequence")
 		})

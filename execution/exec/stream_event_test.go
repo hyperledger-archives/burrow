@@ -17,7 +17,7 @@ import (
 var genesisDoc, accounts, _ = genesis.NewDeterministicGenesis(345234523).GenesisDoc(10, 0)
 
 func TestTxExecution(t *testing.T) {
-	txe := NewTxExecution(txs.Enclose(genesisDoc.ChainID(), newCallTx(0, 1)))
+	txe := NewTxExecution(txs.Enclose(genesisDoc.GetChainID(), newCallTx(0, 1)))
 
 	stack := new(TxStack)
 	var txeOut *TxExecution
@@ -38,7 +38,7 @@ func TestConsumeBlockExecution(t *testing.T) {
 	height := int64(234242)
 	be := &BlockExecution{
 		Header: &tmproto.Header{
-			ChainID: genesisDoc.ChainID(),
+			ChainID: genesisDoc.GetChainID(),
 			AppHash: crypto.Keccak256([]byte("hashily")),
 			Time:    time.Now(),
 			Height:  height,
@@ -46,9 +46,9 @@ func TestConsumeBlockExecution(t *testing.T) {
 		Height: uint64(height),
 	}
 	be.AppendTxs(
-		NewTxExecution(txs.Enclose(genesisDoc.ChainID(), newCallTx(0, 3))),
-		NewTxExecution(txs.Enclose(genesisDoc.ChainID(), newCallTx(0, 2))),
-		NewTxExecution(txs.Enclose(genesisDoc.ChainID(), newCallTx(2, 1))),
+		NewTxExecution(txs.Enclose(genesisDoc.GetChainID(), newCallTx(0, 3))),
+		NewTxExecution(txs.Enclose(genesisDoc.GetChainID(), newCallTx(0, 2))),
+		NewTxExecution(txs.Enclose(genesisDoc.GetChainID(), newCallTx(2, 1))),
 	)
 
 	stack := NewBlockAccumulator()

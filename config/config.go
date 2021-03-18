@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 
+	"github.com/alecthomas/jsonschema"
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
@@ -31,6 +32,8 @@ type BurrowConfig struct {
 	RPC        *rpc.RPCConfig                     `json:",omitempty" toml:",omitempty"`
 	Logging    *logconfig.LoggingConfig           `json:",omitempty" toml:",omitempty"`
 }
+
+var burrowConfigSchema = jsonschema.Reflect(&BurrowConfig{})
 
 func DefaultBurrowConfig() *BurrowConfig {
 	return &BurrowConfig{

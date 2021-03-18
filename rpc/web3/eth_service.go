@@ -45,6 +45,7 @@ type EthService struct {
 	keyClient  keys.KeyClient
 	keyStore   *keys.FilesystemKeyStore
 	config     *tmConfig.Config
+	chainID    *big.Int
 	logger     *logging.Logger
 }
 
@@ -63,16 +64,18 @@ func NewEthService(
 	keyClient := keys.NewLocalKeyClient(keyStore, logger)
 
 	return &EthService{
-		accounts,
-		events,
-		blockchain,
-		validators,
-		nodeView,
-		trans,
-		keyClient,
-		keyStore,
-		tmConfig.DefaultConfig(),
-		logger,
+		accounts:   accounts,
+		events:     events,
+		blockchain: blockchain,
+		validators: validators,
+		nodeView:   nodeView,
+		trans:      trans,
+		keyClient:  keyClient,
+		keyStore:   keyStore,
+		config:     tmConfig.DefaultConfig(),
+		// Ethereum expects ChainID to be an integer value
+		chainID: crypto.GetEthChainID(blockchain.ChainID()),
+		logger:  logger,
 	}
 }
 
@@ -119,7 +122,7 @@ func (srv *EthService) NetPeerCount() (*NetPeerCountResult, error) {
 // this is typically a small int (where 1 == Ethereum mainnet)
 func (srv *EthService) NetVersion() (*NetVersionResult, error) {
 	return &NetVersionResult{
-		ChainID: crypto.GetEthChainID(srv.blockchain.ChainID()).String(),
+		ChainID: HexEncoder.BigInt(srv.chainID),
 	}, nil
 }
 
@@ -133,7 +136,7 @@ func (srv *EthService) EthProtocolVersion() (*EthProtocolVersionResult, error) {
 // EthChainId returns the chainID
 func (srv *EthService) EthChainId() (*EthChainIdResult, error) {
 	return &EthChainIdResult{
-		ChainId: srv.blockchain.ChainID(),
+		ChainId: HexEncoder.BigInt(srv.chainID),
 	}, nil
 }
 
@@ -568,7 +571,7 @@ func (srv *EthService) EthSendRawTransaction(req *EthSendRawTransactionParams) (
 		return nil, d.Err()
 	}
 
-	rawTx := txs.NewEthRawTx(srv.blockchain.ChainID())
+	rawTx := txs.NewEthRawTx(srv.chainID)
 	err := rlp.Decode(data, rawTx)
 	if err != nil {
 		return nil, err

@@ -97,7 +97,7 @@ type Params struct {
 
 func ParamsFromGenesis(genesisDoc *genesis.GenesisDoc) Params {
 	return Params{
-		ChainID:           genesisDoc.ChainID(),
+		ChainID:           genesisDoc.GetChainID(),
 		ProposalThreshold: genesisDoc.Params.ProposalThreshold,
 	}
 }

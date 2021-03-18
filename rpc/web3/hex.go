@@ -99,7 +99,7 @@ func (e *hexEncoder) BytesTrim(bs []byte) string {
 	return "0x" + str
 }
 
-func (e *hexEncoder) BigInt(x big.Int) string {
+func (e *hexEncoder) BigInt(x *big.Int) string {
 	return e.BytesTrim(x.Bytes())
 }
 
