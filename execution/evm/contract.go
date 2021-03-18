@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger/burrow/acm"
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/evm/abi"
@@ -488,7 +489,7 @@ func (c *Contract) execute(st engine.State, params engine.CallParams) ([]byte, e
 			c.debugf(" => %v\n", *params.Gas)
 
 		case CHAINID: // 0x46
-			id := crypto.GetEthChainID(st.Blockchain.ChainID())
+			id := encoding.GetEthChainID(st.Blockchain.ChainID())
 			stack.PushBigInt(id)
 			c.debugf(" => %X\n", id)
 

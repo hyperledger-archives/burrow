@@ -6,6 +6,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/encoding/rlp"
 	"github.com/tmthrgd/go-hex"
 )
@@ -26,8 +27,8 @@ type EthRawTx struct {
 	chainID *big.Int
 }
 
-func NewEthRawTx(chainID string) *EthRawTx {
-	return &EthRawTx{chainID: crypto.GetEthChainID(chainID)}
+func NewEthRawTx(chainID *big.Int) *EthRawTx {
+	return &EthRawTx{chainID: chainID}
 }
 
 func EthRawTxFromEnvelope(txEnv *Envelope) (*EthRawTx, error) {
@@ -44,7 +45,7 @@ func EthRawTxFromEnvelope(txEnv *Envelope) (*EthRawTx, error) {
 	if len(txEnv.Signatories) > 1 {
 		return nil, fmt.Errorf("can only form EthRawTx from Envelope with a zero or one signatories")
 	}
-	sig, err := txEnv.Signatories[0].Signature.GetEthSignature(txEnv.Tx.ChainID)
+	sig, err := txEnv.Signatories[0].Signature.GetEthSignature(encoding.GetEthChainID(txEnv.Tx.ChainID))
 	if err != nil {
 		return nil, err
 	}

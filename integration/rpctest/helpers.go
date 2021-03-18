@@ -154,7 +154,7 @@ func MakeDefaultCallTx(t *testing.T, client rpc.Client, addr *crypto.Address, co
 	fee uint64) *txs.Envelope {
 	sequence := GetSequence(t, client, PrivateAccounts[0].GetAddress())
 	tx := payload.NewCallTxWithSequence(PrivateAccounts[0].GetPublicKey(), addr, code, amt, gasLim, fee, sequence+1)
-	txEnv := txs.Enclose(GenesisDoc.ChainID(), tx)
+	txEnv := txs.Enclose(GenesisDoc.GetChainID(), tx)
 	require.NoError(t, txEnv.Sign(PrivateAccounts[0]))
 	return txEnv
 }

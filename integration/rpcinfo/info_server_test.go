@@ -54,7 +54,7 @@ func TestInfoServer(t *testing.T) {
 				resp, err := infoclient.Status(rpcClient)
 				require.NoError(t, err)
 				assert.Contains(t, resp.GetNodeInfo().GetMoniker(), "node")
-				assert.Equal(t, rpctest.GenesisDoc.ChainID(), resp.NodeInfo.Network,
+				assert.Equal(t, rpctest.GenesisDoc.GetChainID(), resp.NodeInfo.Network,
 					"ChainID should match NodeInfo.Network")
 			})
 

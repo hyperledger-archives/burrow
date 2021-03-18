@@ -31,7 +31,7 @@ func TestQueryServer(t *testing.T) {
 		status, err := cli.Status(context.Background(), &rpcquery.StatusParam{})
 		require.NoError(t, err)
 		assert.Equal(t, rpctest.PrivateAccounts[0].GetPublicKey(), status.ValidatorInfo.PublicKey)
-		assert.Equal(t, rpctest.GenesisDoc.ChainID(), status.ChainID)
+		assert.Equal(t, rpctest.GenesisDoc.GetChainID(), status.ChainID)
 		for i := 0; i < 3; i++ {
 			// Unless we get lucky this is an error
 			_, err = cli.Status(context.Background(), &rpcquery.StatusParam{

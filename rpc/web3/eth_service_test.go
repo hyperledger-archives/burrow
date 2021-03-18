@@ -8,29 +8,33 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger/burrow/rpc/web3"
-	"github.com/hyperledger/burrow/txs"
-	"github.com/hyperledger/burrow/txs/payload"
-
 	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/encoding"
+	"github.com/hyperledger/burrow/encoding/web3hex"
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc/web3"
+	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/require"
 )
 
-var d = new(web3.HexDecoder).Must()
+var d = new(web3hex.Decoder).Must()
+
+// Check we can force set a decimal ChainID
+const chainID = "15321"
 
 func TestWeb3Service(t *testing.T) {
 	ctx := context.Background()
 	genesisAccounts := integration.MakePrivateAccounts("burrow", 1)
 	genesisAccounts = append(genesisAccounts, integration.MakeEthereumAccounts("ethereum", 3)...)
 	genesisDoc := integration.TestGenesisDoc(genesisAccounts, 0)
-
+	genesisDoc.ChainID = chainID
 	config, _ := integration.NewTestConfig(genesisDoc)
 	logger := logging.NewNoopLogger()
 	kern, err := integration.TestKernel(genesisAccounts[0], genesisAccounts, config)
@@ -91,7 +95,7 @@ func TestWeb3Service(t *testing.T) {
 		t.Run("NetVersion", func(t *testing.T) {
 			result, err := eth.NetVersion()
 			require.NoError(t, err)
-			require.Equal(t, crypto.GetEthChainID(genesisDoc.ChainID()).String(), result.ChainID)
+			require.Equal(t, web3hex.Encoder.BigInt(encoding.GetEthChainID(genesisDoc.GetChainID())), result.ChainID)
 		})
 
 		t.Run("EthProtocolVersion", func(t *testing.T) {
@@ -104,7 +108,7 @@ func TestWeb3Service(t *testing.T) {
 			result, err := eth.EthChainId()
 			require.NoError(t, err)
 			doc := config.GenesisDoc
-			require.Equal(t, doc.ChainID(), result.ChainId)
+			require.Equal(t, web3hex.Encoder.BigInt(encoding.GetEthChainID(doc.GetChainID())), result.ChainId)
 		})
 	})
 
@@ -118,7 +122,7 @@ func TestWeb3Service(t *testing.T) {
 		before := acc.GetBalance()
 
 		t.Run("EthSendRawTransaction", func(t *testing.T) {
-			txEnv := txs.Enclose(genesisDoc.ChainID(), &payload.CallTx{
+			txEnv := txs.Enclose(chainID, &payload.CallTx{
 				Input: &payload.TxInput{
 					Address:  sender.GetAddress(),
 					Amount:   1,
@@ -137,7 +141,7 @@ func TestWeb3Service(t *testing.T) {
 			bs, err := rawTx.Marshal()
 			require.NoError(t, err)
 
-			raw := web3.HexEncoder.BytesTrim(bs)
+			raw := web3hex.Encoder.BytesTrim(bs)
 
 			_, err = eth.EthSendRawTransaction(&web3.EthSendRawTransactionParams{
 				SignedTransactionData: raw,
@@ -147,7 +151,7 @@ func TestWeb3Service(t *testing.T) {
 
 		t.Run("EthGetBalance", func(t *testing.T) {
 			result, err := eth.EthGetBalance(&web3.EthGetBalanceParams{
-				Address:     web3.HexEncoder.BytesTrim(receivee.Bytes()),
+				Address:     web3hex.Encoder.BytesTrim(receivee.Bytes()),
 				BlockNumber: "latest",
 			})
 			require.NoError(t, err)
@@ -161,7 +165,7 @@ func TestWeb3Service(t *testing.T) {
 				Address: genesisAccounts[1].GetAddress().String(),
 			})
 			require.NoError(t, err)
-			require.Equal(t, web3.HexEncoder.Uint64(1), result.NonceOrNull)
+			require.Equal(t, web3hex.Encoder.Uint64(1), result.NonceOrNull)
 		})
 
 		// create contract on chain
@@ -177,9 +181,9 @@ func TestWeb3Service(t *testing.T) {
 				go func() {
 					tx := &web3.EthSendTransactionParams{
 						Transaction: web3.Transaction{
-							From: web3.HexEncoder.BytesTrim(genesisAccounts[3].GetAddress().Bytes()),
-							Gas:  web3.HexEncoder.Uint64(uint64(40 + idx)), // make tx unique in mempool
-							Data: web3.HexEncoder.BytesTrim(rpc.Bytecode_HelloWorld),
+							From: web3hex.Encoder.BytesTrim(genesisAccounts[3].GetAddress().Bytes()),
+							Gas:  web3hex.Encoder.Uint64(uint64(40 + idx)), // make tx unique in mempool
+							Data: web3hex.Encoder.BytesTrim(rpc.Bytecode_HelloWorld),
 						},
 					}
 					result, err := eth.EthSendTransaction(tx)
@@ -200,9 +204,9 @@ func TestWeb3Service(t *testing.T) {
 		t.Run("EthGetTransactionReceipt", func(t *testing.T) {
 			sendResult, err := eth.EthSendTransaction(&web3.EthSendTransactionParams{
 				Transaction: web3.Transaction{
-					From: web3.HexEncoder.BytesTrim(genesisAccounts[3].GetAddress().Bytes()),
-					Gas:  web3.HexEncoder.Uint64(40),
-					Data: web3.HexEncoder.BytesTrim(rpc.Bytecode_HelloWorld),
+					From: web3hex.Encoder.BytesTrim(genesisAccounts[3].GetAddress().Bytes()),
+					Gas:  web3hex.Encoder.Uint64(40),
+					Data: web3hex.Encoder.BytesTrim(rpc.Bytecode_HelloWorld),
 				},
 			})
 			require.NoError(t, err)
@@ -224,9 +228,9 @@ func TestWeb3Service(t *testing.T) {
 
 			result, err := eth.EthCall(&web3.EthCallParams{
 				Transaction: web3.Transaction{
-					From: web3.HexEncoder.BytesTrim(genesisAccounts[1].GetAddress().Bytes()),
+					From: web3hex.Encoder.BytesTrim(genesisAccounts[1].GetAddress().Bytes()),
 					To:   contractAddress,
-					Data: web3.HexEncoder.BytesTrim(packed),
+					Data: web3hex.Encoder.BytesTrim(packed),
 				},
 			})
 			require.NoError(t, err)
@@ -244,7 +248,7 @@ func TestWeb3Service(t *testing.T) {
 				Address: contractAddress,
 			})
 			require.NoError(t, err)
-			require.Equal(t, web3.HexEncoder.BytesTrim(rpc.DeployedBytecode_HelloWorld), strings.ToLower(result.Bytes))
+			require.Equal(t, web3hex.Encoder.BytesTrim(rpc.DeployedBytecode_HelloWorld), strings.ToLower(result.Bytes))
 		})
 	})
 
@@ -260,7 +264,7 @@ func TestWeb3Service(t *testing.T) {
 		require.Len(t, result.Addresses, len(genesisAccounts)-1)
 		for _, acc := range genesisAccounts {
 			if acc.PrivateKey().CurveType == crypto.CurveTypeSecp256k1 {
-				require.Contains(t, result.Addresses, web3.HexEncoder.BytesTrim(acc.GetAddress().Bytes()))
+				require.Contains(t, result.Addresses, web3hex.Encoder.BytesTrim(acc.GetAddress().Bytes()))
 			}
 		}
 	})
@@ -275,7 +279,7 @@ func TestWeb3Service(t *testing.T) {
 	})
 
 	t.Run("EthGetBlock", func(t *testing.T) {
-		numberResult, err := eth.EthGetBlockByNumber(&web3.EthGetBlockByNumberParams{BlockNumber: web3.HexEncoder.Uint64(1)})
+		numberResult, err := eth.EthGetBlockByNumber(&web3.EthGetBlockByNumberParams{BlockNumber: web3hex.Encoder.Uint64(1)})
 		require.NoError(t, err)
 		hashResult, err := eth.EthGetBlockByHash(&web3.EthGetBlockByHashParams{BlockHash: numberResult.GetBlockByNumberResult.Hash})
 		require.NoError(t, err)

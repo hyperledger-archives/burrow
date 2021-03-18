@@ -3,8 +3,8 @@ package ethclient
 import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/encoding/web3hex"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
-	"github.com/hyperledger/burrow/rpc/web3"
 )
 
 // These types partially duplicate some of those web3/types.go, the should probably be unified at some point but
@@ -55,11 +55,11 @@ type Filter struct {
 func (f *Filter) EthFilter() *EthFilter {
 	topics := make([]string, len(f.Topics))
 	for i, t := range f.Topics {
-		topics[i] = web3.HexEncoder.BytesTrim(t[:])
+		topics[i] = web3hex.Encoder.BytesTrim(t[:])
 	}
 	addresses := make([]string, len(f.Addresses))
 	for i, a := range f.Addresses {
-		addresses[i] = web3.HexEncoder.Address(a)
+		addresses[i] = web3hex.Encoder.Address(a)
 	}
 	return &EthFilter{
 		FromBlock: logBound(f.GetStart()),

@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/encoding/web3hex"
 	"github.com/hyperledger/burrow/execution/solidity"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
-	"github.com/hyperledger/burrow/rpc/web3"
 	"github.com/hyperledger/burrow/tests/web3/web3test"
 	"github.com/stretchr/testify/assert"
 
@@ -28,11 +28,11 @@ func TestEthAccounts(t *testing.T) {
 func TestEthSendTransaction(t *testing.T) {
 	pk := web3test.GetPrivateKey(t)
 
-	d := new(web3.HexDecoder)
+	d := new(web3hex.Decoder)
 	param := &EthSendTransactionParam{
-		From: web3.HexEncoder.Address(pk.GetAddress()),
-		Gas:  web3.HexEncoder.Uint64(999999),
-		Data: web3.HexEncoder.BytesTrim(solidity.Bytecode_EventEmitter),
+		From: web3hex.Encoder.Address(pk.GetAddress()),
+		Gas:  web3hex.Encoder.Uint64(999999),
+		Data: web3hex.Encoder.BytesTrim(solidity.Bytecode_EventEmitter),
 	}
 	txHash, err := client.SendTransaction(param)
 	require.NoError(t, err)
@@ -82,7 +82,7 @@ func TestEthClient_GetLogs(t *testing.T) {
 func TestEthClient_GetBlockByNumber(t *testing.T) {
 	block, err := client.GetBlockByNumber("latest")
 	require.NoError(t, err)
-	d := new(web3.HexDecoder)
+	d := new(web3hex.Decoder)
 	assert.Greater(t, d.Uint64(block.Number), uint64(0))
 	require.NoError(t, d.Err())
 }

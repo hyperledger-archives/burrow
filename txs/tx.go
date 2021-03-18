@@ -98,7 +98,7 @@ func (tx *Tx) RLPRawTx() (*EthRawTx, error) {
 			To:       to,
 			Amount:   balance.NativeToWei(payload.Input.Amount),
 			Data:     payload.Data.Bytes(),
-			chainID:  crypto.GetEthChainID(tx.ChainID),
+			chainID:  encoding.GetEthChainID(tx.ChainID),
 		}, nil
 	default:
 		return nil, fmt.Errorf("tx type %v not supported for rlp encoding", tx.Payload.Type())

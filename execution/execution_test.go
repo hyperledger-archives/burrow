@@ -53,7 +53,7 @@ var logger = logging.NewNoopLogger()
 var deterministicGenesis = genesis.NewDeterministicGenesis(34059836243380576)
 var testGenesisDoc, testPrivAccounts, _ = deterministicGenesis.
 	GenesisDoc(3, 1)
-var testChainID = testGenesisDoc.ChainID()
+var testChainID = testGenesisDoc.GetChainID()
 
 func TestSendFails(t *testing.T) {
 	stateDB, err := dbm.NewDB("state", dbBackend, dbDir)

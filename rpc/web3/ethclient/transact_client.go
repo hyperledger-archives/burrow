@@ -6,8 +6,8 @@ import (
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/encoding/web3hex"
 	"github.com/hyperledger/burrow/execution/exec"
-	"github.com/hyperledger/burrow/rpc/web3"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
 	"google.golang.org/grpc"
@@ -78,7 +78,7 @@ func (cli *TransactClient) CallTxSync(ctx context.Context, tx *payload.CallTx,
 		return nil, err
 	}
 
-	d := new(web3.HexDecoder)
+	d := new(web3hex.Decoder)
 
 	header := &exec.TxHeader{
 		TxType: payload.TypeCall,
@@ -102,21 +102,21 @@ func (cli *TransactClient) CallTxSync(ctx context.Context, tx *payload.CallTx,
 func (cli *TransactClient) SendTransaction(tx *payload.CallTx) (string, error) {
 	var to string
 	if tx.Address != nil {
-		to = web3.HexEncoder.Address(*tx.Address)
+		to = web3hex.Encoder.Address(*tx.Address)
 	}
 
 	var nonce string
 	if tx.Input.Sequence != 0 {
-		nonce = web3.HexEncoder.Uint64OmitEmpty(tx.Input.Sequence)
+		nonce = web3hex.Encoder.Uint64OmitEmpty(tx.Input.Sequence)
 	}
 
 	param := &EthSendTransactionParam{
-		From:     web3.HexEncoder.Address(tx.Input.Address),
+		From:     web3hex.Encoder.Address(tx.Input.Address),
 		To:       to,
-		Gas:      web3.HexEncoder.Uint64OmitEmpty(tx.GasLimit),
-		GasPrice: web3.HexEncoder.Uint64OmitEmpty(tx.GasPrice),
-		Value:    web3.HexEncoder.Uint64OmitEmpty(tx.Input.Amount),
-		Data:     web3.HexEncoder.BytesTrim(tx.Data),
+		Gas:      web3hex.Encoder.Uint64OmitEmpty(tx.GasLimit),
+		GasPrice: web3hex.Encoder.Uint64OmitEmpty(tx.GasPrice),
+		Value:    web3hex.Encoder.Uint64OmitEmpty(tx.Input.Amount),
+		Data:     web3hex.Encoder.BytesTrim(tx.Data),
 		Nonce:    nonce,
 	}
 
@@ -147,7 +147,7 @@ func (cli *TransactClient) SendRawTransaction(tx *payload.CallTx, signer acm.Add
 		return "", fmt.Errorf("could not marshal Ethereum raw transaction: %w", err)
 	}
 
-	return cli.client.SendRawTransaction(web3.HexEncoder.BytesTrim(bs))
+	return cli.client.SendRawTransaction(web3hex.Encoder.BytesTrim(bs))
 }
 
 func (cli *TransactClient) GetChainID() (string, error) {
@@ -166,7 +166,7 @@ func (cli *TransactClient) GetGasPrice() (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("could not get gas price: %w", err)
 	}
-	d := new(web3.HexDecoder)
+	d := new(web3hex.Decoder)
 	return d.Uint64(gasPrice), d.Err()
 }
 
@@ -175,7 +175,7 @@ func (cli *TransactClient) GetTransactionCount(address crypto.Address) (uint64, 
 	if err != nil {
 		return 0, fmt.Errorf("could not get transaction acount for address %s: %w", address, err)
 	}
-	d := new(web3.HexDecoder)
+	d := new(web3hex.Decoder)
 	return d.Uint64(count), d.Err()
 }
 

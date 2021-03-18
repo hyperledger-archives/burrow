@@ -102,7 +102,7 @@ func DeriveGenesisDoc(burrowGenesisDoc *genesis.GenesisDoc, appHash []byte) *tmT
 	consensusParams.Block.TimeIotaMs = 1
 
 	return &tmTypes.GenesisDoc{
-		ChainID:         burrowGenesisDoc.ChainID(),
+		ChainID:         burrowGenesisDoc.GetChainID(),
 		GenesisTime:     burrowGenesisDoc.GenesisTime,
 		Validators:      validators,
 		AppHash:         appHash,
