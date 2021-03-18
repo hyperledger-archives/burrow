@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,7 +49,7 @@ func TestSigning(t *testing.T) {
 		msg := []byte(("Flipity flobity floo"))
 		sig, err := pk.Sign(msg)
 		require.NoError(t, err)
-		ethSig, err := sig.GetEthSignature("floob")
+		ethSig, err := sig.GetEthSignature(big.NewInt(12342))
 		require.NoError(t, err)
 		parity := ethSig.RecoveryIndex()
 		require.True(t, parity == 0 || parity == 1)

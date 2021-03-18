@@ -117,25 +117,16 @@ func (sig *Signature) String() string {
 	return hex.EncodeUpperToString(sig.Signature)
 }
 
-func GetEthChainID(chainID string) *big.Int {
-	b := new(big.Int)
-	id, ok := b.SetString(chainID, 10)
-	if ok {
-		return id
-	}
-	return b.SetBytes([]byte(chainID))
-}
-
-func GetEthSignatureRecoveryID(chainID string, parity *big.Int) *big.Int {
+func GetEthSignatureRecoveryID(chainID *big.Int, parity *big.Int) *big.Int {
 	// https://github.com/ethereum/EIPs/blob/b3bbee93dc8a775af6a6b2525c9ac5f70a7e5710/EIPS/eip-155.md
 	v := new(big.Int)
-	v.Mul(GetEthChainID(chainID), big2)
+	v.Mul(chainID, big2)
 	v.Add(v, parity)
 	v.Add(v, ethereumRecoveryIDOffset)
 	return v
 }
 
-func (sig *Signature) GetEthSignature(chainID string) (*EIP155Signature, error) {
+func (sig *Signature) GetEthSignature(chainID *big.Int) (*EIP155Signature, error) {
 	if sig.CurveType != CurveTypeSecp256k1 {
 		return nil, fmt.Errorf("can only GetEthSignature for %v keys, but got %v",
 			CurveTypeSecp256k1, sig.CurveType)

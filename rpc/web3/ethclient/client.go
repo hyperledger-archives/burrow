@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/encoding/web3hex"
 	"github.com/hyperledger/burrow/rpc"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/web3"
@@ -58,7 +59,7 @@ func (c *EthClient) SendRawTransaction(txHex string) (string, error) {
 
 func (c *EthClient) GetTransactionCount(address crypto.Address) (string, error) {
 	var count string
-	err := c.Call(EthGetTransactionCountMethod, []string{web3.HexEncoder.Address(address), "latest"}, &count)
+	err := c.Call(EthGetTransactionCountMethod, []string{web3hex.Encoder.Address(address), "latest"}, &count)
 	if err != nil {
 		return "", err
 	}
@@ -125,7 +126,7 @@ func (c *EthClient) BlockNumber() (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	d := new(web3.HexDecoder)
+	d := new(web3hex.Decoder)
 	return d.Uint64(*latestBlock), d.Err()
 }
 
@@ -192,7 +193,7 @@ func logBound(bound *rpcevents.Bound) string {
 	case rpcevents.Bound_LATEST:
 		return "latest"
 	case rpcevents.Bound_ABSOLUTE:
-		return web3.HexEncoder.Uint64(bound.Index)
+		return web3hex.Encoder.Uint64(bound.Index)
 	default:
 		return ""
 	}

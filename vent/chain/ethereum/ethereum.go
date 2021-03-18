@@ -8,19 +8,17 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hyperledger/burrow/event"
-	"github.com/hyperledger/burrow/event/query"
-	"github.com/hyperledger/burrow/logging"
-	"github.com/hyperledger/burrow/rpc/web3"
-	"github.com/hyperledger/burrow/vent/chain"
-
-	"github.com/hyperledger/burrow/rpc/web3/ethclient"
-
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/encoding/web3hex"
+	"github.com/hyperledger/burrow/event"
+	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/errors"
 	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
+	"github.com/hyperledger/burrow/rpc/web3/ethclient"
+	"github.com/hyperledger/burrow/vent/chain"
 	"github.com/hyperledger/burrow/vent/types"
 	"google.golang.org/grpc/connectivity"
 )
@@ -131,11 +129,11 @@ func (b *Block) GetTxs() []chain.Transaction {
 }
 
 func (b *Block) GetMetadata(columns types.SQLColumnNames) (map[string]interface{}, error) {
-	block, err := b.client.GetBlockByNumber(web3.HexEncoder.Uint64(b.Height))
+	block, err := b.client.GetBlockByNumber(web3hex.Encoder.Uint64(b.Height))
 	if err != nil {
 		return nil, err
 	}
-	d := new(web3.HexDecoder)
+	d := new(web3hex.Decoder)
 	blockHeader, err := json.Marshal(block)
 	if err != nil {
 		return nil, fmt.Errorf("could not serialise block header: %w", err)
@@ -223,7 +221,7 @@ type Event struct {
 var _ chain.Event = (*Event)(nil)
 
 func newEvent(log *ethclient.EthLog) (*Event, error) {
-	d := new(web3.HexDecoder)
+	d := new(web3hex.Decoder)
 	topics := make([]binary.Word256, len(log.Topics))
 	for i, t := range log.Topics {
 		topics[i] = binary.LeftPadWord256(d.Bytes(t))

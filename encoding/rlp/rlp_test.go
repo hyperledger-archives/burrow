@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/encoding"
 
 	"github.com/test-go/testify/require"
 )
@@ -285,7 +286,7 @@ func TestEthRawTx(t *testing.T) {
 		To:       to[:],
 		Amount:   big.NewInt(232),
 		Data:     []byte{1, 3, 4},
-		ChainID:  crypto.GetEthChainID("flgoo"),
+		ChainID:  encoding.GetEthChainID("flgoo"),
 		V:        big.NewInt(272),
 		R:        bigly,
 		S:        bigly,
