@@ -1,5 +1,21 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
-## [0.31.0]
+## [0.31.1] - 2020-03-19
+### Changed
+- [Repo] main branch replaces master as per Hyperledger TSC guidelines
+
+### Fixed
+- [Docker] Make sure default testnet mode works when running docker images
+- [Vent] Use appropriately sized database integral types for EVM integer types (i.e. numeric for uint64 and bigger)
+- [Vent] Ethereum block consumer now correctly reads to an _inclusive_ block batch end height
+- [Web3] Handle integer ChainID for web3 consistently; return hex-encoded numeric value from web3 RPC, also allow overriding of genesis-hash derived ChainID so Burrow can be connected with from metamask
+
+### Added
+- [Build] Build dev docker and JS releases by force pushing to prerelease branch
+- [Vent] Expose BlockConsumerConfig to adjust backoff and read characteristics
+- [Vent] Add vent-side continuity test over blocks (to double-check exactly once delivery of events)
+
+
+## [0.31.0] - 2020-03-10
 ### Changed
 - [Tendermint] Upgraded to Tendermint 0.34.3
 - [Docker] Image will now start testnet by default
@@ -66,8 +82,8 @@
 
 ## [0.30.0] - 2020-03-05
 ### Changed
-- [JS] Partial rewrite of client API in typescript 
-		
+- [JS] Partial rewrite of client API in typescript
+
 ### Fixed
 - [State] Blockchain now commits initial AppHash to avoid IAVL panic
 
@@ -93,7 +109,7 @@
 ## [0.29.5] - 2019-12-09
 ### Security
 - [Tendermint] Upgraded to v0.32.8, checkTxAsync now includes node ID
-		
+
 ### Changed
 - [Vent] Sync every block height to DB and send height notification from _vent_chain table so downstream can check DB sync without --blocks
 - [RPC/Query] GetName now returns GRPC NotFound status (rather than unknown) when a requested key is not set.
@@ -126,7 +142,7 @@
 ### Changed
 - [Config] Reverted rename of ValidatorAddress to Address in config (each Burrow node has a specific validator key it uses for signing whether or not it is running as a validator right now)
 
-### Fixed 
+### Fixed
 - [EVM] Return integer overflow error code (not stack overflow) for integer overflow errors
 - [Docs] Fix broken examples
 - [Deploy] Set input on QueryContract jobs correctly
@@ -354,7 +370,7 @@
 
 ### Added
 - [EVM] Implemented [CREATE2 opcode](https://eips.ethereum.org/EIPS/eip-1014)
-- [EVM] Implemented [EXTCODEHASH opcode](https://github.com/ethereum/EIPs/blob/main/EIPS/eip-1052.md)
+- [EVM] Implemented [EXTCODEHASH opcode](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1052.md)
 - [Accounts] Add account GetStats to query endpoint
 - [Config] Expose AddrBookStrict from Tendermint
 - [Deploy] burrow deploy now prints events generated during transactions
@@ -701,6 +717,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.31.1]: https://github.com/hyperledger/burrow/compare/v0.31.0...v0.31.1
 [0.31.0]: https://github.com/hyperledger/burrow/compare/v0.30.5...v0.31.0
 [0.30.5]: https://github.com/hyperledger/burrow/compare/v0.30.4...v0.30.5
 [0.30.4]: https://github.com/hyperledger/burrow/compare/v0.30.3...v0.30.4
