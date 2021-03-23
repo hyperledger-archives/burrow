@@ -21,7 +21,7 @@ func TestLoadOrNewBlockchain(t *testing.T) {
 	assert.False(t, exists)
 	assert.Equal(t, genesisDoc.GenesisTime, blockchain.LastBlockTime())
 	assert.Equal(t, uint64(0), blockchain.LastBlockHeight())
-	assert.Equal(t, genesisDoc.Hash(), blockchain.AppHashAfterLastBlock())
+	assert.Equal(t, genesisDoc.Hash().Bytes(), blockchain.AppHashAfterLastBlock())
 
 	// First block
 	blockTime1 := genesisDoc.GenesisTime.Add(time.Second * 10)

@@ -57,15 +57,16 @@ type GenesisDoc struct {
 	GenesisTime time.Time
 	ChainName   string
 	// Ordinarily we derive this from the genesis hash but to support explicit Ethereum ChainID it may be set
-	ChainID           string `json:",omitempty" toml:",omitempty"`
-	AppHash           binary.HexBytes
-	Params            params `json:",omitempty" toml:",omitempty"`
-	Salt              []byte `json:",omitempty" toml:",omitempty"`
+	ChainID           string          `json:",omitempty" toml:",omitempty"`
+	AppHash           binary.HexBytes `json:",omitempty" toml:",omitempty"`
+	Params            params          `json:",omitempty" toml:",omitempty"`
+	Salt              []byte          `json:",omitempty" toml:",omitempty"`
 	GlobalPermissions permission.AccountPermissions
 	Accounts          []Account
 	Validators        []Validator
 	// memo
-	hash []byte
+	chainID string
+	hash    []byte
 }
 
 func (genesisDoc *GenesisDoc) GlobalPermissionsAccount() *acm.Account {
@@ -98,7 +99,7 @@ func (genesisDoc *GenesisDoc) JSONBytes() ([]byte, error) {
 	return json.MarshalIndent(genesisDoc, "", "\t")
 }
 
-func (genesisDoc *GenesisDoc) Hash() []byte {
+func (genesisDoc *GenesisDoc) Hash() binary.HexBytes {
 	if genesisDoc.hash != nil {
 		return genesisDoc.hash
 	}
@@ -117,10 +118,15 @@ func (genesisDoc *GenesisDoc) ShortHash() []byte {
 }
 
 func (genesisDoc *GenesisDoc) GetChainID() string {
-	if genesisDoc.ChainID == "" {
-		genesisDoc.ChainID = fmt.Sprintf("%s-%X", genesisDoc.ChainName, genesisDoc.ShortHash())
+	if genesisDoc.chainID == "" {
+		// Prefer explicit override ChainID
+		if genesisDoc.ChainID != "" {
+			genesisDoc.chainID = genesisDoc.ChainID
+		} else {
+			genesisDoc.chainID = fmt.Sprintf("%s-%X", genesisDoc.ChainName, genesisDoc.ShortHash())
+		}
 	}
-	return genesisDoc.ChainID
+	return genesisDoc.chainID
 }
 
 //------------------------------------------------------------
