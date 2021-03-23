@@ -16,8 +16,11 @@ import (
 )
 
 const (
+	// Infura has free tier usage of 100,000 req/day
+	defaultMaxRequests       = 99_990
+	defaultTimeBase          = time.Hour * 24
 	defaultMaxRetires        = 5
-	defaultBackoffBase       = 250 * time.Millisecond
+	defaultBackoffBase       = time.Second
 	defaultMaxBlockBatchSize = 100
 )
 
@@ -71,6 +74,10 @@ type Origin struct {
 
 // Client-side block consumer configuration. Requests are retried subject to backoff if a non-fatal error is detected
 type BlockConsumerConfig struct {
+	// The maximum number of requests to make per TimeBase before throttling requests
+	MaxRequests int
+	// The base duration over which to count requests to check for overage of MaxRequests
+	TimeBase time.Duration
 	// The base backoff - we wait this amount of time between each batch and we increase the backoff exponentially
 	// until we reach MaxRetries from BaseBackoffDuration
 	BaseBackoffDuration time.Duration
@@ -82,6 +89,12 @@ type BlockConsumerConfig struct {
 }
 
 func (config *BlockConsumerConfig) Complete() {
+	if config.MaxRequests == 0 {
+		config.MaxRequests = defaultMaxRequests
+	}
+	if config.TimeBase == 0 {
+		config.TimeBase = defaultTimeBase
+	}
 	if config.MaxBlockBatchSize == 0 {
 		config.MaxBlockBatchSize = defaultMaxBlockBatchSize
 	}

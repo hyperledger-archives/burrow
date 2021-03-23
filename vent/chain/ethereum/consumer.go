@@ -18,7 +18,7 @@ import (
 const ConsumerScope = "EthereumConsumer"
 
 type consumer struct {
-	client     EthClient
+	client     ThrottleClient
 	filter     *chain.Filter
 	blockRange *rpcevents.BlockRange
 	logger     *logging.Logger
@@ -33,7 +33,7 @@ type consumer struct {
 	blockBatchSize      uint64
 }
 
-func Consume(client EthClient, filter *chain.Filter, blockRange *rpcevents.BlockRange, config *chain.BlockConsumerConfig,
+func Consume(client ThrottleClient, filter *chain.Filter, blockRange *rpcevents.BlockRange, config *chain.BlockConsumerConfig,
 	logger *logging.Logger, consume func(block chain.Block) error) error {
 	c := consumer{
 		client:              client,
@@ -66,6 +66,7 @@ func (c *consumer) Consume() error {
 		if err != nil {
 			return err
 		}
+		// Avoid spinning excessively where there may be no blocks available
 		time.Sleep(c.backoffDuration)
 	}
 
@@ -75,6 +76,8 @@ func (c *consumer) Consume() error {
 func (c *consumer) ConsumeInBatches(start, end uint64) error {
 	c.logger.TraceMsg("ConsumeInBatches", "start", start, "end", end)
 	for batchStart := start; batchStart <= end; batchStart += c.blockBatchSize {
+		// Avoid breaching requests limit
+		c.client.Throttle()
 		batchEnd := batchStart + c.blockBatchSize
 		c.logger.TraceMsg("Consuming batch", "batch_start", batchStart, "batch_end", batchEnd)
 		if batchEnd > end {

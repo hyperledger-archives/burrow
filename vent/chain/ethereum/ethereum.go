@@ -23,8 +23,10 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 
+const Scope = "Ethereum"
+
 type Chain struct {
-	client         EthClient
+	client         ThrottleClient
 	filter         *chain.Filter
 	chainID        string
 	version        string
@@ -46,16 +48,18 @@ type EthClient interface {
 // We rely on this failing if the chain is not an Ethereum Chain
 func New(client EthClient, filter *chain.Filter, consumerConfig *chain.BlockConsumerConfig,
 	logger *logging.Logger) (*Chain, error) {
-	chainID, err := client.NetVersion()
+	logger = logger.WithScope(Scope)
+	throttleClient := NewThrottleClient(client, consumerConfig.MaxRequests, consumerConfig.TimeBase, logger)
+	chainID, err := throttleClient.NetVersion()
 	if err != nil {
 		return nil, fmt.Errorf("could not get Ethereum ChainID: %w", err)
 	}
-	version, err := client.Web3ClientVersion()
+	version, err := throttleClient.Web3ClientVersion()
 	if err != nil {
 		return nil, fmt.Errorf("could not get Ethereum node version: %w", err)
 	}
 	return &Chain{
-		client:         client,
+		client:         throttleClient,
 		filter:         filter,
 		chainID:        chainID,
 		version:        version,

@@ -12,11 +12,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger/burrow/vent/chain/ethereum"
+
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/rpc/rpctransact"
-	"github.com/hyperledger/burrow/vent/chain/ethereum"
 	"github.com/hyperledger/burrow/vent/config"
 	"github.com/hyperledger/burrow/vent/service"
 	"github.com/hyperledger/burrow/vent/sqldb"
@@ -36,7 +37,7 @@ const (
 var tables = types.DefaultSQLTableNames
 
 // Tweak logger for debug purposes here
-var logger = logconfig.Sink().Terminal().FilterScope(ethereum.ConsumerScope).LoggingConfig().WithTrace().MustLogger()
+var logger = logconfig.Sink().Terminal().FilterScope(ethereum.Scope).LoggingConfig().WithTrace().MustLogger()
 
 func testConsumer(t *testing.T, chainID string, cfg *config.VentConfig, tcli test.TransactClient,
 	inputAddress crypto.Address) {
