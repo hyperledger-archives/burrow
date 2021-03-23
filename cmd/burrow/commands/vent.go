@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -56,6 +58,7 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				watchAddressesOpt := cmd.StringsOpt("watch", nil, "Add contract address to global watch filter")
 				minimumHeightOpt := cmd.IntOpt("minimum-height", 0, "Only process block greater than or equal to height passed")
 				maxRetriesOpt := cmd.IntOpt("max-retries", int(cfg.BlockConsumerConfig.MaxRetries), "Maximum number of retries when consuming blocks")
+				maxRequestRateOpt := cmd.StringOpt("max-request-rate", "", "Maximum request rate given as (number of requests)/(time base), e.g. 1000/24h for 1000 requests per day")
 				backoffDurationOpt := cmd.StringOpt("backoff", "",
 					"The minimum duration to wait before asking for new blocks - increases exponentially when errors occur. Values like 200ms, 1s, 2m")
 				batchSizeOpt := cmd.IntOpt("batch-size", int(cfg.BlockConsumerConfig.MaxBlockBatchSize),
@@ -77,6 +80,10 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 					cfg.HTTPListenAddress = *httpAddrOpt
 					cfg.WatchAddresses = make([]crypto.Address, len(*watchAddressesOpt))
 					cfg.MinimumHeight = uint64(*minimumHeightOpt)
+					cfg.BlockConsumerConfig.MaxRequests, cfg.BlockConsumerConfig.TimeBase, err = parseRequestRate(*maxRequestRateOpt)
+					if err != nil {
+						output.Fatalf("Could not parse max request rate: %w", err)
+					}
 					cfg.BlockConsumerConfig.MaxRetries = uint64(*maxRetriesOpt)
 					cfg.BlockConsumerConfig.BaseBackoffDuration, err = parseDuration(*backoffDurationOpt)
 					if err != nil {
@@ -107,7 +114,7 @@ func Vent(output Output) func(cmd *cli.Cmd) {
 				cmd.Spec = "--spec=<spec file or dir>... [--abi=<abi file or dir>...] " +
 					"[--watch=<contract address>...] [--minimum-height=<lowest height from which to read>] " +
 					"[--max-retries=<max block request retries>] [--backoff=<minimum backoff duration>] " +
-					"[--batch-size=<minimum block batch size>] " +
+					"[--max-request-rate=<requests / time base>] [--batch-size=<minimum block batch size>] " +
 					"[--db-adapter] [--db-url] [--db-schema] [--blocks] [--txs] [--chain-addr] [--http-addr] " +
 					"[--log-level] [--announce-every=<duration>]"
 
@@ -267,6 +274,25 @@ func parseDuration(duration string) (time.Duration, error) {
 		return 0, nil
 	}
 	return time.ParseDuration(duration)
+}
+
+func parseRequestRate(rate string) (int, time.Duration, error) {
+	if rate == "" {
+		return 0, 0, nil
+	}
+	ratio := strings.Split(rate, "/")
+	if len(ratio) != 2 {
+		return 0, 0, fmt.Errorf("expected a ratio string separated by a '/' but got %s", rate)
+	}
+	requests, err := strconv.ParseInt(ratio[0], 10, 0)
+	if err != nil {
+		return 0, 0, fmt.Errorf("could not parse max requests as base 10 integer: %w", err)
+	}
+	timeBase, err := time.ParseDuration(ratio[1])
+	if err != nil {
+		return 0, 0, fmt.Errorf("could not parse time base: %w", err)
+	}
+	return int(requests), timeBase, nil
 }
 
 type dbOpts struct {
