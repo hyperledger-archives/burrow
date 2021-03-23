@@ -35,7 +35,7 @@ func LoadPath(abiFileOrDirs ...string) (*Spec, error) {
 				return fmt.Errorf("error returned while walking abiDir '%s': %v", dir, err)
 			}
 			ext := filepath.Ext(path)
-			if fi.IsDir() || !(ext == ".bin" || ext == ".abi") {
+			if fi.IsDir() || !(ext == ".bin" || ext == ".abi" || ext == ".json") {
 				return nil
 			}
 			abiSpc, err := ReadSpecFile(path)
