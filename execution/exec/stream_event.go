@@ -245,7 +245,10 @@ func (stack *TxStack) Consume(ev *StreamEvent) (*TxExecution, error) {
 		if err != nil {
 			return nil, err
 		}
-		if txe.Envelope == nil || txe.Receipt == nil {
+		// If Origin _is_ set then it implies the transaction originates from a dump and is in an abbreviated
+		// 'pseudo transaction' for which no envelope is stored (since the dump format is intended to minimal) and we
+		// must relax the Envelope presence continuity check
+		if txe.TxHeader.Origin == nil && (txe.Envelope == nil || txe.Receipt == nil) {
 			return nil, fmt.Errorf("TxStack.Consume did not receive transaction envelope for transaction %s",
 				txe.TxHash)
 		}

@@ -48,6 +48,15 @@ func FullVersion() string {
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases(
+		"0.31.2 - 2020-03-24",
+		`### Fixed
+- [Dump] Stop TxStack EventStream consumer from rejecting events from dump/restored chain because they lack tx Envelopes (as they are intended to to keep dump format minimal)
+- [Genesis] Fix hash instability introduced by accidentally removing omitempty from AppHash in genesis
+
+### Added
+- [Vent] Implement throttling on Ethereum Vent consumer via --max-request-rate=<requests / time base> flag to 'vent start'
+`,
+
 		"0.31.1 - 2020-03-19",
 		`### Changed
 - [Repo] main branch replaces master as per Hyperledger TSC guidelines

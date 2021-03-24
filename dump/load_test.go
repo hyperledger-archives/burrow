@@ -2,9 +2,12 @@ package dump
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/hyperledger/burrow/rpc/rpcevents"
 
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/storage"
@@ -65,16 +68,27 @@ func TestLoadAndDump(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	err = st.IterateStreamEvents(nil, nil, storage.AscendingSort, func(se *exec.StreamEvent) error {
-		if se.BeginTx != nil {
-			require.Equal(t, se.BeginTx.TxHeader.Origin.Height, uint64(5))
-			require.Equal(t, se.BeginTx.TxHeader.Origin.Index, uint64(2))
-			require.Equal(t, se.BeginTx.TxHeader.Origin.ChainID, "BurrowChain_7DB5BD-5BCE58")
+	streamEvents := new(exec.StreamEvents)
+	eventHeight := uint64(5)
+	err = st.IterateStreamEvents(nil, nil, storage.AscendingSort, func(ev *exec.StreamEvent) error {
+		streamEvents.StreamEvents = append(streamEvents.StreamEvents, ev)
+		if ev.BeginTx != nil {
+			require.Equal(t, ev.BeginTx.TxHeader.Origin.Height, eventHeight)
+			require.Equal(t, ev.BeginTx.TxHeader.Origin.Index, uint64(2))
+			require.Equal(t, ev.BeginTx.TxHeader.Origin.ChainID, "BurrowChain_7DB5BD-5BCE58")
 		}
-		if se.Event != nil {
-			require.Equal(t, se.Event.Header.Height, uint64(5))
+		if ev.Event != nil {
+			require.Equal(t, ev.Event.Header.Height, eventHeight)
 		}
 		return nil
 	})
 	require.NoError(t, err)
+
+	// Now ensure that the events can be safely consumed by downstream event consumers (e.g. Vent)
+	err = rpcevents.ConsumeBlockExecutions(streamEvents, func(be *exec.BlockExecution) error {
+		// Events carry their original height in the event header
+		require.Equal(t, eventHeight, be.TxExecutions[0].Events[0].Header.Height)
+		return nil
+	})
+	require.Equal(t, io.EOF, err)
 }
