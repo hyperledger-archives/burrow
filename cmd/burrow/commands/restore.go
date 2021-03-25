@@ -27,15 +27,15 @@ func Restore(output Output) func(cmd *cli.Cmd) {
 
 			kern, err := core.NewKernel(conf.BurrowDir)
 			if err != nil {
-				output.Fatalf("could not create Burrow kernel: %v", err)
+				output.Fatalf("could not create Burrow kernel: %w", err)
 			}
 
 			if err = kern.LoadLoggerFromConfig(conf.Logging); err != nil {
-				output.Fatalf("could not create Burrow kernel: %v", err)
+				output.Fatalf("could not load logger: %w", err)
 			}
 
 			if err = kern.LoadDump(conf.GenesisDoc, *filename, *silentOpt); err != nil {
-				output.Fatalf("could not create Burrow kernel: %v", err)
+				output.Fatalf("could not load dump: %v", err)
 			}
 
 			kern.ShutdownAndExit()

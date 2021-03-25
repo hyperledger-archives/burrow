@@ -191,21 +191,21 @@ func (kern *Kernel) LoadDump(genesisDoc *genesis.GenesisDoc, restoreFile string,
 
 	reader, err := dump.NewFileReader(restoreFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create dump file reader: %w", err)
 	}
 
 	err = dump.Load(reader, kern.State)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not load dump state: %w", err)
 	}
 
 	if !bytes.Equal(kern.State.Hash(), kern.Blockchain.GenesisDoc().AppHash) {
-		return fmt.Errorf("restore produced a different apphash expect 0x%x got 0x%x",
+		return fmt.Errorf("restore produced a different apphash, expected %X by actual was %X",
 			kern.Blockchain.GenesisDoc().AppHash, kern.State.Hash())
 	}
 	err = kern.Blockchain.CommitWithAppHash(kern.State.Hash())
 	if err != nil {
-		return fmt.Errorf("unable to commit %v", err)
+		return fmt.Errorf("unable to commit %w", err)
 	}
 
 	kern.Logger.InfoMsg("State restore successful",

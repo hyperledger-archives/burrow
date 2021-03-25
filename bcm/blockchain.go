@@ -156,7 +156,10 @@ func (bc *Blockchain) save() error {
 		if err != nil {
 			return err
 		}
-		bc.db.SetSync(stateKey, encodedState)
+		err = bc.db.SetSync(stateKey, encodedState)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
