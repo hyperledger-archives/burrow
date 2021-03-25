@@ -48,6 +48,11 @@ func FullVersion() string {
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases(
+		"0.31.3 - 2020-03-25",
+		`### Fixed
+- [Dump] Make load from dump set tx index so BlockAccumulator continuity conditions are met
+- [Dump] Improve error messages
+`,
 		"0.31.2 - 2020-03-24",
 		`### Fixed
 - [Dump] Stop TxStack EventStream consumer from rejecting events from dump/restored chain because they lack tx Envelopes (as they are intended to to keep dump format minimal)

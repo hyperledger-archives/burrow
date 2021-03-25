@@ -1,4 +1,10 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.31.3] - 2020-03-25
+### Fixed
+- [Dump] Make load from dump set tx index so BlockAccumulator continuity conditions are met
+- [Dump] Improve error messages
+
+
 ## [0.31.2] - 2020-03-24
 ### Fixed
 - [Dump] Stop TxStack EventStream consumer from rejecting events from dump/restored chain because they lack tx Envelopes (as they are intended to to keep dump format minimal)
@@ -726,6 +732,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.31.3]: https://github.com/hyperledger/burrow/compare/v0.31.2...v0.31.3
 [0.31.2]: https://github.com/hyperledger/burrow/compare/v0.31.1...v0.31.2
 [0.31.1]: https://github.com/hyperledger/burrow/compare/v0.31.0...v0.31.1
 [0.31.0]: https://github.com/hyperledger/burrow/compare/v0.30.5...v0.31.0
