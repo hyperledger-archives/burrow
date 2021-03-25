@@ -1,5 +1,6 @@
 # Vent - SQL mapping layer
 
+
 Vent reads specification files called 'projections', parses their contents, and maps EVM LOG event fields to corresponding SQL columns to create or alter database structures. 
 It listens for a stream of block events from Burrow's GRPC service then parses, unpacks, decodes event data, and builds rows to be upserted in matching event tables, rows are 
 upserted atomically in a single database transaction per block.
@@ -12,6 +13,9 @@ the presence or absence of a `"Primary": true` entry in one of the `FieldMapping
 
 Vent writes each block of updates atomically and is guaranteed to be crash tolerant. If the Vent process is killed it will resume at the last written height. Burrow stores all 
 previous events in its state so even if you delete the Vent database it can be regenerated deterministically. This feature being a core feature of Vent.
+
+There is a [presentation on vent here](https://competent-yalow-f210f7.netlify.app).
+
 
 ## Projections
 A projection is the name  given to the configuration files that Vent uses to interpret EVM events as updates or deletion from SQL tables. They provide an object relational mapping 
