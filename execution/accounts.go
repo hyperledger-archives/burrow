@@ -36,6 +36,7 @@ func NewAccounts(reader acmstate.Reader, keyClient keys.KeyClient, mutexCount in
 		keyClient: keyClient,
 	}
 }
+
 func (accs *Accounts) SigningAccount(address crypto.Address) (*SigningAccount, error) {
 	signer, err := keys.AddressableSigner(accs.keyClient, address)
 	if err != nil {

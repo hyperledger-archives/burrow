@@ -27,8 +27,8 @@ type RWTree struct {
 var _ KVCallbackIterableReader = &RWTree{}
 var _ Versioned = &RWTree{}
 
-// Creates a concurrency safe version of an IAVL tree whereby reads are routed to the last saved tree.
-// Writes must be serialised (as they are within a commit for example).
+// Creates a concurrency safe version of an IAVL tree whereby writes go a latest working tree and reads are routed to
+// the last saved tree. All methods are safe for multiple readers and writers.
 func NewRWTree(db dbm.DB, cacheSize int) (*RWTree, error) {
 	tree, err := NewMutableTree(db, cacheSize)
 	if err != nil {
@@ -79,7 +79,7 @@ func (rwt *RWTree) Save() ([]byte, int64, error) {
 	// Take an immutable reference to the tree we just saved for querying
 	readTree, err := rwt.tree.GetImmutable(version)
 	if err != nil {
-		return nil, 0, fmt.Errorf("RWTree.Save() could not obtain immutable read tree: %v", err)
+		return nil, 0, fmt.Errorf("RWTree.Save() could not obtain immutable read loadOrCreateTree: %v", err)
 	}
 	rwt.readTree.Store(readTree)
 	rwt.updated = false
@@ -147,14 +147,20 @@ func (rwt *RWTree) Iterate(low, high []byte, ascending bool, fn func(key []byte,
 
 func (rwt *RWTree) Dump() string {
 	tree := treeprint.New()
-	AddTreePrintTree("ReadTree", tree, rwt)
-	AddTreePrintTree("WriteTree", tree, rwt.tree)
+	err := AddTreePrintTree("ReadTree", tree, rwt)
+	if err != nil {
+		return fmt.Sprintf("Error printing loadOrCreateTree: %v", err)
+	}
+	err = AddTreePrintTree("WriteTree", tree, rwt.tree)
+	if err != nil {
+		return fmt.Sprintf("Error printing loadOrCreateTree: %v", err)
+	}
 	return tree.String()
 }
 
-func AddTreePrintTree(edge string, tree treeprint.Tree, rwt KVCallbackIterableReader) {
+func AddTreePrintTree(edge string, tree treeprint.Tree, rwt KVCallbackIterableReader) error {
 	tree = tree.AddBranch(fmt.Sprintf("%q", edge))
-	rwt.Iterate(nil, nil, true, func(key []byte, value []byte) error {
+	return rwt.Iterate(nil, nil, true, func(key []byte, value []byte) error {
 		tree.AddNode(fmt.Sprintf("%q -> %q", string(key), string(value)))
 		return nil
 	})

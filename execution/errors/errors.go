@@ -21,7 +21,7 @@ type Source interface {
 	Error() error
 }
 
-var Codes = codes{
+var Codes = &codes{
 	None:                   code("none"),
 	UnknownAddress:         code("unknown address"),
 	InsufficientBalance:    code("insufficient balance"),

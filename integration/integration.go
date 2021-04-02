@@ -6,7 +6,6 @@ package integration
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
@@ -26,12 +25,12 @@ import (
 	"github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/testutil"
 	"github.com/stretchr/testify/require"
 )
 
 const (
-	ChainName  = "Integration_Test_Chain"
-	scratchDir = "test_scratch"
+	ChainName = "Integration_Test_Chain"
 )
 
 // Enable logger output during tests
@@ -77,7 +76,7 @@ func NewTestConfig(genesisDoc *genesis.GenesisDoc,
 	name := fmt.Sprintf("node_%03d", nodeNumber)
 	conf = config.DefaultBurrowConfig()
 	conf.Logging = nil
-	testDir, cleanup := EnterTestDirectory()
+	testDir, cleanup := testutil.EnterTestDirectory()
 	conf.BurrowDir = path.Join(testDir, fmt.Sprintf(".burrow_%s", name))
 	conf.GenesisDoc = genesisDoc
 	conf.Tendermint.Moniker = name
@@ -147,21 +146,6 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 
 	kern.AddProcesses(core.DefaultProcessLaunchers(kern, testConfig.RPC, testConfig.Keys)...)
 	return kern, nil
-}
-
-func EnterTestDirectory() (testDir string, cleanup func()) {
-	var err error
-	testDir, err = ioutil.TempDir("", scratchDir)
-	if err != nil {
-		panic(fmt.Errorf("could not make temp dir for integration tests: %v", err))
-	}
-	// If you need to inspectdirs
-	//testDir := scratchDir
-	os.RemoveAll(testDir)
-	os.MkdirAll(testDir, 0777)
-	os.Chdir(testDir)
-	os.MkdirAll("config", 0777)
-	return testDir, func() { os.RemoveAll(testDir) }
 }
 
 // TestGenesisDoc creates genesis from a set of accounts
