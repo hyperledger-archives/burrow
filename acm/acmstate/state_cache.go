@@ -262,21 +262,26 @@ func (cache *Cache) get(address crypto.Address) (*accountInfo, error) {
 	cache.RLock()
 	accInfo := cache.accounts[address]
 	cache.RUnlock()
-	if accInfo == nil {
-		cache.Lock()
-		defer cache.Unlock()
-		accInfo = cache.accounts[address]
-		if accInfo == nil {
-			account, err := cache.backend.GetAccount(address)
-			if err != nil {
-				return nil, err
-			}
-			accInfo = &accountInfo{
-				account: account,
-				storage: make(map[binary.Word256][]byte),
-			}
-			cache.accounts[address] = accInfo
-		}
+	if accInfo != nil {
+		return accInfo, nil
 	}
+	// Take write lock to fill cache
+	cache.Lock()
+	defer cache.Unlock()
+	// Check for an interleaved cache fill
+	accInfo = cache.accounts[address]
+	if accInfo != nil {
+		return accInfo, nil
+	}
+	// Pull from backend
+	account, err := cache.backend.GetAccount(address)
+	if err != nil {
+		return nil, err
+	}
+	accInfo = &accountInfo{
+		account: account,
+		storage: make(map[binary.Word256][]byte),
+	}
+	cache.accounts[address] = accInfo
 	return accInfo, nil
 }

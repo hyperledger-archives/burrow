@@ -24,10 +24,11 @@ func TestMutableForest_Genesis(t *testing.T) {
 	_, _, err = rwf.Save()
 	require.NoError(t, err)
 	var dump string
-	rwf.Iterate(nil, nil, true, func(prefix []byte, tree KVCallbackIterableReader) error {
+	err = rwf.Iterate(nil, nil, true, func(prefix []byte, tree KVCallbackIterableReader) error {
 		dump = tree.(*RWTree).Dump()
 		return nil
 	})
+	require.NoError(t, err)
 	assert.Contains(t, dump, "\"bar\" -> \"nog\"")
 	reader, err := rwf.Reader(prefix)
 	require.NoError(t, err)
@@ -126,7 +127,8 @@ func TestSorted(t *testing.T) {
 	require.NoError(t, err)
 	tree, err := forest.Writer([]byte("age"))
 	require.NoError(t, err)
-	tree.Get([]byte("foo"))
+	_, err = tree.Get([]byte("foo"))
+	require.NoError(t, err)
 	setForest(t, forest, "age", "Lindsay", "34")
 	setForest(t, forest, "age", "Cora", "1")
 	_, _, err = forest.Save()

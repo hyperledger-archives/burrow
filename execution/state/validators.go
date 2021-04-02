@@ -90,7 +90,7 @@ func (ws *writeState) MakeGenesisValidators(genesisDoc *genesis.GenesisDoc) erro
 	return nil
 }
 
-func (s *ReadState) Power(id crypto.Address) (*big.Int, error) {
+func (s *ImmutableState) Power(id crypto.Address) (*big.Int, error) {
 	tree, err := s.Forest.Reader(keys.Validator.Prefix())
 	if err != nil {
 		return nil, err
@@ -109,7 +109,7 @@ func (s *ReadState) Power(id crypto.Address) (*big.Int, error) {
 	return v.BigPower(), nil
 }
 
-func (s *ReadState) IterateValidators(fn func(id crypto.Addressable, power *big.Int) error) error {
+func (s *ImmutableState) IterateValidators(fn func(id crypto.Addressable, power *big.Int) error) error {
 	tree, err := s.Forest.Reader(keys.Validator.Prefix())
 	if err != nil {
 		return err

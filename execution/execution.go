@@ -54,6 +54,7 @@ type ExecutorState interface {
 	proposal.Reader
 	validator.IterableReader
 }
+
 type BatchExecutor interface {
 	// Provides access to write lock for a BatchExecutor so reads can be prevented for the duration of a commit
 	sync.Locker

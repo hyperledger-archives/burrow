@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/golang/protobuf/proto"
 
@@ -66,7 +67,7 @@ type MutableForest struct {
 	commitsTree *RWTree
 	// Much of the implementation of MutableForest is contained in ImmutableForest which is embedded here and used
 	// mutable via its private API. This embedded instance holds a reference to commitsTree above.
-	*ImmutableForest
+	ImmutableForest
 	// Map of prefix -> tree for trees that may require a save (but only will be if they have actually been updated)
 	dirty map[string]*RWTree
 	// List of dirty prefixes in deterministic order so we may loop over them on Save() and obtain a consistent commitTree hash
@@ -75,6 +76,8 @@ type MutableForest struct {
 
 // ImmutableForest contains much of the implementation for MutableForest yet it's external API is immutable
 type ImmutableForest struct {
+	// Synchronises writes when used from MutableForest and read-side tree loads
+	sync.Mutex
 	// Store of tree prefix -> last commitID (version + hash) - serves as a set of all known trees and provides a global hash
 	commitsTree KVCallbackIterableReader
 	treeDB      dbm.DB
@@ -103,7 +106,7 @@ func NewMutableForest(db dbm.DB, cacheSize int) (*MutableForest, error) {
 		return nil, err
 	}
 	return &MutableForest{
-		ImmutableForest: forest,
+		ImmutableForest: *forest,
 		commitsTree:     commitsTree,
 		dirty:           make(map[string]*RWTree),
 	}, nil
@@ -256,7 +259,8 @@ func (imf *ImmutableForest) Dump() string {
 // Lazy load tree
 func (imf *ImmutableForest) tree(prefix []byte) (*RWTree, error) {
 	// Try cache
-	if value, ok := imf.treeCache.Get(string(prefix)); ok {
+	value, ok := imf.treeCache.Get(string(prefix))
+	if ok {
 		return value.(*RWTree), nil
 	}
 	// Not in caches but non-negative version - we should be able to load into memory
@@ -277,7 +281,14 @@ func (imf *ImmutableForest) commitID(prefix []byte) (*CommitID, error) {
 
 func (imf *ImmutableForest) loadOrCreateTree(prefix []byte) (*RWTree, error) {
 	const errHeader = "ImmutableForest.loadOrCreateTree():"
-	tree, err := imf.newTree(prefix)
+	imf.Lock()
+	defer imf.Unlock()
+	// Check we haven't missed a cache fill
+	value, ok := imf.treeCache.Get(string(prefix))
+	if ok {
+		return value.(*RWTree), nil
+	}
+	tree, err := NewRWTree(NewPrefixDB(imf.treeDB, string(prefix)), imf.cacheSize)
 	if err != nil {
 		return nil, err
 	}
@@ -285,25 +296,15 @@ func (imf *ImmutableForest) loadOrCreateTree(prefix []byte) (*RWTree, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s %v", errHeader, err)
 	}
-	if commitID.Version == 0 {
-		// This is the first time we have been asked to load this tree
-		return imf.newTree(prefix)
+	// Load the tree unless if it has commits
+	if commitID.Version > 0 {
+		err = tree.Load(commitID.Version, imf.overwriting)
+		if err != nil {
+			return nil, fmt.Errorf("%s could not load tree: %v", errHeader, err)
+		}
 	}
-	err = tree.Load(commitID.Version, imf.overwriting)
-	if err != nil {
-		return nil, fmt.Errorf("%s could not load tree: %v", errHeader, err)
-	}
-	return tree, nil
-}
-
-// Create a new in-memory IAVL tree
-func (imf *ImmutableForest) newTree(prefix []byte) (*RWTree, error) {
-	p := string(prefix)
-	tree, err := NewRWTree(NewPrefixDB(imf.treeDB, p), imf.cacheSize)
-	if err != nil {
-		return nil, err
-	}
-	imf.treeCache.Add(p, tree)
+	// Now tree is initialised, add it to the LRU cache
+	imf.treeCache.Add(string(prefix), tree)
 	return tree, nil
 }
 

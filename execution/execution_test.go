@@ -234,7 +234,7 @@ func TestSendPermission(t *testing.T) {
 	tx = payload.NewSendTx()
 	require.NoError(t, tx.AddInput(exe.stateCache, users[0].GetPublicKey(), 5))
 	require.NoError(t, tx.AddInput(exe.stateCache, users[1].GetPublicKey(), 5))
-	require.NoError(t, tx.AddOutput(users[2].GetAddress(), 10))
+	tx.AddOutput(users[2].GetAddress(), 10)
 	err = exe.signExecuteCommit(tx, users[:2]...)
 	require.Error(t, err)
 }

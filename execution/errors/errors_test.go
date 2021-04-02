@@ -25,3 +25,7 @@ func TestCode_String(t *testing.T) {
 	err := Codes.CodeOutOfBounds
 	fmt.Println(err.Error())
 }
+
+func TestPrintCodes(t *testing.T) {
+	fmt.Printf("%v", Codes)
+}

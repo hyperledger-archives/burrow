@@ -11,7 +11,7 @@ import (
 )
 
 // Returns nil if account does not exist with given address.
-func (s *ReadState) GetAccount(address crypto.Address) (*acm.Account, error) {
+func (s *ImmutableState) GetAccount(address crypto.Address) (*acm.Account, error) {
 	tree, err := s.Forest.Reader(keys.Account.Prefix())
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func (ws *writeState) RemoveAccount(address crypto.Address) error {
 	return nil
 }
 
-func (s *ReadState) IterateAccounts(consumer func(*acm.Account) error) error {
+func (s *ImmutableState) IterateAccounts(consumer func(*acm.Account) error) error {
 	tree, err := s.Forest.Reader(keys.Account.Prefix())
 	if err != nil {
 		return err
@@ -112,7 +112,7 @@ func (s *State) GetAccountStats() acmstate.AccountStats {
 
 // Storage
 
-func (s *ReadState) GetStorage(address crypto.Address, key binary.Word256) ([]byte, error) {
+func (s *ImmutableState) GetStorage(address crypto.Address, key binary.Word256) ([]byte, error) {
 	keyFormat := keys.Storage.Fix(address)
 	tree, err := s.Forest.Reader(keyFormat.Prefix())
 	if err != nil {
@@ -142,7 +142,7 @@ func (ws *writeState) SetStorage(address crypto.Address, key binary.Word256, val
 	return nil
 }
 
-func (s *ReadState) IterateStorage(address crypto.Address, consumer func(key binary.Word256, value []byte) error) error {
+func (s *ImmutableState) IterateStorage(address crypto.Address, consumer func(key binary.Word256, value []byte) error) error {
 	keyFormat := keys.Storage.Fix(address)
 	tree, err := s.Forest.Reader(keyFormat.Prefix())
 	if err != nil {

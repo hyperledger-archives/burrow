@@ -28,7 +28,7 @@ func getNode(forest storage.ForestReader, id crypto.Address) (*registry.NodeIden
 
 }
 
-func (s *ReadState) GetNodeByID(id crypto.Address) (*registry.NodeIdentity, error) {
+func (s *ImmutableState) GetNodeByID(id crypto.Address) (*registry.NodeIdentity, error) {
 	return getNode(s.Forest, id)
 }
 
@@ -77,7 +77,7 @@ func (ws *writeState) RemoveNode(id crypto.Address) error {
 	return nil
 }
 
-func (s *ReadState) IterateNodes(consumer func(crypto.Address, *registry.NodeIdentity) error) error {
+func (s *ImmutableState) IterateNodes(consumer func(crypto.Address, *registry.NodeIdentity) error) error {
 	tree, err := s.Forest.Reader(keys.Registry.Prefix())
 	if err != nil {
 		return err

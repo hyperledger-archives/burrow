@@ -9,7 +9,7 @@ import (
 
 var _ names.IterableReader = &State{}
 
-func (s *ReadState) GetName(name string) (*names.Entry, error) {
+func (s *ImmutableState) GetName(name string) (*names.Entry, error) {
 	tree, err := s.Forest.Reader(keys.Name.Prefix())
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (ws *writeState) RemoveName(name string) error {
 	return nil
 }
 
-func (s *ReadState) IterateNames(consumer func(*names.Entry) error) error {
+func (s *ImmutableState) IterateNames(consumer func(*names.Entry) error) error {
 	tree, err := s.Forest.Reader(keys.Name.Prefix())
 	if err != nil {
 		return err

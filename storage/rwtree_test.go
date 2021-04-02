@@ -2,7 +2,6 @@ package storage
 
 import (
 	"fmt"
-	"math/rand"
 	"runtime/debug"
 	"testing"
 	"time"
@@ -153,7 +152,7 @@ func capturePanic(f func() error) (err error) {
 	return
 }
 
-func TestConcurrentReadWriteSave(t *testing.T) {
+func TestRWTreeConcurrentReadWriteSave(t *testing.T) {
 	rwt, err := NewRWTree(dbm.NewMemDB(), 100)
 	require.NoError(t, err)
 	n := 100
@@ -201,7 +200,6 @@ func TestConcurrentReadWriteSave(t *testing.T) {
 
 	// Ensure Save() is safe with concurrent read/writes
 	for i := 0; i < n/10; i++ {
-		time.Sleep(time.Duration(rand.Int63n(100)) * time.Millisecond)
 		err := capturePanic(func() error {
 			_, _, err := rwt.Save()
 			return err

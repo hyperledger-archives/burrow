@@ -9,7 +9,7 @@ import (
 
 var _ proposal.IterableReader = &State{}
 
-func (s *ReadState) GetProposal(proposalHash []byte) (*payload.Ballot, error) {
+func (s *ImmutableState) GetProposal(proposalHash []byte) (*payload.Ballot, error) {
 	tree, err := s.Forest.Reader(keys.Proposal.Prefix())
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (ws *writeState) RemoveProposal(proposalHash []byte) error {
 	return nil
 }
 
-func (s *ReadState) IterateProposals(consumer func(proposalHash []byte, proposal *payload.Ballot) error) error {
+func (s *ImmutableState) IterateProposals(consumer func(proposalHash []byte, proposal *payload.Ballot) error) error {
 	tree, err := s.Forest.Reader(keys.Proposal.Prefix())
 	if err != nil {
 		return err
