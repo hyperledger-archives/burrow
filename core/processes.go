@@ -14,13 +14,16 @@ import (
 	"github.com/hyperledger/burrow/process"
 	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/rpc"
+	"github.com/hyperledger/burrow/rpc/lib/server"
 	"github.com/hyperledger/burrow/rpc/metrics"
 	"github.com/hyperledger/burrow/rpc/rpcdump"
 	"github.com/hyperledger/burrow/rpc/rpcevents"
 	"github.com/hyperledger/burrow/rpc/rpcinfo"
 	"github.com/hyperledger/burrow/rpc/rpcquery"
 	"github.com/hyperledger/burrow/rpc/rpctransact"
+	"github.com/hyperledger/burrow/rpc/web3"
 	"github.com/hyperledger/burrow/txs"
+	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/version"
 	hex "github.com/tmthrgd/go-hex"
 )
@@ -31,6 +34,7 @@ const (
 	NoConsensusProcessName = "NoConsensusExecution"
 	TendermintProcessName  = "Tendermint"
 	StartupProcessName     = "StartupAnnouncer"
+	Web3ProcessName        = "rpcConfig/web3"
 	InfoProcessName        = "rpcConfig/info"
 	GRPCProcessName        = "rpcConfig/GRPC"
 	MetricsProcessName     = "rpcConfig/metrics"
@@ -44,6 +48,7 @@ func DefaultProcessLaunchers(kern *Kernel, rpcConfig *rpc.RPCConfig, keysConfig 
 		NoConsensusLauncher(kern),
 		TendermintLauncher(kern),
 		StartupLauncher(kern),
+		Web3Launcher(kern, rpcConfig.Web3),
 		InfoLauncher(kern, rpcConfig.Info),
 		MetricsLauncher(kern, rpcConfig.Metrics),
 		GRPCLauncher(kern, rpcConfig.GRPC, keysConfig),
@@ -56,7 +61,7 @@ func ProfileLauncher(kern *Kernel, conf *rpc.ServerConfig) process.Launcher {
 		Enabled: conf.Enabled,
 		Launch: func() (process.Process, error) {
 			debugServer := &http.Server{
-				Addr: fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort),
+				Addr: conf.ListenAddress(),
 			}
 			go func() {
 				err := debugServer.ListenAndServe()
@@ -91,7 +96,9 @@ func NoConsensusLauncher(kern *Kernel) process.Launcher {
 		Launch: func() (process.Process, error) {
 			accountState := kern.State
 			nameRegState := kern.State
-			kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, kern.State, nil, kern.Logger)
+			nodeRegState := kern.State
+			validatorSet := kern.State
+			kern.Service = rpc.NewService(accountState, nameRegState, nodeRegState, kern.Blockchain, validatorSet, nil, kern.Logger)
 			// TimeoutFactor scales in units of seconds
 			blockDuration := time.Duration(kern.timeoutFactor * float64(time.Second))
 			//proc := abci.NewProcess(kern.checker, kern.committer, kern.Blockchain, kern.txCodec, blockDuration, kern.Panic)
@@ -99,8 +106,8 @@ func NoConsensusLauncher(kern *Kernel) process.Launcher {
 			// Provide execution accounts against backend state since we will commit immediately
 			accounts := execution.NewAccounts(kern.committer, kern.keyClient, AccountsRingMutexCount)
 			// Elide consensus and use a CheckTx function that immediately commits any valid transaction
-			kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter, accounts, proc.CheckTx, kern.txCodec,
-				kern.Logger)
+			kern.Transactor = execution.NewTransactor(kern.Blockchain,
+				kern.Emitter, accounts, proc.CheckTx, "", kern.txCodec, kern.Logger)
 			return proc, nil
 		},
 	}
@@ -117,17 +124,26 @@ func TendermintLauncher(kern *Kernel) process.Launcher {
 				return nil, fmt.Errorf("%s cannot get NodeView %v", errHeader, err)
 			}
 
-			accountState := kern.State
-			nameRegState := kern.State
-			kern.Service = rpc.NewService(accountState, nameRegState, kern.Blockchain, kern.State, nodeView, kern.Logger)
+			var id p2p.ID
+			if ni := nodeView.NodeInfo(); ni != nil {
+				id = p2p.ID(ni.ID.Bytes())
+			}
 
 			kern.Blockchain.SetBlockStore(bcm.NewBlockStore(nodeView.BlockStore()))
 			// Provide execution accounts against checker state so that we can assign sequence numbers
 			accounts := execution.NewAccounts(kern.checker, kern.keyClient, AccountsRingMutexCount)
 			// Pass transactions to Tendermint's CheckTx function for broadcast and consensus
 			checkTx := kern.Node.Mempool().CheckTx
-			kern.Transactor = execution.NewTransactor(kern.Blockchain, kern.Emitter, accounts, checkTx, kern.txCodec,
-				kern.Logger)
+			kern.Transactor = execution.NewTransactor(kern.Blockchain,
+				kern.Emitter, accounts, checkTx, id, kern.txCodec, kern.Logger)
+
+			accountState := kern.State
+			eventsState := kern.State
+			nameRegState := kern.State
+			nodeRegState := kern.State
+			validatorState := kern.State
+			kern.Service = rpc.NewService(accountState, nameRegState, nodeRegState, kern.Blockchain, validatorState, nodeView, kern.Logger)
+			kern.EthService = web3.NewEthService(accountState, eventsState, kern.Blockchain, validatorState, nodeView, kern.Transactor, kern.keyStore, kern.Logger)
 
 			if err := kern.Node.Start(); err != nil {
 				return nil, fmt.Errorf("%s error starting Tendermint node: %v", errHeader, err)
@@ -184,7 +200,7 @@ func StartupLauncher(kern *Kernel) process.Launcher {
 			logger := kern.Logger.With(
 				"launch_time", start,
 				"burrow_version", project.FullVersion(),
-				"tendermint_version", version.Version,
+				"tendermint_version", version.TMCoreSemVer,
 				"validator_address", nodeView.ValidatorAddress(),
 				"node_id", string(info.ID()),
 				"net_address", netAddress.String(),
@@ -203,7 +219,7 @@ func InfoLauncher(kern *Kernel, conf *rpc.ServerConfig) process.Launcher {
 		Name:    InfoProcessName,
 		Enabled: conf.Enabled,
 		Launch: func() (process.Process, error) {
-			listener, err := process.ListenerFromAddress(fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort))
+			listener, err := process.ListenerFromAddress(conf.ListenAddress())
 			if err != nil {
 				return nil, err
 			}
@@ -220,12 +236,36 @@ func InfoLauncher(kern *Kernel, conf *rpc.ServerConfig) process.Launcher {
 	}
 }
 
+func Web3Launcher(kern *Kernel, conf *rpc.ServerConfig) process.Launcher {
+	return process.Launcher{
+		Name:    Web3ProcessName,
+		Enabled: conf.Enabled,
+		Launch: func() (process.Process, error) {
+			listener, err := process.ListenerFromAddress(fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort))
+			if err != nil {
+				return nil, err
+			}
+			err = kern.registerListener(Web3ProcessName, listener)
+			if err != nil {
+				return nil, err
+			}
+
+			srv, err := server.StartHTTPServer(listener, web3.NewServer(kern.EthService), kern.Logger)
+			if err != nil {
+				return nil, err
+			}
+
+			return srv, nil
+		},
+	}
+}
+
 func MetricsLauncher(kern *Kernel, conf *rpc.MetricsConfig) process.Launcher {
 	return process.Launcher{
 		Name:    MetricsProcessName,
 		Enabled: conf.Enabled,
 		Launch: func() (process.Process, error) {
-			listener, err := process.ListenerFromAddress(fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort))
+			listener, err := process.ListenerFromAddress(conf.ListenAddress())
 			if err != nil {
 				return nil, err
 			}
@@ -253,7 +293,7 @@ func GRPCLauncher(kern *Kernel, conf *rpc.ServerConfig, keyConfig *keys.KeysConf
 				return nil, err
 			}
 
-			listener, err := process.ListenerFromAddress(fmt.Sprintf("%s:%s", conf.ListenHost, conf.ListenPort))
+			listener, err := process.ListenerFromAddress(conf.ListenAddress())
 			if err != nil {
 				return nil, err
 			}
@@ -263,7 +303,7 @@ func GRPCLauncher(kern *Kernel, conf *rpc.ServerConfig, keyConfig *keys.KeysConf
 			}
 
 			grpcServer := rpc.NewGRPCServer(kern.Logger)
-			var ks *keys.KeyStore
+			var ks *keys.FilesystemKeyStore
 			if kern.keyStore != nil {
 				ks = kern.keyStore
 			}
@@ -271,15 +311,12 @@ func GRPCLauncher(kern *Kernel, conf *rpc.ServerConfig, keyConfig *keys.KeysConf
 
 			if keyConfig.GRPCServiceEnabled {
 				if kern.keyStore == nil {
-					ks = keys.NewKeyStore(keyConfig.KeysDirectory, keyConfig.AllowBadFilePermissions)
+					ks = keys.NewFilesystemKeyStore(keyConfig.KeysDirectory, keyConfig.AllowBadFilePermissions)
 				}
 				keys.RegisterKeysServer(grpcServer, ks)
 			}
-
-			nameRegState := kern.State
-			proposalRegState := kern.State
-			rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(kern.State, nameRegState, proposalRegState,
-				kern.Blockchain, kern.State, nodeView, kern.Logger))
+			rpcquery.RegisterQueryServer(grpcServer, rpcquery.NewQueryServer(kern.State, kern.Blockchain, nodeView,
+				kern.Logger))
 
 			txCodec := txs.NewProtobufCodec()
 			rpctransact.RegisterTransactServer(grpcServer,

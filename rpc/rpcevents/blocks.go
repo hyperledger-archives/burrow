@@ -72,10 +72,12 @@ func SingleBlock(height uint64) *BlockRange {
 	return AbsoluteRange(height, height+1)
 }
 
-func ConsumeBlockExecutions(stream ExecutionEvents_StreamClient, consumer func(*exec.BlockExecution) error) error {
+func ConsumeBlockExecutions(stream exec.EventStream, consumer func(*exec.BlockExecution) error,
+	continuityOptions ...exec.ContinuityOpt) error {
 	var be *exec.BlockExecution
 	var err error
-	for be, err = exec.ConsumeBlockExecution(stream); err == nil; be, err = exec.ConsumeBlockExecution(stream) {
+	ba := exec.NewBlockAccumulator(continuityOptions...)
+	for be, err = ba.ConsumeBlockExecution(stream); err == nil; be, err = ba.ConsumeBlockExecution(stream) {
 		err = consumer(be)
 		if err != nil {
 			return err

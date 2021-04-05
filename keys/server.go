@@ -20,14 +20,14 @@ import (
 
 func StandAloneServer(keysDir string, AllowBadFilePermissions bool) *grpc.Server {
 	grpcServer := grpc.NewServer()
-	RegisterKeysServer(grpcServer, NewKeyStore(keysDir, AllowBadFilePermissions))
+	RegisterKeysServer(grpcServer, NewFilesystemKeyStore(keysDir, AllowBadFilePermissions))
 	return grpcServer
 }
 
 //------------------------------------------------------------------------
 // handlers
 
-func (k *KeyStore) GenerateKey(ctx context.Context, in *GenRequest) (*GenResponse, error) {
+func (k *FilesystemKeyStore) GenerateKey(ctx context.Context, in *GenRequest) (*GenResponse, error) {
 	curveT, err := crypto.CurveTypeFromString(in.CurveType)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (k *KeyStore) GenerateKey(ctx context.Context, in *GenRequest) (*GenRespons
 	return &GenResponse{Address: addrH}, nil
 }
 
-func (k *KeyStore) Export(ctx context.Context, in *ExportRequest) (*ExportResponse, error) {
+func (k *FilesystemKeyStore) Export(ctx context.Context, in *ExportRequest) (*ExportResponse, error) {
 	addr, err := getNameAddr(k.keysDirPath, in.GetName(), in.GetAddress())
 
 	if err != nil {
@@ -75,7 +75,7 @@ func (k *KeyStore) Export(ctx context.Context, in *ExportRequest) (*ExportRespon
 	}, nil
 }
 
-func (k *KeyStore) PublicKey(ctx context.Context, in *PubRequest) (*PubResponse, error) {
+func (k *FilesystemKeyStore) PublicKey(ctx context.Context, in *PubRequest) (*PubResponse, error) {
 	addr, err := getNameAddr(k.keysDirPath, in.GetName(), in.GetAddress())
 	if err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (k *KeyStore) PublicKey(ctx context.Context, in *PubRequest) (*PubResponse,
 	return &PubResponse{CurveType: key.CurveType.String(), PublicKey: key.Pubkey()}, nil
 }
 
-func (k *KeyStore) Sign(ctx context.Context, in *SignRequest) (*SignResponse, error) {
+func (k *FilesystemKeyStore) Sign(ctx context.Context, in *SignRequest) (*SignResponse, error) {
 	addr, err := getNameAddr(k.keysDirPath, in.GetName(), in.GetAddress())
 	if err != nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (k *KeyStore) Sign(ctx context.Context, in *SignRequest) (*SignResponse, er
 	return &SignResponse{Signature: sig}, err
 }
 
-func (k *KeyStore) Verify(ctx context.Context, in *VerifyRequest) (*VerifyResponse, error) {
+func (k *FilesystemKeyStore) Verify(ctx context.Context, in *VerifyRequest) (*VerifyResponse, error) {
 	if in.GetPublicKey() == nil {
 		return nil, fmt.Errorf("must provide a pubkey")
 	}
@@ -142,7 +142,7 @@ func (k *KeyStore) Verify(ctx context.Context, in *VerifyRequest) (*VerifyRespon
 	return &VerifyResponse{}, nil
 }
 
-func (k *KeyStore) Hash(ctx context.Context, in *HashRequest) (*HashResponse, error) {
+func (k *FilesystemKeyStore) Hash(ctx context.Context, in *HashRequest) (*HashResponse, error) {
 	var hasher hash.Hash
 	switch in.GetHashtype() {
 	case "ripemd160":
@@ -159,9 +159,9 @@ func (k *KeyStore) Hash(ctx context.Context, in *HashRequest) (*HashResponse, er
 	return &HashResponse{Hash: hex.EncodeUpperToString(hasher.Sum(nil))}, nil
 }
 
-func (k *KeyStore) ImportJSON(ctx context.Context, in *ImportJSONRequest) (*ImportResponse, error) {
+func (k *FilesystemKeyStore) ImportJSON(ctx context.Context, in *ImportJSONRequest) (*ImportResponse, error) {
 	keyJSON := []byte(in.GetJSON())
-	addr := IsValidKeyJson(keyJSON)
+	addr := isValidKeyJson(keyJSON)
 	if addr != nil {
 		_, err := writeKey(k.keysDirPath, addr, keyJSON)
 		if err != nil {
@@ -209,7 +209,7 @@ func (k *KeyStore) ImportJSON(ctx context.Context, in *ImportJSONRequest) (*Impo
 	return &ImportResponse{Address: hex.EncodeUpperToString(addr)}, nil
 }
 
-func (k *KeyStore) Import(ctx context.Context, in *ImportRequest) (*ImportResponse, error) {
+func (k *FilesystemKeyStore) Import(ctx context.Context, in *ImportRequest) (*ImportResponse, error) {
 	curveT, err := crypto.CurveTypeFromString(in.GetCurveType())
 	if err != nil {
 		return nil, err
@@ -232,7 +232,7 @@ func (k *KeyStore) Import(ctx context.Context, in *ImportRequest) (*ImportRespon
 	return &ImportResponse{Address: hex.EncodeUpperToString(key.Address[:])}, nil
 }
 
-func (k *KeyStore) List(ctx context.Context, in *ListRequest) (*ListResponse, error) {
+func (k *FilesystemKeyStore) List(ctx context.Context, in *ListRequest) (*ListResponse, error) {
 	byname, err := coreNameList(k.keysDirPath)
 	if err != nil {
 		return nil, err
@@ -259,7 +259,7 @@ func (k *KeyStore) List(ctx context.Context, in *ListRequest) (*ListResponse, er
 		if err != nil {
 			return nil, err
 		}
-		addrs, err := GetAllAddresses(datadir)
+		addrs, err := getAllAddresses(datadir)
 		if err != nil {
 			return nil, err
 		}
@@ -284,7 +284,7 @@ func getAddressNames(address string, byname map[string]string) []string {
 	return names
 }
 
-func (k *KeyStore) RemoveName(ctx context.Context, in *RemoveNameRequest) (*RemoveNameResponse, error) {
+func (k *FilesystemKeyStore) RemoveName(ctx context.Context, in *RemoveNameRequest) (*RemoveNameResponse, error) {
 	if in.GetKeyName() == "" {
 		return nil, fmt.Errorf("please specify a name")
 	}
@@ -292,7 +292,7 @@ func (k *KeyStore) RemoveName(ctx context.Context, in *RemoveNameRequest) (*Remo
 	return &RemoveNameResponse{}, coreNameRm(k.keysDirPath, in.GetKeyName())
 }
 
-func (k *KeyStore) AddName(ctx context.Context, in *AddNameRequest) (*AddNameResponse, error) {
+func (k *FilesystemKeyStore) AddName(ctx context.Context, in *AddNameRequest) (*AddNameResponse, error) {
 	if in.GetKeyname() == "" {
 		return nil, fmt.Errorf("please specify a name")
 	}

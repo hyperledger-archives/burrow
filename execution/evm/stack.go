@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package evm
 
@@ -18,6 +7,8 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+
+	"github.com/hyperledger/burrow/execution/engine"
 
 	. "github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
@@ -30,11 +21,11 @@ type Stack struct {
 	maxCapacity uint64
 	ptr         int
 
-	gas     *uint64
+	gas     *big.Int
 	errSink errors.Sink
 }
 
-func NewStack(initialCapacity uint64, maxCapacity uint64, gas *uint64, errSink errors.Sink) *Stack {
+func NewStack(errSink errors.Sink, initialCapacity uint64, maxCapacity uint64, gas *big.Int) *Stack {
 	return &Stack{
 		slice:       make([]Word256, initialCapacity),
 		ptr:         0,
@@ -44,27 +35,25 @@ func NewStack(initialCapacity uint64, maxCapacity uint64, gas *uint64, errSink e
 	}
 }
 
-func (st *Stack) useGas(gasToUse uint64) {
-	if *st.gas > gasToUse {
-		*st.gas -= gasToUse
-	} else {
-		st.pushErr(errors.ErrorCodeInsufficientGas)
-	}
-}
-
-func (st *Stack) pushErr(err errors.CodedError) {
-	st.errSink.PushError(err)
-}
-
 func (st *Stack) Push(d Word256) {
-	st.useGas(GasStackOp)
+	st.useGas(engine.GasStackOp)
 	err := st.ensureCapacity(uint64(st.ptr) + 1)
 	if err != nil {
-		st.pushErr(errors.ErrorCodeDataStackOverflow)
+		st.pushErr(errors.Codes.DataStackOverflow)
 		return
 	}
 	st.slice[st.ptr] = d
 	st.ptr++
+}
+
+func (st *Stack) Pop() Word256 {
+	st.useGas(engine.GasStackOp)
+	if st.ptr == 0 {
+		st.pushErr(errors.Codes.DataStackUnderflow)
+		return Zero256
+	}
+	st.ptr--
+	return st.slice[st.ptr]
 }
 
 // currently only called after sha3.Sha3
@@ -79,12 +68,17 @@ func (st *Stack) PushAddress(address crypto.Address) {
 	st.Push(address.Word256())
 }
 
-func (st *Stack) Push64(i int64) {
-	st.Push(Int64ToWord256(i))
+func (st *Stack) Push64(i uint64) {
+	st.Push(Uint64ToWord256(i))
 }
 
-func (st *Stack) PushU64(i uint64) {
-	st.Push(Uint64ToWord256(i))
+func (st *Stack) Pop64() uint64 {
+	d := st.Pop()
+	if Is64BitOverflow(d) {
+		st.pushErr(errors.Errorf(errors.Codes.IntegerOverflow, "uint64 overflow from word: %v", d))
+		return 0
+	}
+	return Uint64FromWord256(d)
 }
 
 // Pushes the bigInt as a Word256 encoding negative values in 32-byte twos complement and returns the encoded result
@@ -92,44 +86,6 @@ func (st *Stack) PushBigInt(bigInt *big.Int) Word256 {
 	word := LeftPadWord256(U256(bigInt).Bytes())
 	st.Push(word)
 	return word
-}
-
-// Pops
-
-func (st *Stack) Pop() Word256 {
-	st.useGas(GasStackOp)
-	if st.ptr == 0 {
-		st.pushErr(errors.ErrorCodeDataStackUnderflow)
-		return Zero256
-	}
-	st.ptr--
-	return st.slice[st.ptr]
-}
-
-func (st *Stack) PopBytes() []byte {
-	return st.Pop().Bytes()
-}
-
-func (st *Stack) PopAddress() crypto.Address {
-	return crypto.AddressFromWord256(st.Pop())
-}
-
-func (st *Stack) Pop64() int64 {
-	d := st.Pop()
-	if Is64BitOverflow(d) {
-		st.pushErr(errors.ErrorCodef(errors.ErrorCodeIntegerOverflow, "int64 overflow from word: %v", d))
-		return 0
-	}
-	return Int64FromWord256(d)
-}
-
-func (st *Stack) PopU64() uint64 {
-	d := st.Pop()
-	if Is64BitOverflow(d) {
-		st.pushErr(errors.ErrorCodef(errors.ErrorCodeIntegerOverflow, "uint64 overflow from word: %v", d))
-		return 0
-	}
-	return Uint64FromWord256(d)
 }
 
 func (st *Stack) PopBigIntSigned() *big.Int {
@@ -141,23 +97,31 @@ func (st *Stack) PopBigInt() *big.Int {
 	return new(big.Int).SetBytes(d[:])
 }
 
+func (st *Stack) PopBytes() []byte {
+	return st.Pop().Bytes()
+}
+
+func (st *Stack) PopAddress() crypto.Address {
+	return crypto.AddressFromWord256(st.Pop())
+}
+
 func (st *Stack) Len() int {
 	return st.ptr
 }
 
 func (st *Stack) Swap(n int) {
-	st.useGas(GasStackOp)
+	st.useGas(engine.GasStackOp)
 	if st.ptr < n {
-		st.pushErr(errors.ErrorCodeDataStackUnderflow)
+		st.pushErr(errors.Codes.DataStackUnderflow)
 		return
 	}
 	st.slice[st.ptr-n], st.slice[st.ptr-1] = st.slice[st.ptr-1], st.slice[st.ptr-n]
 }
 
 func (st *Stack) Dup(n int) {
-	st.useGas(GasStackOp)
+	st.useGas(engine.GasStackOp)
 	if st.ptr < n {
-		st.pushErr(errors.ErrorCodeDataStackUnderflow)
+		st.pushErr(errors.Codes.DataStackUnderflow)
 		return
 	}
 	st.Push(st.slice[st.ptr-n])
@@ -166,7 +130,7 @@ func (st *Stack) Dup(n int) {
 // Not an opcode, costs no gas.
 func (st *Stack) Peek() Word256 {
 	if st.ptr == 0 {
-		st.pushErr(errors.ErrorCodeDataStackUnderflow)
+		st.pushErr(errors.Codes.DataStackUnderflow)
 		return Zero256
 	}
 	return st.slice[st.ptr-1]
@@ -231,4 +195,12 @@ func (st *Stack) ensureCapacity(newCapacity uint64) error {
 	// just re-slice (even if len(mem.slice) < newCapacity)
 	st.slice = st.slice[:newCapacity]
 	return nil
+}
+
+func (st *Stack) useGas(gasToUse uint64) {
+	st.pushErr(engine.UseGasNegative(st.gas, gasToUse))
+}
+
+func (st *Stack) pushErr(err errors.CodedError) {
+	st.errSink.PushError(err)
 }

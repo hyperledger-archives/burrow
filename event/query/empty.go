@@ -13,7 +13,7 @@ func (Empty) Matches(tags Tagged) bool {
 }
 
 func (Empty) String() string {
-	return "empty"
+	return ""
 }
 
 func (Empty) Query() (Query, error) {

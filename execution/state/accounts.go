@@ -16,8 +16,10 @@ func (s *ReadState) GetAccount(address crypto.Address) (*acm.Account, error) {
 	if err != nil {
 		return nil, err
 	}
-	accBytes := tree.Get(keys.Account.KeyNoPrefix(address))
-	if accBytes == nil {
+	accBytes, err := tree.Get(keys.Account.KeyNoPrefix(address))
+	if err != nil {
+		return nil, err
+	} else if accBytes == nil {
 		return nil, nil
 	}
 	account := new(acm.Account)
@@ -116,7 +118,7 @@ func (s *ReadState) GetStorage(address crypto.Address, key binary.Word256) ([]by
 	if err != nil {
 		return []byte{}, err
 	}
-	return tree.Get(keyFormat.KeyNoPrefix(key)), nil
+	return tree.Get(keyFormat.KeyNoPrefix(key))
 }
 
 func (ws *writeState) SetStorage(address crypto.Address, key binary.Word256, value []byte) error {
@@ -149,13 +151,13 @@ func (s *ReadState) IterateStorage(address crypto.Address, consumer func(key bin
 	return tree.Iterate(nil, nil, true,
 		func(key []byte, value []byte) error {
 
-			if len(key) != binary.Word256Length {
+			if len(key) != binary.Word256Bytes {
 				return fmt.Errorf("key '%X' stored for account %s is not a %v-byte word",
-					key, address, binary.Word256Length)
+					key, address, binary.Word256Bytes)
 			}
-			if len(value) != binary.Word256Length {
+			if len(value) != binary.Word256Bytes {
 				return fmt.Errorf("value '%X' stored for account %s is not a %v-byte word",
-					key, address, binary.Word256Length)
+					key, address, binary.Word256Bytes)
 			}
 			return consumer(binary.LeftPadWord256(key), value)
 		})

@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package proposal
 
@@ -24,7 +13,7 @@ import (
 	"github.com/hyperledger/burrow/txs/payload"
 )
 
-// The Cache helps prevent unnecessary IAVLTree updates and garbage generation.
+// Cache helps prevent unnecessary IAVLTree updates and garbage generation.
 type Cache struct {
 	sync.RWMutex
 	backend   Reader
@@ -63,8 +52,7 @@ func (p ProposalHashArray) Less(i, j int) bool {
 
 var _ Writer = &Cache{}
 
-// Returns a Cache that wraps an underlying NameRegCacheGetter to use on a cache miss, can write to an
-// output Writer via Sync.
+// Returns a Cache, can write to an output Writer via Sync.
 // Not goroutine safe, use syncStateCache if you need concurrent access
 func NewCache(backend Reader) *Cache {
 	return &Cache{
@@ -117,19 +105,17 @@ func (cache *Cache) RemoveProposal(proposalHash []byte) error {
 }
 
 // Writes whatever is in the cache to the output Writer state. Does not flush the cache, to do that call Reset()
-// after Sync or use Flusth if your wish to use the output state as your next backend
+// after Sync or use Flush if your wish to use the output state as your next backend
 func (cache *Cache) Sync(state Writer) error {
 	cache.Lock()
 	defer cache.Unlock()
-	// Determine order for names
-	// note names may be of any length less than some limit
 	var hashes ProposalHashArray
 	for hash := range cache.proposals {
 		hashes = append(hashes, hash)
 	}
 	sort.Stable(hashes)
 
-	// Update or delete names.
+	// Update or delete proposals
 	for _, hash := range hashes {
 		proposalInfo := cache.proposals[hash]
 		proposalInfo.RLock()
@@ -151,22 +137,12 @@ func (cache *Cache) Sync(state Writer) error {
 	return nil
 }
 
-// Resets the cache to empty initialising the backing map to the same size as the previous iteration.
+// Resets the cache to empty initialising the backing map to the same size as the previous iteration
 func (cache *Cache) Reset(backend Reader) {
 	cache.Lock()
 	defer cache.Unlock()
 	cache.backend = backend
 	cache.proposals = make(map[[sha256.Size]byte]*proposalInfo)
-}
-
-// Syncs the Cache and Resets it to use Writer as the backend Reader
-func (cache *Cache) Flush(output Writer, backend Reader) error {
-	err := cache.Sync(output)
-	if err != nil {
-		return err
-	}
-	cache.Reset(backend)
-	return nil
 }
 
 func (cache *Cache) Backend() Reader {

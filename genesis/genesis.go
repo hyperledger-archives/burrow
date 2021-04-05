@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package genesis
 
@@ -40,7 +29,7 @@ const ShortHashSuffixBytes = 3
 type BasicAccount struct {
 	// Address is convenient to have in file for reference, but otherwise ignored since derived from PublicKey
 	Address   crypto.Address
-	PublicKey crypto.PublicKey
+	PublicKey *crypto.PublicKey
 	Amount    uint64
 }
 
@@ -65,8 +54,10 @@ type params struct {
 }
 
 type GenesisDoc struct {
-	GenesisTime       time.Time
-	ChainName         string
+	GenesisTime time.Time
+	ChainName   string
+	// Ordinarily we derive this from the genesis hash but to support explicit Ethereum ChainID it may be set
+	ChainID           string          `json:",omitempty" toml:",omitempty"`
 	AppHash           binary.HexBytes `json:",omitempty" toml:",omitempty"`
 	Params            params          `json:",omitempty" toml:",omitempty"`
 	Salt              []byte          `json:",omitempty" toml:",omitempty"`
@@ -74,8 +65,8 @@ type GenesisDoc struct {
 	Accounts          []Account
 	Validators        []Validator
 	// memo
-	hash    []byte
 	chainID string
+	hash    []byte
 }
 
 func (genesisDoc *GenesisDoc) GlobalPermissionsAccount() *acm.Account {
@@ -108,7 +99,7 @@ func (genesisDoc *GenesisDoc) JSONBytes() ([]byte, error) {
 	return json.MarshalIndent(genesisDoc, "", "\t")
 }
 
-func (genesisDoc *GenesisDoc) Hash() []byte {
+func (genesisDoc *GenesisDoc) Hash() binary.HexBytes {
 	if genesisDoc.hash != nil {
 		return genesisDoc.hash
 	}
@@ -126,9 +117,14 @@ func (genesisDoc *GenesisDoc) ShortHash() []byte {
 	return genesisDoc.Hash()[:ShortHashSuffixBytes]
 }
 
-func (genesisDoc *GenesisDoc) ChainID() string {
+func (genesisDoc *GenesisDoc) GetChainID() string {
 	if genesisDoc.chainID == "" {
-		genesisDoc.chainID = fmt.Sprintf("%s-%X", genesisDoc.ChainName, genesisDoc.ShortHash())
+		// Prefer explicit override ChainID
+		if genesisDoc.ChainID != "" {
+			genesisDoc.chainID = genesisDoc.ChainID
+		} else {
+			genesisDoc.chainID = fmt.Sprintf("%s-%X", genesisDoc.ChainName, genesisDoc.ShortHash())
+		}
 	}
 	return genesisDoc.chainID
 }

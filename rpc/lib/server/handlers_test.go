@@ -71,7 +71,7 @@ func TestRPCParams(t *testing.T) {
 		} else {
 			assert.True(t, recv.Error.Code < 0, "#%d: not expecting a positive JSONRPC code", i)
 			// The wanted error is either in the message or the data
-			assert.Contains(t, recv.Error.Message+recv.Error.Data, tt.wantErr, "#%d: expected substring", i)
+			assert.Contains(t, recv.Error.Message+string(recv.Error.Data), tt.wantErr, "#%d: expected substring", i)
 		}
 	}
 }

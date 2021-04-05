@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package acmstate
 
@@ -30,7 +19,6 @@ type Cache struct {
 	name     string
 	backend  Reader
 	accounts map[crypto.Address]*accountInfo
-	metadata map[MetadataHash]*metadataInfo
 	readonly bool
 }
 
@@ -42,11 +30,6 @@ type accountInfo struct {
 	updated bool
 }
 
-type metadataInfo struct {
-	metadata string
-	updated  bool
-}
-
 type CacheOption func(*Cache) *Cache
 
 // Returns a Cache that wraps an underlying Reader to use on a cache miss, can write to an output Writer
@@ -55,7 +38,6 @@ func NewCache(backend Reader, options ...CacheOption) *Cache {
 	cache := &Cache{
 		backend:  backend,
 		accounts: make(map[crypto.Address]*accountInfo),
-		metadata: make(map[MetadataHash]*metadataInfo),
 	}
 	for _, option := range options {
 		option(cache)
@@ -90,10 +72,10 @@ func (cache *Cache) GetAccount(address crypto.Address) (*acm.Account, error) {
 
 func (cache *Cache) UpdateAccount(account *acm.Account) error {
 	if account == nil {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "UpdateAccount called with nil account")
+		return errors.Errorf(errors.Codes.IllegalWrite, "UpdateAccount called with nil account")
 	}
 	if cache.readonly {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+		return errors.Errorf(errors.Codes.IllegalWrite,
 			"UpdateAccount called in a read-only context on account %v", account.GetAddress())
 	}
 	accInfo, err := cache.get(account.GetAddress())
@@ -103,38 +85,16 @@ func (cache *Cache) UpdateAccount(account *acm.Account) error {
 	accInfo.Lock()
 	defer accInfo.Unlock()
 	if accInfo.removed {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "UpdateAccount on a removed account: %s", account.GetAddress())
+		return errors.Errorf(errors.Codes.IllegalWrite, "UpdateAccount on a removed account: %s", account.GetAddress())
 	}
 	accInfo.account = account.Copy()
 	accInfo.updated = true
 	return nil
 }
 
-func (cache *Cache) GetMetadata(metahash MetadataHash) (string, error) {
-	metaInfo, err := cache.getMetadata(metahash)
-	if err != nil {
-		return "", err
-	}
-
-	return metaInfo.metadata, nil
-}
-
-func (cache *Cache) SetMetadata(metahash MetadataHash, metadata string) error {
-	if cache.readonly {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "SetMetadata called in read-only context on metadata hash: %v", metahash)
-	}
-
-	cache.Lock()
-	defer cache.Unlock()
-
-	cache.metadata[metahash] = &metadataInfo{updated: true, metadata: metadata}
-
-	return nil
-}
-
 func (cache *Cache) RemoveAccount(address crypto.Address) error {
 	if cache.readonly {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "RemoveAccount called on read-only account %v", address)
+		return errors.Errorf(errors.Codes.IllegalWrite, "RemoveAccount called on read-only account %v", address)
 	}
 	accInfo, err := cache.get(address)
 	if err != nil {
@@ -191,12 +151,12 @@ func (cache *Cache) GetStorage(address crypto.Address, key binary.Word256) ([]by
 // NOTE: Set value to zero to remove.
 func (cache *Cache) SetStorage(address crypto.Address, key binary.Word256, value []byte) error {
 	if cache.readonly {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+		return errors.Errorf(errors.Codes.IllegalWrite,
 			"SetStorage called in a read-only context on account %v", address)
 	}
 	accInfo, err := cache.get(address)
 	if accInfo.account == nil {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite,
+		return errors.Errorf(errors.Codes.IllegalWrite,
 			"SetStorage called on an account that does not exist: %v", address)
 	}
 	accInfo.Lock()
@@ -205,7 +165,7 @@ func (cache *Cache) SetStorage(address crypto.Address, key binary.Word256, value
 		return err
 	}
 	if accInfo.removed {
-		return errors.ErrorCodef(errors.ErrorCodeIllegalWrite, "SetStorage on a removed account: %s", address)
+		return errors.Errorf(errors.Codes.IllegalWrite, "SetStorage on a removed account: %s", address)
 	}
 	accInfo.storage[key] = value
 	accInfo.updated = true
@@ -279,14 +239,6 @@ func (cache *Cache) Sync(st Writer) error {
 		accInfo.RUnlock()
 	}
 
-	for metahash, metadataInfo := range cache.metadata {
-		if metadataInfo.updated {
-			err := st.SetMetadata(metahash, metadataInfo.metadata)
-			if err != nil {
-				return err
-			}
-		}
-	}
 	return nil
 }
 
@@ -296,16 +248,6 @@ func (cache *Cache) Reset(backend Reader) {
 	defer cache.Unlock()
 	cache.backend = backend
 	cache.accounts = make(map[crypto.Address]*accountInfo, len(cache.accounts))
-}
-
-// Syncs the Cache to output and Resets it to use backend as Reader
-func (cache *Cache) Flush(output Writer, backend Reader) error {
-	err := cache.Sync(output)
-	if err != nil {
-		return err
-	}
-	cache.Reset(backend)
-	return nil
 }
 
 func (cache *Cache) String() string {
@@ -337,27 +279,4 @@ func (cache *Cache) get(address crypto.Address) (*accountInfo, error) {
 		}
 	}
 	return accInfo, nil
-}
-
-// Get the cache accountInfo item creating it if necessary
-func (cache *Cache) getMetadata(metahash MetadataHash) (*metadataInfo, error) {
-	cache.RLock()
-	metaInfo := cache.metadata[metahash]
-	cache.RUnlock()
-	if metaInfo == nil {
-		cache.Lock()
-		defer cache.Unlock()
-		metaInfo = cache.metadata[metahash]
-		if metaInfo == nil {
-			metadata, err := cache.backend.GetMetadata(metahash)
-			if err != nil {
-				return nil, err
-			}
-			metaInfo = &metadataInfo{
-				metadata: metadata,
-			}
-			cache.metadata[metahash] = metaInfo
-		}
-	}
-	return metaInfo, nil
 }

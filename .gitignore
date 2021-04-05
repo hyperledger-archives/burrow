@@ -23,3 +23,8 @@ tests/keys/
 .output.json
 vendor/
 node_modules
+js/dist
+
+helm/package
+build/
+.pid

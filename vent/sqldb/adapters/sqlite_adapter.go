@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger/burrow/vent/types"
 	"github.com/jmoiron/sqlx"
 	sqlite3 "github.com/mattn/go-sqlite3"
+	"github.com/pkg/errors"
 )
 
 var sqliteDataTypes = map[types.SQLColumnType]string{
@@ -225,20 +226,21 @@ func (sla *SQLiteAdapter) InsertLogQuery() string {
 
 // ErrorEquals verify if an error is of a given SQL type
 func (sla *SQLiteAdapter) ErrorEquals(err error, sqlErrorType types.SQLErrorType) bool {
-	if err, ok := err.(sqlite3.Error); ok {
+	slErr := new(sqlite3.Error)
+	if errors.As(err, slErr) {
 		errDescription := err.Error()
 
 		switch sqlErrorType {
 		case types.SQLErrorTypeGeneric:
 			return true
 		case types.SQLErrorTypeDuplicatedColumn:
-			return err.Code == 1 && strings.Contains(errDescription, "duplicate column")
+			return slErr.Code == 1 && strings.Contains(errDescription, "duplicate column")
 		case types.SQLErrorTypeDuplicatedTable:
-			return err.Code == 1 && strings.Contains(errDescription, "table") && strings.Contains(errDescription, "already exists")
+			return slErr.Code == 1 && strings.Contains(errDescription, "table") && strings.Contains(errDescription, "already exists")
 		case types.SQLErrorTypeUndefinedTable:
-			return err.Code == 1 && strings.Contains(errDescription, "no such table")
+			return slErr.Code == 1 && strings.Contains(errDescription, "no such table")
 		case types.SQLErrorTypeUndefinedColumn:
-			return err.Code == 1 && strings.Contains(errDescription, "table") && strings.Contains(errDescription, "has no column named")
+			return slErr.Code == 1 && strings.Contains(errDescription, "table") && strings.Contains(errDescription, "has no column named")
 		case types.SQLErrorTypeInvalidType:
 			// NOT SUPPORTED
 			return false

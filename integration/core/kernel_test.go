@@ -11,19 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger/burrow/logging/loggers"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/hyperledger/burrow/acm"
-	"github.com/hyperledger/burrow/governance"
-
 	"github.com/hyperledger/burrow/acm/balance"
-	"github.com/hyperledger/burrow/rpc/rpctransact"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/hyperledger/burrow/config"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution/exec"
@@ -32,9 +21,14 @@ import (
 	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/integration/rpctest"
 	"github.com/hyperledger/burrow/keys"
-	"github.com/hyperledger/burrow/keys/mock"
 	"github.com/hyperledger/burrow/logging/logconfig"
+	"github.com/hyperledger/burrow/logging/loggers"
+	"github.com/hyperledger/burrow/rpc/rpctransact"
 	"github.com/hyperledger/burrow/txs/payload"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestKernel(t *testing.T) {
@@ -56,7 +50,7 @@ func testKernel(t *testing.T, opts ...func(*config.BurrowConfig)) {
 			defer cleanup()
 			require.NotNil(t, privateAccounts)
 			require.NotNil(t, privateValidators)
-			assert.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, conf, nil, nil))
+			assert.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, conf, nil))
 		})
 
 		t.Run("BootShutdownResume", func(t *testing.T) {
@@ -79,14 +73,14 @@ func testKernel(t *testing.T, opts ...func(*config.BurrowConfig)) {
 				return true
 			}
 			// First run
-			err := bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, testConfig, nil, blockChecker)
+			err := bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, testConfig, blockChecker)
 			require.NoError(t, err)
 			// Resume and check we pick up where we left off
-			err = bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, testConfig, nil, blockChecker)
+			err = bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, testConfig, blockChecker)
 			require.NoError(t, err)
 			// Resuming with mismatched genesis should fail
 			genesisDoc.Salt = []byte("foo")
-			err = bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, testConfig, nil, blockChecker)
+			err = bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, testConfig, blockChecker)
 			assert.Error(t, err)
 		})
 
@@ -96,14 +90,14 @@ func testKernel(t *testing.T, opts ...func(*config.BurrowConfig)) {
 			name := "capture"
 			buffer := 100
 			path := "foo.json"
-			logging := logconfig.New().
+			conf.Logging = logconfig.New().
 				Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
 					return sink.SetTransform(logconfig.CaptureTransform(name, buffer, false)).
 						SetOutput(logconfig.FileOutput(path).SetFormat(loggers.JSONFormat))
 				})
 			i := 0
 			gap := 1
-			assert.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, conf, logging,
+			assert.NoError(t, bootWaitBlocksShutdown(t, privateValidators[0], privateAccounts, conf,
 				func(block *exec.BlockExecution) (cont bool) {
 					if i == gap {
 						// Send sync signal
@@ -134,16 +128,15 @@ func testKernel(t *testing.T, opts ...func(*config.BurrowConfig)) {
 }
 
 func bootWaitBlocksShutdown(t testing.TB, validator *acm.PrivateAccount, privateAccounts []*acm.PrivateAccount,
-	testConfig *config.BurrowConfig, logging *logconfig.LoggingConfig,
-	blockChecker func(block *exec.BlockExecution) (cont bool)) error {
+	testConfig *config.BurrowConfig, blockChecker func(block *exec.BlockExecution) (cont bool)) error {
 
-	kern, err := integration.TestKernel(validator, rpctest.PrivateAccounts, testConfig, logging)
+	kern, err := integration.TestKernel(validator, rpctest.PrivateAccounts, testConfig)
 	if err != nil {
 		return err
 	}
 
-	kern.SetKeyClient(mock.NewKeyClient(privateAccounts...))
-	kern.SetKeyStore(keys.NewKeyStore(keys.DefaultKeysDir, false))
+	kern.SetKeyClient(keys.NewLocalKeyClient(keys.NewMemoryKeyStore(privateAccounts...), kern.Logger))
+	kern.SetKeyStore(keys.NewFilesystemKeyStore(keys.DefaultKeysDir, false))
 	ctx := context.Background()
 	if err = kern.Boot(); err != nil {
 		return err
@@ -181,7 +174,7 @@ func bootWaitBlocksShutdown(t testing.TB, validator *acm.PrivateAccount, private
 
 			txe, err = tcli.BroadcastTxSync(ctx, &rpctransact.TxEnvelopeParam{
 				Payload: &payload.Any{
-					GovTx: governance.AlterBalanceTx(inputAddress, validator, balance.New().Power(pow)),
+					GovTx: payload.AlterBalanceTx(inputAddress, validator, balance.New().Power(pow)),
 				},
 			})
 			handleTxe(txe, err, errCh)

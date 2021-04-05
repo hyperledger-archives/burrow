@@ -7,7 +7,7 @@ import (
 	"github.com/hyperledger/burrow/crypto"
 )
 
-// Ring stores the validator power history in buckets as a riNng buffer. The primary storage is a the difference between
+// Ring stores the validator power history in buckets as a ring buffer. The primary storage is a the difference between
 // each rotation (commit - i.e. block) in 'delta' and the cumulative result of each delta in cum, where the result of
 // the delta at i is stored in the cum at i+1. For example suppose we have 4 buckets then graphically:
 //
@@ -63,7 +63,7 @@ func (vc *Ring) GetPower(id crypto.Address) *big.Int {
 	return vc.Head().Previous.GetPower(id)
 }
 
-func (vc *Ring) SetPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
+func (vc *Ring) SetPower(id *crypto.PublicKey, power *big.Int) (*big.Int, error) {
 	return vc.Head().SetPower(id, power)
 }
 

@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package state
 
@@ -18,6 +7,8 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"sync"
+
+	"github.com/hyperledger/burrow/execution/registry"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
@@ -57,6 +48,7 @@ type KeyFormatStore struct {
 	Proposal  *storage.MustKeyFormat
 	Validator *storage.MustKeyFormat
 	Event     *storage.MustKeyFormat
+	Registry  *storage.MustKeyFormat
 	TxHash    *storage.MustKeyFormat
 	Abi       *storage.MustKeyFormat
 }
@@ -66,7 +58,7 @@ var keys = KeyFormatStore{
 	// AccountAddress -> Account
 	Account: storage.NewMustKeyFormat("a", crypto.AddressLength),
 	// AccountAddress, Key -> Value
-	Storage: storage.NewMustKeyFormat("s", crypto.AddressLength, binary.Word256Length),
+	Storage: storage.NewMustKeyFormat("s", crypto.AddressLength, binary.Word256Bytes),
 	// Name -> Entry
 	Name: storage.NewMustKeyFormat("n", storage.VariadicSegmentLength),
 	// ProposalHash -> Proposal
@@ -75,6 +67,8 @@ var keys = KeyFormatStore{
 	Validator: storage.NewMustKeyFormat("v", crypto.AddressLength),
 	// Height -> StreamEvent
 	Event: storage.NewMustKeyFormat("e", uint64Length),
+	// Validator -> NodeIdentity
+	Registry: storage.NewMustKeyFormat("r", crypto.AddressLength),
 
 	// Stored on the plain
 	// TxHash -> TxHeight, TxIndex
@@ -97,7 +91,9 @@ type Updatable interface {
 	acmstate.Writer
 	names.Writer
 	proposal.Writer
+	registry.Writer
 	validator.Writer
+	acmstate.MetadataWriter
 	AddBlock(blockExecution *exec.BlockExecution) error
 }
 
@@ -105,8 +101,9 @@ type Updatable interface {
 type writeState struct {
 	forest       *storage.MutableForest
 	plain        *storage.PrefixDB
-	accountStats acmstate.AccountStats
 	ring         *validator.Ring
+	accountStats acmstate.AccountStats
+	nodeStats    registry.NodeStats
 }
 
 type ReadState struct {
@@ -124,7 +121,7 @@ type State struct {
 	logger     *logging.Logger
 }
 
-// Create a new State object
+// NewState creates a new State object
 func NewState(db dbm.DB) *State {
 	forest, err := storage.NewMutableForest(storage.NewPrefixDB(db, forestPrefix), defaultCacheCapacity)
 	if err != nil {
@@ -141,9 +138,10 @@ func NewState(db dbm.DB) *State {
 			History: ring,
 		},
 		writeState: writeState{
-			forest: forest,
-			plain:  plain,
-			ring:   ring,
+			forest:    forest,
+			plain:     plain,
+			ring:      ring,
+			nodeStats: registry.NewNodeStats(),
 		},
 		logger: logging.NewNoopLogger(),
 	}
@@ -200,18 +198,18 @@ func LoadState(db dbm.DB, version int64) (*State, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not load MutableForest at version %d: %v", version, err)
 	}
+
 	// Populate stats. If this starts taking too long, store the value rather than the full scan at startup
-	err = s.IterateAccounts(func(acc *acm.Account) error {
-		if len(acc.EVMCode) > 0 || len(acc.WASMCode) > 0 {
-			s.writeState.accountStats.AccountsWithCode++
-		} else {
-			s.writeState.accountStats.AccountsWithoutCode++
-		}
-		return nil
-	})
+	err = s.loadAccountStats()
 	if err != nil {
 		return nil, err
 	}
+
+	err = s.loadNodeStats()
+	if err != nil {
+		return nil, err
+	}
+
 	// load the validator ring
 	ring, err := LoadValidatorRing(version, DefaultValidatorsWindowSize, s.writeState.forest.GetImmutable)
 	if err != nil {
@@ -221,6 +219,24 @@ func LoadState(db dbm.DB, version int64) (*State, error) {
 	s.ReadState.History = ring
 
 	return s, nil
+}
+
+func (s *State) loadAccountStats() error {
+	return s.IterateAccounts(func(acc *acm.Account) error {
+		if len(acc.EVMCode) > 0 || len(acc.WASMCode) > 0 {
+			s.writeState.accountStats.AccountsWithCode++
+		} else {
+			s.writeState.accountStats.AccountsWithoutCode++
+		}
+		return nil
+	})
+}
+
+func (s *State) loadNodeStats() error {
+	return s.IterateNodes(func(id crypto.Address, node *registry.NodeIdentity) error {
+		s.writeState.nodeStats.Addresses[node.GetNetworkAddress()][id] = struct{}{}
+		return nil
+	})
 }
 
 func (s *State) Version() int64 {

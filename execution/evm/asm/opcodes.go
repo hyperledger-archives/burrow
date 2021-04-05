@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package asm
 
@@ -82,8 +71,9 @@ const (
 	COINBASE
 	TIMESTAMP
 	BLOCKHEIGHT
-	DIFFICULTY_DEPRECATED
+	DIFFICULTY
 	GASLIMIT
+	CHAINID
 )
 
 const (
@@ -185,10 +175,10 @@ const (
 	CALLCODE
 	RETURN
 	DELEGATECALL
+	CREATE2
 
 	// 0x70 range - other
 	STATICCALL   = 0xfa
-	CREATE2      = 0xfb
 	REVERT       = 0xfd
 	INVALID      = 0xfe
 	SELFDESTRUCT = 0xff
@@ -247,12 +237,13 @@ var opCodeNames = map[OpCode]string{
 	EXTCODEHASH:         "EXTCODEHASH",
 
 	// 0x40 range - block operations
-	BLOCKHASH:             "BLOCKHASH",
-	COINBASE:              "COINBASE",
-	TIMESTAMP:             "TIMESTAMP",
-	BLOCKHEIGHT:           "BLOCKHEIGHT",
-	DIFFICULTY_DEPRECATED: "DIFFICULTY_DEPRECATED",
-	GASLIMIT:              "GASLIMIT",
+	BLOCKHASH:   "BLOCKHASH",
+	COINBASE:    "COINBASE",
+	TIMESTAMP:   "TIMESTAMP",
+	BLOCKHEIGHT: "BLOCKHEIGHT",
+	DIFFICULTY:  "DIFFICULTY",
+	GASLIMIT:    "GASLIMIT",
+	CHAINID:     "CHAINID",
 
 	// 0x50 range - 'storage' and execution
 	POP:      "POP",
@@ -347,9 +338,9 @@ var opCodeNames = map[OpCode]string{
 	RETURN:       "RETURN",
 	CALLCODE:     "CALLCODE",
 	DELEGATECALL: "DELEGATECALL",
+	CREATE2:      "CREATE2",
 	STATICCALL:   "STATICCALL",
 	// 0x70 range - other
-	CREATE2:      "CREATE2",
 	REVERT:       "REVERT",
 	INVALID:      "INVALID",
 	SELFDESTRUCT: "SELFDESTRUCT",

@@ -24,7 +24,7 @@ type Variable struct {
 // LoadPath loads one abi file or finds all files in a directory
 func LoadPath(abiFileOrDirs ...string) (*Spec, error) {
 	if len(abiFileOrDirs) == 0 {
-		return &Spec{}, fmt.Errorf("no ABI file or directory provided")
+		return nil, fmt.Errorf("no ABI file or directory provided")
 	}
 
 	specs := make([]*Spec, 0)
@@ -35,7 +35,7 @@ func LoadPath(abiFileOrDirs ...string) (*Spec, error) {
 				return fmt.Errorf("error returned while walking abiDir '%s': %v", dir, err)
 			}
 			ext := filepath.Ext(path)
-			if fi.IsDir() || !(ext == ".bin" || ext == ".abi") {
+			if fi.IsDir() || !(ext == ".bin" || ext == ".abi" || ext == ".json") {
 				return nil
 			}
 			abiSpc, err := ReadSpecFile(path)
@@ -46,7 +46,7 @@ func LoadPath(abiFileOrDirs ...string) (*Spec, error) {
 			return nil
 		})
 		if err != nil {
-			return &Spec{}, err
+			return nil, err
 		}
 	}
 	return MergeSpec(specs), nil
@@ -183,25 +183,24 @@ func ReadSpecFile(filename string) (*Spec, error) {
 // described a struct. Both args and rets should be set to the return value of reflect.TypeOf()
 // with the respective struct as an argument.
 func SpecFromStructReflect(fname string, args reflect.Type, rets reflect.Type) *FunctionSpec {
-	s := FunctionSpec{
-		Inputs:  make([]Argument, args.NumField()),
-		Outputs: make([]Argument, rets.NumField()),
-	}
+	inputs := make([]Argument, args.NumField())
+	outputs := make([]Argument, rets.NumField())
+
 	for i := 0; i < args.NumField(); i++ {
 		f := args.Field(i)
 		a := typeFromReflect(f.Type)
 		a.Name = f.Name
-		s.Inputs[i] = a
+		inputs[i] = a
 	}
+
 	for i := 0; i < rets.NumField(); i++ {
 		f := rets.Field(i)
 		a := typeFromReflect(f.Type)
 		a.Name = f.Name
-		s.Outputs[i] = a
+		outputs[i] = a
 	}
-	s.SetFunctionID(fname)
 
-	return &s
+	return NewFunctionSpec(fname, inputs, outputs)
 }
 
 func SpecFromFunctionReflect(fname string, v reflect.Value, skipIn, skipOut int) *FunctionSpec {
@@ -211,20 +210,18 @@ func SpecFromFunctionReflect(fname string, v reflect.Value, skipIn, skipOut int)
 		panic(fmt.Sprintf("%s is not a function", t.Name()))
 	}
 
-	s := FunctionSpec{}
-	s.Inputs = make([]Argument, t.NumIn()-skipIn)
-	s.Outputs = make([]Argument, t.NumOut()-skipOut)
+	inputs := make([]Argument, t.NumIn()-skipIn)
+	outputs := make([]Argument, t.NumOut()-skipOut)
 
-	for i := range s.Inputs {
-		s.Inputs[i] = typeFromReflect(t.In(i + skipIn))
+	for i := range inputs {
+		inputs[i] = typeFromReflect(t.In(i + skipIn))
 	}
 
-	for i := range s.Outputs {
-		s.Outputs[i] = typeFromReflect(t.Out(i))
+	for i := range outputs {
+		outputs[i] = typeFromReflect(t.Out(i))
 	}
 
-	s.SetFunctionID(fname)
-	return &s
+	return NewFunctionSpec(fname, inputs, outputs)
 }
 
 func GetPackingTypes(args []Argument) []interface{} {

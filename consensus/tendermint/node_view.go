@@ -15,13 +15,17 @@ import (
 
 type NodeView struct {
 	tmNode    *Node
-	publicKey crypto.PublicKey
+	publicKey *crypto.PublicKey
 	txDecoder txs.Decoder
 	runID     simpleuuid.UUID
 }
 
 func NewNodeView(tmNode *Node, txDecoder txs.Decoder, runID simpleuuid.UUID) (*NodeView, error) {
-	publicKey, err := crypto.PublicKeyFromTendermintPubKey(tmNode.PrivValidator().GetPubKey())
+	pk, err := tmNode.PrivValidator().GetPubKey()
+	if err != nil {
+		return nil, err
+	}
+	publicKey, err := crypto.PublicKeyFromTendermintPubKey(pk)
 	if err != nil {
 		return nil, err
 	}
@@ -34,9 +38,9 @@ func NewNodeView(tmNode *Node, txDecoder txs.Decoder, runID simpleuuid.UUID) (*N
 	}, nil
 }
 
-func (nv *NodeView) ValidatorPublicKey() crypto.PublicKey {
+func (nv *NodeView) ValidatorPublicKey() *crypto.PublicKey {
 	if nv == nil {
-		return crypto.PublicKey{}
+		return nil
 	}
 	return nv.publicKey
 }
@@ -59,18 +63,18 @@ func (nv *NodeView) NodeInfo() *NodeInfo {
 	return &NodeInfo{}
 }
 
-func (nv *NodeView) IsFastSyncing() bool {
+func (nv *NodeView) IsSyncing() bool {
 	if nv == nil {
 		return true
 	}
-	return nv.tmNode.ConsensusReactor().FastSync()
+	return nv.tmNode.ConsensusReactor().WaitSync()
 }
 
 func (nv *NodeView) Peers() p2p.IPeerSet {
 	return nv.tmNode.Switch().Peers()
 }
 
-func (nv *NodeView) BlockStore() state.BlockStoreRPC {
+func (nv *NodeView) BlockStore() state.BlockStore {
 	return nv.tmNode.BlockStore()
 }
 

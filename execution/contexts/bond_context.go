@@ -6,13 +6,14 @@ import (
 
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/acm/validator"
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs/payload"
 )
 
 type BondContext struct {
-	StateWriter  acmstate.ReaderWriter
+	State        acmstate.ReaderWriter
 	ValidatorSet validator.ReaderWriter
 	Logger       *logging.Logger
 	tx           *payload.BondTx
@@ -28,13 +29,18 @@ func (ctx *BondContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 
 	// the account initiating the bond
 	power := new(big.Int).SetUint64(ctx.tx.Input.GetAmount())
-	account, err := ctx.StateWriter.GetAccount(ctx.tx.Input.Address)
+	account, err := ctx.State.GetAccount(ctx.tx.Input.Address)
 	if err != nil {
 		return err
 	}
 
+	ct := account.PublicKey.GetCurveType()
+	if ct == crypto.CurveTypeSecp256k1 {
+		return fmt.Errorf("secp256k1 not supported")
+	}
+
 	// can the account bond?
-	if !hasBondPermission(ctx.StateWriter, account, ctx.Logger) {
+	if !hasBondPermission(ctx.State, account, ctx.Logger) {
 		return fmt.Errorf("account '%s' lacks bond permission", account.Address)
 	}
 
@@ -59,5 +65,5 @@ func (ctx *BondContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 		return err
 	}
 
-	return ctx.StateWriter.UpdateAccount(account)
+	return ctx.State.UpdateAccount(account)
 }

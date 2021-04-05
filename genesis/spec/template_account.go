@@ -10,10 +10,10 @@ import (
 	"github.com/hyperledger/burrow/permission"
 )
 
-func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int) (*genesis.Validator, error) {
+func (ta TemplateAccount) Validator(keyClient keys.KeyClient, index int, curve crypto.CurveType) (*genesis.Validator, error) {
 	var err error
 	gv := new(genesis.Validator)
-	gv.PublicKey, gv.Address, err = ta.RealisePublicKeyAndAddress(keyClient)
+	gv.PublicKey, gv.Address, err = ta.RealisePublicKeyAndAddress(keyClient, crypto.CurveTypeEd25519)
 	if err != nil {
 		return nil, err
 	}
@@ -43,10 +43,10 @@ func (ta TemplateAccount) AccountPermissions() (permission.AccountPermissions, e
 	}, nil
 }
 
-func (ta TemplateAccount) GenesisAccount(keyClient keys.KeyClient, index int) (*genesis.Account, error) {
+func (ta TemplateAccount) GenesisAccount(keyClient keys.KeyClient, index int, curve crypto.CurveType) (*genesis.Account, error) {
 	var err error
 	ga := new(genesis.Account)
-	ga.PublicKey, ga.Address, err = ta.RealisePublicKeyAndAddress(keyClient)
+	ga.PublicKey, ga.Address, err = ta.RealisePublicKeyAndAddress(keyClient, curve)
 	if err != nil {
 		return nil, err
 	}
@@ -69,11 +69,11 @@ func (ta TemplateAccount) GenesisAccount(keyClient keys.KeyClient, index int) (*
 
 // Adds a public key and address to the template. If PublicKey will try to fetch it by Address.
 // If both PublicKey and Address are not set will use the keyClient to generate a new keypair
-func (ta TemplateAccount) RealisePublicKeyAndAddress(keyClient keys.KeyClient) (pubKey crypto.PublicKey, address crypto.Address, err error) {
+func (ta TemplateAccount) RealisePublicKeyAndAddress(keyClient keys.KeyClient, curve crypto.CurveType) (pubKey *crypto.PublicKey, address crypto.Address, err error) {
 	if ta.PublicKey == nil {
 		if ta.Address == nil {
 			// If neither PublicKey or Address set then generate a new one
-			address, err = keyClient.Generate(ta.Name, crypto.CurveTypeEd25519)
+			address, err = keyClient.Generate(ta.Name, curve)
 			if err != nil {
 				return
 			}
@@ -91,7 +91,7 @@ func (ta TemplateAccount) RealisePublicKeyAndAddress(keyClient keys.KeyClient) (
 			err = fmt.Errorf("template address %s does not match public key derived address %s", ta.Address,
 				ta.PublicKey)
 		}
-		pubKey = *ta.PublicKey
+		pubKey = ta.PublicKey
 	}
 	return
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	"github.com/hyperledger/burrow/logging"
@@ -38,10 +39,10 @@ func (s *Server) Run() {
 	s.Log.InfoMsg("Starting HTTP Server")
 
 	// start http server
-	httpServer := &http.Server{Addr: s.Config.HTTPAddr, Handler: s}
+	httpServer := &http.Server{Addr: s.Config.HTTPListenAddress, Handler: s}
 
 	go func() {
-		s.Log.InfoMsg("HTTP Server listening", "address", s.Config.HTTPAddr)
+		s.Log.InfoMsg("HTTP Server listening", "address", s.Config.HTTPListenAddress)
 		httpServer.ListenAndServe()
 	}()
 
@@ -70,6 +71,11 @@ func healthHandler(consumer *Consumer) func(resp http.ResponseWriter, req *http.
 			resp.WriteHeader(http.StatusServiceUnavailable)
 		} else {
 			resp.WriteHeader(http.StatusOK)
+			bs, err := json.Marshal(consumer.StatusMessage(req.Context()))
+			if err == nil {
+				resp.Header().Set("Content-Type", "application/json")
+				resp.Write(bs)
+			}
 		}
 	}
 }

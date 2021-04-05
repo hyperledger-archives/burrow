@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package logging
 
@@ -70,6 +59,9 @@ func NewNoopLogger() *Logger {
 
 // Handle signals
 func (l *Logger) Sync() error {
+	if l == nil {
+		return nil
+	}
 	// Send over input channels (to pass through any capture loggers)
 	err := structure.Sync(l.Info)
 	if err != nil {
@@ -79,6 +71,9 @@ func (l *Logger) Sync() error {
 }
 
 func (l *Logger) Reload() error {
+	if l == nil {
+		return nil
+	}
 	// Send directly to output logger
 	return structure.Reload(l.Output)
 }
@@ -92,6 +87,9 @@ func (l *Logger) Reload() error {
 // assumption about the name or signature of the logging method(s).
 // See InfoTraceLogger
 func (l *Logger) With(keyvals ...interface{}) *Logger {
+	if l == nil {
+		return nil
+	}
 	return &Logger{
 		Output: l.Output,
 		Info:   log.With(l.Info, keyvals...),
@@ -101,6 +99,9 @@ func (l *Logger) With(keyvals ...interface{}) *Logger {
 
 // Establish a context on the Info channel keeping Trace the same
 func (l *Logger) WithInfo(keyvals ...interface{}) *Logger {
+	if l == nil {
+		return nil
+	}
 	return &Logger{
 		Output: l.Output,
 		Info:   log.With(l.Info, keyvals...),
@@ -110,6 +111,9 @@ func (l *Logger) WithInfo(keyvals ...interface{}) *Logger {
 
 // Establish a context on the Trace channel keeping Info the same
 func (l *Logger) WithTrace(keyvals ...interface{}) *Logger {
+	if l == nil {
+		return nil
+	}
 	return &Logger{
 		Output: l.Output,
 		Info:   l.Info,
@@ -118,6 +122,9 @@ func (l *Logger) WithTrace(keyvals ...interface{}) *Logger {
 }
 
 func (l *Logger) WithPrefix(keyvals ...interface{}) *Logger {
+	if l == nil {
+		return nil
+	}
 	return &Logger{
 		Output: l.Output,
 		Info:   log.WithPrefix(l.Info, keyvals...),
@@ -127,17 +134,42 @@ func (l *Logger) WithPrefix(keyvals ...interface{}) *Logger {
 
 // Hot swap the underlying outputLogger with another one to re-route messages
 func (l *Logger) SwapOutput(infoLogger log.Logger) {
+	if l == nil {
+		return
+	}
 	l.Output.Swap(infoLogger)
 }
 
 // Record structured Info log line with a message
 func (l *Logger) InfoMsg(message string, keyvals ...interface{}) error {
+	if l == nil {
+		return nil
+	}
 	return Msg(l.Info, message, keyvals...)
 }
 
 // Record structured Trace log line with a message
 func (l *Logger) TraceMsg(message string, keyvals ...interface{}) error {
+	if l == nil {
+		return nil
+	}
 	return Msg(l.Trace, message, keyvals...)
+}
+
+// Record structured Info log line
+func (l *Logger) InfoLog(keyvals ...interface{}) error {
+	if l == nil {
+		return nil
+	}
+	return l.Info.Log(keyvals...)
+}
+
+// Record structured Trace log line
+func (l *Logger) TraceLog(keyvals ...interface{}) error {
+	if l == nil {
+		return nil
+	}
+	return l.Trace.Log(keyvals...)
 }
 
 // Establish or extend the scope of this logger by appending scopeName to the Scope vector.

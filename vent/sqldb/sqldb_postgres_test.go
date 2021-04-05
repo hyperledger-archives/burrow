@@ -47,6 +47,7 @@ func TestPostgresBlockNotification(t *testing.T) {
 	channelName := "height_notification"
 	pad := db.DBAdapter.(*adapters.PostgresAdapter)
 
+	// Run twice to show idempotency
 	for i := 0; i < 2; i++ {
 		query := pad.CreateNotifyFunctionQuery(functionName, channelName, columns.Height)
 		_, err := db.DB.Exec(query)
@@ -100,5 +101,11 @@ func TestPostgresBlockNotification(t *testing.T) {
 	_, err = db.GetBlock(test.ChainID, dat.BlockHeight)
 	require.NoError(t, err)
 
-	require.NoError(t, <-errCh)
+	const timeout = 2 * time.Second
+	select {
+	case <-time.After(timeout):
+		t.Fatalf("timed out waiting for notification after %s", timeout)
+	case err = <-errCh:
+		require.NoError(t, err)
+	}
 }

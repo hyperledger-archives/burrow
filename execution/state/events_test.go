@@ -8,8 +8,10 @@ import (
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/crypto/sha3"
 	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/storage"
+	"github.com/hyperledger/burrow/txs"
+	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/require"
 	dbm "github.com/tendermint/tm-db"
 )
@@ -19,29 +21,24 @@ func TestWriteState_AddBlock(t *testing.T) {
 	height := uint64(100)
 	numTxs := uint64(5)
 	events := uint64(10)
-	block := mkBlock(height, numTxs, events)
-	_, _, err := s.Update(func(ws Updatable) error {
-		return ws.AddBlock(block)
-	})
-	require.NoError(t, err)
+	addBlock(t, s, height, numTxs, events)
 
 	txIndex := uint64(0)
 	eventIndex := uint64(0)
-	err = s.IterateStreamEvents(&height, &height,
-		func(ev *exec.StreamEvent) error {
-			switch {
-			case ev.BeginTx != nil:
-				eventIndex = 0
-			case ev.Event != nil:
-				require.Equal(t, mkEvent(height, txIndex, eventIndex).Header.TxHash.String(),
-					ev.Event.Header.TxHash.String(), "event TxHash mismatch at tx #%d event #%d",
-					txIndex, eventIndex)
-				eventIndex++
-			case ev.EndTx != nil:
-				txIndex++
-			}
-			return nil
-		})
+	err := s.IterateStreamEvents(&height, &height, storage.AscendingSort, func(ev *exec.StreamEvent) error {
+		switch {
+		case ev.BeginTx != nil:
+			eventIndex = 0
+		case ev.Event != nil:
+			require.Equal(t, mkEvent(height, txIndex, eventIndex).Header.TxHash.String(),
+				ev.Event.Header.TxHash.String(), "event TxHash mismatch at tx #%d event #%d",
+				txIndex, eventIndex)
+			eventIndex++
+		case ev.EndTx != nil:
+			txIndex++
+		}
+		return nil
+	})
 	require.NoError(t, err)
 	require.Equal(t, numTxs, txIndex, "should have observed all txs")
 	// non-increasing events
@@ -101,7 +98,7 @@ func TestReadState_TxByHash(t *testing.T) {
 	for height := uint64(0); height < maxHeight; height++ {
 		for txIndex := uint64(0); txIndex < numTxs; txIndex++ {
 			// Find this tx
-			tx := mkTx(height, txIndex, events)
+			tx := mkTxExecution(height, txIndex, events)
 			txHash := tx.TxHash.String()
 			// Check we have no duplicates (indicates problem with how we are generating hashes for these tests
 			require.False(t, hashSet[txHash], "should be no duplicate tx hashes")
@@ -117,65 +114,27 @@ func TestReadState_TxByHash(t *testing.T) {
 	}
 }
 
-func deepCountTxs(txes []*exec.TxExecution) int {
-	sum := len(txes)
-	for _, txe := range txes {
-		sum += deepCountTxs(txe.TxExecutions)
-	}
-	return sum
-}
+func TestLastBlockStored(t *testing.T) {
+	s := NewState(dbm.NewMemDB())
+	// Add first block
+	addBlock(t, s, uint64(1), 2, 3)
+	lastStoredHeight, err := s.LastStoredHeight()
+	require.NoError(t, err)
+	require.Equal(t, lastStoredHeight, uint64(1))
 
-func nestTxs(txe *exec.TxExecution, height, events, numTxs uint64) []*exec.TxExecution {
-	txes := make([]*exec.TxExecution, numTxs)
-	for i := uint64(0); i < numTxs; i++ {
-		txes[i] = mkTx(height, i, events)
-		txe.TxExecutions = append(txe.TxExecutions, txes[i])
-	}
-	return txes
-}
+	// Add empty block
+	addBlock(t, s, uint64(2), 0, 0)
+	lastStoredHeight, err = s.LastStoredHeight()
+	require.NoError(t, err)
+	// Same last stored height
+	require.Equal(t, lastStoredHeight, uint64(1))
 
-func mkBlock(height, numTxs, events uint64) *exec.BlockExecution {
-	be := &exec.BlockExecution{
-		Height: height,
-	}
-	for ti := uint64(0); ti < numTxs; ti++ {
-		txe := mkTx(height, ti, events)
-		be.TxExecutions = append(be.TxExecutions, txe)
-	}
-	return be
-}
-
-func mkTx(height, txIndex, events uint64) *exec.TxExecution {
-	hash := make([]byte, 32)
-	bin.BigEndian.PutUint64(hash[:8], height)
-	bin.BigEndian.PutUint64(hash[8:16], txIndex)
-	bin.BigEndian.PutUint64(hash[16:24], events)
-	txe := &exec.TxExecution{
-		TxHeader: &exec.TxHeader{
-			TxHash: hash,
-			Height: height,
-			Index:  txIndex,
-		},
-	}
-	for e := uint64(0); e < events; e++ {
-		txe.Events = append(txe.Events, mkEvent(height, txIndex, e))
-	}
-	return txe
-}
-
-func mkEvent(height, tx, index uint64) *exec.Event {
-	return &exec.Event{
-		Header: &exec.Header{
-			Height:  height,
-			Index:   index,
-			TxHash:  sha3.Sha3([]byte(fmt.Sprintf("txhash%v%v%v", height, tx, index))),
-			EventID: fmt.Sprintf("eventID: %v%v%v", height, tx, index),
-		},
-		Log: &exec.LogEvent{
-			Address: crypto.Address{byte(height), byte(index)},
-			Topics:  []binary.Word256{{1, 2, 3}},
-		},
-	}
+	// Add non-empty block
+	addBlock(t, s, uint64(3), 1, 0)
+	lastStoredHeight, err = s.LastStoredHeight()
+	require.NoError(t, err)
+	// Same last stored height
+	require.Equal(t, lastStoredHeight, uint64(3))
 }
 
 func BenchmarkAddBlockAndIterator(b *testing.B) {
@@ -189,9 +148,93 @@ func BenchmarkAddBlockAndIterator(b *testing.B) {
 		})
 		require.NoError(b, err)
 	}
-	err := s.IterateStreamEvents(nil, nil,
-		func(ev *exec.StreamEvent) error {
-			return nil
-		})
+	err := s.IterateStreamEvents(nil, nil, storage.AscendingSort, func(ev *exec.StreamEvent) error {
+		return nil
+	})
 	require.NoError(b, err)
+}
+
+func addBlock(t testing.TB, s *State, height, numTxs, events uint64) {
+	block := mkBlock(height, numTxs, events)
+	_, _, err := s.Update(func(ws Updatable) error {
+		return ws.AddBlock(block)
+	})
+	require.NoError(t, err)
+}
+
+func deepCountTxs(txes []*exec.TxExecution) int {
+	sum := len(txes)
+	for _, txe := range txes {
+		sum += deepCountTxs(txe.TxExecutions)
+	}
+	return sum
+}
+
+func nestTxs(txe *exec.TxExecution, height, events, numTxs uint64) []*exec.TxExecution {
+	txes := make([]*exec.TxExecution, numTxs)
+	for i := uint64(0); i < numTxs; i++ {
+		txes[i] = mkTxExecution(height, i, events)
+		txe.TxExecutions = append(txe.TxExecutions, txes[i])
+	}
+	return txes
+}
+
+func mkBlock(height, numTxs, events uint64) *exec.BlockExecution {
+	be := &exec.BlockExecution{
+		Height: height,
+	}
+	for ti := uint64(0); ti < numTxs; ti++ {
+		txe := mkTxExecution(height, ti, events)
+		be.TxExecutions = append(be.TxExecutions, txe)
+	}
+	return be
+}
+
+func mkTxExecution(height, txIndex, events uint64) *exec.TxExecution {
+	hash := make([]byte, 32)
+	bin.BigEndian.PutUint64(hash[:8], height)
+	bin.BigEndian.PutUint64(hash[8:16], txIndex)
+	bin.BigEndian.PutUint64(hash[16:24], events)
+	txEnv := txs.Enclose("ChainTheFirst", mkTx())
+	txe := &exec.TxExecution{
+		TxHeader: &exec.TxHeader{
+			TxHash: hash,
+			Height: height,
+			Index:  txIndex,
+		},
+		Envelope: txEnv,
+		Receipt:  txEnv.Tx.GenerateReceipt(),
+	}
+	for e := uint64(0); e < events; e++ {
+		txe.Events = append(txe.Events, mkEvent(height, txIndex, e))
+	}
+	return txe
+}
+
+func mkTx() payload.Payload {
+	return &payload.CallTx{
+		Input: &payload.TxInput{
+			Address:  crypto.Address{1, 2, 3},
+			Amount:   12345,
+			Sequence: 67890,
+		},
+		GasLimit: 111,
+		Fee:      222,
+		Data:     []byte("data1"),
+	}
+}
+
+func mkEvent(height, tx, index uint64) *exec.Event {
+	return &exec.Event{
+		Header: &exec.Header{
+			Height:  height,
+			Index:   index,
+			TxHash:  crypto.Keccak256([]byte(fmt.Sprintf("txhash%v%v%v", height, tx, index))),
+			EventID: fmt.Sprintf("eventID: %v%v%v", height, tx, index),
+		},
+		Log: &exec.LogEvent{
+			Address: crypto.Address{byte(height), byte(index)},
+			Topics:  []binary.Word256{{1, 2, 3}},
+		},
+	}
 }

@@ -4,17 +4,16 @@
 package rpcevents
 
 import (
-	context "context"
 	fmt "fmt"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	golang_proto "github.com/golang/protobuf/proto"
 	github_com_hyperledger_burrow_binary "github.com/hyperledger/burrow/binary"
 	exec "github.com/hyperledger/burrow/execution/exec"
-	grpc "google.golang.org/grpc"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -27,7 +26,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type Bound_BoundType int32
 
@@ -88,16 +87,12 @@ func (m *GetBlockRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *GetBlockRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_GetBlockRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *GetBlockRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetBlockRequest.Merge(m, src)
@@ -149,16 +144,12 @@ func (m *TxRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *TxRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_TxRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *TxRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_TxRequest.Merge(m, src)
@@ -236,16 +227,12 @@ func (m *BlocksRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *BlocksRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_BlocksRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *BlocksRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BlocksRequest.Merge(m, src)
@@ -295,16 +282,12 @@ func (m *EventsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *EventsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_EventsResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *EventsResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_EventsResponse.Merge(m, src)
@@ -355,16 +338,12 @@ func (m *GetTxsRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *GetTxsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_GetTxsRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *GetTxsRequest) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetTxsRequest.Merge(m, src)
@@ -421,16 +400,12 @@ func (m *GetTxsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *GetTxsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_GetTxsResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *GetTxsResponse) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GetTxsResponse.Merge(m, src)
@@ -480,16 +455,12 @@ func (m *Bound) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *Bound) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Bound.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *Bound) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_Bound.Merge(m, src)
@@ -545,16 +516,12 @@ func (m *BlockRange) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *BlockRange) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_BlockRange.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *BlockRange) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BlockRange.Merge(m, src)
@@ -610,251 +577,50 @@ func init() { proto.RegisterFile("rpcevents.proto", fileDescriptor_580b21d8d2fd6
 func init() { golang_proto.RegisterFile("rpcevents.proto", fileDescriptor_580b21d8d2fd68e4) }
 
 var fileDescriptor_580b21d8d2fd68e4 = []byte{
-	// 583 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x54, 0x4d, 0x6f, 0xd3, 0x40,
-	0x10, 0xed, 0xe6, 0xc3, 0xaa, 0x27, 0xfd, 0x30, 0xab, 0x82, 0x42, 0x84, 0xd2, 0xc8, 0x48, 0xa8,
-	0x12, 0xaa, 0x53, 0x05, 0x55, 0x9c, 0x10, 0x8a, 0x25, 0xd3, 0x16, 0xb5, 0x42, 0xac, 0x97, 0x0f,
-	0x21, 0x24, 0xe4, 0x38, 0x8b, 0x13, 0xd1, 0xda, 0xc6, 0x5e, 0x83, 0xf3, 0x53, 0xf8, 0x2b, 0x9c,
-	0x38, 0xf6, 0xc8, 0x99, 0x43, 0x85, 0xd2, 0x3f, 0x82, 0xbc, 0x6b, 0x3b, 0x4e, 0x29, 0xe5, 0x12,
-	0xed, 0xcc, 0x7b, 0x33, 0xf3, 0xf2, 0x76, 0xd6, 0xb0, 0x19, 0x85, 0x2e, 0xfb, 0xc2, 0x7c, 0x1e,
-	0x1b, 0x61, 0x14, 0xf0, 0x00, 0xab, 0x65, 0xa2, 0xb3, 0xeb, 0x4d, 0xf9, 0x24, 0x19, 0x19, 0x6e,
-	0x70, 0xd6, 0xf7, 0x02, 0x2f, 0xe8, 0x0b, 0xc6, 0x28, 0xf9, 0x28, 0x22, 0x11, 0x88, 0x93, 0xac,
-	0xec, 0x00, 0x4b, 0x99, 0x2b, 0xcf, 0xfa, 0x13, 0xd8, 0x3c, 0x60, 0xdc, 0x3c, 0x0d, 0xdc, 0x4f,
-	0x84, 0x7d, 0x4e, 0x58, 0xcc, 0xf1, 0x1d, 0x50, 0x0e, 0xd9, 0xd4, 0x9b, 0xf0, 0x36, 0xea, 0xa1,
-	0x9d, 0x06, 0xc9, 0x23, 0x8c, 0xa1, 0xf1, 0xc6, 0x99, 0xf2, 0x76, 0xad, 0x87, 0x76, 0x56, 0x89,
-	0x38, 0xeb, 0x3e, 0xa8, 0x34, 0x2d, 0x0a, 0x4f, 0x40, 0xa1, 0xe9, 0xa1, 0x13, 0x4f, 0x44, 0xe1,
-	0x9a, 0xb9, 0x7f, 0x7e, 0xb1, 0xbd, 0xf2, 0xeb, 0x62, 0xbb, 0x2a, 0x6f, 0x32, 0x0b, 0x59, 0x74,
-	0xca, 0xc6, 0x1e, 0x8b, 0xfa, 0xa3, 0x24, 0x8a, 0x82, 0xaf, 0xfd, 0xd1, 0xd4, 0x77, 0xa2, 0x99,
-	0x71, 0xc8, 0x52, 0x73, 0xc6, 0x59, 0x4c, 0xf2, 0x26, 0xd7, 0xce, 0x7b, 0x0f, 0xeb, 0x42, 0x6b,
-	0x5c, 0xcc, 0xdc, 0x07, 0x90, 0xe2, 0x1d, 0xdf, 0x63, 0x62, 0x6e, 0x6b, 0x70, 0xdb, 0x58, 0x78,
-	0xb5, 0x00, 0x49, 0x85, 0x88, 0xb7, 0xa0, 0xf9, 0x32, 0x61, 0xd1, 0x4c, 0x34, 0x57, 0x89, 0x0c,
-	0xf4, 0x13, 0xd8, 0xb0, 0x44, 0x19, 0x61, 0x71, 0x18, 0xf8, 0x31, 0xfb, 0xa7, 0x17, 0xf7, 0x41,
-	0x91, 0xcc, 0x76, 0xad, 0x57, 0xdf, 0x69, 0x0d, 0x5a, 0x86, 0xf0, 0x54, 0xe4, 0x48, 0x0e, 0xe9,
-	0x0c, 0xd6, 0x0f, 0x18, 0xa7, 0x69, 0x29, 0xb6, 0x07, 0x2d, 0x9b, 0x3b, 0x11, 0x5f, 0x6a, 0x59,
-	0x4d, 0xe1, 0x7b, 0xa0, 0x5a, 0xfe, 0x38, 0xc7, 0x6b, 0x02, 0x5f, 0x24, 0x16, 0xaa, 0xeb, 0x55,
-	0xd5, 0x1f, 0x60, 0xa3, 0x18, 0xf3, 0x1f, 0xd5, 0xfb, 0xb0, 0x46, 0x53, 0x2b, 0x65, 0x6e, 0xc2,
-	0xa7, 0x81, 0x5f, 0x68, 0xbf, 0x25, 0xb5, 0x57, 0x10, 0xb2, 0x44, 0xd3, 0xbf, 0x21, 0x68, 0x9a,
-	0x41, 0xe2, 0x8f, 0xb1, 0x01, 0x0d, 0x3a, 0x0b, 0xa5, 0xcf, 0x1b, 0x83, 0x4e, 0xd5, 0xe7, 0x0c,
-	0x97, 0xbf, 0x19, 0x83, 0x08, 0x5e, 0x26, 0xf8, 0xc8, 0x1f, 0xb3, 0x34, 0xff, 0x2b, 0x32, 0xd0,
-	0x9f, 0x83, 0x5a, 0x12, 0xf1, 0x1a, 0xac, 0x0e, 0x4d, 0xfb, 0xc5, 0xf1, 0x2b, 0x6a, 0x69, 0x2b,
-	0x59, 0x44, 0xac, 0xe3, 0x21, 0x3d, 0x7a, 0x6d, 0x69, 0x08, 0xab, 0xd0, 0x7c, 0x76, 0x44, 0x6c,
-	0xaa, 0xd5, 0x30, 0x80, 0x72, 0x3c, 0xa4, 0x96, 0x4d, 0xb5, 0x7a, 0x76, 0xb6, 0x29, 0xb1, 0x86,
-	0x27, 0x5a, 0x43, 0x7f, 0x5b, 0xbd, 0x7f, 0xfc, 0x00, 0x9a, 0xc2, 0xcd, 0x7c, 0x11, 0xb4, 0xab,
-	0x02, 0x89, 0x84, 0xb1, 0x0e, 0x75, 0xcb, 0x1f, 0x0b, 0x55, 0xd7, 0xb1, 0x32, 0x70, 0xf0, 0x1d,
-	0xc1, 0x66, 0x69, 0x82, 0xbc, 0x51, 0xfc, 0x18, 0x14, 0x9b, 0x47, 0xcc, 0x39, 0xc3, 0xed, 0xab,
-	0x3b, 0x56, 0x5c, 0x72, 0x27, 0xb7, 0x53, 0xf2, 0x44, 0xdd, 0x1e, 0xc2, 0xbb, 0x50, 0xa3, 0x29,
-	0xde, 0xaa, 0x14, 0x95, 0xcf, 0xa6, 0xf3, 0xb7, 0xff, 0xf8, 0x69, 0xb1, 0x5e, 0x37, 0xcc, 0xb9,
-	0x5b, 0x41, 0x96, 0xb7, 0x76, 0x0f, 0x99, 0xc3, 0xf3, 0x79, 0x17, 0xfd, 0x9c, 0x77, 0xd1, 0xef,
-	0x79, 0x17, 0xfd, 0xb8, 0xec, 0xa2, 0xf3, 0xcb, 0x2e, 0x7a, 0xf7, 0xf0, 0xe6, 0x87, 0x18, 0x85,
-	0x6e, 0xbf, 0xec, 0x39, 0x52, 0xc4, 0x07, 0xe2, 0xd1, 0x9f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x65,
-	0xc9, 0x65, 0x0f, 0x79, 0x04, 0x00, 0x00,
-}
-
-// Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConn
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion4
-
-// ExecutionEventsClient is the client API for ExecutionEvents service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type ExecutionEventsClient interface {
-	// Get StreamEvents (including transactions) for a range of block heights
-	Stream(ctx context.Context, in *BlocksRequest, opts ...grpc.CallOption) (ExecutionEvents_StreamClient, error)
-	// Get a particular TxExecution by hash
-	Tx(ctx context.Context, in *TxRequest, opts ...grpc.CallOption) (*exec.TxExecution, error)
-	// GetEvents provides events streaming one block at a time - that is all events emitted in a particular block
-	// are guaranteed to be delivered in each GetEventsResponse
-	Events(ctx context.Context, in *BlocksRequest, opts ...grpc.CallOption) (ExecutionEvents_EventsClient, error)
-}
-
-type executionEventsClient struct {
-	cc *grpc.ClientConn
-}
-
-func NewExecutionEventsClient(cc *grpc.ClientConn) ExecutionEventsClient {
-	return &executionEventsClient{cc}
-}
-
-func (c *executionEventsClient) Stream(ctx context.Context, in *BlocksRequest, opts ...grpc.CallOption) (ExecutionEvents_StreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_ExecutionEvents_serviceDesc.Streams[0], "/rpcevents.ExecutionEvents/Stream", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &executionEventsStreamClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type ExecutionEvents_StreamClient interface {
-	Recv() (*exec.StreamEvent, error)
-	grpc.ClientStream
-}
-
-type executionEventsStreamClient struct {
-	grpc.ClientStream
-}
-
-func (x *executionEventsStreamClient) Recv() (*exec.StreamEvent, error) {
-	m := new(exec.StreamEvent)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *executionEventsClient) Tx(ctx context.Context, in *TxRequest, opts ...grpc.CallOption) (*exec.TxExecution, error) {
-	out := new(exec.TxExecution)
-	err := c.cc.Invoke(ctx, "/rpcevents.ExecutionEvents/Tx", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *executionEventsClient) Events(ctx context.Context, in *BlocksRequest, opts ...grpc.CallOption) (ExecutionEvents_EventsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_ExecutionEvents_serviceDesc.Streams[1], "/rpcevents.ExecutionEvents/Events", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &executionEventsEventsClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type ExecutionEvents_EventsClient interface {
-	Recv() (*EventsResponse, error)
-	grpc.ClientStream
-}
-
-type executionEventsEventsClient struct {
-	grpc.ClientStream
-}
-
-func (x *executionEventsEventsClient) Recv() (*EventsResponse, error) {
-	m := new(EventsResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-// ExecutionEventsServer is the server API for ExecutionEvents service.
-type ExecutionEventsServer interface {
-	// Get StreamEvents (including transactions) for a range of block heights
-	Stream(*BlocksRequest, ExecutionEvents_StreamServer) error
-	// Get a particular TxExecution by hash
-	Tx(context.Context, *TxRequest) (*exec.TxExecution, error)
-	// GetEvents provides events streaming one block at a time - that is all events emitted in a particular block
-	// are guaranteed to be delivered in each GetEventsResponse
-	Events(*BlocksRequest, ExecutionEvents_EventsServer) error
-}
-
-func RegisterExecutionEventsServer(s *grpc.Server, srv ExecutionEventsServer) {
-	s.RegisterService(&_ExecutionEvents_serviceDesc, srv)
-}
-
-func _ExecutionEvents_Stream_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(BlocksRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(ExecutionEventsServer).Stream(m, &executionEventsStreamServer{stream})
-}
-
-type ExecutionEvents_StreamServer interface {
-	Send(*exec.StreamEvent) error
-	grpc.ServerStream
-}
-
-type executionEventsStreamServer struct {
-	grpc.ServerStream
-}
-
-func (x *executionEventsStreamServer) Send(m *exec.StreamEvent) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func _ExecutionEvents_Tx_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TxRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ExecutionEventsServer).Tx(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpcevents.ExecutionEvents/Tx",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ExecutionEventsServer).Tx(ctx, req.(*TxRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ExecutionEvents_Events_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(BlocksRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(ExecutionEventsServer).Events(m, &executionEventsEventsServer{stream})
-}
-
-type ExecutionEvents_EventsServer interface {
-	Send(*EventsResponse) error
-	grpc.ServerStream
-}
-
-type executionEventsEventsServer struct {
-	grpc.ServerStream
-}
-
-func (x *executionEventsEventsServer) Send(m *EventsResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-var _ExecutionEvents_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "rpcevents.ExecutionEvents",
-	HandlerType: (*ExecutionEventsServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Tx",
-			Handler:    _ExecutionEvents_Tx_Handler,
-		},
-	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "Stream",
-			Handler:       _ExecutionEvents_Stream_Handler,
-			ServerStreams: true,
-		},
-		{
-			StreamName:    "Events",
-			Handler:       _ExecutionEvents_Events_Handler,
-			ServerStreams: true,
-		},
-	},
-	Metadata: "rpcevents.proto",
+	// 580 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x54, 0x5d, 0x6b, 0xd4, 0x40,
+	0x14, 0xed, 0xec, 0x17, 0xcd, 0xdd, 0x7e, 0xc4, 0xa1, 0xca, 0xba, 0x48, 0xba, 0x44, 0x90, 0x82,
+	0x34, 0x5b, 0x56, 0x8a, 0x4f, 0x22, 0x1b, 0x88, 0x6d, 0xa5, 0x45, 0x9c, 0x8c, 0x1f, 0x88, 0x20,
+	0xd9, 0xec, 0x90, 0x5d, 0x6c, 0x93, 0x98, 0x4c, 0x34, 0xfb, 0x53, 0xfc, 0x2b, 0x3e, 0xf9, 0xd8,
+	0x47, 0x1f, 0xc5, 0x87, 0x22, 0xdb, 0x3f, 0x22, 0x99, 0x49, 0xb2, 0xd9, 0x5a, 0xeb, 0xcb, 0x32,
+	0xf7, 0x9e, 0x73, 0xef, 0x3d, 0x7b, 0xe6, 0x4e, 0x60, 0x33, 0x0a, 0x5d, 0xf6, 0x99, 0xf9, 0x3c,
+	0x36, 0xc2, 0x28, 0xe0, 0x01, 0x56, 0xca, 0x44, 0x77, 0xcb, 0x0b, 0xbc, 0x40, 0x64, 0xfb, 0xd9,
+	0x49, 0x12, 0xba, 0xc0, 0x52, 0xe6, 0xca, 0xb3, 0xfe, 0x04, 0x36, 0x0f, 0x18, 0x37, 0x4f, 0x03,
+	0xf7, 0x23, 0x61, 0x9f, 0x12, 0x16, 0x73, 0x7c, 0x07, 0x5a, 0x87, 0x6c, 0xea, 0x4d, 0x78, 0x07,
+	0xf5, 0xd0, 0x4e, 0x83, 0xe4, 0x11, 0xc6, 0xd0, 0x78, 0xe3, 0x4c, 0x79, 0xa7, 0xd6, 0x43, 0x3b,
+	0xab, 0x44, 0x9c, 0x75, 0x1f, 0x14, 0x9a, 0x16, 0x85, 0x27, 0xd0, 0xa2, 0xe9, 0xa1, 0x13, 0x4f,
+	0x44, 0xe1, 0x9a, 0xb9, 0x7f, 0x7e, 0xb1, 0xbd, 0xf2, 0xeb, 0x62, 0x7b, 0xd7, 0x9b, 0xf2, 0x49,
+	0x32, 0x32, 0xdc, 0xe0, 0xac, 0x3f, 0x99, 0x85, 0x2c, 0x3a, 0x65, 0x63, 0x8f, 0x45, 0xfd, 0x51,
+	0x12, 0x45, 0xc1, 0x97, 0xfe, 0x68, 0xea, 0x3b, 0xd1, 0xcc, 0x38, 0x64, 0xa9, 0x39, 0xe3, 0x2c,
+	0x26, 0x79, 0x93, 0x6b, 0xe7, 0xbd, 0x87, 0x75, 0xa1, 0x35, 0x2e, 0x66, 0xee, 0x03, 0x48, 0xf1,
+	0x8e, 0xef, 0x31, 0x31, 0xb7, 0x3d, 0xb8, 0x6d, 0x2c, 0x2c, 0x59, 0x80, 0xa4, 0x42, 0xc4, 0x5b,
+	0xd0, 0x7c, 0x99, 0xb0, 0x68, 0x26, 0x9a, 0x2b, 0x44, 0x06, 0xfa, 0x09, 0x6c, 0x58, 0xa2, 0x8c,
+	0xb0, 0x38, 0x0c, 0xfc, 0x98, 0xfd, 0xd3, 0x8b, 0xfb, 0xd0, 0x92, 0xcc, 0x4e, 0xad, 0x57, 0xdf,
+	0x69, 0x0f, 0xda, 0x86, 0xf0, 0x54, 0xe4, 0x48, 0x0e, 0xe9, 0x0c, 0xd6, 0x0f, 0x18, 0xa7, 0x69,
+	0x29, 0xb6, 0x07, 0x6d, 0x9b, 0x3b, 0x11, 0x5f, 0x6a, 0x59, 0x4d, 0xe1, 0x7b, 0xa0, 0x58, 0xfe,
+	0x38, 0xc7, 0x6b, 0x02, 0x5f, 0x24, 0x16, 0xaa, 0xeb, 0x55, 0xd5, 0x1f, 0x60, 0xa3, 0x18, 0xf3,
+	0x1f, 0xd5, 0xfb, 0xb0, 0x46, 0x53, 0x2b, 0x65, 0x6e, 0xc2, 0xa7, 0x81, 0x5f, 0x68, 0xbf, 0x25,
+	0xb5, 0x57, 0x10, 0xb2, 0x44, 0xd3, 0xbf, 0x22, 0x68, 0x9a, 0x41, 0xe2, 0x8f, 0xb1, 0x01, 0x0d,
+	0x3a, 0x0b, 0xa5, 0xcf, 0x1b, 0x83, 0x6e, 0xd5, 0xe7, 0x0c, 0x97, 0xbf, 0x19, 0x83, 0x08, 0x5e,
+	0x26, 0xf8, 0xc8, 0x1f, 0xb3, 0x34, 0xff, 0x2b, 0x32, 0xd0, 0x9f, 0x83, 0x52, 0x12, 0xf1, 0x1a,
+	0xac, 0x0e, 0x4d, 0xfb, 0xc5, 0xf1, 0x2b, 0x6a, 0xa9, 0x2b, 0x59, 0x44, 0xac, 0xe3, 0x21, 0x3d,
+	0x7a, 0x6d, 0xa9, 0x08, 0x2b, 0xd0, 0x7c, 0x76, 0x44, 0x6c, 0xaa, 0xd6, 0x30, 0x40, 0xeb, 0x78,
+	0x48, 0x2d, 0x9b, 0xaa, 0xf5, 0xec, 0x6c, 0x53, 0x62, 0x0d, 0x4f, 0xd4, 0x86, 0xfe, 0xb6, 0x7a,
+	0xff, 0xf8, 0x01, 0x34, 0x85, 0x9b, 0xf9, 0x22, 0xa8, 0x57, 0x05, 0x12, 0x09, 0x63, 0x1d, 0xea,
+	0x96, 0x3f, 0x16, 0xaa, 0xae, 0x63, 0x65, 0xe0, 0xe0, 0x1b, 0x82, 0xcd, 0xd2, 0x04, 0x79, 0xa3,
+	0xf8, 0x31, 0xb4, 0x6c, 0x1e, 0x31, 0xe7, 0x0c, 0x77, 0xae, 0xee, 0x58, 0x71, 0xc9, 0xdd, 0xdc,
+	0x4e, 0xc9, 0x13, 0x75, 0x7b, 0x08, 0xef, 0x42, 0x8d, 0xa6, 0x78, 0xab, 0x52, 0x54, 0x3e, 0x9b,
+	0xee, 0xdf, 0xfe, 0xe3, 0xa7, 0xc5, 0x7a, 0xdd, 0x30, 0xe7, 0x6e, 0x05, 0x59, 0xde, 0xda, 0x3d,
+	0x64, 0x5a, 0xe7, 0x73, 0x0d, 0xfd, 0x98, 0x6b, 0xe8, 0xe7, 0x5c, 0x43, 0xbf, 0xe7, 0x1a, 0xfa,
+	0x7e, 0xa9, 0xa1, 0xf3, 0x4b, 0x0d, 0xbd, 0x7b, 0x78, 0xf3, 0x63, 0x8c, 0x42, 0xb7, 0x5f, 0xf6,
+	0x1d, 0xb5, 0xc4, 0x47, 0xe2, 0xd1, 0x9f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x17, 0xe1, 0x08, 0x02,
+	0x64, 0x04, 0x00, 0x00,
 }
 
 func (m *GetBlockRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -862,35 +628,41 @@ func (m *GetBlockRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetBlockRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GetBlockRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Height != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintRpcevents(dAtA, i, uint64(m.Height))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if m.Wait {
-		dAtA[i] = 0x10
-		i++
+		i--
 		if m.Wait {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
 		}
-		i++
+		i--
+		dAtA[i] = 0x10
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Height != 0 {
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.Height))
+		i--
+		dAtA[i] = 0x8
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *TxRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -898,38 +670,46 @@ func (m *TxRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *TxRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *TxRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	dAtA[i] = 0xa
-	i++
-	i = encodeVarintRpcevents(dAtA, i, uint64(m.TxHash.Size()))
-	n1, err := m.TxHash.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	i += n1
 	if m.Wait {
-		dAtA[i] = 0x10
-		i++
+		i--
 		if m.Wait {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
 		}
-		i++
+		i--
+		dAtA[i] = 0x10
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	{
+		size := m.TxHash.Size()
+		i -= size
+		if _, err := m.TxHash.MarshalTo(dAtA[i:]); err != nil {
+			return 0, err
+		}
+		i = encodeVarintRpcevents(dAtA, i, uint64(size))
 	}
-	return i, nil
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
 }
 
 func (m *BlocksRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -937,36 +717,45 @@ func (m *BlocksRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *BlocksRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *BlocksRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.BlockRange != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintRpcevents(dAtA, i, uint64(m.BlockRange.Size()))
-		n2, err := m.BlockRange.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n2
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.Query) > 0 {
-		dAtA[i] = 0x12
-		i++
+		i -= len(m.Query)
+		copy(dAtA[i:], m.Query)
 		i = encodeVarintRpcevents(dAtA, i, uint64(len(m.Query)))
-		i += copy(dAtA[i:], m.Query)
+		i--
+		dAtA[i] = 0x12
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.BlockRange != nil {
+		{
+			size, err := m.BlockRange.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRpcevents(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *EventsResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -974,37 +763,45 @@ func (m *EventsResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *EventsResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *EventsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Height != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintRpcevents(dAtA, i, uint64(m.Height))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.Events) > 0 {
-		for _, msg := range m.Events {
-			dAtA[i] = 0x12
-			i++
-			i = encodeVarintRpcevents(dAtA, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(dAtA[i:])
-			if err != nil {
-				return 0, err
+		for iNdEx := len(m.Events) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Events[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintRpcevents(dAtA, i, uint64(size))
 			}
-			i += n
+			i--
+			dAtA[i] = 0x12
 		}
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Height != 0 {
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.Height))
+		i--
+		dAtA[i] = 0x8
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *GetTxsRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -1012,36 +809,43 @@ func (m *GetTxsRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetTxsRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GetTxsRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.StartHeight != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintRpcevents(dAtA, i, uint64(m.StartHeight))
-	}
-	if m.EndHeight != 0 {
-		dAtA[i] = 0x10
-		i++
-		i = encodeVarintRpcevents(dAtA, i, uint64(m.EndHeight))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.Query) > 0 {
-		dAtA[i] = 0x1a
-		i++
+		i -= len(m.Query)
+		copy(dAtA[i:], m.Query)
 		i = encodeVarintRpcevents(dAtA, i, uint64(len(m.Query)))
-		i += copy(dAtA[i:], m.Query)
+		i--
+		dAtA[i] = 0x1a
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.EndHeight != 0 {
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.EndHeight))
+		i--
+		dAtA[i] = 0x10
 	}
-	return i, nil
+	if m.StartHeight != 0 {
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.StartHeight))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *GetTxsResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -1049,37 +853,45 @@ func (m *GetTxsResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetTxsResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GetTxsResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Height != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintRpcevents(dAtA, i, uint64(m.Height))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.TxExecutions) > 0 {
-		for _, msg := range m.TxExecutions {
-			dAtA[i] = 0x12
-			i++
-			i = encodeVarintRpcevents(dAtA, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(dAtA[i:])
-			if err != nil {
-				return 0, err
+		for iNdEx := len(m.TxExecutions) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.TxExecutions[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintRpcevents(dAtA, i, uint64(size))
 			}
-			i += n
+			i--
+			dAtA[i] = 0x12
 		}
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Height != 0 {
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.Height))
+		i--
+		dAtA[i] = 0x8
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *Bound) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -1087,30 +899,36 @@ func (m *Bound) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *Bound) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Bound) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Type != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintRpcevents(dAtA, i, uint64(m.Type))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if m.Index != 0 {
-		dAtA[i] = 0x10
-		i++
 		i = encodeVarintRpcevents(dAtA, i, uint64(m.Index))
+		i--
+		dAtA[i] = 0x10
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Type != 0 {
+		i = encodeVarintRpcevents(dAtA, i, uint64(m.Type))
+		i--
+		dAtA[i] = 0x8
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func (m *BlockRange) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -1118,44 +936,56 @@ func (m *BlockRange) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *BlockRange) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *BlockRange) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Start != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintRpcevents(dAtA, i, uint64(m.Start.Size()))
-		n3, err := m.Start.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n3
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if m.End != nil {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintRpcevents(dAtA, i, uint64(m.End.Size()))
-		n4, err := m.End.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
+		{
+			size, err := m.End.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRpcevents(dAtA, i, uint64(size))
 		}
-		i += n4
+		i--
+		dAtA[i] = 0x12
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Start != nil {
+		{
+			size, err := m.Start.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRpcevents(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func encodeVarintRpcevents(dAtA []byte, offset int, v uint64) int {
+	offset -= sovRpcevents(v)
+	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return offset + 1
+	return base
 }
 func (m *GetBlockRequest) Size() (n int) {
 	if m == nil {
@@ -1315,14 +1145,7 @@ func (m *BlockRange) Size() (n int) {
 }
 
 func sovRpcevents(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozRpcevents(x uint64) (n int) {
 	return sovRpcevents(uint64((x << 1) ^ uint64((int64(x) >> 63))))
@@ -1401,10 +1224,7 @@ func (m *GetBlockRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthRpcevents
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthRpcevents
 			}
 			if (iNdEx + skippy) > l {
@@ -1508,10 +1328,7 @@ func (m *TxRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthRpcevents
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthRpcevents
 			}
 			if (iNdEx + skippy) > l {
@@ -1630,10 +1447,7 @@ func (m *BlocksRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthRpcevents
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthRpcevents
 			}
 			if (iNdEx + skippy) > l {
@@ -1737,10 +1551,7 @@ func (m *EventsResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthRpcevents
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthRpcevents
 			}
 			if (iNdEx + skippy) > l {
@@ -1861,10 +1672,7 @@ func (m *GetTxsRequest) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthRpcevents
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthRpcevents
 			}
 			if (iNdEx + skippy) > l {
@@ -1968,10 +1776,7 @@ func (m *GetTxsResponse) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthRpcevents
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthRpcevents
 			}
 			if (iNdEx + skippy) > l {
@@ -2060,10 +1865,7 @@ func (m *Bound) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthRpcevents
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthRpcevents
 			}
 			if (iNdEx + skippy) > l {
@@ -2186,10 +1988,7 @@ func (m *BlockRange) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthRpcevents
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthRpcevents
 			}
 			if (iNdEx + skippy) > l {
@@ -2208,6 +2007,7 @@ func (m *BlockRange) Unmarshal(dAtA []byte) error {
 func skipRpcevents(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0
+	depth := 0
 	for iNdEx < l {
 		var wire uint64
 		for shift := uint(0); ; shift += 7 {
@@ -2239,10 +2039,8 @@ func skipRpcevents(dAtA []byte) (n int, err error) {
 					break
 				}
 			}
-			return iNdEx, nil
 		case 1:
 			iNdEx += 8
-			return iNdEx, nil
 		case 2:
 			var length int
 			for shift := uint(0); ; shift += 7 {
@@ -2263,55 +2061,30 @@ func skipRpcevents(dAtA []byte) (n int, err error) {
 				return 0, ErrInvalidLengthRpcevents
 			}
 			iNdEx += length
-			if iNdEx < 0 {
-				return 0, ErrInvalidLengthRpcevents
-			}
-			return iNdEx, nil
 		case 3:
-			for {
-				var innerWire uint64
-				var start int = iNdEx
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return 0, ErrIntOverflowRpcevents
-					}
-					if iNdEx >= l {
-						return 0, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					innerWire |= (uint64(b) & 0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				innerWireType := int(innerWire & 0x7)
-				if innerWireType == 4 {
-					break
-				}
-				next, err := skipRpcevents(dAtA[start:])
-				if err != nil {
-					return 0, err
-				}
-				iNdEx = start + next
-				if iNdEx < 0 {
-					return 0, ErrInvalidLengthRpcevents
-				}
-			}
-			return iNdEx, nil
+			depth++
 		case 4:
-			return iNdEx, nil
+			if depth == 0 {
+				return 0, ErrUnexpectedEndOfGroupRpcevents
+			}
+			depth--
 		case 5:
 			iNdEx += 4
-			return iNdEx, nil
 		default:
 			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
 		}
+		if iNdEx < 0 {
+			return 0, ErrInvalidLengthRpcevents
+		}
+		if depth == 0 {
+			return iNdEx, nil
+		}
 	}
-	panic("unreachable")
+	return 0, io.ErrUnexpectedEOF
 }
 
 var (
-	ErrInvalidLengthRpcevents = fmt.Errorf("proto: negative length found during unmarshaling")
-	ErrIntOverflowRpcevents   = fmt.Errorf("proto: integer overflow")
+	ErrInvalidLengthRpcevents        = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowRpcevents          = fmt.Errorf("proto: integer overflow")
+	ErrUnexpectedEndOfGroupRpcevents = fmt.Errorf("proto: unexpected end of group")
 )

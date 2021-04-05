@@ -7,6 +7,7 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -23,7 +24,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 // For testing
 type TestMessage struct {
@@ -44,7 +45,7 @@ func (m *TestMessage) XXX_Unmarshal(b []byte) error {
 }
 func (m *TestMessage) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
-	n, err := m.MarshalTo(b)
+	n, err := m.MarshalToSizedBuffer(b)
 	if err != nil {
 		return nil, err
 	}
@@ -88,25 +89,25 @@ func init() { proto.RegisterFile("encoding.proto", fileDescriptor_ac330e3fa468db
 func init() { golang_proto.RegisterFile("encoding.proto", fileDescriptor_ac330e3fa468db3c) }
 
 var fileDescriptor_ac330e3fa468db3c = []byte{
-	// 189 bytes of a gzipped FileDescriptorProto
+	// 180 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x4b, 0xcd, 0x4b, 0xce,
-	0x4f, 0xc9, 0xcc, 0x4b, 0xd7, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x80, 0xf1, 0xa5, 0x74,
-	0xd3, 0x33, 0x4b, 0x32, 0x4a, 0x93, 0xf4, 0x92, 0xf3, 0x73, 0xf5, 0xd3, 0xf3, 0xd3, 0xf3, 0xf5,
-	0xc1, 0x0a, 0x92, 0x4a, 0xd3, 0xc0, 0x3c, 0x30, 0x07, 0xcc, 0x82, 0x68, 0x54, 0xb2, 0xe7, 0xe2,
-	0x0e, 0x49, 0x2d, 0x2e, 0xf1, 0x4d, 0x2d, 0x2e, 0x4e, 0x4c, 0x4f, 0x15, 0x12, 0xe2, 0x62, 0x09,
-	0xa9, 0x2c, 0x48, 0x95, 0x60, 0x54, 0x60, 0xd4, 0xe0, 0x0d, 0x02, 0xb3, 0x85, 0xc4, 0xb8, 0xd8,
-	0x1c, 0x73, 0xf3, 0x4b, 0xf3, 0x4a, 0x24, 0x98, 0x14, 0x18, 0x35, 0x58, 0x82, 0xa0, 0x3c, 0x2b,
-	0x96, 0x19, 0x0b, 0xe4, 0x19, 0x9c, 0x1c, 0x4e, 0x3c, 0x92, 0x63, 0xbc, 0xf0, 0x48, 0x8e, 0xf1,
-	0xc6, 0x23, 0x39, 0xc6, 0x07, 0x8f, 0xe4, 0x18, 0x0f, 0x3c, 0x96, 0x63, 0x3c, 0xf1, 0x58, 0x8e,
-	0x31, 0x4a, 0x0d, 0xc9, 0x25, 0x19, 0x95, 0x05, 0xa9, 0x45, 0x39, 0xa9, 0x29, 0xe9, 0xa9, 0x45,
-	0xfa, 0x49, 0xa5, 0x45, 0x45, 0xf9, 0xe5, 0xfa, 0x30, 0x17, 0x27, 0xb1, 0x81, 0x5d, 0x62, 0x0c,
-	0x08, 0x00, 0x00, 0xff, 0xff, 0xe3, 0x76, 0xda, 0xe3, 0xd4, 0x00, 0x00, 0x00,
+	0x4f, 0xc9, 0xcc, 0x4b, 0xd7, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x80, 0xf1, 0xa5, 0x44,
+	0xd2, 0xf3, 0xd3, 0xf3, 0xc1, 0x82, 0xfa, 0x20, 0x16, 0x44, 0x5e, 0xc9, 0x9e, 0x8b, 0x3b, 0x24,
+	0xb5, 0xb8, 0xc4, 0x37, 0xb5, 0xb8, 0x38, 0x31, 0x3d, 0x55, 0x48, 0x88, 0x8b, 0x25, 0xa4, 0xb2,
+	0x20, 0x55, 0x82, 0x51, 0x81, 0x51, 0x83, 0x37, 0x08, 0xcc, 0x16, 0x12, 0xe3, 0x62, 0x73, 0xcc,
+	0xcd, 0x2f, 0xcd, 0x2b, 0x91, 0x60, 0x52, 0x60, 0xd4, 0x60, 0x09, 0x82, 0xf2, 0xac, 0x58, 0x66,
+	0x2c, 0x90, 0x67, 0x70, 0x72, 0x38, 0xf1, 0x48, 0x8e, 0xf1, 0xc2, 0x23, 0x39, 0xc6, 0x1b, 0x8f,
+	0xe4, 0x18, 0x1f, 0x3c, 0x92, 0x63, 0x3c, 0xf0, 0x58, 0x8e, 0xf1, 0xc4, 0x63, 0x39, 0xc6, 0x28,
+	0xb5, 0xf4, 0xcc, 0x92, 0x8c, 0xd2, 0x24, 0xbd, 0xe4, 0xfc, 0x5c, 0xfd, 0x8c, 0xca, 0x82, 0xd4,
+	0xa2, 0x9c, 0xd4, 0x94, 0xf4, 0xd4, 0x22, 0xfd, 0xa4, 0xd2, 0xa2, 0xa2, 0xfc, 0x72, 0x7d, 0x98,
+	0xc3, 0x92, 0xd8, 0xc0, 0x2e, 0x31, 0x06, 0x04, 0x00, 0x00, 0xff, 0xff, 0x1c, 0x38, 0x2e, 0xed,
+	0xbb, 0x00, 0x00, 0x00,
 }
 
 func (m *TestMessage) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -114,34 +115,42 @@ func (m *TestMessage) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *TestMessage) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *TestMessage) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Type != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintEncoding(dAtA, i, uint64(m.Type))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if m.Amount != 0 {
-		dAtA[i] = 0x10
-		i++
 		i = encodeVarintEncoding(dAtA, i, uint64(m.Amount))
+		i--
+		dAtA[i] = 0x10
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Type != 0 {
+		i = encodeVarintEncoding(dAtA, i, uint64(m.Type))
+		i--
+		dAtA[i] = 0x8
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func encodeVarintEncoding(dAtA []byte, offset int, v uint64) int {
+	offset -= sovEncoding(v)
+	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return offset + 1
+	return base
 }
 func (m *TestMessage) Size() (n int) {
 	if m == nil {
@@ -162,14 +171,7 @@ func (m *TestMessage) Size() (n int) {
 }
 
 func sovEncoding(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozEncoding(x uint64) (n int) {
 	return sovEncoding(uint64((x << 1) ^ uint64((int64(x) >> 63))))
@@ -247,10 +249,7 @@ func (m *TestMessage) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthEncoding
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthEncoding
 			}
 			if (iNdEx + skippy) > l {
@@ -269,6 +268,7 @@ func (m *TestMessage) Unmarshal(dAtA []byte) error {
 func skipEncoding(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0
+	depth := 0
 	for iNdEx < l {
 		var wire uint64
 		for shift := uint(0); ; shift += 7 {
@@ -300,10 +300,8 @@ func skipEncoding(dAtA []byte) (n int, err error) {
 					break
 				}
 			}
-			return iNdEx, nil
 		case 1:
 			iNdEx += 8
-			return iNdEx, nil
 		case 2:
 			var length int
 			for shift := uint(0); ; shift += 7 {
@@ -324,55 +322,30 @@ func skipEncoding(dAtA []byte) (n int, err error) {
 				return 0, ErrInvalidLengthEncoding
 			}
 			iNdEx += length
-			if iNdEx < 0 {
-				return 0, ErrInvalidLengthEncoding
-			}
-			return iNdEx, nil
 		case 3:
-			for {
-				var innerWire uint64
-				var start int = iNdEx
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return 0, ErrIntOverflowEncoding
-					}
-					if iNdEx >= l {
-						return 0, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					innerWire |= (uint64(b) & 0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				innerWireType := int(innerWire & 0x7)
-				if innerWireType == 4 {
-					break
-				}
-				next, err := skipEncoding(dAtA[start:])
-				if err != nil {
-					return 0, err
-				}
-				iNdEx = start + next
-				if iNdEx < 0 {
-					return 0, ErrInvalidLengthEncoding
-				}
-			}
-			return iNdEx, nil
+			depth++
 		case 4:
-			return iNdEx, nil
+			if depth == 0 {
+				return 0, ErrUnexpectedEndOfGroupEncoding
+			}
+			depth--
 		case 5:
 			iNdEx += 4
-			return iNdEx, nil
 		default:
 			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
 		}
+		if iNdEx < 0 {
+			return 0, ErrInvalidLengthEncoding
+		}
+		if depth == 0 {
+			return iNdEx, nil
+		}
 	}
-	panic("unreachable")
+	return 0, io.ErrUnexpectedEOF
 }
 
 var (
-	ErrInvalidLengthEncoding = fmt.Errorf("proto: negative length found during unmarshaling")
-	ErrIntOverflowEncoding   = fmt.Errorf("proto: integer overflow")
+	ErrInvalidLengthEncoding        = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowEncoding          = fmt.Errorf("proto: integer overflow")
+	ErrUnexpectedEndOfGroupEncoding = fmt.Errorf("proto: unexpected end of group")
 )

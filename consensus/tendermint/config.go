@@ -3,6 +3,7 @@ package tendermint
 import (
 	"fmt"
 	"math"
+	"net"
 	"net/url"
 	"strings"
 	"time"
@@ -35,6 +36,8 @@ type BurrowTendermintConfig struct {
 	// Set false for private or local networks
 	AddrBookStrict bool
 	Moniker        string
+	// Only accept connections from registered peers
+	IdentifyPeers bool
 	// Peers ID or address this node is authorize to sync with
 	AuthorizedPeers string
 	// EmptyBlocks mode and possible interval between empty blocks in seconds, one of:
@@ -103,7 +106,7 @@ func (btc *BurrowTendermintConfig) Config(rootDir string, timeoutFactor float64)
 		conf.P2P.Seeds = btc.Seeds
 		conf.P2P.SeedMode = btc.SeedMode
 		conf.P2P.PersistentPeers = btc.PersistentPeers
-		conf.P2P.ListenAddress = fmt.Sprintf("%s:%s", btc.ListenHost, btc.ListenPort)
+		conf.P2P.ListenAddress = btc.ListenAddress()
 		conf.P2P.ExternalAddress = btc.ExternalAddress
 		conf.P2P.AddrBookStrict = btc.AddrBookStrict
 		// We use this in tests and I am not aware of a strong reason to reject nodes on the same IP with different ports
@@ -111,30 +114,29 @@ func (btc *BurrowTendermintConfig) Config(rootDir string, timeoutFactor float64)
 
 		// Unfortunately this stops metrics from being used at all
 		conf.Instrumentation.Prometheus = false
-		conf.FilterPeers = btc.AuthorizedPeers != ""
+
+		conf.FilterPeers = btc.IdentifyPeers || btc.AuthorizedPeers != ""
 	}
 	// Disable Tendermint RPC
 	conf.RPC.ListenAddress = ""
 	return conf, nil
 }
 
-func (btc *BurrowTendermintConfig) DefaultAuthorizedPeersProvider() abci.PeersFilterProvider {
-	var authorizedPeersID, authorizedPeersAddress []string
+func (btc *BurrowTendermintConfig) DefaultAuthorizedPeersProvider() abci.AuthorizedPeers {
+	authorizedPeers := abci.NewPeerLists()
 
 	authorizedPeersAddrOrID := strings.Split(btc.AuthorizedPeers, ",")
 	for _, authorizedPeerAddrOrID := range authorizedPeersAddrOrID {
 		_, err := url.Parse(authorizedPeerAddrOrID)
 		isNodeAddress := err != nil
 		if isNodeAddress {
-			authorizedPeersAddress = append(authorizedPeersAddress, authorizedPeerAddrOrID)
+			authorizedPeers.Addresses[authorizedPeerAddrOrID] = struct{}{}
 		} else {
-			authorizedPeersID = append(authorizedPeersID, authorizedPeerAddrOrID)
+			authorizedPeers.IDs[authorizedPeerAddrOrID] = struct{}{}
 		}
 	}
 
-	return func() ([]string, []string) {
-		return authorizedPeersID, authorizedPeersAddress
-	}
+	return authorizedPeers
 }
 
 func scaleTimeout(factor float64, timeout time.Duration) time.Duration {
@@ -142,4 +144,8 @@ func scaleTimeout(factor float64, timeout time.Duration) time.Duration {
 		return timeout
 	}
 	return time.Duration(math.Round(factor * float64(timeout)))
+}
+
+func (btc *BurrowTendermintConfig) ListenAddress() string {
+	return net.JoinHostPort(btc.ListenHost, btc.ListenPort)
 }

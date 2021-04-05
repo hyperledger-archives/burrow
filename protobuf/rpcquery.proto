@@ -4,15 +4,18 @@ package rpcquery;
 
 option go_package = "github.com/hyperledger/burrow/rpc/rpcquery";
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-import "github.com/tendermint/tendermint/abci/types/types.proto";
+import "gogoproto/gogo.proto";
+import "tendermint/types/types.proto";
 
 import "names.proto";
 import "acm.proto";
 import "validator.proto";
+import "registry.proto";
 import "rpc.proto";
 import "payload.proto";
 
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.stable_marshaler_all) = true;
 option (gogoproto.sizer_all) = true;
 option (gogoproto.goproto_registration) = true;
@@ -29,6 +32,8 @@ service Query {
     rpc GetName (GetNameParam) returns (names.Entry);
     rpc ListNames (ListNamesParam) returns (stream names.Entry);
 
+    // GetNetworkRegistry returns for each validator address, the list of their identified node at the current state
+    rpc GetNetworkRegistry (GetNetworkRegistryParam) returns (NetworkRegistry);
     rpc GetValidatorSet (GetValidatorSetParam) returns (ValidatorSet);
     rpc GetValidatorSetHistory (GetValidatorSetHistoryParam) returns (ValidatorSetHistory);
 
@@ -37,7 +42,7 @@ service Query {
 
     rpc GetStats(GetStatsParam) returns (Stats);
 
-    rpc GetBlockHeader(GetBlockParam) returns (types.Header);
+    rpc GetBlockHeader(GetBlockParam) returns (tendermint.types.Header);
 }
 
 message StatusParam {
@@ -79,6 +84,10 @@ message ListNamesParam {
     string Query = 1;
 }
 
+message GetNetworkRegistryParam {
+
+}
+
 message GetValidatorSetParam {
 
 }
@@ -86,6 +95,15 @@ message GetValidatorSetParam {
 message GetValidatorSetHistoryParam {
     // Use -1 for all available history
     int64 IncludePrevious = 1;
+}
+
+message NetworkRegistry {
+    repeated RegisteredValidator Set = 1;
+}
+
+message RegisteredValidator {
+    bytes Address = 1 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+    registry.NodeIdentity Node = 2;
 }
 
 message ValidatorSetHistory {

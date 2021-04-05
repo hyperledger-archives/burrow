@@ -24,6 +24,7 @@ func (k CurveType) String() string {
 		return "unknown"
 	}
 }
+
 func (k CurveType) ABCIType() string {
 	switch k {
 	case CurveTypeSecp256k1:
@@ -51,14 +52,14 @@ func CurveTypeFromString(s string) (CurveType, error) {
 	case "":
 		return CurveTypeUnset, nil
 	default:
-		return CurveTypeUnset, ErrInvalidCurve(s)
+		return CurveTypeUnset, fmt.Errorf("invalid curve name: '%s'", s)
 	}
 }
 
-type ErrInvalidCurve string
+type ErrInvalidCurve uint32
 
-func (err ErrInvalidCurve) Error() string {
-	return fmt.Sprintf("invalid curve type")
+func (curveType ErrInvalidCurve) Error() string {
+	return fmt.Sprintf("invalid curve type: %d", curveType)
 }
 
 // The types in this file allow us to control serialisation of keys and signatures, as well as the interface
@@ -72,4 +73,8 @@ type Signer interface {
 // It typically removes signatures before serializing.
 type Signable interface {
 	SignBytes(chainID string) ([]byte, error)
+}
+
+func (pk *PrivateKey) GetAddress() Address {
+	return pk.GetPublicKey().GetAddress()
 }

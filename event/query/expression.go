@@ -30,6 +30,8 @@ const (
 	OpGreater
 	OpEqual
 	OpContains
+	OpNotEqual
+	OpNot
 )
 
 var opNames = map[Operator]string{
@@ -41,10 +43,19 @@ var opNames = map[Operator]string{
 	OpGreater:      ">",
 	OpEqual:        "=",
 	OpContains:     "CONTAINS",
+	OpNotEqual:     "!=",
+	OpNot:          "Not",
 }
 
 func (op Operator) String() string {
 	return opNames[op]
+}
+
+func (op Operator) Arity() int {
+	if op == OpNot {
+		return 1
+	}
+	return 2
 }
 
 // Instruction is a container suitable for the code tape and the stack to hold values an operations
@@ -93,6 +104,7 @@ func (e *Expression) Evaluate(getTagValue func(tag string) (interface{}, bool)) 
 	}
 	var left, right *instruction
 	stack := make([]*instruction, 0, len(e.code))
+	var err error
 	for _, in := range e.code {
 		if in.op == OpTerminal {
 			// just push terminals on to the stack
@@ -100,13 +112,14 @@ func (e *Expression) Evaluate(getTagValue func(tag string) (interface{}, bool)) 
 			continue
 		}
 
-		if len(stack) < 2 {
-			return false, fmt.Errorf("cannot pop from stack for query expression [%v] because stack has "+
-				"fewer than 2 elements", e)
+		stack, left, right, err = pop(stack, in.op)
+		if err != nil {
+			return false, fmt.Errorf("cannot process instruction %v in expression [%v]: %w", in, e, err)
 		}
-		stack, left, right = pop(stack)
 		ins := &instruction{}
 		switch in.op {
+		case OpNot:
+			ins.match = !right.match
 		case OpAnd:
 			ins.match = left.match && right.match
 		case OpOr:
@@ -147,8 +160,16 @@ func (e *Expression) explainf(fmt string, args ...interface{}) {
 	}
 }
 
-func pop(stack []*instruction) ([]*instruction, *instruction, *instruction) {
-	return stack[:len(stack)-2], stack[len(stack)-2], stack[len(stack)-1]
+func pop(stack []*instruction, op Operator) ([]*instruction, *instruction, *instruction, error) {
+	arity := op.Arity()
+	if len(stack) < arity {
+		return stack, nil, nil, fmt.Errorf("cannot pop arguments for arity %d operator %v from stack "+
+			"because stack has fewer than %d elements", arity, op, arity)
+	}
+	if arity == 1 {
+		return stack[:len(stack)-1], nil, stack[len(stack)-1], nil
+	}
+	return stack[:len(stack)-2], stack[len(stack)-2], stack[len(stack)-1], nil
 }
 
 func compareString(op Operator, tagValue interface{}, value string) bool {
@@ -158,6 +179,8 @@ func compareString(op Operator, tagValue interface{}, value string) bool {
 		return strings.Contains(tagString, value)
 	case OpEqual:
 		return tagString == value
+	case OpNotEqual:
+		return tagString != value
 	}
 	return false
 }
@@ -206,6 +229,8 @@ func compareNumber(op Operator, tagValue interface{}, value *big.Float) bool {
 		return cmp == 1
 	case OpEqual:
 		return cmp == 0
+	case OpNotEqual:
+		return cmp != 0
 	}
 	return false
 }
@@ -241,6 +266,8 @@ func compareTime(op Operator, tagValue interface{}, value time.Time) bool {
 		return tagTime.After(value)
 	case OpEqual:
 		return tagTime.Equal(value)
+	case OpNotEqual:
+		return !tagTime.Equal(value)
 	}
 	return false
 }

@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package core
 
@@ -26,12 +15,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hyperledger/burrow/dump"
-
 	"github.com/go-kit/kit/log"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
+	"github.com/hyperledger/burrow/dump"
+	"github.com/hyperledger/burrow/rpc/web3"
+
+	// GRPC Codec
+	_ "github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/execution/state"
@@ -61,6 +53,7 @@ type Kernel struct {
 	// Expose these public-facing interfaces to allow programmatic extension of the Kernel by other projects
 	Emitter        *event.Emitter
 	Service        *rpc.Service
+	EthService     *web3.EthService
 	Launchers      []process.Launcher
 	State          *state.State
 	Blockchain     *bcm.Blockchain
@@ -70,11 +63,11 @@ type Kernel struct {
 	Logger         *logging.Logger
 	database       dbm.DB
 	txCodec        txs.Codec
-	exeOptions     []execution.ExecutionOption
+	exeOptions     []execution.Option
 	checker        execution.BatchExecutor
 	committer      execution.BatchCommitter
 	keyClient      keys.KeyClient
-	keyStore       *keys.KeyStore
+	keyStore       *keys.FilesystemKeyStore
 	info           string
 	processes      map[string]process.Process
 	listeners      map[string]net.Listener
@@ -89,6 +82,13 @@ func NewKernel(dbDir string) (*Kernel, error) {
 		return nil, fmt.Errorf("Burrow requires a database directory")
 	}
 	runID, err := simpleuuid.NewTime(time.Now()) // Create a random ID based on start time
+	if err != nil {
+		return nil, fmt.Errorf("could not create runID UUID: %w", err)
+	}
+	db, err := dbm.NewDB(BurrowDBName, dbm.GoLevelDBBackend, dbDir)
+	if err != nil {
+		return nil, fmt.Errorf("could not create DB for Kernel: %w", err)
+	}
 	return &Kernel{
 		Logger:         logging.NewNoopLogger(),
 		RunID:          runID,
@@ -97,7 +97,7 @@ func NewKernel(dbDir string) (*Kernel, error) {
 		listeners:      make(map[string]net.Listener),
 		shutdownNotify: make(chan struct{}),
 		txCodec:        txs.NewProtobufCodec(),
-		database:       dbm.NewDB(BurrowDBName, dbm.GoLevelDBBackend, dbDir),
+		database:       db,
 	}, err
 }
 
@@ -138,7 +138,13 @@ func (kern *Kernel) LoadState(genesisDoc *genesis.GenesisDoc) (err error) {
 			return fmt.Errorf("could not build genesis state: %v", err)
 		}
 
-		if err = kern.State.InitialCommit(); err != nil {
+		err = kern.State.InitialCommit()
+		if err != nil {
+			return err
+		}
+
+		err = kern.Blockchain.CommitWithAppHash(kern.State.Hash())
+		if err != nil {
 			return err
 		}
 	}
@@ -146,8 +152,15 @@ func (kern *Kernel) LoadState(genesisDoc *genesis.GenesisDoc) (err error) {
 	kern.Logger.InfoMsg("State loading successful")
 
 	params := execution.ParamsFromGenesis(genesisDoc)
-	kern.checker = execution.NewBatchChecker(kern.State, params, kern.Blockchain, kern.Logger)
-	kern.committer = execution.NewBatchCommitter(kern.State, params, kern.Blockchain, kern.Emitter, kern.Logger, kern.exeOptions...)
+	kern.checker, err = execution.NewBatchChecker(kern.State, params, kern.Blockchain, kern.Logger)
+	if err != nil {
+		return fmt.Errorf("could not create BatchChecker: %w", err)
+	}
+	kern.committer, err = execution.NewBatchCommitter(kern.State, params, kern.Blockchain, kern.Emitter, kern.Logger,
+		kern.exeOptions...)
+	if err != nil {
+		return fmt.Errorf("could not create BatchCommitter: %w", err)
+	}
 	return nil
 }
 
@@ -178,21 +191,21 @@ func (kern *Kernel) LoadDump(genesisDoc *genesis.GenesisDoc, restoreFile string,
 
 	reader, err := dump.NewFileReader(restoreFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create dump file reader: %w", err)
 	}
 
 	err = dump.Load(reader, kern.State)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not load dump state: %w", err)
 	}
 
 	if !bytes.Equal(kern.State.Hash(), kern.Blockchain.GenesisDoc().AppHash) {
-		return fmt.Errorf("restore produced a different apphash expect 0x%x got 0x%x",
+		return fmt.Errorf("restore produced a different apphash, expected %X by actual was %X",
 			kern.Blockchain.GenesisDoc().AppHash, kern.State.Hash())
 	}
 	err = kern.Blockchain.CommitWithAppHash(kern.State.Hash())
 	if err != nil {
-		return fmt.Errorf("unable to commit %v", err)
+		return fmt.Errorf("unable to commit %w", err)
 	}
 
 	kern.Logger.InfoMsg("State restore successful",
@@ -209,7 +222,7 @@ func (kern *Kernel) GetNodeView() (*tendermint.NodeView, error) {
 }
 
 // AddExecutionOptions extends our execution options
-func (kern *Kernel) AddExecutionOptions(opts ...execution.ExecutionOption) {
+func (kern *Kernel) AddExecutionOptions(opts ...execution.Option) {
 	kern.exeOptions = append(kern.exeOptions, opts...)
 }
 
@@ -224,7 +237,7 @@ func (kern *Kernel) SetKeyClient(client keys.KeyClient) {
 }
 
 // SetKeyStore explicitly sets the key store
-func (kern *Kernel) SetKeyStore(store *keys.KeyStore) {
+func (kern *Kernel) SetKeyStore(store *keys.FilesystemKeyStore) {
 	kern.keyStore = store
 }
 
@@ -313,7 +326,7 @@ func (kern *Kernel) supervise() {
 	syncCh := make(chan os.Signal, 1)
 	signal.Notify(shutdownCh, syscall.SIGINT, syscall.SIGTERM)
 	signal.Notify(reloadCh, syscall.SIGHUP)
-	signal.Notify(syncCh, syscall.SIGUSR1)
+	signal.Notify(syncCh, syscall.SIGTRAP)
 	for {
 		select {
 		case <-reloadCh:

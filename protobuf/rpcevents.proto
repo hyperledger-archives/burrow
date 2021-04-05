@@ -2,16 +2,14 @@ syntax = 'proto3';
 
 option go_package = "github.com/hyperledger/burrow/rpc/rpcevents";
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "gogoproto/gogo.proto";
 import "exec.proto";
 
 package rpcevents;
 
-// Enable custom Marshal method.
 option (gogoproto.marshaler_all) = true;
-// Enable custom Unmarshal method.
 option (gogoproto.unmarshaler_all) = true;
-// Enable custom Size method (Required by Marshal and Unmarshal).
+option (gogoproto.stable_marshaler_all) = true;
 option (gogoproto.sizer_all) = true;
 // Enable registration with golang/protobuf for the grpc-gateway.
 option (gogoproto.goproto_registration) = true;

@@ -45,6 +45,8 @@ type Job struct {
 	Unbond *Unbond `mapstructure:"unbond,omitempty" json:"unbond,omitempty" yaml:"unbond,omitempty" toml:"unbond"`
 	// Utilize monax:db's native name registry to register a name
 	RegisterName *RegisterName `mapstructure:"register,omitempty" json:"register,omitempty" yaml:"register,omitempty" toml:"register"`
+	// Validator identify as node key
+	Identify *Identify `mapstructure:"identify,omitempty" json:"identify,omitempty" yaml:"identify,omitempty" toml:"identify"`
 	// Sends a transaction which will update the permissions of an account. Must be sent from an account which
 	// has root permissions on the blockchain (as set by either the genesis.json or in a subsequence transaction)
 	Permission *Permission `mapstructure:"permission,omitempty" json:"permission,omitempty" yaml:"permission,omitempty" toml:"permission"`

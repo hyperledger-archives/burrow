@@ -14,9 +14,9 @@ import (
 )
 
 type PermissionsContext struct {
-	StateWriter acmstate.ReaderWriter
-	Logger      *logging.Logger
-	tx          *payload.PermsTx
+	State  acmstate.ReaderWriter
+	Logger *logging.Logger
+	tx     *payload.PermsTx
 }
 
 func (ctx *PermissionsContext) Execute(txe *exec.TxExecution, p payload.Payload) error {
@@ -26,14 +26,14 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution, p payload.Payload)
 		return fmt.Errorf("payload must be PermsTx, but is: %v", txe.Envelope.Tx.Payload)
 	}
 	// Validate input
-	inAcc, err := ctx.StateWriter.GetAccount(ctx.tx.Input.Address)
+	inAcc, err := ctx.State.GetAccount(ctx.tx.Input.Address)
 	if err != nil {
 		return err
 	}
 	if inAcc == nil {
 		ctx.Logger.InfoMsg("Cannot find input account",
 			"tx_input", ctx.tx.Input)
-		return errors.ErrorCodeInvalidAddress
+		return errors.Codes.InvalidAddress
 	}
 
 	err = ctx.tx.PermArgs.EnsureValid()
@@ -43,7 +43,7 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution, p payload.Payload)
 
 	permFlag := ctx.tx.PermArgs.Action
 	// check permission
-	if !HasPermission(ctx.StateWriter, inAcc, permFlag, ctx.Logger) {
+	if !HasPermission(ctx.State, inAcc, permFlag, ctx.Logger) {
 		return fmt.Errorf("account %s does not have moderator permission %s (%b)", ctx.tx.Input.Address,
 			permFlag.String(), permFlag)
 	}
@@ -59,24 +59,24 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution, p payload.Payload)
 		// this one doesn't make sense from txs
 		return fmt.Errorf("HasBase is for contracts, not humans. Just look at the blockchain")
 	case permission.SetBase:
-		permAcc, err = mutatePermissions(ctx.StateWriter, *ctx.tx.PermArgs.Target,
+		permAcc, err = mutatePermissions(ctx.State, *ctx.tx.PermArgs.Target,
 			func(perms *permission.AccountPermissions) error {
 				return perms.Base.Set(*ctx.tx.PermArgs.Permission, *ctx.tx.PermArgs.Value)
 			})
 	case permission.UnsetBase:
-		permAcc, err = mutatePermissions(ctx.StateWriter, *ctx.tx.PermArgs.Target,
+		permAcc, err = mutatePermissions(ctx.State, *ctx.tx.PermArgs.Target,
 			func(perms *permission.AccountPermissions) error {
 				return perms.Base.Unset(*ctx.tx.PermArgs.Permission)
 			})
 	case permission.SetGlobal:
-		permAcc, err = mutatePermissions(ctx.StateWriter, acm.GlobalPermissionsAddress,
+		permAcc, err = mutatePermissions(ctx.State, acm.GlobalPermissionsAddress,
 			func(perms *permission.AccountPermissions) error {
 				return perms.Base.Set(*ctx.tx.PermArgs.Permission, *ctx.tx.PermArgs.Value)
 			})
 	case permission.HasRole:
 		return fmt.Errorf("HasRole is for contracts, not humans. Just look at the blockchain")
 	case permission.AddRole:
-		permAcc, err = mutatePermissions(ctx.StateWriter, *ctx.tx.PermArgs.Target,
+		permAcc, err = mutatePermissions(ctx.State, *ctx.tx.PermArgs.Target,
 			func(perms *permission.AccountPermissions) error {
 				if !perms.AddRole(*ctx.tx.PermArgs.Role) {
 					return fmt.Errorf("role (%s) already exists for account %s",
@@ -85,7 +85,7 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution, p payload.Payload)
 				return nil
 			})
 	case permission.RemoveRole:
-		permAcc, err = mutatePermissions(ctx.StateWriter, *ctx.tx.PermArgs.Target,
+		permAcc, err = mutatePermissions(ctx.State, *ctx.tx.PermArgs.Target,
 			func(perms *permission.AccountPermissions) error {
 				if !perms.RemoveRole(*ctx.tx.PermArgs.Role) {
 					return fmt.Errorf("role (%s) does not exist for account %s",
@@ -106,15 +106,15 @@ func (ctx *PermissionsContext) Execute(txe *exec.TxExecution, p payload.Payload)
 	inAcc.Balance -= value
 	err = inAcc.SubtractFromBalance(value)
 	if err != nil {
-		return errors.ErrorCodef(errors.ErrorCodeInsufficientFunds,
+		return errors.Errorf(errors.Codes.InsufficientFunds,
 			"Input account does not have sufficient balance to cover input amount: %v", ctx.tx.Input)
 	}
-	err = ctx.StateWriter.UpdateAccount(inAcc)
+	err = ctx.State.UpdateAccount(inAcc)
 	if err != nil {
 		return err
 	}
 	if permAcc != nil {
-		err = ctx.StateWriter.UpdateAccount(permAcc)
+		err = ctx.State.UpdateAccount(permAcc)
 		if err != nil {
 			return err
 		}

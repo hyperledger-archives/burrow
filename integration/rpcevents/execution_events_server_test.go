@@ -1,19 +1,8 @@
 // +build integration
 
 // Space above here matters
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package rpcevents
 
@@ -130,7 +119,7 @@ func TestExecutionEventsTest(t *testing.T) {
 				blocks = append(blocks, be)
 				assert.Contains(t, strconv.FormatUint(be.Height, 10), "2")
 				return nil
-			})
+			}, exec.NonConsecutiveBlocks|exec.NonConsecutiveTxs)
 			require.Equal(t, io.EOF, err)
 			require.Len(t, blocks, 2, "should record blocks 2 and 12")
 			assert.Equal(t, uint64(2), blocks[0].Height)
@@ -176,7 +165,7 @@ func TestExecutionEventsTest(t *testing.T) {
 		})
 
 		t.Run("Revert", func(t *testing.T) {
-			txe, err := rpctest.CreateContract(tcli, inputAddress0, solidity.Bytecode_Revert, nil)
+			txe, err := rpctest.CreateEVMContract(tcli, inputAddress0, solidity.Bytecode_Revert, nil)
 			require.NoError(t, err)
 			spec, err := abi.ReadSpec(solidity.Abi_Revert)
 			require.NoError(t, err)
@@ -185,7 +174,7 @@ func TestExecutionEventsTest(t *testing.T) {
 			contractAddress := txe.Receipt.ContractAddress
 			txe, err = rpctest.CallContract(tcli, inputAddress0, contractAddress, data)
 			require.NoError(t, err)
-			assert.Equal(t, errors.ErrorCodeExecutionReverted, txe.Exception.Code)
+			assert.Equal(t, errors.Codes.ExecutionReverted, errors.GetCode(txe.Exception))
 			assert.Contains(t, txe.Exception.Error(), "I have reverted")
 
 			request := &rpcevents.BlocksRequest{

@@ -16,17 +16,19 @@ const (
 
 	// Operators
 	equalString          = "="
+	notEqualString       = "!="
 	greaterThanString    = ">"
 	lessThanString       = "<"
 	greaterOrEqualString = ">="
 	lessOrEqualString    = "<="
 	containsString       = "CONTAINS"
 	andString            = "AND"
+	orString             = "OR"
+	notString            = "NOT"
 
 	// Values
 	trueString  = "true"
 	falseString = "false"
-	emptyString = "empty"
 	timeString  = "TIME"
 	dateString  = "DATE"
 )
@@ -89,7 +91,7 @@ var conditionTemplate = template.Must(template.New("condition").Parse("{{.Tag}} 
 // Creates a new query builder with a base query that is the conjunction of all queries passed
 func NewBuilder(queries ...string) *Builder {
 	qb := new(Builder)
-	qb.queryString = qb.and(stringIterator(queries...))
+	qb.queryString = qb.binary(stringIterator(queries...), andString)
 	return qb
 }
 
@@ -113,7 +115,21 @@ func NewOrEmpty(queryString string) (Query, error) {
 
 // Creates the conjunction of Builder and rightQuery
 func (qb *Builder) And(queryBuilders ...*Builder) *Builder {
-	return NewBuilder(qb.and(queryBuilderIterator(queryBuilders...)))
+	return NewBuilder(qb.binary(queryBuilderIterator(queryBuilders...), andString))
+}
+
+func (qb *Builder) Or(queryBuilders ...*Builder) *Builder {
+	return NewBuilder(qb.binary(queryBuilderIterator(queryBuilders...), orString))
+}
+
+func (qb *Builder) Not() *Builder {
+	defer qb.Buffer.Reset()
+	qb.Buffer.WriteString(notString)
+	qb.Buffer.WriteByte(' ')
+	qb.Buffer.WriteByte('(')
+	qb.Buffer.WriteString(qb.queryString)
+	qb.Buffer.WriteByte(')')
+	return NewBuilder(qb.Buffer.String())
 }
 
 // Creates the conjunction of Builder and tag = operand
@@ -121,52 +137,59 @@ func (qb *Builder) AndEquals(tag string, operand interface{}) *Builder {
 	qb.condition.Tag = tag
 	qb.condition.Op = equalString
 	qb.condition.Operand = operandString(operand)
-	return NewBuilder(qb.and(stringIterator(qb.conditionString())))
+	return NewBuilder(qb.binary(stringIterator(qb.conditionString()), andString))
+}
+
+func (qb *Builder) AndNotEquals(tag string, operand interface{}) *Builder {
+	qb.condition.Tag = tag
+	qb.condition.Op = notEqualString
+	qb.condition.Operand = operandString(operand)
+	return NewBuilder(qb.binary(stringIterator(qb.conditionString()), andString))
 }
 
 func (qb *Builder) AndGreaterThanOrEqual(tag string, operand interface{}) *Builder {
 	qb.condition.Tag = tag
 	qb.condition.Op = greaterOrEqualString
 	qb.condition.Operand = operandString(operand)
-	return NewBuilder(qb.and(stringIterator(qb.conditionString())))
+	return NewBuilder(qb.binary(stringIterator(qb.conditionString()), andString))
 }
 
 func (qb *Builder) AndLessThanOrEqual(tag string, operand interface{}) *Builder {
 	qb.condition.Tag = tag
 	qb.condition.Op = lessOrEqualString
 	qb.condition.Operand = operandString(operand)
-	return NewBuilder(qb.and(stringIterator(qb.conditionString())))
+	return NewBuilder(qb.binary(stringIterator(qb.conditionString()), andString))
 }
 
 func (qb *Builder) AndStrictlyGreaterThan(tag string, operand interface{}) *Builder {
 	qb.condition.Tag = tag
 	qb.condition.Op = greaterThanString
 	qb.condition.Operand = operandString(operand)
-	return NewBuilder(qb.and(stringIterator(qb.conditionString())))
+	return NewBuilder(qb.binary(stringIterator(qb.conditionString()), andString))
 }
 
 func (qb *Builder) AndStrictlyLessThan(tag string, operand interface{}) *Builder {
 	qb.condition.Tag = tag
 	qb.condition.Op = lessThanString
 	qb.condition.Operand = operandString(operand)
-	return NewBuilder(qb.and(stringIterator(qb.conditionString())))
+	return NewBuilder(qb.binary(stringIterator(qb.conditionString()), andString))
 }
 
 func (qb *Builder) AndContains(tag string, operand interface{}) *Builder {
 	qb.condition.Tag = tag
 	qb.condition.Op = containsString
 	qb.condition.Operand = operandString(operand)
-	return NewBuilder(qb.and(stringIterator(qb.conditionString())))
+	return NewBuilder(qb.binary(stringIterator(qb.conditionString()), andString))
 }
 
-func (qb *Builder) and(queryIterator func(func(string))) string {
+func (qb *Builder) binary(queryIterator func(func(string)), operator string) string {
 	defer qb.Buffer.Reset()
 	qb.Buffer.WriteString(qb.queryString)
 	queryIterator(func(q string) {
 		if !isEmpty(q) {
 			if qb.Buffer.Len() > 0 {
 				qb.Buffer.WriteByte(' ')
-				qb.Buffer.WriteString(andString)
+				qb.Buffer.WriteString(operator)
 				qb.Buffer.WriteByte(' ')
 			}
 			qb.Buffer.WriteString(q)
@@ -248,7 +271,7 @@ func (qb *Builder) conditionString() string {
 }
 
 func isEmpty(queryString string) bool {
-	return queryString == "" || queryString == emptyString
+	return queryString == ""
 }
 
 // Iterators over some strings

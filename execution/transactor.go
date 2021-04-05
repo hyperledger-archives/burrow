@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package execution
 
@@ -30,12 +19,16 @@ import (
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/txs"
 	abciTypes "github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/mempool"
+	"github.com/tendermint/tendermint/p2p"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
 const (
 	SubscribeBufferSize = 10
 )
+
+type txChecker func(tx tmTypes.Tx, callback func(*abciTypes.Response), txInfo mempool.TxInfo) error
 
 // Transactor is responsible for helping to formulate, sign, and broadcast transactions to tendermint
 //
@@ -49,20 +42,21 @@ type Transactor struct {
 	BlockchainInfo  bcm.BlockchainInfo
 	Emitter         *event.Emitter
 	MempoolAccounts *Accounts
-	checkTxAsync    func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error
+	checkTxAsync    txChecker
+	nodeID          p2p.ID
 	txEncoder       txs.Encoder
 	logger          *logging.Logger
 }
 
 func NewTransactor(tip bcm.BlockchainInfo, emitter *event.Emitter, mempoolAccounts *Accounts,
-	checkTxAsync func(tx tmTypes.Tx, cb func(*abciTypes.Response)) error, txEncoder txs.Encoder,
-	logger *logging.Logger) *Transactor {
+	checkTxAsync txChecker, id p2p.ID, txEncoder txs.Encoder, logger *logging.Logger) *Transactor {
 
 	return &Transactor{
 		BlockchainInfo:  tip,
 		Emitter:         emitter,
 		MempoolAccounts: mempoolAccounts,
 		checkTxAsync:    checkTxAsync,
+		nodeID:          id,
 		txEncoder:       txEncoder,
 		logger:          logger.With(structure.ComponentKey, "Transactor"),
 	}
@@ -104,7 +98,7 @@ func (trans *Transactor) BroadcastTxSync(ctx context.Context, txEnv *txs.Envelop
 	case msg := <-out:
 		txe := msg.(*exec.TxExecution)
 		callError := txe.CallError()
-		if callError != nil && callError.ErrorCode() != errors.ErrorCodeExecutionReverted {
+		if callError != nil && callError.ErrorCode() != errors.Codes.ExecutionReverted {
 			return nil, errors.Wrap(callError, "exception during transaction execution")
 		}
 		return txe, nil
@@ -233,14 +227,14 @@ func (trans *Transactor) CheckTxSyncRaw(ctx context.Context, txBytes []byte) (*t
 			}
 			return receipt, nil
 		default:
-			return nil, errors.ErrorCodef(errors.Code(checkTxResponse.Code),
-				"error returned by Tendermint in BroadcastTxSync ABCI log: %v", checkTxResponse.Log)
+			return nil, fmt.Errorf("error %d returned by Tendermint in BroadcastTxSync ABCI log: %v",
+				checkTxResponse.Code, checkTxResponse.Log)
 		}
 	}
 }
 
 func (trans *Transactor) CheckTxAsyncRaw(txBytes []byte, callback func(res *abciTypes.Response)) error {
-	return trans.checkTxAsync(txBytes, callback)
+	return trans.checkTxAsync(txBytes, callback, mempool.TxInfo{SenderP2PID: trans.nodeID})
 }
 
 func (trans *Transactor) CheckTxAsync(txEnv *txs.Envelope, callback func(res *abciTypes.Response)) error {

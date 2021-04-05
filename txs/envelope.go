@@ -50,7 +50,7 @@ func (s *Signatory) RealisePublicKey(getter acmstate.AccountGetter) error {
 			return fmt.Errorf("%s: could not get account %v: %v", errPrefix, *s.Address, err)
 		}
 		publicKey := acc.PublicKey
-		s.PublicKey = &publicKey
+		s.PublicKey = publicKey
 	}
 	if !s.PublicKey.IsValid() {
 		return fmt.Errorf("%s: public key %v is invalid", errPrefix, *s.PublicKey)
@@ -94,7 +94,7 @@ func (sig *Signatory) Validate() error {
 
 // Verifies the validity of the Signatories' Signatures in the Envelope. The Signatories must
 // appear in the same order as the inputs as returned by Tx.GetInputs().
-func (txEnv *Envelope) Verify(getter acmstate.AccountGetter, chainID string) error {
+func (txEnv *Envelope) Verify(chainID string) error {
 	err := txEnv.Validate()
 	if err != nil {
 		return err
@@ -109,7 +109,7 @@ func (txEnv *Envelope) Verify(getter acmstate.AccountGetter, chainID string) err
 		return fmt.Errorf("%s: number of inputs (= %v) should equal number of signatories (= %v)",
 			errPrefix, len(inputs), len(txEnv.Signatories))
 	}
-	signBytes, err := txEnv.Tx.SignBytes()
+	signBytes, err := txEnv.Tx.SignBytes(txEnv.GetEncoding())
 	if err != nil {
 		return fmt.Errorf("%s: could not generate SignBytes: %v", errPrefix, err)
 	}
@@ -132,7 +132,7 @@ func (txEnv *Envelope) Verify(getter acmstate.AccountGetter, chainID string) err
 func (txEnv *Envelope) Sign(signingAccounts ...acm.AddressableSigner) error {
 	// Clear any existing
 	txEnv.Signatories = nil
-	signBytes, err := txEnv.Tx.SignBytes()
+	signBytes, err := txEnv.Tx.SignBytes(txEnv.GetEncoding())
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,7 @@ func (txEnv *Envelope) Sign(signingAccounts ...acm.AddressableSigner) error {
 		publicKey := sa.GetPublicKey()
 		txEnv.Signatories = append(txEnv.Signatories, Signatory{
 			Address:   &address,
-			PublicKey: &publicKey,
+			PublicKey: publicKey,
 			Signature: sig,
 		})
 	}

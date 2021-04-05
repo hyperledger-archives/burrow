@@ -26,8 +26,8 @@ func Abi(output Output) func(cmd *cli.Cmd) {
 						for id, e := range spec.EventsByID {
 							fmt.Printf("event %s: %s\n", id, e.String())
 						}
-						for name, f := range spec.Functions {
-							fmt.Printf("func %x: %s\n", f.FunctionID, f.String(name))
+						for _, f := range spec.Functions {
+							fmt.Printf("func %x: %s\n", f.FunctionID, f.String())
 						}
 					}
 				}

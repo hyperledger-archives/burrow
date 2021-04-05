@@ -58,20 +58,13 @@ func TestReplay(t *testing.T) {
 	var height uint64 = 10
 	genesisDoc, tmDB, burrowDB := makeChain(t, height)
 
-	re := NewReplay(burrowDB, tmDB, genesisDoc)
+	src := NewSource(burrowDB, tmDB, genesisDoc)
+	dst := NewSourceFromGenesis(genesisDoc)
+	re := NewReplay(src, dst)
+
 	rc, err := re.Blocks(1, height)
 	require.NoError(t, err)
 	require.Len(t, rc, int(height-1))
-}
-
-func initBurrow(t *testing.T, gd *genesis.GenesisDoc) (dbm.DB, *state.State, *bcm.Blockchain) {
-	db := dbm.NewMemDB()
-	st, err := state.MakeGenesisState(db, gd)
-	require.NoError(t, err)
-	err = st.InitialCommit()
-	require.NoError(t, err)
-	chain := bcm.NewBlockchain(db, gd)
-	return db, st, chain
 }
 
 func makeChain(t *testing.T, max uint64) (*genesis.GenesisDoc, dbm.DB, dbm.DB) {
@@ -87,10 +80,12 @@ func makeChain(t *testing.T, max uint64) (*genesis.GenesisDoc, dbm.DB, dbm.DB) {
 	})
 	require.NoError(t, err)
 
-	burrowDB, burrowState, burrowChain := initBurrow(t, genesisDoc)
+	burrowDB, burrowState, burrowChain, err := initBurrow(genesisDoc)
+	require.NoError(t, err)
 
-	committer := execution.NewBatchCommitter(burrowState, execution.ParamsFromGenesis(genesisDoc),
+	committer, err := execution.NewBatchCommitter(burrowState, execution.ParamsFromGenesis(genesisDoc),
 		burrowChain, event.NewEmitter(), logging.NewNoopLogger())
+	require.NoError(t, err)
 
 	var stateHash []byte
 	for i := uint64(1); i < max; i++ {
@@ -123,10 +118,10 @@ func makeBlock(t *testing.T, st sm.State, bs *store.BlockStore, commit func(*typ
 
 	commit(block)
 	partSet := block.MakePartSet(2)
-	commitSigs := []*types.CommitSig{{Height: height, Timestamp: time.Time{}}}
-	seenCommit := types.NewCommit(types.BlockID{
-		Hash:        block.Hash(),
-		PartsHeader: partSet.Header(),
+	commitSigs := []types.CommitSig{{Timestamp: time.Time{}}}
+	seenCommit := types.NewCommit(height, 0, types.BlockID{
+		Hash:          block.Hash(),
+		PartSetHeader: partSet.Header(),
 	}, commitSigs)
 	bs.SaveBlock(block, partSet, seenCommit)
 }

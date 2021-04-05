@@ -4,9 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hyperledger/burrow/encoding"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/crypto"
-	"github.com/hyperledger/burrow/crypto/sha3"
+	_ "github.com/hyperledger/burrow/encoding"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
 	"github.com/hyperledger/burrow/integration"
@@ -18,7 +20,7 @@ import (
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
+	"golang.org/x/crypto/sha3"
 )
 
 // Recursive call count for UpsieDownsie() function call from strange_loop.sol
@@ -31,19 +33,19 @@ var GenesisDoc = integration.TestGenesisDoc(PrivateAccounts, 0)
 
 // Helpers
 func NewTransactClient(t testing.TB, listenAddress string) rpctransact.TransactClient {
-	conn, err := grpc.Dial(listenAddress, grpc.WithInsecure())
+	conn, err := encoding.GRPCDial(listenAddress)
 	require.NoError(t, err)
 	return rpctransact.NewTransactClient(conn)
 }
 
 func NewExecutionEventsClient(t testing.TB, listenAddress string) rpcevents.ExecutionEventsClient {
-	conn, err := grpc.Dial(listenAddress, grpc.WithInsecure())
+	conn, err := encoding.GRPCDial(listenAddress)
 	require.NoError(t, err)
 	return rpcevents.NewExecutionEventsClient(conn)
 }
 
 func NewQueryClient(t testing.TB, listenAddress string) rpcquery.QueryClient {
-	conn, err := grpc.Dial(listenAddress, grpc.WithInsecure())
+	conn, err := encoding.GRPCDial(listenAddress)
 	require.NoError(t, err)
 	return rpcquery.NewQueryClient(conn)
 }
@@ -53,13 +55,13 @@ type MetadataMap struct {
 	Abi          []byte
 }
 
-func CreateContract(cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte, metamap []MetadataMap) (*exec.TxExecution, error) {
+func CreateEVMContract(cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte, metamap []MetadataMap) (*exec.TxExecution, error) {
 	var meta []*payload.ContractMeta
 	if metamap != nil {
 		meta = make([]*payload.ContractMeta, len(metamap))
 		for i, m := range metamap {
-			hash := sha3.NewKeccak256()
-			hash.Write([]byte(m.DeployedCode))
+			hash := sha3.NewLegacyKeccak256()
+			hash.Write(m.DeployedCode)
 			meta[i] = &payload.ContractMeta{
 				CodeHash: hash.Sum(nil),
 				Meta:     string(m.Abi),
@@ -74,6 +76,37 @@ func CreateContract(cli rpctransact.TransactClient, inputAddress crypto.Address,
 		},
 		Address:      nil,
 		Data:         bytecode,
+		Fee:          2,
+		GasLimit:     10000,
+		ContractMeta: meta,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return txe, nil
+}
+
+func CreateWASMContract(cli rpctransact.TransactClient, inputAddress crypto.Address, bytecode []byte, metamap []MetadataMap) (*exec.TxExecution, error) {
+	var meta []*payload.ContractMeta
+	if metamap != nil {
+		meta = make([]*payload.ContractMeta, len(metamap))
+		for i, m := range metamap {
+			hash := sha3.NewLegacyKeccak256()
+			hash.Write(m.DeployedCode)
+			meta[i] = &payload.ContractMeta{
+				CodeHash: hash.Sum(nil),
+				Meta:     string(m.Abi),
+			}
+		}
+	}
+
+	txe, err := cli.CallTxSync(context.Background(), &payload.CallTx{
+		Input: &payload.TxInput{
+			Address: inputAddress,
+			Amount:  2,
+		},
+		Address:      nil,
+		WASM:         bytecode,
 		Fee:          2,
 		GasLimit:     10000,
 		ContractMeta: meta,
@@ -117,11 +150,11 @@ func UpdateName(cli rpctransact.TransactClient, inputAddress crypto.Address, nam
 //-------------------------------------------------------------------------------
 // some default transaction functions
 
-func MakeDefaultCallTx(t *testing.T, client infoclient.RPCClient, addr *crypto.Address, code []byte, amt, gasLim,
+func MakeDefaultCallTx(t *testing.T, client rpc.Client, addr *crypto.Address, code []byte, amt, gasLim,
 	fee uint64) *txs.Envelope {
 	sequence := GetSequence(t, client, PrivateAccounts[0].GetAddress())
 	tx := payload.NewCallTxWithSequence(PrivateAccounts[0].GetPublicKey(), addr, code, amt, gasLim, fee, sequence+1)
-	txEnv := txs.Enclose(GenesisDoc.ChainID(), tx)
+	txEnv := txs.Enclose(GenesisDoc.GetChainID(), tx)
 	require.NoError(t, txEnv.Sign(PrivateAccounts[0]))
 	return txEnv
 }
@@ -130,7 +163,7 @@ func MakeDefaultCallTx(t *testing.T, client infoclient.RPCClient, addr *crypto.A
 // rpc call wrappers (fail on err)
 
 // get an account's sequence number
-func GetSequence(t *testing.T, client infoclient.RPCClient, addr crypto.Address) uint64 {
+func GetSequence(t *testing.T, client rpc.Client, addr crypto.Address) uint64 {
 	acc, err := infoclient.Account(client, addr)
 	if err != nil {
 		t.Fatal(err)
@@ -142,7 +175,7 @@ func GetSequence(t *testing.T, client infoclient.RPCClient, addr crypto.Address)
 }
 
 // get the account
-func GetAccount(t *testing.T, client infoclient.RPCClient, addr crypto.Address) *acm.Account {
+func GetAccount(t *testing.T, client rpc.Client, addr crypto.Address) *acm.Account {
 	ac, err := infoclient.Account(client, addr)
 	if err != nil {
 		t.Fatal(err)
@@ -151,7 +184,7 @@ func GetAccount(t *testing.T, client infoclient.RPCClient, addr crypto.Address) 
 }
 
 // dump all storage for an account. currently unused
-func DumpStorage(t *testing.T, client infoclient.RPCClient, addr crypto.Address) *rpc.ResultDumpStorage {
+func DumpStorage(t *testing.T, client rpc.Client, addr crypto.Address) *rpc.ResultDumpStorage {
 	resp, err := infoclient.DumpStorage(client, addr)
 	if err != nil {
 		t.Fatal(err)
@@ -159,7 +192,7 @@ func DumpStorage(t *testing.T, client infoclient.RPCClient, addr crypto.Address)
 	return resp
 }
 
-func GetStorage(t *testing.T, client infoclient.RPCClient, addr crypto.Address, key []byte) []byte {
+func GetStorage(t *testing.T, client rpc.Client, addr crypto.Address, key []byte) []byte {
 	resp, err := infoclient.Storage(client, addr, key)
 	if err != nil {
 		t.Fatal(err)

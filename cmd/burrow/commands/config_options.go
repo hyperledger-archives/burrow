@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/hyperledger/burrow/config"
@@ -18,6 +19,7 @@ type configOptions struct {
 	initPassphraseOpt  *string
 	initMonikerOpt     *string
 	externalAddressOpt *string
+	grpcAddressOpt     *string
 }
 
 const configFileSpec = "[--config=<config file>]"
@@ -43,6 +45,7 @@ func addConfigOptions(cmd *cli.Cmd) *configOptions {
 		"|--address=<address of signing key>] " +
 		"[--passphrase=<secret passphrase to unlock key>] " +
 		"[--external-address=<hostname:port>] " +
+		"[--grpc-address=<hostname:port>] " +
 		configFileSpec + " " + genesisFileSpec
 
 	cmd.Spec = strings.Join([]string{cmd.Spec, spec}, " ")
@@ -85,6 +88,12 @@ func addConfigOptions(cmd *cli.Cmd) *configOptions {
 			EnvVar: "BURROW_EXTERNAL_ADDRESS",
 		}),
 
+		grpcAddressOpt: cmd.String(cli.StringOpt{
+			Name:   "grpc-address",
+			Desc:   "GRPC listen address",
+			EnvVar: "BURROW_GRPC_ADDRESS",
+		}),
+
 		configFileOpt: cmd.String(configFileOption),
 
 		genesisFileOpt: cmd.String(genesisFileOption),
@@ -97,7 +106,7 @@ func (opts *configOptions) obtainBurrowConfig() (*config.BurrowConfig, error) {
 		return nil, err
 	}
 	// Which account am I?
-	conf.Address, err = accountAddress(conf, *opts.initAddressOpt, *opts.accountIndexOpt, *opts.validatorIndexOpt)
+	conf.ValidatorAddress, err = accountAddress(conf, *opts.initAddressOpt, *opts.accountIndexOpt, *opts.validatorIndexOpt)
 	if err != nil {
 		return nil, err
 	}
@@ -106,18 +115,26 @@ func (opts *configOptions) obtainBurrowConfig() (*config.BurrowConfig, error) {
 	}
 	if *opts.initMonikerOpt == "" {
 		chainIDHeader := ""
-		if conf.GenesisDoc != nil && conf.GenesisDoc.ChainID() != "" {
-			chainIDHeader = conf.GenesisDoc.ChainID() + "_"
+		if conf.GenesisDoc != nil && conf.GenesisDoc.GetChainID() != "" {
+			chainIDHeader = conf.GenesisDoc.GetChainID() + "_"
 		}
-		if conf.Address != nil {
+		if conf.ValidatorAddress != nil {
 			// Set a default moniker... since we can at this stage of config completion and it is required for start
-			conf.Tendermint.Moniker = fmt.Sprintf("%sNode_%s", chainIDHeader, conf.Address)
+			conf.Tendermint.Moniker = fmt.Sprintf("%sNode_%s", chainIDHeader, conf.ValidatorAddress)
 		}
 	} else {
 		conf.Tendermint.Moniker = *opts.initMonikerOpt
 	}
 	if *opts.externalAddressOpt != "" {
 		conf.Tendermint.ExternalAddress = *opts.externalAddressOpt
+	}
+	if *opts.grpcAddressOpt != "" {
+		host, port, err := net.SplitHostPort(*opts.grpcAddressOpt)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse GRPC listen addres: %w", err)
+		}
+		conf.RPC.GRPC.ListenHost = host
+		conf.RPC.GRPC.ListenPort = port
 	}
 	return conf, nil
 }
@@ -155,8 +172,8 @@ func accountAddress(conf *config.BurrowConfig, addressIn string, accIndex, valIn
 				valIndex, len(conf.GenesisDoc.Validators))
 		}
 		return &conf.GenesisDoc.Validators[valIndex].Address, nil
-	} else if conf.Address != nil {
-		return conf.Address, nil
+	} else if conf.ValidatorAddress != nil {
+		return conf.ValidatorAddress, nil
 	} else if conf.GenesisDoc != nil && len(conf.GenesisDoc.Validators) == 1 {
 		return &conf.GenesisDoc.Validators[0].Address, nil
 	}

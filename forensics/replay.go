@@ -14,6 +14,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/binary"
+	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/event"
 	"github.com/hyperledger/burrow/execution"
@@ -23,14 +24,15 @@ import (
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/pkg/errors"
+	sm "github.com/tendermint/tendermint/state"
 	"github.com/tendermint/tendermint/store"
 	"github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 	"github.com/xlab/treeprint"
 )
 
-// Replay is a kernel for state replaying
-type Replay struct {
+// Source is a kernel for tracking state
+type Source struct {
 	Explorer   *bcm.BlockStore
 	State      *state.State
 	db         dbm.DB
@@ -41,10 +43,10 @@ type Replay struct {
 	logger     *logging.Logger
 }
 
-func NewReplay(burrowDB, tmDB dbm.DB, genesisDoc *genesis.GenesisDoc) *Replay {
+func NewSource(burrowDB, tmDB dbm.DB, genesisDoc *genesis.GenesisDoc) *Source {
 	// Avoid writing through to underlying DB
 	cacheDB := storage.NewCacheDB(burrowDB)
-	return &Replay{
+	return &Source{
 		Explorer:   bcm.NewBlockStore(store.NewBlockStore(tmDB)),
 		db:         burrowDB,
 		cacheDB:    cacheDB,
@@ -54,58 +56,118 @@ func NewReplay(burrowDB, tmDB dbm.DB, genesisDoc *genesis.GenesisDoc) *Replay {
 	}
 }
 
-func NewReplayFromDir(genesisDoc *genesis.GenesisDoc, dbDir string) *Replay {
-	burrowDB := dbm.NewDB(core.BurrowDBName, dbm.GoLevelDBBackend, dbDir)
-	tmDB := dbm.NewDB("blockstore", dbm.GoLevelDBBackend, path.Join(dbDir, "data"))
-	return NewReplay(burrowDB, tmDB, genesisDoc)
+func NewSourceFromDir(genesisDoc *genesis.GenesisDoc, dbDir string) *Source {
+	burrowDB, err := dbm.NewDB(core.BurrowDBName, dbm.GoLevelDBBackend, dbDir)
+	if err != nil {
+		panic(fmt.Errorf("could not create core DB for replay source: %w", err))
+	}
+	tmDB, err := dbm.NewDB("blockstore", dbm.GoLevelDBBackend, path.Join(dbDir, "data"))
+	if err != nil {
+		panic(fmt.Errorf("could not create blockstore DB for replay source: %w", err))
+	}
+	return NewSource(burrowDB, tmDB, genesisDoc)
+}
+
+func NewSourceFromGenesis(genesisDoc *genesis.GenesisDoc) *Source {
+	tmDB := dbm.NewMemDB()
+	gd := tendermint.DeriveGenesisDoc(genesisDoc, nil)
+	st, err := sm.MakeGenesisState(&types.GenesisDoc{
+		ChainID:    gd.ChainID,
+		Validators: gd.Validators,
+		AppHash:    gd.AppHash,
+	})
+	if err != nil {
+		panic(err)
+	}
+	stateStore := sm.NewStore(tmDB)
+	err = stateStore.Save(st)
+	if err != nil {
+		panic(err)
+	}
+	burrowDB, burrowState, burrowChain, err := initBurrow(genesisDoc)
+	if err != nil {
+		panic(err)
+	}
+	src := NewSource(burrowDB, tmDB, genesisDoc)
+	src.State = burrowState
+	src.committer, err = execution.NewBatchCommitter(burrowState, execution.ParamsFromGenesis(genesisDoc),
+		burrowChain, event.NewEmitter(), logging.NewNoopLogger())
+	if err != nil {
+		panic(err)
+	}
+	return src
+}
+
+func initBurrow(gd *genesis.GenesisDoc) (dbm.DB, *state.State, *bcm.Blockchain, error) {
+	db := dbm.NewMemDB()
+	st, err := state.MakeGenesisState(db, gd)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	err = st.InitialCommit()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	chain := bcm.NewBlockchain(db, gd)
+	return db, st, chain, nil
 }
 
 // LoadAt height
-func (re *Replay) LoadAt(height uint64) (err error) {
+func (src *Source) LoadAt(height uint64) (err error) {
 	if height >= 1 {
 		// Load and commit previous block
-		block, err := re.Explorer.Block(int64(height))
+		block, err := src.Explorer.Block(int64(height))
 		if err != nil {
 			return err
 		}
-		err = re.blockchain.CommitBlockAtHeight(block.Time, block.Hash(), block.Header.AppHash, uint64(block.Height))
+		err = src.blockchain.CommitBlockAtHeight(block.Time, block.Hash(), block.Header.AppHash, uint64(block.Height))
 		if err != nil {
 			return err
 		}
 	}
-	re.State, err = state.LoadState(re.cacheDB, execution.VersionAtHeight(height))
+	src.State, err = state.LoadState(src.cacheDB, execution.VersionAtHeight(height))
 	if err != nil {
 		return err
 	}
 
 	// Get our commit machinery
-	re.committer = execution.NewBatchCommitter(re.State, execution.ParamsFromGenesis(re.genesisDoc), re.blockchain,
-		event.NewEmitter(), re.logger)
-	return nil
+	src.committer, err = execution.NewBatchCommitter(src.State, execution.ParamsFromGenesis(src.genesisDoc), src.blockchain,
+		event.NewEmitter(), src.logger)
+	return err
 }
 
-func (re *Replay) LatestHeight() (uint64, error) {
-	blockchain, _, err := bcm.LoadOrNewBlockchain(re.db, re.genesisDoc, re.logger)
+func (src *Source) LatestHeight() (uint64, error) {
+	blockchain, _, err := bcm.LoadOrNewBlockchain(src.db, src.genesisDoc, src.logger)
 	if err != nil {
 		return 0, err
 	}
 	return blockchain.LastBlockHeight(), nil
 }
 
-func (re *Replay) LatestBlockchain() (*bcm.Blockchain, error) {
-	blockchain, _, err := bcm.LoadOrNewBlockchain(re.db, re.genesisDoc, re.logger)
+func (src *Source) LatestBlockchain() (*bcm.Blockchain, error) {
+	blockchain, _, err := bcm.LoadOrNewBlockchain(src.db, src.genesisDoc, src.logger)
 	if err != nil {
 		return nil, err
 	}
-	re.blockchain = blockchain
+	src.blockchain = blockchain
 	return blockchain, nil
+}
+
+// Replay is a kernel for state replaying
+type Replay struct {
+	Src *Source
+	Dst *Source
+}
+
+func NewReplay(src, dst *Source) *Replay {
+	return &Replay{src, dst}
 }
 
 // Block loads and commits a block
 func (re *Replay) Block(height uint64) (*ReplayCapture, error) {
 	// block.AppHash is hash after txs from previous block have been applied - it's the state we want to load on top
 	// of which we will reapply this block txs
-	if err := re.LoadAt(height - 1); err != nil {
+	if err := re.Src.LoadAt(height - 1); err != nil {
 		return nil, err
 	}
 	return re.Commit(height)
@@ -113,7 +175,7 @@ func (re *Replay) Block(height uint64) (*ReplayCapture, error) {
 
 // Blocks iterates through the given range
 func (re *Replay) Blocks(startHeight, endHeight uint64) ([]*ReplayCapture, error) {
-	if err := re.LoadAt(startHeight - 1); err != nil {
+	if err := re.Dst.LoadAt(startHeight - 1); err != nil {
 		return nil, errors.Wrap(err, "State()")
 	}
 
@@ -134,7 +196,7 @@ func (re *Replay) Commit(height uint64) (*ReplayCapture, error) {
 		Height: height,
 	}
 
-	block, err := re.Explorer.Block(int64(height))
+	block, err := re.Src.Explorer.Block(int64(height))
 	if err != nil {
 		return nil, errors.Wrap(err, "explorer.Block()")
 	}
@@ -142,14 +204,14 @@ func (re *Replay) Commit(height uint64) (*ReplayCapture, error) {
 		return nil, errors.Errorf("Tendermint block height %d != requested block height %d",
 			block.Height, height)
 	}
-	if height > 1 && !bytes.Equal(re.State.Hash(), block.AppHash) {
+	if height > 1 && !bytes.Equal(re.Dst.State.Hash(), block.AppHash) {
 		return nil, errors.Errorf("state hash %X does not match AppHash %X at height %d",
-			re.State.Hash(), block.AppHash[:], height)
+			re.Dst.State.Hash(), block.AppHash[:], height)
 	}
 
 	recap.AppHashBefore = binary.HexBytes(block.AppHash)
 	err = block.Transactions(func(txEnv *txs.Envelope) error {
-		txe, err := re.committer.Execute(txEnv)
+		txe, err := re.Dst.committer.Execute(txEnv)
 		if err != nil {
 			return errors.Wrap(err, "committer.Execute()")
 		}
@@ -161,7 +223,7 @@ func (re *Replay) Commit(height uint64) (*ReplayCapture, error) {
 	}
 
 	abciHeader := types.TM2PB.Header(&block.Header)
-	recap.AppHashAfter, err = re.committer.Commit(&abciHeader)
+	recap.AppHashAfter, err = re.Dst.committer.Commit(&abciHeader)
 	if err != nil {
 		return nil, errors.Wrap(err, "committer.Commit()")
 	}
@@ -184,8 +246,10 @@ func iterComp(exp, act *state.ReadState, tree treeprint.Tree, prefix []byte) (ui
 	branch := tree.AddBranch(prefix)
 	return diffs, reader1.Iterate(nil, nil, true,
 		func(key, value []byte) error {
-			actual := reader2.Get(key)
-			if !bytes.Equal(actual, value) {
+			actual, err := reader2.Get(key)
+			if err != nil {
+				return err
+			} else if !bytes.Equal(actual, value) {
 				diffs++
 				branch.AddNode(color.GreenString("%q -> %q", hex.EncodeToString(key), hex.EncodeToString(value)))
 				branch.AddNode(color.RedString("%q -> %q", hex.EncodeToString(key), hex.EncodeToString(actual)))

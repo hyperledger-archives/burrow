@@ -78,16 +78,16 @@ func SqliteVentConfig(grpcAddress string) *config.VentConfig {
 
 	cfg.DBURL = file.Name()
 	cfg.DBAdapter = types.SQLiteDB
-	cfg.GRPCAddr = grpcAddress
+	cfg.ChainAddress = grpcAddress
 	return cfg
 }
 
-func PostgresVentConfig(grpcAddress string) *config.VentConfig {
+func PostgresVentConfig(chainAddress string) *config.VentConfig {
 	cfg := config.DefaultVentConfig()
-	cfg.DBSchema = fmt.Sprintf("test_%s", randString(10))
+	cfg.DBSchema = fmt.Sprintf("test_%d_%s", time.Now().Unix(), randString(10))
 	cfg.DBAdapter = types.PostgresDB
 	cfg.DBURL = config.DefaultPostgresDBURL
-	cfg.GRPCAddr = grpcAddress
+	cfg.ChainAddress = chainAddress
 	cfg.AnnounceEvery = time.Millisecond * 100
 	return cfg
 }

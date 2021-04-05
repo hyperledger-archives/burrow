@@ -48,9 +48,174 @@ func FullVersion() string {
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
 	MustDeclareReleases(
+		"0.31.3 - 2020-03-25",
+		`### Fixed
+- [Dump] Make load from dump set tx index so BlockAccumulator continuity conditions are met
+- [Dump] Improve error messages
+`,
+		"0.31.2 - 2020-03-24",
+		`### Fixed
+- [Dump] Stop TxStack EventStream consumer from rejecting events from dump/restored chain because they lack tx Envelopes (as they are intended to to keep dump format minimal)
+- [Genesis] Fix hash instability introduced by accidentally removing omitempty from AppHash in genesis
+
+### Added
+- [Vent] Implement throttling on Ethereum Vent consumer via --max-request-rate=<requests / time base> flag to 'vent start'
+`,
+
+		"0.31.1 - 2020-03-19",
+		`### Changed
+- [Repo] main branch replaces master as per Hyperledger TSC guidelines
+
+### Fixed
+- [Docker] Make sure default testnet mode works when running docker images
+- [Vent] Use appropriately sized database integral types for EVM integer types (i.e. numeric for uint64 and bigger)
+- [Vent] Ethereum block consumer now correctly reads to an _inclusive_ block batch end height
+- [Web3] Handle integer ChainID for web3 consistently; return hex-encoded numeric value from web3 RPC, also allow overriding of genesis-hash derived ChainID so Burrow can be connected with from metamask
+
+### Added
+- [Build] Build dev docker and JS releases by force pushing to prerelease branch
+- [Vent] Expose BlockConsumerConfig to adjust backoff and read characteristics
+- [Vent] Add vent-side continuity test over blocks (to double-check exactly once delivery of events)
+`,
+		"0.31.0 - 2020-03-10",
+		`### Changed
+- [Tendermint] Upgraded to Tendermint 0.34.3
+- [Docker] Image will now start testnet by default
+
+### Added
+- [Vent] Added support for building Vent SQL tables from Ethereum web3 JSONRPC chains (useful for oracles/state channels with layer 1)
+- [Vent] Added Status to healthcheck endpoint on Vent
+- [Natives] Implemented ecrecover using btcec (revised key handling)
+- [Engine] Implement cross-engine dispatch
+- [WASM] Implement cross-engine calls and calls to precompiles
+- [WASM] Significantly extend eWASM support and implement functions
+- [WASM] Add printing debug functions
+- [WASM] Implement CREATE, GETTXGASPRICE, GETBLOCKDIFFICULTY, SELFDESTRUCT eWASM functions (thanks Yoongbok Lee!)
+- [WASM/JS] JS library supports deploying WASM code
+- [Deploy] Can specify WASM in playbook
+- [EVM] Implement CHAINID and DIFFICULTY opcodes
+- [Query] PEG query grammar now supports Not ("NOT") and NotEqual ("!=") operators
+
+### Fixed
+- [Deploy] Fix flaky parallel tests
+- [EVM] Use correct opcode for create2 (thanks Vitali Grabovski!)
+- [ABI] Check length of input before decoding (thanks Tri-stone!)
+- [WASM] Constructor argument handling
+- [RLP] Incorrect use of offsets for longer bytes strings
+- [RLP] Use minimal encoding for length prefixes (no leading zeros)
+- [Web3] Generate correct encoding hash for RawTx (ChainID in hash digest but not payload)
+- [Web3] Generate canonical weird Ethereum hex
+- [State] Fix read concurrency in RWTree (on which state is based) removing need for CallSim lock workaround
+
+### Security
+- Updated elliptic JS dep to 6.5.3
+- Updated lodash to 4.17.19
+`,
+		"0.30.5 - 2020-07-09",
+		`### Added
+- [Vent] Add BytesToHex flag on projection field mappings that causes bytes fields (e.g. bytes32) solidity fields to be hex-encoded and mapped to varchar(64) rather than bytea/blob columns in postgres/sqlite
+`,
+		"0.30.4 - 2020-04-05",
+		`### Added
+- [Build] Added Helm chart
+- [State] Account now has EVMOpcodeBitset field to support upcoming EVM fixes
+
+### Fixed
+- [JS] Github actions release of JS lib
+`,
+		"0.30.3 - 2020-04-05",
+		`### Added
+- [CLI] Made previously internal Solidity Go fixtures compilation available through 'burrow compile'
+- [TS] Default ts client interface implementation
+`,
+		"0.30.2 - 2020-03-13",
+		`### Fixed
+- [RPC] add mutex to callSim and callCode
+`,
+		"0.30.1 - 2020-03-06",
+		`### Fixed
+- [CLI/Tx] Unbond formulation now specifies amount
+`,
+
+		"0.30.0 - 2020-03-05",
+		`### Changed
+- [JS] Partial rewrite of client API in typescript
+
+### Fixed
+- [State] Blockchain now commits initial AppHash to avoid IAVL panic
+`,
+		"0.29.8 - 2020-02-11",
+		`### Fixed
+- [ABI] Fix failure to convert crypto.Address to EVMAddress (https://github.com/hyperledger/burrow/issues/1326)
+`,
+		"0.29.7 - 2020-01-27",
+		`### Fixed
+- [Build] Updates to CI build process
+`,
+		"0.29.6 - 2020-01-22",
+		`### Changed
+- [CLI] Burrow dump can now stream to STDOUT
+
+### Fixed
+- [NPM] Burrow-js is now published via an auth token
+`,
+		"0.29.5 - 2019-12-09",
+		`### Security
+- [Tendermint] Upgraded to v0.32.8, checkTxAsync now includes node ID
+
+### Changed
+- [Vent] Sync every block height to DB and send height notification from _vent_chain table so downstream can check DB sync without --blocks
+- [RPC/Query] GetName now returns GRPC NotFound status (rather than unknown) when a requested key is not set.
+
+### Fixed
+- [Execution] Simulated calls (e.g. query contracts) now returns the height of the state on which the query was run. Useful for downstream sync.
+`,
+		"0.29.4 - 2019-11-22",
+		`### Changed
+- [Build] Move to solidity 0.5.12
+`,
+
+		"0.29.3 - 2019-10-16",
+		`### Changed
+- [NPM] Point package.json to index.js
+`,
+
+		"0.29.2 - 2019-10-15",
+		`### Changed
+- [NPM] Publish with index.js in TLD
+`,
+		"0.29.1 - 2019-10-10",
+		`### Changed
+- [State] Split metadata and account state to be kinder to downstream EVM integrators
+`,
+		"0.29.0 - 2019-10-08",
+		`### Changed
+- [Config] Reverted rename of ValidatorAddress to Address in config (each Burrow node has a specific validator key it uses for signing whether or not it is running as a validator right now)
+
+### Fixed
+- [EVM] Return integer overflow error code (not stack overflow) for integer overflow errors
+- [Docs] Fix broken examples
+- [Deploy] Set input on QueryContract jobs correctly
+- [EVM] Fix byte-printing for DebugOpcodes run mode
+- [Crypto] Use Tendermint-compatible secp256k1 addressing
+- [Natives] Make natives first class contracts and establish Dispatcher and Callable as a common calling convention for natives, EVM, and WASM (pending for WASM).
+- [Natives] Fix Ethereum precompile addresses (addresses were padded on right instead of the left)
+
+
+### Added
+- [Web3] Implemented Ethereum web3 JSON RPC including sendRawTransaction!
+- [Docs] Much docs (see also: https://www.hyperledger.org/blog/2019/10/08/burrow-the-boring-blockchain)
+- [Docs] Generate github pages docs index with docsify: https://hyperledger.github.io/burrow/
+- [JS] Publish burrow.js to @hyperledger/burrow
+- [State] Store EVM ABI and contract metadata on-chain see [GetMetadata](https://github.com/hyperledger/burrow/blob/e80aad5d8fac1f67dbfec61ea75670f9a38c61a1/protobuf/rpcquery.proto#L25)
+- [Tendermint] Upgrade to v0.32.3
+- [Execution] Added IdentifyTx for introducing nodes (binding their NodeID to ValidatorAddress)
+- [Natives] Implement Ethereum precompile number 5 - modular exponentiation
+
+`,
 		"0.28.2 - 2019-08-21",
 		`### Fixed
-- [Vent] The new decode event ABI _before_ filter provides more keys but means vent must have access to all possible LogEvent ABIs when it is started. This is not practical in general so we now will will only err if an event matches but we have no ABI. This means we might not notice we have forgot to include an ABI since an event that _would_ have matched on an ABI spec field (prefixed 'Event') will not just not match, and so fail silently. 
+- [Vent] The new decode event ABI _before_ filter provides more keys but means vent must have access to all possible LogEvent ABIs when it is started. This is not practical in general so we now will will only err if an event matches but we have no ABI. This means we might not notice we have forgot to include an ABI since an event that _would_ have matched on an ABI spec field (prefixed 'Event') will not just not match, and so fail silently.
 `,
 		"0.28.1 - 2019-08-21",
 		`### Fixed
@@ -110,7 +275,7 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [Consensus] Tendermint config CreateEmptyBlocks, CreateEmptyBlocksInterval now work as intended and prevent empty blocks being produced (except when needed for proof purposes) or when the interval expires (when set)
 
 ### Added
-- [Dump] burrow dump now has local variant that produces a dump directly from a compatible burrow directory rather than over GRPC. If dumping/restoring between state-incompatible versions use burrow dump remote. 
+- [Dump] burrow dump now has local variant that produces a dump directly from a compatible burrow directory rather than over GRPC. If dumping/restoring between state-incompatible versions use burrow dump remote.
 `,
 		"0.26.0 - 2019-06-14",
 		`### Changed
@@ -148,7 +313,7 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 ### Added
 - [CLI] Introduced burrow configure --pool for generation of multiple validator configs suitable for running on a single (or many) machines
 - [CLI] Burrow deploy can now run multiple burrow deploy files (aka playbooks) and run them in parallel
-- [Consensus] Now possible to run Burrow without Tendermint in 'NoConsensus' mode by setting Tendermint.Enabled = false  for faster local testing. Execution.TimeoutFactor can be used to control how regularly Burrow commits (and is used 
+- [Consensus] Now possible to run Burrow without Tendermint in 'NoConsensus' mode by setting Tendermint.Enabled = false  for faster local testing. Execution.TimeoutFactor can be used to control how regularly Burrow commits (and is used
 
 ### Fixed
 - [Execution] Fixed uint64 underflow (when subtracting fee from balance) not protected against in CallContext
@@ -163,7 +328,7 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [CLI] Introduced burrow configure --pool for generation of multiple validator configs suitable for running on a single (or many) machines
 
 ### Fixed
-- [Metrics] Fix histogram statistics by making counts cumulative 
+- [Metrics] Fix histogram statistics by making counts cumulative
 `,
 		"0.24.5 - 2019-03-14",
 		`### Changed
@@ -247,7 +412,7 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [Deploy] burrow deploy can use key names where addresses are used
 - [Governance] Added threshold-based governance via Proposal mechanism which allows entities with Root permission to propose and vote on batches of transactions to be executed on a running network with no single entity being able to do so.
 - [Governance] Added command line and query introspection of proposals as well as burrow deploy support
-- [Vent] Merged Vent our SQL projection and mapping layer into the Burrow repository and binary via 'burrow vent'. See [Vent Readme](./vent/README.md)
+- [Vent] Merged Vent our SQL projection and mapping layer into the Burrow repository and binary via 'burrow vent'. See [Vent Readme](./vent/vent.md)
 - [State] Improved read-write separation with RWTree and ImmutableForest data structures
 - [State] Implemented dump/restore to port state between different version of Burrow or to compress the execution of a chain (with a proof) onto a fresh chain
 

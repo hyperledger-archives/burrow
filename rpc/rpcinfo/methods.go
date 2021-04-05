@@ -13,8 +13,9 @@ import (
 // Method names
 const (
 	// Status and healthcheck
-	Status  = "status"
-	Network = "network"
+	Status          = "status"
+	Network         = "network"
+	NetworkRegistry = "network/registry"
 
 	// Accounts
 	Accounts        = "accounts"
@@ -60,8 +61,9 @@ func GetRoutes(service *rpc.Service) map[string]*server.RPCFunc {
 	// TODO: overhaul this with gRPC-gateway / swagger
 	return map[string]*server.RPCFunc{
 		// Status
-		Status:  server.NewRPCFunc(service.StatusWithin, "block_time_within,block_seen_time_within"),
-		Network: server.NewRPCFunc(service.Network, ""),
+		Status:          server.NewRPCFunc(service.StatusWithin, "block_time_within,block_seen_time_within"),
+		Network:         server.NewRPCFunc(service.Network, ""),
+		NetworkRegistry: server.NewRPCFunc(service.NetworkRegistry, ""),
 
 		// Accounts
 		Accounts: server.NewRPCFunc(func() (*rpc.ResultAccounts, error) {

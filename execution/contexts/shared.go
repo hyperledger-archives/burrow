@@ -28,14 +28,14 @@ func getInputs(accountGetter acmstate.AccountGetter, ins []*payload.TxInput) (ma
 	for _, in := range ins {
 		// Account shouldn't be duplicated
 		if _, ok := accounts[in.Address]; ok {
-			return nil, total, errors.ErrorCodeDuplicateAddress
+			return nil, total, errors.Codes.DuplicateAddress
 		}
 		acc, err := accountGetter.GetAccount(in.Address)
 		if err != nil {
 			return nil, total, err
 		}
 		if acc == nil {
-			return nil, total, errors.ErrorCodeInvalidAddress
+			return nil, total, errors.Codes.InvalidAddress
 		}
 		accounts[in.Address] = acc
 		total += in.Amount
@@ -64,7 +64,7 @@ func getOrMakeOutput(accountGetter acmstate.AccountGetter, accs map[crypto.Addre
 
 	// Account shouldn't be duplicated
 	if _, ok := accs[outputAddress]; ok {
-		return nil, errors.ErrorCodeDuplicateAddress
+		return nil, errors.Codes.DuplicateAddress
 	}
 	acc, err := accountGetter.GetAccount(outputAddress)
 	if err != nil {
@@ -142,11 +142,19 @@ func HasPermission(accountGetter acmstate.AccountGetter, acc *acm.Account, perm 
 		return false
 	}
 
-	v, err := acc.Permissions.Base.Compose(acmstate.GlobalAccountPermissions(accountGetter).Base).Get(perm)
+	globalPerms, err := acmstate.GlobalAccountPermissions(accountGetter)
 	if err != nil {
 		logger.TraceMsg("Error obtaining permission value (will default to false/deny)",
 			"perm_flag", perm.String(),
 			structure.ErrorKey, err)
+		return false
+	}
+	v, err := acc.Permissions.Base.Compose(globalPerms.Base).Get(perm)
+	if err != nil {
+		logger.TraceMsg("Error obtaining permission value (will default to false/deny)",
+			"perm_flag", perm.String(),
+			structure.ErrorKey, err)
+		return false
 	}
 
 	if v {
@@ -172,6 +180,18 @@ func allHavePermission(accountGetter acmstate.AccountGetter, perm permission.Per
 		}
 	}
 	return nil
+}
+
+func oneHasPermission(accountGetter acmstate.AccountGetter, perm permission.PermFlag,
+	accs map[crypto.Address]*acm.Account, logger *logging.Logger) error {
+	for _, acc := range accs {
+		if HasPermission(accountGetter, acc, perm, logger) {
+			return nil
+		}
+	}
+	return errors.PermissionDenied{
+		Perm: perm,
+	}
 }
 
 func hasProposalPermission(accountGetter acmstate.AccountGetter, acc *acm.Account,

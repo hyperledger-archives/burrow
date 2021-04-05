@@ -23,11 +23,9 @@ func TestApp_QueryAuthorizedPeers(t *testing.T) {
 		panicFunc: func(e error) {
 			panicked = true
 		},
-		// Given no authorized node defined
-		authorizedPeersProvider: func() ([]string, []string) {
-			return []string{}, []string{}
-		},
 		logger: logging.NewNoopLogger(),
+		// Given no authorized node defined
+		authorizedPeers: &PeerLists{},
 	}
 
 	// When authorized node query is raised with any node id
@@ -38,8 +36,9 @@ func TestApp_QueryAuthorizedPeers(t *testing.T) {
 	assert.Equal(t, codes.PeerFilterAuthorizedCode, resp.Code)
 
 	// Given authorized nodes defined
-	app.authorizedPeersProvider = func() ([]string, []string) {
-		return []string{aNodeId}, []string{aNodeAddress}
+	app.authorizedPeers = &PeerLists{
+		IDs:       map[string]struct{}{aNodeId: {}},
+		Addresses: map[string]struct{}{aNodeAddress: {}},
 	}
 
 	// When authorized node query is raised for an authorized node by id
@@ -72,9 +71,7 @@ func TestApp_QueryAuthorizedPeers(t *testing.T) {
 
 	// Given a provider which panics
 	assert.False(t, panicked)
-	app.authorizedPeersProvider = func() ([]string, []string) {
-		panic("ouch")
-	}
+	app.authorizedPeers = new(panicker)
 
 	// When authorized node query is raised
 	resp = app.Query(*makeTestFilterQuery("addr", "hackMe"))
@@ -83,6 +80,21 @@ func TestApp_QueryAuthorizedPeers(t *testing.T) {
 	assert.True(t, panicked)
 	assert.NotNil(t, resp)
 	assert.Equal(t, codes.UnsupportedRequestCode, resp.Code)
+}
+
+type panicker struct {
+}
+
+func (p panicker) QueryPeerByID(id string) bool {
+	panic("id")
+}
+
+func (p panicker) QueryPeerByAddress(id string) bool {
+	panic("address")
+}
+
+func (p panicker) NumPeers() int {
+	panic("peers")
 }
 
 func TestIsPeersFilterQuery(t *testing.T) {

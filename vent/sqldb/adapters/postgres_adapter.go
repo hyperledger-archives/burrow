@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/lib/pq"
+	"github.com/pkg/errors"
 
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/vent/types"
@@ -265,22 +266,24 @@ func (pa *PostgresAdapter) ErrorEquals(err error, sqlErrorType types.SQLErrorTyp
 }
 
 func errorEquals(err error, sqlErrorType types.SQLErrorType) bool {
-	if err, ok := err.(*pq.Error); ok {
+	pqErr := new(pq.Error)
+
+	if errors.As(err, &pqErr) {
 		switch sqlErrorType {
 		case types.SQLErrorTypeGeneric:
 			return true
 		case types.SQLErrorTypeDuplicatedColumn:
-			return err.Code == "42701"
+			return pqErr.Code == "42701"
 		case types.SQLErrorTypeDuplicatedTable:
-			return err.Code == "42P07"
+			return pqErr.Code == "42P07"
 		case types.SQLErrorTypeDuplicatedSchema:
-			return err.Code == "42P06"
+			return pqErr.Code == "42P06"
 		case types.SQLErrorTypeUndefinedTable:
-			return err.Code == "42P01"
+			return pqErr.Code == "42P01"
 		case types.SQLErrorTypeUndefinedColumn:
-			return err.Code == "42703"
+			return pqErr.Code == "42703"
 		case types.SQLErrorTypeInvalidType:
-			return err.Code == "42704"
+			return pqErr.Code == "42704"
 		}
 	}
 

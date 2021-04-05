@@ -8,6 +8,7 @@ import (
 
 	"github.com/tmthrgd/go-hex"
 
+	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,6 +26,20 @@ func TestPacker(t *testing.T) {
 		name           string
 		expectedOutput []byte
 	}{
+		// Test string address
+		{
+			`[{"constant":false,"inputs":[{"internalType":"address payable","name":"friend","type":"address"}],"name":"sendToAFriend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"}]`,
+			[]interface{}{"C42DEED84BDF2CA695F2E91F4E6395D191CF35FC"},
+			"sendToAFriend",
+			pad([]byte{196, 45, 238, 216, 75, 223, 44, 166, 149, 242, 233, 31, 78, 99, 149, 209, 145, 207, 53, 252}, 32, true),
+		},
+		// From: https://github.com/hyperledger/burrow/issues/1326
+		{
+			`[{"constant":false,"inputs":[{"internalType":"address payable","name":"friend","type":"address"}],"name":"sendToAFriend","outputs":[],"payable":true,"stateMutability":"payable","type":"function"}]`,
+			[]interface{}{crypto.Address{1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4}},
+			"sendToAFriend",
+			pad([]byte{1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4}, 32, true),
+		},
 		{
 			`[{"constant":false,"inputs":[{"name":"","type":"uint256"}],"name":"UInt","outputs":[],"payable":false,"type":"function"}]`,
 			[]interface{}{"1"},
@@ -127,7 +142,7 @@ func TestPacker(t *testing.T) {
 	} {
 		t.Log(test.args)
 		if output, _, err := EncodeFunctionCall(test.ABI, test.name, logging.NewNoopLogger(), test.args...); err != nil {
-			t.Error("Unexpected error in ", test.name, ": ", err)
+			t.Errorf("Unexpected error in %s: %v", test.name, err)
 		} else {
 			if !bytes.Equal(output[4:], test.expectedOutput) {
 				t.Errorf("Incorrect output,\n\t expected %v,\n\t got %v", test.expectedOutput, output[4:])

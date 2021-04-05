@@ -89,7 +89,7 @@ func (pi *prefixCallbackIterable) Iterate(start, end []byte, ascending bool, fn 
 	})
 }
 
-func (p Prefix) Iterator(iteratorFn func(start, end []byte) dbm.Iterator, start, end []byte) KVIterator {
+func (p Prefix) Iterator(iteratorFn func(start, end []byte) (dbm.Iterator, error), start, end []byte) (KVIterator, error) {
 	var pstart, pend []byte = p.Key(start), nil
 
 	if end == nil {
@@ -97,12 +97,18 @@ func (p Prefix) Iterator(iteratorFn func(start, end []byte) dbm.Iterator, start,
 	} else {
 		pend = p.Key(end)
 	}
+
+	source, err := iteratorFn(pstart, pend)
+	if err != nil {
+		return nil, err
+	}
+
 	return &prefixIterator{
 		start:  start,
 		end:    end,
 		prefix: p,
-		source: iteratorFn(pstart, pend),
-	}
+		source: source,
+	}, nil
 }
 
 func (p Prefix) Iterable(source KVIterable) KVIterable {
@@ -117,11 +123,11 @@ type prefixIterable struct {
 	source KVIterable
 }
 
-func (pi *prefixIterable) Iterator(low, high []byte) KVIterator {
+func (pi *prefixIterable) Iterator(low, high []byte) (KVIterator, error) {
 	return pi.prefix.Iterator(pi.source.Iterator, low, high)
 }
 
-func (pi *prefixIterable) ReverseIterator(low, high []byte) KVIterator {
+func (pi *prefixIterable) ReverseIterator(low, high []byte) (KVIterator, error) {
 	return pi.prefix.Iterator(pi.source.ReverseIterator, low, high)
 }
 
@@ -183,8 +189,12 @@ func (pi *prefixIterator) Value() []byte {
 	return pi.source.Value()
 }
 
-func (pi *prefixIterator) Close() {
-	pi.source.Close()
+func (pi *prefixIterator) Close() error {
+	return pi.source.Close()
+}
+
+func (pi *prefixIterator) Error() error {
+	return nil
 }
 
 func (pi *prefixIterator) validate() {
@@ -203,26 +213,26 @@ type prefixKVStore struct {
 	source KVStore
 }
 
-func (ps *prefixKVStore) Get(key []byte) []byte {
+func (ps *prefixKVStore) Get(key []byte) ([]byte, error) {
 	return ps.source.Get(ps.prefix.Key(key))
 }
 
-func (ps *prefixKVStore) Has(key []byte) bool {
+func (ps *prefixKVStore) Has(key []byte) (bool, error) {
 	return ps.source.Has(ps.prefix.Key(key))
 }
 
-func (ps *prefixKVStore) Set(key, value []byte) {
-	ps.source.Set(ps.prefix.Key(key), value)
+func (ps *prefixKVStore) Set(key, value []byte) error {
+	return ps.source.Set(ps.prefix.Key(key), value)
 }
 
-func (ps *prefixKVStore) Delete(key []byte) {
-	ps.source.Delete(ps.prefix.Key(key))
+func (ps *prefixKVStore) Delete(key []byte) error {
+	return ps.source.Delete(ps.prefix.Key(key))
 }
 
-func (ps *prefixKVStore) Iterator(low, high []byte) KVIterator {
+func (ps *prefixKVStore) Iterator(low, high []byte) (KVIterator, error) {
 	return ps.prefix.Iterator(ps.source.Iterator, low, high)
 }
 
-func (ps *prefixKVStore) ReverseIterator(low, high []byte) KVIterator {
+func (ps *prefixKVStore) ReverseIterator(low, high []byte) (KVIterator, error) {
 	return ps.prefix.Iterator(ps.source.ReverseIterator, low, high)
 }

@@ -1,0 +1,120 @@
+affinity: {}
+chain:
+  extraSeeds: []
+  testing: false
+config:
+  BurrowDir: .burrow
+  Keys:
+    AllowBadFilePermissions: true
+    GRPCServiceEnabled: true
+    KeysDirectory: /keys
+    RemoteAddress: ""
+  Logging:
+    ExcludeTrace: true
+    NonBlocking: true
+    RootSink:
+      Output:
+        Format: json
+        OutputType: stderr
+  RPC:
+    GRPC:
+      Enabled: true
+      ListenHost: 0.0.0.0
+      ListenPort: "10997"
+    Info:
+      Enabled: true
+      ListenHost: 0.0.0.0
+      ListenPort: "26658"
+    Metrics:
+      BlockSampleSize: 100
+      Enabled: true
+      ListenHost: 0.0.0.0
+      ListenPort: "9102"
+      MetricsPath: /metrics
+    Profiler:
+      Enabled: true
+      ListenHost: 0.0.0.0
+      ListenPort: "6060"
+  Tendermint:
+    ExternalAddress: ""
+    ListenHost: 0.0.0.0
+    ListenPort: "26656"
+    Moniker: ""
+    SeedMode: false
+    Seeds: ""
+contracts:
+  command: ""
+  enabled: false
+  image:
+    pullPolicy: IfNotPresent
+    repository: ""
+    tag: ""
+environment:
+  inline: {}
+  secrets: []
+extraArgs: {}
+grpc:
+  ingress:
+    annotations: {}
+    enabled: false
+    hosts: []
+    tls: {}
+  service:
+    loadBalance: true
+    type: ClusterIP
+image:
+  pullPolicy: IfNotPresent
+  repository: hyperledger/burrow
+  # To be set by helm package
+  tag: null
+info:
+  ingress:
+    annotations: {}
+    enabled: false
+    hosts: []
+    partial: false
+    pathLeader: /
+    tls: {}
+  service:
+    loadBalance: true
+    type: ClusterIP
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 240
+  path: /status?block_seen_time_within=10m
+  periodSeconds: 30
+  timeoutSeconds: 1
+nodeSelector: {}
+organization: user
+peer:
+  ingress:
+    enabled: false
+    hosts: []
+  service:
+    type: ClusterIP
+persistence:
+  accessMode: ReadWriteOnce
+  enabled: true
+  persistentVolumeReclaimPolicy: Retain
+  size: 80Gi
+  storageClass: standard
+  useExisting: false
+podAnnotations: {}
+podLabels: {}
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 5
+  path: /status
+restore:
+  args: []
+  command: curl
+  enabled: false
+  image:
+    pullPolicy: IfNotPresent
+    repository: appropriate/curl
+    tag: latest
+tolerations: []
+validators:
+- address: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  name: Validator_0
+  nodeAddress: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA

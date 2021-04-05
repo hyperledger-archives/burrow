@@ -12,31 +12,31 @@ import (
 )
 
 type SendContext struct {
-	StateWriter acmstate.ReaderWriter
-	Logger      *logging.Logger
-	tx          *payload.SendTx
+	State  acmstate.ReaderWriter
+	Logger *logging.Logger
+	tx     *payload.SendTx
 }
 
 func (ctx *SendContext) Execute(txe *exec.TxExecution, p payload.Payload) error {
 	var ok bool
 	ctx.tx, ok = p.(*payload.SendTx)
 	if !ok {
-		return fmt.Errorf("payload must be NameTx, but is: %v", txe.Envelope.Tx.Payload)
+		return fmt.Errorf("payload must be SendTx, but is: %v", txe.Envelope.Tx.Payload)
 	}
-	accounts, inTotal, err := getInputs(ctx.StateWriter, ctx.tx.Inputs)
+	accounts, inTotal, err := getInputs(ctx.State, ctx.tx.Inputs)
 	if err != nil {
 		return err
 	}
 
 	// ensure all inputs have send permissions
-	err = allHavePermission(ctx.StateWriter, permission.Send, accounts, ctx.Logger)
+	err = allHavePermission(ctx.State, permission.Send, accounts, ctx.Logger)
 	if err != nil {
 		return errors.Wrap(err, "at least one input lacks permission for SendTx")
 	}
 
 	// add outputs to accounts map
 	// if any outputs don't exist, all inputs must have CreateAccount perm
-	accounts, err = getOrMakeOutputs(ctx.StateWriter, accounts, ctx.tx.Outputs, ctx.Logger)
+	accounts, err = getOrMakeOutputs(ctx.State, accounts, ctx.tx.Outputs, ctx.Logger)
 	if err != nil {
 		return err
 	}
@@ -46,13 +46,13 @@ func (ctx *SendContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 		return err
 	}
 	if outTotal > inTotal {
-		return errors.ErrorCodeInsufficientFunds
+		return errors.Codes.InsufficientFunds
 	}
 	if outTotal < inTotal {
-		return errors.ErrorCodeOverpayment
+		return errors.Codes.Overpayment
 	}
 	if outTotal == 0 {
-		return errors.ErrorCodeZeroPayment
+		return errors.Codes.ZeroPayment
 	}
 
 	// Good! Adjust accounts
@@ -67,7 +67,7 @@ func (ctx *SendContext) Execute(txe *exec.TxExecution, p payload.Payload) error 
 	}
 
 	for _, acc := range accounts {
-		err = ctx.StateWriter.UpdateAccount(acc)
+		err = ctx.State.UpdateAccount(acc)
 		if err != nil {
 			return err
 		}

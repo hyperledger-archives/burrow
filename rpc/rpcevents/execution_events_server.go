@@ -10,18 +10,21 @@ import (
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/storage"
 )
 
 const SubscribeBufferSize = 100
 
 type Provider interface {
 	// Get transactions
-	IterateStreamEvents(start, end *uint64, consumer func(*exec.StreamEvent) error) (err error)
+	IterateStreamEvents(startHeight, endHeight *uint64, sortOrder storage.SortOrder,
+		consumer func(*exec.StreamEvent) error) (err error)
 	// Get a particular TxExecution by hash
 	TxByHash(txHash []byte) (*exec.TxExecution, error)
 }
 
 type executionEventsServer struct {
+	UnimplementedExecutionEventsServer
 	eventsProvider Provider
 	emitter        *event.Emitter
 	tip            bcm.BlockchainInfo
@@ -140,8 +143,10 @@ func (ees *executionEventsServer) streamEvents(ctx context.Context, blockRange *
 		// Check if we have missed blocks we need to catch up on
 		if start < block.Height {
 			// We expect start == block.Height when processing consecutive blocks but we may have missed a block by
-			// dropping an event - if so we can fill in here
-			catchupEnd := block.Height
+			// pubsub dropping an event (e.g. under heavy load) - if so we can fill in here. Since we have just
+			// received block at block.Height it should be guaranteed that we have stored all blocks <= block.Height
+			// in state (we only publish after successful state update).
+			catchupEnd := block.Height - 1
 			if catchupEnd > end {
 				catchupEnd = end
 			}
@@ -202,12 +207,12 @@ func (ees *executionEventsServer) iterateStreamEvents(startHeight, endHeight uin
 	// NOTE: this will underflow when start is 0 (as it often will be - and needs to be for restored chains)
 	// however we at most underflow by 1 and we always add 1 back on when returning so we get away with this.
 	lastHeightSeen := startHeight - 1
-	err := ees.eventsProvider.IterateStreamEvents(&startHeight, &endHeight,
-		func(blockEvent *exec.StreamEvent) error {
-			if blockEvent.EndBlock != nil {
-				lastHeightSeen = blockEvent.EndBlock.GetHeight()
+	err := ees.eventsProvider.IterateStreamEvents(&startHeight, &endHeight, storage.AscendingSort,
+		func(ev *exec.StreamEvent) error {
+			if ev.EndBlock != nil {
+				lastHeightSeen = ev.EndBlock.GetHeight()
 			}
-			return consumer(blockEvent)
+			return consumer(ev)
 		})
 	// Returns the appropriate _next_ starting block - the one after the one we have seen - from which to stream next
 	return lastHeightSeen + 1, err

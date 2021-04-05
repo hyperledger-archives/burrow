@@ -2,7 +2,6 @@ package payload
 
 import (
 	"fmt"
-	"strings"
 )
 
 /*
@@ -40,6 +39,7 @@ const (
 	TypePermissions = Type(0x21)
 	TypeGovernance  = Type(0x22)
 	TypeProposal    = Type(0x23)
+	TypeIdentify    = Type(0x24)
 )
 
 type Payload interface {
@@ -62,6 +62,7 @@ var nameFromType = map[Type]string{
 	TypeProposal:    "ProposalTx",
 	TypeBond:        "BondTx",
 	TypeUnbond:      "UnbondTx",
+	TypeIdentify:    "IdentifyTx",
 }
 
 var typeFromName = make(map[string]Type)
@@ -102,14 +103,23 @@ func (typ *Type) Unmarshal(data []byte) error {
 	return typ.UnmarshalText(data)
 }
 
-func InputsString(inputs []*TxInput) string {
-	strs := make([]string, len(inputs))
-	for i, in := range inputs {
-		strs[i] = in.Address.String()
-	}
-	return strings.Join(strs, ",")
-}
-
+//func (tx *CallTx) ProtoReflect() protoreflect.Message {
+//	fd, _ := descriptor.ForMessage(tx)
+//	ggfd, _ := descriptor.ForMessage()
+//	protodesc.NewFiles(&descriptorpb.FileDescriptorSet{File: })
+//	f, err := protodesc.NewFile(fd, nil)
+//	if err != nil {
+//		panic(err)
+//	}
+//	mi := &protoimpl.MessageInfo{
+//		GoReflectType: reflect.TypeOf(tx),
+//		Desc:          f.Messages().Get(0),
+//	}
+//	m := mi.MessageOf(tx)
+//	fmt.Sprint(fd)
+//	return m
+//}
+//
 func New(txType Type) (Payload, error) {
 	switch txType {
 	case TypeSend:
@@ -130,6 +140,8 @@ func New(txType Type) (Payload, error) {
 		return &UnbondTx{}, nil
 	case TypeProposal:
 		return &ProposalTx{}, nil
+	case TypeIdentify:
+		return &IdentifyTx{}, nil
 	}
 	return nil, fmt.Errorf("unknown payload type: %d", txType)
 }

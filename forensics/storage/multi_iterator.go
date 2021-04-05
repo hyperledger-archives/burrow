@@ -109,9 +109,22 @@ func (mi *MultiIterator) Peek() storage.KVIterator {
 	return mi.iterators[0]
 }
 
-func (mi *MultiIterator) Close() {
+func (mi *MultiIterator) Close() error {
 	// Close any remaining valid iterators
 	for _, it := range mi.iterators {
-		it.Close()
+		err := it.Close()
+		if err != nil {
+			return err
+		}
 	}
+	return nil
+}
+
+func (mi *MultiIterator) Error() error {
+	for _, it := range mi.iterators {
+		if err := it.Error(); err != nil {
+			return err
+		}
+	}
+	return nil
 }

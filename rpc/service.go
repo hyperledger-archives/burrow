@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package rpc
 
@@ -28,6 +17,7 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/names"
+	"github.com/hyperledger/burrow/execution/registry"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
 	"github.com/hyperledger/burrow/permission"
@@ -47,6 +37,7 @@ const MaxBlockLookback = 1000
 type Service struct {
 	state      acmstate.IterableStatsReader
 	nameReg    names.IterableReader
+	nodeReg    registry.IterableReader
 	blockchain bcm.BlockchainInfo
 	validators validator.History
 	nodeView   *tendermint.NodeView
@@ -55,12 +46,13 @@ type Service struct {
 
 // Service provides an internal query and information service with serialisable return types on which can accomodate
 // a number of transport front ends
-func NewService(state acmstate.IterableStatsReader, nameReg names.IterableReader, blockchain bcm.BlockchainInfo,
+func NewService(state acmstate.IterableStatsReader, nameReg names.IterableReader, nodeReg registry.IterableReader, blockchain bcm.BlockchainInfo,
 	validators validator.History, nodeView *tendermint.NodeView, logger *logging.Logger) *Service {
 
 	return &Service{
 		state:      state,
 		nameReg:    nameReg,
+		nodeReg:    nodeReg,
 		blockchain: blockchain,
 		validators: validators,
 		nodeView:   nodeView,
@@ -145,6 +137,22 @@ func (s *Service) Network() (*ResultNetwork, error) {
 			Peers:     peers,
 		},
 	}, nil
+}
+
+func (s *Service) NetworkRegistry() ([]*ResultNetworkRegistry, error) {
+	if s.nodeView == nil {
+		return nil, fmt.Errorf("cannot return network registry info because NodeView not mounted")
+	}
+
+	rnr := make([]*ResultNetworkRegistry, 0)
+	err := s.nodeReg.IterateNodes(func(id crypto.Address, rn *registry.NodeIdentity) error {
+		rnr = append(rnr, &ResultNetworkRegistry{
+			Address:      rn.ValidatorPublicKey.GetAddress(),
+			NodeIdentity: *rn,
+		})
+		return nil
+	})
+	return rnr, err
 }
 
 func (s *Service) Genesis() (*ResultGenesis, error) {
@@ -376,7 +384,7 @@ func (s *Service) ConsensusState() (*ResultConsensusState, error) {
 }
 
 func (s *Service) GeneratePrivateAccount() (*ResultGeneratePrivateAccount, error) {
-	privateAccount, err := acm.GeneratePrivateAccount()
+	privateAccount, err := acm.GeneratePrivateAccount(crypto.CurveTypeEd25519)
 	if err != nil {
 		return nil, err
 	}
@@ -394,7 +402,7 @@ func Status(blockchain bcm.BlockchainInfo, validators validator.History, nodeVie
 		GenesisHash:   blockchain.GenesisHash(),
 		NodeInfo:      nodeView.NodeInfo(),
 		SyncInfo:      bcm.GetSyncInfo(blockchain),
-		CatchingUp:    nodeView.IsFastSyncing(),
+		CatchingUp:    nodeView.IsSyncing(),
 	}
 	if nodeView != nil {
 		address := nodeView.ValidatorAddress()

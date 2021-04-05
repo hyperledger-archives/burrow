@@ -27,6 +27,7 @@ const (
 	TypeEnvelope
 	TypeEndTx
 	TypeEndBlock
+	TypePrint
 )
 
 var nameFromType = map[EventType]string{
@@ -95,19 +96,6 @@ func (ev *Event) Body() string {
 		return ev.Call.String()
 	}
 	return "<empty>"
-}
-
-// Tags
-type Events []*Event
-
-func (tevs Events) Filter(qry query.Query) Events {
-	var filtered Events
-	for _, tev := range tevs {
-		if qry.Matches(tev) {
-			filtered = append(filtered, tev)
-		}
-	}
-	return filtered
 }
 
 func (ev *Event) Get(key string) (value interface{}, ok bool) {

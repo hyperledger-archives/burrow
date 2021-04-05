@@ -79,14 +79,14 @@ func (dg *deterministicGenesis) Account(minBalance uint64) (*acm.Account, *acm.P
 		panic(fmt.Errorf("could not generate private key deterministically"))
 	}
 	privAccount := &acm.ConcretePrivateAccount{
-		PublicKey:  privateKey.GetPublicKey(),
+		PublicKey:  *privateKey.GetPublicKey(),
 		PrivateKey: privateKey,
 		Address:    privateKey.GetPublicKey().GetAddress(),
 	}
 	perms := permission.DefaultAccountPermissions
 	acc := &acm.Account{
 		Address:     privAccount.Address,
-		PublicKey:   privAccount.PublicKey,
+		PublicKey:   &privAccount.PublicKey,
 		Sequence:    uint64(dg.random.Int()),
 		Balance:     minBalance,
 		Permissions: perms,

@@ -3,19 +3,19 @@ package exec
 type CallType uint32
 
 const (
+	CallTypeInvalid  = CallType(1<<32 - 1)
 	CallTypeCall     = CallType(0x00)
 	CallTypeCode     = CallType(0x01)
 	CallTypeDelegate = CallType(0x02)
 	CallTypeStatic   = CallType(0x03)
-	CallTypeSNative  = CallType(0x04)
 )
 
 var nameFromCallType = map[CallType]string{
+	CallTypeInvalid:  "InvalidCall",
 	CallTypeCall:     "Call",
 	CallTypeCode:     "CallCode",
 	CallTypeDelegate: "DelegateCall",
 	CallTypeStatic:   "StaticCall",
-	CallTypeSNative:  "SNativeCall",
 }
 
 var callTypeFromName = make(map[string]CallType)

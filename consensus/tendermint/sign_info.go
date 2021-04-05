@@ -7,7 +7,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/hyperledger/burrow/binary"
+	"github.com/tendermint/tendermint/libs/protoio"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	"github.com/tendermint/tendermint/types"
 	tmtime "github.com/tendermint/tendermint/types/time"
 )
@@ -20,15 +23,15 @@ const (
 	stepPrecommit int8 = 3
 )
 
-func voteToStep(vote *types.Vote) int8 {
+// A vote is either stepPrevote or stepPrecommit.
+func voteToStep(vote *tmproto.Vote) int8 {
 	switch vote.Type {
-	case types.PrevoteType:
+	case tmproto.PrevoteType:
 		return stepPrevote
-	case types.PrecommitType:
+	case tmproto.PrecommitType:
 		return stepPrecommit
 	default:
-		panic("Unknown vote type")
-		return 0
+		panic(fmt.Sprintf("Unknown vote type: %v", vote.Type))
 	}
 }
 
@@ -37,10 +40,10 @@ func voteToStep(vote *types.Vote) int8 {
 type LastSignedInfo struct {
 	sync.Mutex
 	Height    int64           `json:"height"`
-	Round     int             `json:"round"`
+	Round     int32           `json:"round"`
 	Step      int8            `json:"step"`
-	Signature []byte          `json:"signature,omitempty"` // so we dont lose signatures
-	SignBytes binary.HexBytes `json:"signbytes,omitempty"` // so we dont lose signatures
+	Signature []byte          `json:"signature,omitempty"` // so we don't lose signatures
+	SignBytes binary.HexBytes `json:"signbytes,omitempty"` // so we don't lose signatures
 }
 
 func NewLastSignedInfo() *LastSignedInfo {
@@ -53,7 +56,7 @@ type tmCryptoSigner func(msg []byte) []byte
 
 // SignVote signs a canonical representation of the vote, along with the
 // chainID. Implements PrivValidator.
-func (lsi *LastSignedInfo) SignVote(sign tmCryptoSigner, chainID string, vote *types.Vote) error {
+func (lsi *LastSignedInfo) SignVote(sign tmCryptoSigner, chainID string, vote *tmproto.Vote) error {
 	lsi.Lock()
 	defer lsi.Unlock()
 	if err := lsi.signVote(sign, chainID, vote); err != nil {
@@ -64,7 +67,7 @@ func (lsi *LastSignedInfo) SignVote(sign tmCryptoSigner, chainID string, vote *t
 
 // SignProposal signs a canonical representation of the proposal, along with
 // the chainID. Implements PrivValidator.
-func (lsi *LastSignedInfo) SignProposal(sign tmCryptoSigner, chainID string, proposal *types.Proposal) error {
+func (lsi *LastSignedInfo) SignProposal(sign tmCryptoSigner, chainID string, proposal *tmproto.Proposal) error {
 	lsi.Lock()
 	defer lsi.Unlock()
 	if err := lsi.signProposal(sign, chainID, proposal); err != nil {
@@ -74,7 +77,7 @@ func (lsi *LastSignedInfo) SignProposal(sign tmCryptoSigner, chainID string, pro
 }
 
 // returns error if HRS regression or no SignBytes. returns true if HRS is unchanged
-func (lsi *LastSignedInfo) checkHRS(height int64, round int, step int8) (bool, error) {
+func (lsi *LastSignedInfo) checkHRS(height int64, round int32, step int8) (bool, error) {
 	if lsi.Height > height {
 		return false, errors.New("height regression")
 	}
@@ -104,15 +107,15 @@ func (lsi *LastSignedInfo) checkHRS(height int64, round int, step int8) (bool, e
 // signVote checks if the vote is good to sign and sets the vote signature.
 // It may need to set the timestamp as well if the vote is otherwise the same as
 // a previously signed vote (ie. we crashed after signing but before the vote hit the WAL).
-func (lsi *LastSignedInfo) signVote(sign tmCryptoSigner, chainID string, vote *types.Vote) error {
+func (lsi *LastSignedInfo) signVote(sign tmCryptoSigner, chainID string, vote *tmproto.Vote) error {
 	height, round, step := vote.Height, vote.Round, voteToStep(vote)
-	signBytes := vote.SignBytes(chainID)
 
 	sameHRS, err := lsi.checkHRS(height, round, step)
 	if err != nil {
 		return err
 	}
 
+	signBytes := types.VoteSignBytes(chainID, vote)
 	// We might crash before writing to the wal,
 	// causing us to try to re-sign for the same HRS.
 	// If signbytes are the same, use the last signature.
@@ -140,14 +143,15 @@ func (lsi *LastSignedInfo) signVote(sign tmCryptoSigner, chainID string, vote *t
 // signProposal checks if the proposal is good to sign and sets the proposal signature.
 // It may need to set the timestamp as well if the proposal is otherwise the same as
 // a previously signed proposal ie. we crashed after signing but before the proposal hit the WAL).
-func (lsi *LastSignedInfo) signProposal(sign tmCryptoSigner, chainID string, proposal *types.Proposal) error {
+func (lsi *LastSignedInfo) signProposal(sign tmCryptoSigner, chainID string, proposal *tmproto.Proposal) error {
 	height, round, step := proposal.Height, proposal.Round, stepPropose
-	signBytes := proposal.SignBytes(chainID)
 
 	sameHRS, err := lsi.checkHRS(height, round, step)
 	if err != nil {
 		return err
 	}
+
+	signBytes := types.ProposalSignBytes(chainID, proposal)
 
 	// We might crash before writing to the wal,
 	// causing us to try to re-sign for the same HRS.
@@ -174,7 +178,7 @@ func (lsi *LastSignedInfo) signProposal(sign tmCryptoSigner, chainID string, pro
 }
 
 // Persist height/round/step and signature
-func (lsi *LastSignedInfo) saveSigned(height int64, round int, step int8,
+func (lsi *LastSignedInfo) saveSigned(height int64, round int32, step int8,
 	signBytes []byte, sig []byte) {
 
 	lsi.Height = height
@@ -194,11 +198,11 @@ func (lsi *LastSignedInfo) String() string {
 // returns the timestamp from the lastSignBytes.
 // returns true if the only difference in the votes is their timestamp.
 func checkVotesOnlyDifferByTimestamp(lastSignBytes, newSignBytes []byte) (time.Time, bool) {
-	var lastVote, newVote types.CanonicalVote
-	if err := cdc.UnmarshalBinaryLengthPrefixed(lastSignBytes, &lastVote); err != nil {
+	var lastVote, newVote tmproto.CanonicalVote
+	if err := protoio.UnmarshalDelimited(lastSignBytes, &lastVote); err != nil {
 		panic(fmt.Sprintf("LastSignBytes cannot be unmarshalled into vote: %v", err))
 	}
-	if err := cdc.UnmarshalBinaryLengthPrefixed(newSignBytes, &newVote); err != nil {
+	if err := protoio.UnmarshalDelimited(newSignBytes, &newVote); err != nil {
 		panic(fmt.Sprintf("signBytes cannot be unmarshalled into vote: %v", err))
 	}
 
@@ -208,20 +212,18 @@ func checkVotesOnlyDifferByTimestamp(lastSignBytes, newSignBytes []byte) (time.T
 	now := tmtime.Now()
 	lastVote.Timestamp = now
 	newVote.Timestamp = now
-	lastVoteBytes, _ := cdc.MarshalJSON(lastVote)
-	newVoteBytes, _ := cdc.MarshalJSON(newVote)
 
-	return lastTime, bytes.Equal(newVoteBytes, lastVoteBytes)
+	return lastTime, proto.Equal(&newVote, &lastVote)
 }
 
 // returns the timestamp from the lastSignBytes.
 // returns true if the only difference in the proposals is their timestamp
 func checkProposalsOnlyDifferByTimestamp(lastSignBytes, newSignBytes []byte) (time.Time, bool) {
-	var lastProposal, newProposal types.CanonicalProposal
-	if err := cdc.UnmarshalBinaryLengthPrefixed(lastSignBytes, &lastProposal); err != nil {
+	var lastProposal, newProposal tmproto.CanonicalProposal
+	if err := protoio.UnmarshalDelimited(lastSignBytes, &lastProposal); err != nil {
 		panic(fmt.Sprintf("LastSignBytes cannot be unmarshalled into proposal: %v", err))
 	}
-	if err := cdc.UnmarshalBinaryLengthPrefixed(newSignBytes, &newProposal); err != nil {
+	if err := protoio.UnmarshalDelimited(newSignBytes, &newProposal); err != nil {
 		panic(fmt.Sprintf("signBytes cannot be unmarshalled into proposal: %v", err))
 	}
 
@@ -230,8 +232,6 @@ func checkProposalsOnlyDifferByTimestamp(lastSignBytes, newSignBytes []byte) (ti
 	now := tmtime.Now()
 	lastProposal.Timestamp = now
 	newProposal.Timestamp = now
-	lastProposalBytes, _ := cdc.MarshalBinaryLengthPrefixed(lastProposal)
-	newProposalBytes, _ := cdc.MarshalBinaryLengthPrefixed(newProposal)
 
-	return lastTime, bytes.Equal(newProposalBytes, lastProposalBytes)
+	return lastTime, proto.Equal(&newProposal, &lastProposal)
 }

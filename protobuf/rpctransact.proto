@@ -4,17 +4,16 @@ package rpctransact;
 
 option go_package = "github.com/hyperledger/burrow/rpc/rpctransact";
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "gogoproto/gogo.proto";
 import "google/protobuf/duration.proto";
 
 import "exec.proto";
 import "payload.proto";
 import "txs.proto";
 
-// Enable custom Marshal method.
 option (gogoproto.marshaler_all) = true;
-// Enable custom Unmarshal method.
 option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.stable_marshaler_all) = true;
 // Enable custom Size method (Required by Marshal and Unmarshal).
 option (gogoproto.sizer_all) = true;
 // Enable registration with golang/protobuf for the grpc-gateway.
@@ -50,7 +49,7 @@ service Transact {
     // Formulate and  SendTx transaction signed server-side
     rpc SendTxAsync (payload.SendTx) returns (txs.Receipt);
 
-    // Formualte a NameTx signed server-side and wait for it to be included in a block returning the registered name
+    // Formulate a NameTx signed server-side and wait for it to be included in a block returning the registered name
     rpc NameTxSync (payload.NameTx) returns (exec.TxExecution);
     // Formulate a NameTx signed server-side
     rpc NameTxAsync (payload.NameTx) returns (txs.Receipt);

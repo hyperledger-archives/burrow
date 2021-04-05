@@ -38,11 +38,13 @@ const (
 	Input // 256
 	// Permission to execute batch transactins
 	Batch // 512
+	// Allows account to associate new blockchain nodes
+	Identify // 1028
 
 	// Moderator permissions.
 	// These permissions concern the alteration of the chain permissions listed above. Each permission relates to a
 	// particular canonical permission mutation or query function. When an account is granted a moderation permission
-	// it is permitted to call that function. See snative.go for a marked-up description of what each function does.
+	// it is permitted to call that function. See contract.go for a marked-up description of what each function does.
 	HasBase
 	SetBase
 	UnsetBase
@@ -51,7 +53,10 @@ const (
 	AddRole
 	RemoveRole
 
-	NumPermissions uint = 17 // NOTE Adjust this too. We can support upto 64
+	NumPermissions uint = 18 // NOTE Adjust this too. We can support upto 64
+
+	// To allow an operation with no permission flags set at all
+	None PermFlag = 0
 
 	TopPermFlag      PermFlag = 1 << (NumPermissions - 1)
 	AllPermFlags     PermFlag = TopPermFlag | (TopPermFlag - 1)
@@ -64,6 +69,7 @@ const (
 	CreateContractString = "createContract"
 	CreateAccountString  = "createAccount"
 	BondString           = "bond"
+	IdentifyString       = "identify"
 	NameString           = "name"
 	ProposalString       = "proposal"
 	InputString          = "input"
@@ -85,7 +91,7 @@ const (
 // A particular permission
 type PermFlag uint64
 
-// Checks if a permission flag is valid (a known base chain or snative permission)
+// Checks if a permission flag is valid (a known base chain or native contract permission)
 func (pf PermFlag) IsValid() bool {
 	return pf <= AllPermFlags
 }
@@ -108,6 +114,8 @@ func (pf PermFlag) String() string {
 		return CreateAccountString
 	case Bond:
 		return BondString
+	case Identify:
+		return IdentifyString
 	case Name:
 		return NameString
 	case Proposal:
@@ -153,6 +161,8 @@ func PermStringToFlag(perm string) (PermFlag, error) {
 		return CreateAccount, nil
 	case BondString:
 		return Bond, nil
+	case IdentifyString:
+		return Identify, nil
 	case NameString:
 		return Name, nil
 	case ProposalString:

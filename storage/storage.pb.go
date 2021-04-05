@@ -7,6 +7,7 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -23,7 +24,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 // This is the object that is stored in the leaves of the commitsTree - it captures the sub-tree hashes so that the
 // commitsTree's hash becomes a mixture of the hashes of all the sub-trees.
@@ -45,7 +46,7 @@ func (m *CommitID) XXX_Unmarshal(b []byte) error {
 }
 func (m *CommitID) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
-	n, err := m.MarshalTo(b)
+	n, err := m.MarshalToSizedBuffer(b)
 	if err != nil {
 		return nil, err
 	}
@@ -89,25 +90,25 @@ func init() { proto.RegisterFile("storage.proto", fileDescriptor_0d2c4ccf1453ffd
 func init() { golang_proto.RegisterFile("storage.proto", fileDescriptor_0d2c4ccf1453ffdb) }
 
 var fileDescriptor_0d2c4ccf1453ffdb = []byte{
-	// 186 bytes of a gzipped FileDescriptorProto
+	// 177 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x2d, 0x2e, 0xc9, 0x2f,
-	0x4a, 0x4c, 0x4f, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x87, 0x72, 0xa5, 0x74, 0xd3,
-	0x33, 0x4b, 0x32, 0x4a, 0x93, 0xf4, 0x92, 0xf3, 0x73, 0xf5, 0xd3, 0xf3, 0xd3, 0xf3, 0xf5, 0xc1,
-	0xf2, 0x49, 0xa5, 0x69, 0x60, 0x1e, 0x98, 0x03, 0x66, 0x41, 0xf4, 0x29, 0xd9, 0x71, 0x71, 0x38,
-	0xe7, 0xe7, 0xe6, 0x66, 0x96, 0x78, 0xba, 0x08, 0x49, 0x70, 0xb1, 0x87, 0xa5, 0x16, 0x15, 0x67,
-	0xe6, 0xe7, 0x49, 0x30, 0x2a, 0x30, 0x6a, 0x30, 0x07, 0xc1, 0xb8, 0x42, 0x42, 0x5c, 0x2c, 0x1e,
-	0x89, 0xc5, 0x19, 0x12, 0x4c, 0x0a, 0x8c, 0x1a, 0x3c, 0x41, 0x60, 0xb6, 0x15, 0xcb, 0x8c, 0x05,
-	0xf2, 0x0c, 0x4e, 0xf6, 0x27, 0x1e, 0xc9, 0x31, 0x5e, 0x78, 0x24, 0xc7, 0x78, 0xe3, 0x91, 0x1c,
-	0xe3, 0x83, 0x47, 0x72, 0x8c, 0x07, 0x1e, 0xcb, 0x31, 0x9e, 0x78, 0x2c, 0xc7, 0x18, 0xa5, 0x8a,
-	0xe4, 0x90, 0x8c, 0xca, 0x82, 0xd4, 0xa2, 0x9c, 0xd4, 0x94, 0xf4, 0xd4, 0x22, 0xfd, 0xa4, 0xd2,
-	0xa2, 0xa2, 0xfc, 0x72, 0x7d, 0xa8, 0x7b, 0x93, 0xd8, 0xc0, 0xee, 0x30, 0x06, 0x04, 0x00, 0x00,
-	0xff, 0xff, 0xc6, 0xa6, 0xc1, 0x7f, 0xd0, 0x00, 0x00, 0x00,
+	0x4a, 0x4c, 0x4f, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x87, 0x72, 0xa5, 0x44, 0xd2,
+	0xf3, 0xd3, 0xf3, 0xc1, 0x62, 0xfa, 0x20, 0x16, 0x44, 0x5a, 0xc9, 0x8e, 0x8b, 0xc3, 0x39, 0x3f,
+	0x37, 0x37, 0xb3, 0xc4, 0xd3, 0x45, 0x48, 0x82, 0x8b, 0x3d, 0x2c, 0xb5, 0xa8, 0x38, 0x33, 0x3f,
+	0x4f, 0x82, 0x51, 0x81, 0x51, 0x83, 0x39, 0x08, 0xc6, 0x15, 0x12, 0xe2, 0x62, 0xf1, 0x48, 0x2c,
+	0xce, 0x90, 0x60, 0x52, 0x60, 0xd4, 0xe0, 0x09, 0x02, 0xb3, 0xad, 0x58, 0x66, 0x2c, 0x90, 0x67,
+	0x70, 0xb2, 0x3f, 0xf1, 0x48, 0x8e, 0xf1, 0xc2, 0x23, 0x39, 0xc6, 0x1b, 0x8f, 0xe4, 0x18, 0x1f,
+	0x3c, 0x92, 0x63, 0x3c, 0xf0, 0x58, 0x8e, 0xf1, 0xc4, 0x63, 0x39, 0xc6, 0x28, 0xd5, 0xf4, 0xcc,
+	0x92, 0x8c, 0xd2, 0x24, 0xbd, 0xe4, 0xfc, 0x5c, 0xfd, 0x8c, 0xca, 0x82, 0xd4, 0xa2, 0x9c, 0xd4,
+	0x94, 0xf4, 0xd4, 0x22, 0xfd, 0xa4, 0xd2, 0xa2, 0xa2, 0xfc, 0x72, 0x7d, 0xa8, 0xb3, 0x92, 0xd8,
+	0xc0, 0xee, 0x30, 0x06, 0x04, 0x00, 0x00, 0xff, 0xff, 0xff, 0x1e, 0xd4, 0x9e, 0xb7, 0x00, 0x00,
+	0x00,
 }
 
 func (m *CommitID) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -115,35 +116,44 @@ func (m *CommitID) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *CommitID) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CommitID) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Version != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintStorage(dAtA, i, uint64(m.Version))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.Hash) > 0 {
-		dAtA[i] = 0x12
-		i++
+		i -= len(m.Hash)
+		copy(dAtA[i:], m.Hash)
 		i = encodeVarintStorage(dAtA, i, uint64(len(m.Hash)))
-		i += copy(dAtA[i:], m.Hash)
+		i--
+		dAtA[i] = 0x12
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Version != 0 {
+		i = encodeVarintStorage(dAtA, i, uint64(m.Version))
+		i--
+		dAtA[i] = 0x8
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func encodeVarintStorage(dAtA []byte, offset int, v uint64) int {
+	offset -= sovStorage(v)
+	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return offset + 1
+	return base
 }
 func (m *CommitID) Size() (n int) {
 	if m == nil {
@@ -165,14 +175,7 @@ func (m *CommitID) Size() (n int) {
 }
 
 func sovStorage(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozStorage(x uint64) (n int) {
 	return sovStorage(uint64((x << 1) ^ uint64((int64(x) >> 63))))
@@ -265,10 +268,7 @@ func (m *CommitID) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthStorage
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthStorage
 			}
 			if (iNdEx + skippy) > l {
@@ -287,6 +287,7 @@ func (m *CommitID) Unmarshal(dAtA []byte) error {
 func skipStorage(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0
+	depth := 0
 	for iNdEx < l {
 		var wire uint64
 		for shift := uint(0); ; shift += 7 {
@@ -318,10 +319,8 @@ func skipStorage(dAtA []byte) (n int, err error) {
 					break
 				}
 			}
-			return iNdEx, nil
 		case 1:
 			iNdEx += 8
-			return iNdEx, nil
 		case 2:
 			var length int
 			for shift := uint(0); ; shift += 7 {
@@ -342,55 +341,30 @@ func skipStorage(dAtA []byte) (n int, err error) {
 				return 0, ErrInvalidLengthStorage
 			}
 			iNdEx += length
-			if iNdEx < 0 {
-				return 0, ErrInvalidLengthStorage
-			}
-			return iNdEx, nil
 		case 3:
-			for {
-				var innerWire uint64
-				var start int = iNdEx
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return 0, ErrIntOverflowStorage
-					}
-					if iNdEx >= l {
-						return 0, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					innerWire |= (uint64(b) & 0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				innerWireType := int(innerWire & 0x7)
-				if innerWireType == 4 {
-					break
-				}
-				next, err := skipStorage(dAtA[start:])
-				if err != nil {
-					return 0, err
-				}
-				iNdEx = start + next
-				if iNdEx < 0 {
-					return 0, ErrInvalidLengthStorage
-				}
-			}
-			return iNdEx, nil
+			depth++
 		case 4:
-			return iNdEx, nil
+			if depth == 0 {
+				return 0, ErrUnexpectedEndOfGroupStorage
+			}
+			depth--
 		case 5:
 			iNdEx += 4
-			return iNdEx, nil
 		default:
 			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
 		}
+		if iNdEx < 0 {
+			return 0, ErrInvalidLengthStorage
+		}
+		if depth == 0 {
+			return iNdEx, nil
+		}
 	}
-	panic("unreachable")
+	return 0, io.ErrUnexpectedEOF
 }
 
 var (
-	ErrInvalidLengthStorage = fmt.Errorf("proto: negative length found during unmarshaling")
-	ErrIntOverflowStorage   = fmt.Errorf("proto: integer overflow")
+	ErrInvalidLengthStorage        = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowStorage          = fmt.Errorf("proto: integer overflow")
+	ErrUnexpectedEndOfGroupStorage = fmt.Errorf("proto: unexpected end of group")
 )

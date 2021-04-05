@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package event
 
@@ -22,7 +11,7 @@ import (
 	"github.com/hyperledger/burrow/event/query"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/structure"
-	"github.com/tendermint/tendermint/libs/common"
+	"github.com/tendermint/tendermint/libs/service"
 	hex "github.com/tmthrgd/go-hex"
 )
 
@@ -33,7 +22,7 @@ const DefaultEventBufferCapacity = 2 << 10
 
 // Emitter has methods for working with events
 type Emitter struct {
-	common.BaseService
+	service.BaseService
 	pubsubServer *pubsub.Server
 	logger       *logging.Logger
 }
@@ -41,7 +30,7 @@ type Emitter struct {
 // NewEmitter initializes an emitter struct with a pubsubServer
 func NewEmitter() *Emitter {
 	pubsubServer := pubsub.NewServer(pubsub.BufferCapacity(DefaultEventBufferCapacity))
-	pubsubServer.BaseService = *common.NewBaseService(nil, "Emitter", pubsubServer)
+	pubsubServer.BaseService = *service.NewBaseService(nil, "Emitter", pubsubServer)
 	pubsubServer.Start()
 	return &Emitter{
 		pubsubServer: pubsubServer,

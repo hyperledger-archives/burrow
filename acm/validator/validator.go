@@ -9,7 +9,7 @@ import (
 	"github.com/hyperledger/burrow/acm"
 )
 
-func New(publicKey crypto.PublicKey, power *big.Int) *Validator {
+func New(publicKey *crypto.PublicKey, power *big.Int) *Validator {
 	v := &Validator{
 		PublicKey: publicKey,
 		Power:     power.Uint64(),
@@ -38,10 +38,11 @@ func (v *Validator) GetAddress() crypto.Address {
 }
 
 func FromAccount(acc *acm.Account, power uint64) *Validator {
-	address := acc.GetAddress()
+	pubKey := acc.GetPublicKey()
+	address, _ := crypto.AddressFromBytes(pubKey.TendermintAddress().Bytes())
 	return &Validator{
 		Address:   &address,
-		PublicKey: acc.GetPublicKey(),
+		PublicKey: pubKey,
 		Power:     power,
 	}
 }

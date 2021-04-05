@@ -7,6 +7,7 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -24,7 +25,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type AccountPermissions struct {
 	Base             BasePermissions `protobuf:"bytes,1,opt,name=Base" json:"Base"`
@@ -42,16 +43,12 @@ func (m *AccountPermissions) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *AccountPermissions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_AccountPermissions.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *AccountPermissions) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_AccountPermissions.Merge(m, src)
@@ -98,16 +95,12 @@ func (m *BasePermissions) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *BasePermissions) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_BasePermissions.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *BasePermissions) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_BasePermissions.Merge(m, src)
@@ -161,16 +154,12 @@ func (m *PermArgs) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *PermArgs) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_PermArgs.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *PermArgs) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_PermArgs.Merge(m, src)
@@ -228,36 +217,36 @@ func init() { proto.RegisterFile("permission.proto", fileDescriptor_c837ef01cbda
 func init() { golang_proto.RegisterFile("permission.proto", fileDescriptor_c837ef01cbda0ad8) }
 
 var fileDescriptor_c837ef01cbda0ad8 = []byte{
-	// 367 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x91, 0x31, 0x4f, 0xc2, 0x40,
-	0x14, 0xc7, 0x7b, 0x50, 0x48, 0x39, 0x49, 0x24, 0x17, 0x87, 0x46, 0x93, 0xb6, 0x61, 0x30, 0x1d,
-	0xb0, 0x35, 0x26, 0x2e, 0x0c, 0x26, 0xed, 0x60, 0x1c, 0x4d, 0x35, 0x0e, 0x6e, 0xa5, 0x9c, 0xa5,
-	0xb1, 0x70, 0xf5, 0xee, 0x1a, 0xc3, 0xb7, 0x70, 0x64, 0x54, 0x3e, 0x89, 0x23, 0x23, 0xb3, 0x03,
-	0x21, 0xf0, 0x2d, 0x9c, 0xcc, 0x5d, 0x09, 0x54, 0x13, 0xdc, 0xee, 0xff, 0xfe, 0xff, 0xf7, 0x7e,
-	0x7d, 0xaf, 0xb0, 0x95, 0x61, 0x3a, 0x4c, 0x18, 0x4b, 0xc8, 0xc8, 0xc9, 0x28, 0xe1, 0x04, 0xc1,
-	0x5d, 0xe5, 0xf8, 0x2c, 0x4e, 0xf8, 0x20, 0xef, 0x39, 0x11, 0x19, 0xba, 0x31, 0x89, 0x89, 0x2b,
-	0x23, 0xbd, 0xfc, 0x49, 0x2a, 0x29, 0xe4, 0xab, 0x68, 0x6d, 0x3f, 0x43, 0xe4, 0x45, 0x11, 0xc9,
-	0x47, 0xfc, 0x76, 0x3b, 0x83, 0xa1, 0x4b, 0xa8, 0xfa, 0x21, 0xc3, 0x3a, 0xb0, 0x80, 0x7d, 0x70,
-	0x71, 0xe2, 0x94, 0x88, 0xa2, 0x5e, 0x8a, 0xfa, 0xea, 0x6c, 0x61, 0x2a, 0x81, 0x8c, 0xa3, 0x23,
-	0x58, 0x0b, 0x48, 0x8a, 0x99, 0x5e, 0xb1, 0xaa, 0x76, 0x23, 0x28, 0x44, 0x57, 0x7b, 0x9b, 0x9a,
-	0xca, 0x64, 0x6a, 0x2a, 0xed, 0x17, 0x78, 0xf8, 0xa7, 0x1d, 0x9d, 0xc2, 0x9a, 0x90, 0x4c, 0xa2,
-	0x54, 0xbf, 0x25, 0xa6, 0x7d, 0x2f, 0x4c, 0x4d, 0x14, 0xaf, 0xd3, 0x30, 0x0e, 0x0a, 0x1b, 0xd9,
-	0xb0, 0x7e, 0x87, 0xb9, 0x9f, 0x70, 0xbd, 0xb2, 0x27, 0xb8, 0xf1, 0xbb, 0xcd, 0xc9, 0xbb, 0xa9,
-	0x6c, 0x91, 0x4b, 0x00, 0x65, 0xc4, 0xa3, 0xb1, 0x1c, 0xe2, 0x45, 0x3c, 0x21, 0xa3, 0xbd, 0xb4,
-	0x8d, 0x8f, 0x6e, 0x60, 0xfd, 0x3e, 0xa4, 0x31, 0x2e, 0x70, 0x4d, 0xff, 0xfc, 0x6b, 0x61, 0x76,
-	0x4a, 0x97, 0x1d, 0x8c, 0x33, 0x4c, 0x53, 0xdc, 0x8f, 0x31, 0x75, 0x7b, 0x39, 0xa5, 0xe4, 0xd5,
-	0x8d, 0xe8, 0x38, 0xe3, 0xc4, 0xf1, 0xfa, 0x7d, 0x8a, 0x19, 0x0b, 0x36, 0xfd, 0xa8, 0x03, 0xe1,
-	0x6e, 0x5f, 0xbd, 0x2a, 0xb9, 0xcd, 0x5f, 0xcc, 0x92, 0x8f, 0x10, 0x54, 0xc5, 0xd1, 0x74, 0xd5,
-	0x02, 0x76, 0x23, 0x90, 0x6f, 0x71, 0xd5, 0x87, 0x30, 0xcd, 0xb1, 0x5e, 0xb3, 0x80, 0xad, 0x05,
-	0x85, 0xe8, 0x6a, 0x62, 0xcd, 0xf9, 0x87, 0xa9, 0xf8, 0x57, 0xb3, 0x95, 0x01, 0xe6, 0x2b, 0x03,
-	0x2c, 0x57, 0x06, 0xf8, 0x5c, 0x1b, 0x60, 0xb6, 0x36, 0xc0, 0xa3, 0xfd, 0xff, 0xd7, 0xee, 0xfe,
-	0xe8, 0x4f, 0x00, 0x00, 0x00, 0xff, 0xff, 0xb6, 0xa6, 0x3c, 0xf5, 0x50, 0x02, 0x00, 0x00,
+	// 363 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x51, 0xb1, 0x6e, 0xea, 0x30,
+	0x14, 0x8d, 0x21, 0xa0, 0xe0, 0x87, 0xf4, 0x90, 0xc5, 0x10, 0xbd, 0x27, 0x25, 0x11, 0xc3, 0x53,
+	0x06, 0x94, 0x3c, 0x55, 0xea, 0xc2, 0x96, 0x0c, 0x55, 0xc7, 0x2a, 0xad, 0x3a, 0x74, 0x0b, 0xc1,
+	0x32, 0x51, 0x03, 0x4e, 0x6d, 0x47, 0x15, 0x7f, 0xd1, 0x91, 0xb1, 0xe5, 0x4b, 0x3a, 0x32, 0x32,
+	0x56, 0x1d, 0x10, 0x0a, 0x7f, 0xd1, 0xa9, 0xb2, 0x83, 0x80, 0x56, 0xa2, 0xdb, 0xbd, 0xe7, 0x9c,
+	0x7b, 0x8e, 0xef, 0x35, 0xec, 0xe4, 0x98, 0x4d, 0x52, 0xce, 0x53, 0x3a, 0xf5, 0x72, 0x46, 0x05,
+	0x45, 0xf0, 0x80, 0xfc, 0xe9, 0x12, 0x4a, 0xa8, 0x82, 0x7d, 0x59, 0x55, 0x8a, 0xde, 0x3d, 0x44,
+	0x41, 0x92, 0xd0, 0x62, 0x2a, 0xae, 0xf6, 0x52, 0x8e, 0xce, 0xa1, 0x1e, 0xc6, 0x1c, 0x9b, 0xc0,
+	0x01, 0xee, 0xaf, 0xb3, 0xbf, 0xde, 0x91, 0xb1, 0xc4, 0x8f, 0xa4, 0xa1, 0xbe, 0x5c, 0xdb, 0x5a,
+	0xa4, 0xe4, 0xa8, 0x0b, 0x1b, 0x11, 0xcd, 0x30, 0x37, 0x6b, 0x4e, 0xdd, 0x6d, 0x45, 0x55, 0x33,
+	0x30, 0x9e, 0x16, 0xb6, 0x36, 0x5f, 0xd8, 0x5a, 0xef, 0x01, 0xfe, 0xfe, 0x36, 0x8e, 0xfe, 0xc1,
+	0x86, 0x6c, 0xb9, 0x8a, 0xd2, 0xc3, 0x8e, 0x74, 0xfb, 0x58, 0xdb, 0x86, 0x04, 0x2f, 0xb2, 0x98,
+	0x44, 0x15, 0x8d, 0x5c, 0xd8, 0xbc, 0xc6, 0x22, 0x4c, 0x85, 0x59, 0x3b, 0x21, 0xdc, 0xf1, 0x83,
+	0xf6, 0xfc, 0xd9, 0xd6, 0xf6, 0x91, 0x1b, 0x00, 0x95, 0x24, 0x60, 0x44, 0x99, 0x04, 0x89, 0x48,
+	0xe9, 0xf4, 0x64, 0xda, 0x8e, 0x47, 0x97, 0xb0, 0x79, 0x13, 0x33, 0x82, 0xab, 0xb8, 0x76, 0xf8,
+	0xff, 0x7d, 0x6d, 0xf7, 0x49, 0x2a, 0xc6, 0xc5, 0xd0, 0x4b, 0xe8, 0xc4, 0x1f, 0xcf, 0x72, 0xcc,
+	0x32, 0x3c, 0x22, 0x98, 0xf9, 0xc3, 0x82, 0x31, 0xfa, 0xe8, 0x27, 0x6c, 0x96, 0x0b, 0xea, 0x05,
+	0xa3, 0x11, 0xc3, 0x9c, 0x47, 0xbb, 0x79, 0xd4, 0x87, 0xf0, 0xb0, 0xaf, 0x59, 0x57, 0xb9, 0xed,
+	0x2f, 0x99, 0x47, 0x3c, 0x42, 0x50, 0x97, 0x47, 0x33, 0x75, 0x07, 0xb8, 0xad, 0x48, 0xd5, 0xf2,
+	0xaa, 0xb7, 0x71, 0x56, 0x60, 0xb3, 0xe1, 0x00, 0xd7, 0x88, 0xaa, 0x66, 0x60, 0xc8, 0x35, 0x57,
+	0x2f, 0xb6, 0x16, 0x86, 0xcb, 0xd2, 0x02, 0xab, 0xd2, 0x02, 0x6f, 0xa5, 0x05, 0x36, 0xa5, 0x05,
+	0x5e, 0xb7, 0x16, 0x58, 0x6e, 0x2d, 0x70, 0xe7, 0xfe, 0xfc, 0xe2, 0xc3, 0xaf, 0x7e, 0x06, 0x00,
+	0x00, 0xff, 0xff, 0x7e, 0x9f, 0xab, 0xe6, 0x3b, 0x02, 0x00, 0x00,
 }
 
 func (m *AccountPermissions) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -265,43 +254,45 @@ func (m *AccountPermissions) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *AccountPermissions) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AccountPermissions) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	dAtA[i] = 0xa
-	i++
-	i = encodeVarintPermission(dAtA, i, uint64(m.Base.Size()))
-	n1, err := m.Base.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	i += n1
 	if len(m.Roles) > 0 {
-		for _, s := range m.Roles {
+		for iNdEx := len(m.Roles) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Roles[iNdEx])
+			copy(dAtA[i:], m.Roles[iNdEx])
+			i = encodeVarintPermission(dAtA, i, uint64(len(m.Roles[iNdEx])))
+			i--
 			dAtA[i] = 0x12
-			i++
-			l = len(s)
-			for l >= 1<<7 {
-				dAtA[i] = uint8(uint64(l)&0x7f | 0x80)
-				l >>= 7
-				i++
-			}
-			dAtA[i] = uint8(l)
-			i++
-			i += copy(dAtA[i:], s)
 		}
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	{
+		size, err := m.Base.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintPermission(dAtA, i, uint64(size))
 	}
-	return i, nil
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
 }
 
 func (m *BasePermissions) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -309,26 +300,32 @@ func (m *BasePermissions) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *BasePermissions) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *BasePermissions) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	dAtA[i] = 0x8
-	i++
-	i = encodeVarintPermission(dAtA, i, uint64(m.Perms))
-	dAtA[i] = 0x10
-	i++
-	i = encodeVarintPermission(dAtA, i, uint64(m.SetBit))
 	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return i, nil
+	i = encodeVarintPermission(dAtA, i, uint64(m.SetBit))
+	i--
+	dAtA[i] = 0x10
+	i = encodeVarintPermission(dAtA, i, uint64(m.Perms))
+	i--
+	dAtA[i] = 0x8
+	return len(dAtA) - i, nil
 }
 
 func (m *PermArgs) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -336,55 +333,65 @@ func (m *PermArgs) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *PermArgs) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *PermArgs) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	dAtA[i] = 0x8
-	i++
-	i = encodeVarintPermission(dAtA, i, uint64(m.Action))
-	if m.Target != nil {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintPermission(dAtA, i, uint64(m.Target.Size()))
-		n2, err := m.Target.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n2
-	}
-	if m.Permission != nil {
-		dAtA[i] = 0x18
-		i++
-		i = encodeVarintPermission(dAtA, i, uint64(*m.Permission))
-	}
-	if m.Role != nil {
-		dAtA[i] = 0x22
-		i++
-		i = encodeVarintPermission(dAtA, i, uint64(len(*m.Role)))
-		i += copy(dAtA[i:], *m.Role)
-	}
 	if m.Value != nil {
-		dAtA[i] = 0x28
-		i++
+		i--
 		if *m.Value {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
 		}
-		i++
+		i--
+		dAtA[i] = 0x28
 	}
-	return i, nil
+	if m.Role != nil {
+		i -= len(*m.Role)
+		copy(dAtA[i:], *m.Role)
+		i = encodeVarintPermission(dAtA, i, uint64(len(*m.Role)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.Permission != nil {
+		i = encodeVarintPermission(dAtA, i, uint64(*m.Permission))
+		i--
+		dAtA[i] = 0x18
+	}
+	if m.Target != nil {
+		{
+			size := m.Target.Size()
+			i -= size
+			if _, err := m.Target.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+			i = encodeVarintPermission(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	i = encodeVarintPermission(dAtA, i, uint64(m.Action))
+	i--
+	dAtA[i] = 0x8
+	return len(dAtA) - i, nil
 }
 
 func encodeVarintPermission(dAtA []byte, offset int, v uint64) int {
+	offset -= sovPermission(v)
+	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return offset + 1
+	return base
 }
 func (m *AccountPermissions) Size() (n int) {
 	if m == nil {
@@ -445,14 +452,7 @@ func (m *PermArgs) Size() (n int) {
 }
 
 func sovPermission(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozPermission(x uint64) (n int) {
 	return sovPermission(uint64((x << 1) ^ uint64((int64(x) >> 63))))
@@ -557,10 +557,7 @@ func (m *AccountPermissions) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthPermission
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthPermission
 			}
 			if (iNdEx + skippy) > l {
@@ -649,10 +646,7 @@ func (m *BasePermissions) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthPermission
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthPermission
 			}
 			if (iNdEx + skippy) > l {
@@ -831,10 +825,7 @@ func (m *PermArgs) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthPermission
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthPermission
 			}
 			if (iNdEx + skippy) > l {
@@ -852,6 +843,7 @@ func (m *PermArgs) Unmarshal(dAtA []byte) error {
 func skipPermission(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0
+	depth := 0
 	for iNdEx < l {
 		var wire uint64
 		for shift := uint(0); ; shift += 7 {
@@ -883,10 +875,8 @@ func skipPermission(dAtA []byte) (n int, err error) {
 					break
 				}
 			}
-			return iNdEx, nil
 		case 1:
 			iNdEx += 8
-			return iNdEx, nil
 		case 2:
 			var length int
 			for shift := uint(0); ; shift += 7 {
@@ -907,55 +897,30 @@ func skipPermission(dAtA []byte) (n int, err error) {
 				return 0, ErrInvalidLengthPermission
 			}
 			iNdEx += length
-			if iNdEx < 0 {
-				return 0, ErrInvalidLengthPermission
-			}
-			return iNdEx, nil
 		case 3:
-			for {
-				var innerWire uint64
-				var start int = iNdEx
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return 0, ErrIntOverflowPermission
-					}
-					if iNdEx >= l {
-						return 0, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					innerWire |= (uint64(b) & 0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				innerWireType := int(innerWire & 0x7)
-				if innerWireType == 4 {
-					break
-				}
-				next, err := skipPermission(dAtA[start:])
-				if err != nil {
-					return 0, err
-				}
-				iNdEx = start + next
-				if iNdEx < 0 {
-					return 0, ErrInvalidLengthPermission
-				}
-			}
-			return iNdEx, nil
+			depth++
 		case 4:
-			return iNdEx, nil
+			if depth == 0 {
+				return 0, ErrUnexpectedEndOfGroupPermission
+			}
+			depth--
 		case 5:
 			iNdEx += 4
-			return iNdEx, nil
 		default:
 			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
 		}
+		if iNdEx < 0 {
+			return 0, ErrInvalidLengthPermission
+		}
+		if depth == 0 {
+			return iNdEx, nil
+		}
 	}
-	panic("unreachable")
+	return 0, io.ErrUnexpectedEOF
 }
 
 var (
-	ErrInvalidLengthPermission = fmt.Errorf("proto: negative length found during unmarshaling")
-	ErrIntOverflowPermission   = fmt.Errorf("proto: integer overflow")
+	ErrInvalidLengthPermission        = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowPermission          = fmt.Errorf("proto: integer overflow")
+	ErrUnexpectedEndOfGroupPermission = fmt.Errorf("proto: unexpected end of group")
 )

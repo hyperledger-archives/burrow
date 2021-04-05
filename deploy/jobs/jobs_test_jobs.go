@@ -34,8 +34,8 @@ func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, script *def.
 		data = hex.EncodeToString(packedBytes)
 	}
 	if err != nil {
-		var err = util.ABIErrorHandler(err, nil, query, logger)
-		return "", nil, err
+		return "", nil, fmt.Errorf("error in QueryContractJob with %v: %w",
+			query, err)
 	}
 
 	logger.InfoMsg("Query contract",
@@ -68,6 +68,8 @@ func QueryContractJob(query *def.QueryContract, do *def.DeployArgs, script *def.
 	if err != nil {
 		return "", nil, err
 	}
+
+	logEvents(txe, client, logger)
 
 	result2 := util.GetReturnValue(query.Variables, logger)
 	// Finalize

@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "preserveSymlinks": true,
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "declaration": true,
+    "typeRoots": [ "./types", "./node_modules/@types"]
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "types",
+    "src/test/"
+  ]
+}

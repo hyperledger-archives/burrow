@@ -4,10 +4,12 @@ package rpcdump;
 
 option go_package = "github.com/hyperledger/burrow/rpc/rpcdump";
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "gogoproto/gogo.proto";
 
 import "dump.proto";
 
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.stable_marshaler_all) = true;
 option (gogoproto.sizer_all) = true;
 option (gogoproto.goproto_registration) = true;

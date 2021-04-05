@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger/burrow/project"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/crypto/encoding"
 )
 
 type Validators interface {
@@ -29,13 +30,15 @@ const (
 )
 
 type App struct {
+	// Provides a no-op implementation for all methods (in particular snapshots for now will abort)
+	types.BaseApplication
 	// Node information to return in Info
 	nodeInfo string
 	// State
-	blockchain              *bcm.Blockchain
-	validators              Validators
-	mempoolLocker           sync.Locker
-	authorizedPeersProvider PeersFilterProvider
+	blockchain      *bcm.Blockchain
+	validators      Validators
+	mempoolLocker   sync.Locker
+	authorizedPeers AuthorizedPeers
 	// We need to cache these from BeginBlock for when we need actually need it in Commit
 	block *types.RequestBeginBlock
 	// Function to use to fail gracefully from panic rather than letting Tendermint make us a zombie
@@ -46,23 +49,20 @@ type App struct {
 	logger    *logging.Logger
 }
 
-// PeersFilterProvider provides current authorized nodes id and/or addresses
-type PeersFilterProvider func() (authorizedPeersID []string, authorizedPeersAddress []string)
-
 var _ types.Application = &App{}
 
 func NewApp(nodeInfo string, blockchain *bcm.Blockchain, validators Validators, checker execution.BatchExecutor,
-	committer execution.BatchCommitter, txDecoder txs.Decoder, authorizedPeersProvider PeersFilterProvider,
+	committer execution.BatchCommitter, txDecoder txs.Decoder, authorizedPeers AuthorizedPeers,
 	panicFunc func(error), logger *logging.Logger) *App {
 	return &App{
-		nodeInfo:                nodeInfo,
-		blockchain:              blockchain,
-		validators:              validators,
-		checker:                 checker,
-		committer:               committer,
-		txDecoder:               txDecoder,
-		authorizedPeersProvider: authorizedPeersProvider,
-		panicFunc:               panicFunc,
+		nodeInfo:        nodeInfo,
+		blockchain:      blockchain,
+		validators:      validators,
+		checker:         checker,
+		committer:       committer,
+		txDecoder:       txDecoder,
+		authorizedPeers: authorizedPeers,
+		panicFunc:       panicFunc,
 		logger: logger.WithScope("abci.NewApp").With(structure.ComponentKey, "ABCI_App",
 			"node_info", nodeInfo),
 	}
@@ -106,7 +106,7 @@ func (app *App) Query(reqQuery types.RequestQuery) (respQuery types.ResponseQuer
 	return
 }
 
-func (app *App) InitChain(chain types.RequestInitChain) (respInitChain types.ResponseInitChain) {
+func (app *App) InitChain(chain types.RequestInitChain) types.ResponseInitChain {
 	defer func() {
 		if r := recover(); r != nil {
 			app.panicFunc(fmt.Errorf("panic occurred in abci.App/InitChain: %v\n%s", r, debug.Stack()))
@@ -122,17 +122,19 @@ func (app *App) InitChain(chain types.RequestInitChain) (respInitChain types.Res
 			len(chain.Validators), currentSet.Size()))
 	}
 	for _, v := range chain.Validators {
-		pk, err := crypto.PublicKeyFromABCIPubKey(v.GetPubKey())
+		pk, err := encoding.PubKeyFromProto(v.GetPubKey())
 		if err != nil {
 			panic(err)
 		}
-		err = app.checkValidatorMatches(currentSet, types.Validator{Address: pk.GetAddress().Bytes(), Power: v.Power})
+		err = app.checkValidatorMatches(currentSet, types.Validator{Address: pk.Address().Bytes(), Power: v.Power})
 		if err != nil {
 			panic(err)
 		}
 	}
 	app.logger.InfoMsg("Initial validator set matches")
-	return
+	return types.ResponseInitChain{
+		AppHash: app.blockchain.AppHashAfterLastBlock(),
+	}
 }
 
 func (app *App) BeginBlock(block types.RequestBeginBlock) (respBeginBlock types.ResponseBeginBlock) {
@@ -238,8 +240,12 @@ func (app *App) EndBlock(reqEndBlock types.RequestEndBlock) types.ResponseEndBlo
 	err := app.validators.ValidatorChanges(BurrowValidatorDelayInBlocks).IterateValidators(func(id crypto.Addressable, power *big.Int) error {
 		app.logger.InfoMsg("Updating validator power", "validator_address", id.GetAddress(),
 			"new_power", power)
+		pk, err := encoding.PubKeyToProto(id.GetPublicKey().TendermintPubKey())
+		if err != nil {
+			panic(err)
+		}
 		validatorUpdates = append(validatorUpdates, types.ValidatorUpdate{
-			PubKey: id.GetPublicKey().ABCIPubKey(),
+			PubKey: pk,
 			// Must ensure power fits in an int64 during execution
 			Power: power.Int64(),
 		})
@@ -265,7 +271,6 @@ func (app *App) Commit() types.ResponseCommit {
 		structure.ScopeKey, "Commit()",
 		"height", app.block.Header.Height,
 		"hash", app.block.Hash,
-		"txs", app.block.Header.NumTxs,
 		"block_time", blockTime,
 		"last_block_time", app.blockchain.LastBlockTime(),
 		"last_block_duration", app.blockchain.LastCommitDuration(),

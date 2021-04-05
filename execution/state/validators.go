@@ -95,8 +95,10 @@ func (s *ReadState) Power(id crypto.Address) (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-	bs := tree.Get(keys.Validator.KeyNoPrefix(id))
-	if len(bs) == 0 {
+	bs, err := tree.Get(keys.Validator.KeyNoPrefix(id))
+	if err != nil {
+		return nil, err
+	} else if len(bs) == 0 {
 		return new(big.Int), nil
 	}
 	v := new(validator.Validator)
@@ -122,7 +124,7 @@ func (s *ReadState) IterateValidators(fn func(id crypto.Addressable, power *big.
 	})
 }
 
-func (ws *writeState) SetPower(id crypto.PublicKey, power *big.Int) (*big.Int, error) {
+func (ws *writeState) SetPower(id *crypto.PublicKey, power *big.Int) (*big.Int, error) {
 	// SetPower in ring
 	flow, err := ws.ring.SetPower(id, power)
 	if err != nil {
@@ -132,7 +134,7 @@ func (ws *writeState) SetPower(id crypto.PublicKey, power *big.Int) (*big.Int, e
 	return flow, ws.setPower(id, power)
 }
 
-func (ws *writeState) setPower(id crypto.PublicKey, power *big.Int) error {
+func (ws *writeState) setPower(id *crypto.PublicKey, power *big.Int) error {
 	tree, err := ws.forest.Writer(keys.Validator.Prefix())
 	if err != nil {
 		return err

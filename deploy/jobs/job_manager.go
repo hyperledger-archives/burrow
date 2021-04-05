@@ -22,6 +22,7 @@ const (
 type solidityCompilerWork struct {
 	contractName string
 	workDir      string
+	wasm         bool
 }
 
 type compilerJob struct {
@@ -31,33 +32,28 @@ type compilerJob struct {
 	done         chan struct{}
 }
 
-func solcRunner(jobs chan *compilerJob, logger *logging.Logger) {
-	for {
-		job, ok := <-jobs
-		if !ok {
-			break
-		}
-		resp, err := compilers.EVM(job.work.contractName, false, job.work.workDir, nil, logger)
-		(*job).compilerResp = resp
-		(*job).err = err
-		close(job.done)
-	}
-}
-
-func solangRunner(jobs chan *compilerJob, logger *logging.Logger) {
+func solidityRunner(jobs chan *compilerJob, logger *logging.Logger) {
 	for {
 		job, ok := <-jobs
 		if !ok {
 			return
 		}
-		resp, err := compilers.WASM(job.work.contractName, job.work.workDir, logger)
-		(*job).compilerResp = resp
-		(*job).err = err
+		if job.work.wasm {
+			resp, err := compilers.WASM(job.work.contractName, job.work.workDir, logger)
+			(*job).compilerResp = resp
+			(*job).err = err
+
+		} else {
+			resp, err := compilers.EVM(job.work.contractName, false, job.work.workDir, nil, logger)
+			(*job).compilerResp = resp
+			(*job).err = err
+
+		}
 		close(job.done)
 	}
 }
 
-func queueCompilerWork(job *def.Job, playbook *def.Playbook, jobs chan *compilerJob) error {
+func queueCompilerWork(job *def.Job, playbook *def.Playbook, jobs chan *compilerJob, forceWasm bool) error {
 	payload, err := job.Payload()
 	if err != nil {
 		return fmt.Errorf("could not get Job payload: %v", payload)
@@ -71,6 +67,7 @@ func queueCompilerWork(job *def.Job, playbook *def.Playbook, jobs chan *compiler
 			work: solidityCompilerWork{
 				contractName: job.Build.Contract,
 				workDir:      playbook.Path,
+				wasm:         job.Build.Wasm || forceWasm,
 			},
 		}
 		job.Intermediate = &intermediate
@@ -82,6 +79,7 @@ func queueCompilerWork(job *def.Job, playbook *def.Playbook, jobs chan *compiler
 				work: solidityCompilerWork{
 					contractName: job.Deploy.Contract,
 					workDir:      playbook.Path,
+					wasm:         job.Deploy.Wasm || forceWasm,
 				},
 			}
 			job.Intermediate = &intermediate
@@ -89,14 +87,14 @@ func queueCompilerWork(job *def.Job, playbook *def.Playbook, jobs chan *compiler
 		}
 	case *def.Proposal:
 		for _, job := range job.Proposal.Jobs {
-			err = queueCompilerWork(job, playbook, jobs)
+			err = queueCompilerWork(job, playbook, jobs, forceWasm)
 			if err != nil {
 				return err
 			}
 		}
 	case *def.Meta:
 		for _, job := range job.Meta.Playbook.Jobs {
-			err = queueCompilerWork(job, playbook, jobs)
+			err = queueCompilerWork(job, playbook, jobs, forceWasm)
 			if err != nil {
 				return err
 			}
@@ -155,12 +153,12 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if err != nil {
 				return err
 			}
-			err = UpdateAccountJob(job.UpdateAccount, playbook.Account, tx, client, logger)
+			err = UpdateAccountJob(tx, client, logger)
 
 		// Util jobs
 		case *def.Account:
 			announce(job.Name, "Account", logger)
-			job.Result, err = SetAccountJob(job.Account, args, playbook, logger)
+			job.Result, err = SetAccountJob(job.Account, playbook, logger)
 		case *def.Set:
 			announce(job.Name, "Set", logger)
 			job.Result, err = SetValJob(job.Set, args, logger)
@@ -172,7 +170,7 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if err != nil {
 				return err
 			}
-			job.Result, err = SendJob(job.Send, tx, playbook.Account, client, logger)
+			job.Result, err = SendJob(tx, client, logger)
 			if err != nil {
 				return err
 			}
@@ -182,7 +180,7 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if err != nil {
 				return err
 			}
-			job.Result, err = BondJob(job.Bond, tx, playbook.Account, client, logger)
+			job.Result, err = BondJob(tx, client, logger)
 			if err != nil {
 				return err
 			}
@@ -192,7 +190,7 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if err != nil {
 				return err
 			}
-			job.Result, err = UnbondJob(job.Unbond, tx, playbook.Account, client, logger)
+			job.Result, err = UnbondJob(tx, client, logger)
 			if err != nil {
 				return err
 			}
@@ -202,7 +200,7 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if err != nil {
 				return err
 			}
-			job.Result, err = RegisterNameJob(job.RegisterName, args, playbook, txs, client, logger)
+			job.Result, err = RegisterNameJob(txs, client, logger)
 			if err != nil {
 				return err
 			}
@@ -212,7 +210,17 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if err != nil {
 				return err
 			}
-			job.Result, err = PermissionJob(job.Permission, playbook.Account, tx, client, logger)
+			job.Result, err = PermissionJob(tx, client, logger)
+			if err != nil {
+				return err
+			}
+		case *def.Identify:
+			announce(job.Name, "Identify", logger)
+			tx, err := FormulateIdentifyJob(job.Identify, playbook.Account, client, logger)
+			if err != nil {
+				return err
+			}
+			job.Result, err = IdentifyJob(tx, client, logger)
 			if err != nil {
 				return err
 			}
@@ -224,7 +232,7 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if ferr != nil {
 				return ferr
 			}
-			job.Result, err = DeployJob(job.Deploy, args, playbook, client, txs, contracts, logger)
+			job.Result, err = DeployJob(job.Deploy, playbook, client, txs, contracts, logger)
 
 		case *def.Call:
 			announce(job.Name, "Call", logger)
@@ -232,7 +240,7 @@ func doJobs(playbook *def.Playbook, args *def.DeployArgs, client *def.Client, lo
 			if ferr != nil {
 				return ferr
 			}
-			job.Result, job.Variables, err = CallJob(job.Call, CallTx, args, playbook, client, logger)
+			job.Result, job.Variables, err = CallJob(job.Call, CallTx, playbook, client, logger)
 		case *def.Build:
 			announce(job.Name, "Build", logger)
 			var resp *compilers.Response
@@ -308,15 +316,11 @@ func ExecutePlaybook(args *def.DeployArgs, playbook *def.Playbook, client *def.C
 	defer close(jobs)
 
 	for i := 0; i < concurrentSolc; i++ {
-		if args.Wasm {
-			go solangRunner(jobs, logger)
-		} else {
-			go solcRunner(jobs, logger)
-		}
+		go solidityRunner(jobs, logger)
 	}
 
 	for _, job := range playbook.Jobs {
-		queueCompilerWork(job, playbook, jobs)
+		queueCompilerWork(job, playbook, jobs, args.Wasm)
 	}
 
 	err = doJobs(playbook, args, client, logger)

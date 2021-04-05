@@ -10,26 +10,21 @@
 
 # ----------------------------------------------------------
 
-SHELL := /bin/bash
+SHELL := /usr/bin/env bash
 REPO := $(shell pwd)
-GOFILES := $(shell go list -f "{{.Dir}}" ./...)
-PACKAGES := $(shell go list ./... )
-
-# Protobuf generated go files
-PROTO_FILES = $(shell find . -path ./vendor -prune -o -path ./.gopath_bos -prune -o -type f -name '*.proto' -print)
-PROTO_GO_FILES = $(patsubst %.proto, %.pb.go, $(PROTO_FILES))
-PROTO_GO_FILES_REAL = $(shell find . -path ./vendor -prune -o -type f -name '*.pb.go' -print)
 
 # Our own Go files containing the compiled bytecode of solidity files as a constant
-SOLIDITY_FILES = $(shell find . -path ./vendor -prune -o -path ./tests -prune -o -type f -name '*.sol' -print)
-SOLIDITY_GO_FILES = $(patsubst %.sol, %.sol.go, $(SOLIDITY_FILES))
-SOLANG_FILES = $(shell find . -path ./vendor -prune -o -path ./tests -prune -o -type f -name '*.solang' -print)
-SOLANG_GO_FILES = $(patsubst %.solang, %.solang.go, $(SOLANG_FILES))
 
-CI_IMAGE="hyperledger/burrow:ci"
+export CI_IMAGE=hyperledger/burrow:ci-2
 
-GOPATH?=${HOME}/go
-BIN_PATH?=${GOPATH}/bin
+VERSION := $(shell scripts/version.sh)
+# Gets implicit default GOPATH if not set
+GOPATH?=$(shell go env GOPATH)
+BIN_PATH?=$(GOPATH)/bin
+HELM_PATH?=helm/package
+HELM_PACKAGE=$(HELM_PATH)/burrow-$(VERSION).tgz
+ARCH?=linux-amd64
+PID_DIR=.pid
 
 export GO111MODULE=on
 
@@ -40,26 +35,26 @@ export GO111MODULE=on
 .PHONY: check
 check:
 	@echo "Checking code for formatting style compliance."
-	@gofmt -l -d ${GOFILES}
-	@gofmt -l ${GOFILES} | read && echo && echo "Your marmot has found a problem with the formatting style of the code." 1>&2 && exit 1 || true
+	@gofmt -l -d $(shell go list -f "{{.Dir}}" ./...)
+	@gofmt -l $(shell go list -f "{{.Dir}}" ./...) | read && echo && echo "Your marmot has found a problem with the formatting style of the code." 1>&2 && exit 1 || true
 
 # Just fix it
 .PHONY: fix
 fix:
-	@goimports -l -w ${GOFILES}
+	@goimports -l -w $(shell go list -f "{{.Dir}}" ./...)
 
 # fmt runs gofmt -w on the code, modifying any files that do not match
 # the style guide.
 .PHONY: fmt
 fmt:
 	@echo "Correcting any formatting style corrections."
-	@gofmt -l -w ${GOFILES}
+	@gofmt -l -w $(shell go list -f "{{.Dir}}" ./...)
 
 # lint installs golint and prints recommendations for coding style.
 lint:
 	@echo "Running lint checks."
 	go get -u github.com/golang/lint/golint
-	@for file in $(GOFILES); do \
+	@for file in $(shell go list -f "{{.Dir}}" ./...); do \
 		echo; \
 		golint --set_exit_status $${file}; \
 	done
@@ -69,32 +64,57 @@ lint:
 .PHONY: vet
 vet:
 	@echo "Running go vet."
-	@go vet ${PACKAGES}
+	@go vet $(shell go list ./... )
 
 # run the megacheck tool for code compliance
 .PHONY: megacheck
 megacheck:
 	@go get honnef.co/go/tools/cmd/megacheck
-	@for pkg in ${PACKAGES}; do megacheck "$$pkg"; done
+	@for pkg in $(shell go list ./... ); do megacheck "$$pkg"; done
 
 # Protobuffing
-.PHONY: protobuf_deps
-protobuf_deps:
-	@go get -u github.com/gogo/protobuf/protoc-gen-gogo
-#	@go get -u github.com/golang/protobuf/protoc-gen-go
+
+BURROW_TS_PATH = ./js
+PROTO_GEN_TS_PATH = ${BURROW_TS_PATH}/proto
+NODE_BIN = ${BURROW_TS_PATH}/node_modules/.bin
+
+# To access Tendermint bundled protobuf files from go module cache
+TENDERMINT_MOD?=github.com/tendermint/tendermint
+TENDERMINT_VERSION?=$(shell go list -m -f '{{ .Version }}' $(TENDERMINT_MOD))
+TENDERMINT_SRC?=$(shell go env GOMODCACHE)/$(TENDERMINT_MOD)@$(TENDERMINT_VERSION)
+TENDERMINT_PROTO?=$(TENDERMINT_SRC)/proto
+
+PROTO_FILES = $(shell find . $(TENDERMINT_PROTO) -path $(BURROW_TS_PATH) -prune -o -path ./node_modules -prune -o -type f -name '*.proto' -print)
+PROTO_GO_FILES = $(patsubst %.proto, %.pb.go, $(PROTO_FILES))
+PROTO_GO_FILES_REAL = $(shell find . -type f -name '*.pb.go' -print)
+PROTO_TS_FILES = $(patsubst %.proto, %.pb.ts, $(PROTO_FILES))
+
+.PHONY: protobuf
+protobuf: $(PROTO_GO_FILES) $(PROTO_TS_FILES) fix
 
 # Implicit compile rule for GRPC/proto files (note since pb.go files no longer generated
 # in same directory as proto file this just regenerates everything
 %.pb.go: %.proto
-	protoc -I ./protobuf $< --gogo_out=plugins=grpc:${GOPATH}/src
+	protoc -I ./protobuf -I $(TENDERMINT_PROTO) $< --gogo_out=${GOPATH}/src --go-grpc_out=${GOPATH}/src
 
-.PHONY: protobuf
-protobuf: $(PROTO_GO_FILES)
+# Using this: https://github.com/agreatfool/grpc_tools_node_protoc_ts
+%.pb.ts: %.proto
+	mkdir -p $(PROTO_GEN_TS_PATH)
+	$(NODE_BIN)/grpc_tools_node_protoc -I protobuf -I $(TENDERMINT_PROTO) \
+		--plugin="protoc-gen-ts=$(NODE_BIN)/protoc-gen-ts" \
+		--js_out="import_style=commonjs,binary:${PROTO_GEN_TS_PATH}" \
+		--ts_out="generate_package_definition:${PROTO_GEN_TS_PATH}" \
+		--grpc_out="generate_package_definition:${PROTO_GEN_TS_PATH}" \
+		$<
+
+.PHONY: protobuf_deps
+protobuf_deps:
+	@go get -u github.com/gogo/protobuf/protoc-gen-gogo
+	@cd ${BURROW_TS_PATH} && yarn install --only=dev
 
 .PHONY: clean_protobuf
 clean_protobuf:
 	@rm -f $(PROTO_GO_FILES_REAL)
-
 
 ### PEG query grammar
 
@@ -118,7 +138,7 @@ commit_hash:
 
 # build all targets in github.com/hyperledger/burrow
 .PHONY: build
-build:	check build_burrow
+build:	check build_burrow build_burrow_debug
 
 # build all targets in github.com/hyperledger/burrow with checks for race conditions
 .PHONY: build_race
@@ -127,24 +147,29 @@ build_race:	check build_race_db
 # build burrow and vent
 .PHONY: build_burrow
 build_burrow: commit_hash
-	go build -ldflags "-extldflags '-static' \
+	go build $(BURROW_BUILD_FLAGS) -ldflags "-extldflags '-static' \
 	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt) \
 	-X github.com/hyperledger/burrow/project.date=$(shell date '+%Y-%m-%d')" \
-	-o ${REPO}/bin/burrow ./cmd/burrow
+	-o ${REPO}/bin/burrow$(BURROW_BUILD_SUFFIX) ./cmd/burrow
 
 # With the sqlite tag - enabling Vent sqlite adapter support, but building a CGO binary
 .PHONY: build_burrow_sqlite
-build_burrow_sqlite: commit_hash
-	go build -tags sqlite \
-	 -ldflags "-extldflags '-static' \
-	-X github.com/hyperledger/burrow/project.commit=$(shell cat commit_hash.txt) \
-	-X github.com/hyperledger/burrow/project.date=$(shell date -I)" \
-	-o ${REPO}/bin/burrow-vent-sqlite ./cmd/burrow
+build_burrow_sqlite: export BURROW_BUILD_SUFFIX=-vent-sqlite
+build_burrow_sqlite: export BURROW_BUILD_FLAGS=-tags sqlite
+build_burrow_sqlite:
+	$(MAKE) build_burrow
+
+# Builds a binary suitable for delve line-by-line debugging through CGO with optimisations (-N) and inling (-l) disabled
+.PHONY: build_burrow_debug
+build_burrow_debug: export BURROW_BUILD_SUFFIX=-debug
+build_burrow_debug: export BURROW_BUILD_FLAGS=-gcflags "all=-N -l"
+build_burrow_debug:
+	$(MAKE) build_burrow
 
 .PHONY: install
 install: build_burrow
 	mkdir -p ${BIN_PATH}
-	install -T ${REPO}/bin/burrow ${BIN_PATH}/burrow
+	install ${REPO}/bin/burrow ${BIN_PATH}/burrow
 
 # build burrow with checks for race conditions
 .PHONY: build_race_db
@@ -161,70 +186,105 @@ docker_build: check commit_hash
 ### Testing github.com/hyperledger/burrow
 
 # Solidity fixtures
-%.sol.go: %.sol
-	@go run ./deploy/compile/solgo/main.go $^
-
-# Solidity fixtures
-%.solang.go: %.solang
-	@go run ./deploy/compile/solgo/main.go -wasm $^
-
 .PHONY: solidity
-solidity: $(SOLIDITY_GO_FILES)
+solidity: $(patsubst %.sol, %.sol.go, $(wildcard ./execution/solidity/*.sol)) build_burrow
 
+%.sol.go: %.sol
+	@burrow compile $^
+
+# Solang fixtures
 .PHONY: solang
-solang: $(SOLANG_GO_FILES)
+solang: $(patsubst %.solang, %.solang.go, $(wildcard ./execution/solidity/*.solang) $(wildcard ./execution/wasm/*.solang)) build_burrow
+
+%.solang.go: %.solang
+	@burrow compile --wasm $^
 
 # node/js
-#
-# Install dependency
-.PHONY: npm_install
-npm_install:
-	npm install
-
-.PHONY: test_js
-test_js: bin/solc build_burrow
-	./tests/scripts/bin_wrapper.sh npm test
+.PHONY: yarn_install
+yarn_install:
+	@cd ${BURROW_TS_PATH} && yarn install
 
 # Test
 
+.PHONY: test_js
+test_js:
+	@cd ${BURROW_TS_PATH} && yarn test
+
+.PHONY: publish_js
+publish_js:
+	yarn --cwd js install
+	yarn --cwd js build
+	yarn --cwd js publish --access public --non-interactive --no-git-tag-version --new-version $(shell ./scripts/local_version.sh)
+
 .PHONY: test
-test: check bin/solc
-# on circleci we might want to limit memory usage through GO_TEST_ARGS
+test: check bin/solc bin/solang
 	@tests/scripts/bin_wrapper.sh go test ./... ${GO_TEST_ARGS}
 
-.PHONY: test_cover
-test_cover: check bin/solc
-	@tests/scripts/bin_wrapper.sh go test -coverprofile=c.out ./... ${GO_TEST_ARGS}
-	@tests/scripts/bin_wrapper.sh go tool cover -html=c.out -o coverage.html
-
 .PHONY: test_keys
-test_keys: build_burrow
+test_keys:
 	burrow_bin="${REPO}/bin/burrow" tests/keys_server/test.sh
+
+.PHONY:	test_truffle
+test_truffle:
+	burrow_bin="${REPO}/bin/burrow" tests/web3/truffle.sh
 
 .PHONY:	test_integration_vent
 test_integration_vent:
 	# Include sqlite adapter with tests - will build with CGO but that's probably fine
-	go test -v -tags 'integration sqlite' ./vent/...
+	go test -count=1 -v -tags 'integration sqlite' ./vent/...
 
-.PHONY:	test_integration_vent_postgres
-test_integration_vent_postgres:
-	docker-compose run burrow make test_integration_vent
+.PHONY:	test_integration_vent_complete
+test_integration_vent_complete:
+	docker-compose run burrow make test_integration_vent test_integration_vent_ethereum
+
+.PHONY:	test_integration_vent_ethereum
+test_integration_vent_ethereum: start_ganache
+	go test -count=1 -v -tags 'integration !sqlite ethereum' ./vent/...
+	$(MAKE) stop_ganache
+
+.PHONY:	test_integration_ethereum
+test_integration_ethereum: start_ganache
+	go test -v -tags 'integration ethereum' ./rpc/...
+	$(MAKE) stop_ganache
+
+$(PID_DIR)/ganache.pid:
+	mkdir -p $(PID_DIR)
+	yarn --cwd vent/test/eth install
+	@echo "Starting ganache in background..."
+	{ yarn --cwd vent/test/eth ganache & echo $$! > $@; }
+	@sleep 3
+	@echo "Ganache process started (pid at $@)"
+
+.PHONY: start_ganache
+start_ganache: $(PID_DIR)/ganache.pid
+
+.PHONY: stop_ganache
+stop_ganache: $(PID_DIR)/ganache.pid
+	@kill $(shell cat $<) && echo "Ganache process stopped." && rm $< || rm $<
+
+# For local debug
+.PHONY: postgres
+postgres:
+	docker run -e POSTGRES_HOST_AUTH_METHOD=trust -p 5432:5432 postgres:11-alpine
 
 .PHONY: test_restore
-test_restore: build_burrow bin/solc
+test_restore:
 	@tests/scripts/bin_wrapper.sh tests/dump/test.sh
 
 # Go will attempt to run separate packages in parallel
-.PHONY: test_integration
-test_integration: test_keys test_deploy test_integration_vent_postgres test_restore
-	@go test -v -tags integration ./integration/...
 
-.PHONY: test_integration_no_postgres
-test_integration_no_postgres: test_keys test_deploy test_integration_vent test_restore
-	@go test -v -tags integration ./integration/...
+.PHONY: test_integration
+test_integration:
+	@go test -count=1 -v -tags integration ./integration/...
+
+.PHONY: test_integration_all
+test_integration_all: test_keys test_deploy test_integration_vent_complete test_restore test_truffle test_integration
+
+.PHONY: test_integration_all_no_postgres
+test_integration_all_no_postgres: test_keys test_deploy test_integration_vent test_restore test_truffle test_integration
 
 .PHONY: test_deploy
-test_deploy: bin/solc build_burrow
+test_deploy:
 	@tests/scripts/bin_wrapper.sh tests/deploy.sh
 
 bin/solc: ./tests/scripts/deps/solc.sh
@@ -232,10 +292,15 @@ bin/solc: ./tests/scripts/deps/solc.sh
 	@tests/scripts/deps/solc.sh bin/solc
 	@touch bin/solc
 
+bin/solang: ./tests/scripts/deps/solang.sh
+	@mkdir -p bin
+	@tests/scripts/deps/solang.sh bin/solang
+	@touch bin/solang
+
 # test burrow with checks for race conditions
 .PHONY: test_race
 test_race: build_race
-	@go test -race ${PACKAGES}
+	@go test -race $(shell go list ./... )
 
 ### Clean up
 
@@ -249,7 +314,7 @@ clean:
 # Print version
 .PHONY: version
 version:
-	@go run ./project/cmd/version/main.go
+	@echo $(VERSION)
 
 # Generate full changelog of all release notes
 CHANGELOG.md: project/history.go project/cmd/changelog/main.go
@@ -265,21 +330,12 @@ docs: CHANGELOG.md NOTES.md
 # Tag the current HEAD commit with the current release defined in
 # ./project/history.go
 .PHONY: tag_release
-tag_release: test check CHANGELOG.md NOTES.md build
+tag_release: test check docs build
 	@scripts/tag_release.sh
-
-.PHONY: release
-release: docs check test docker_build
-	@scripts/is_checkout_dirty.sh || (echo "checkout is dirty so not releasing!" && exit 1)
-	@scripts/release.sh
-
-.PHONY: release_dev
-release_dev: test docker_build
-	@scripts/release_dev.sh
 
 .PHONY: build_ci_image
 build_ci_image:
-	docker build -t ${CI_IMAGE} -f ./.circleci/Dockerfile .
+	docker build -t ${CI_IMAGE} -f ./.github/Dockerfile .
 
 .PHONY: push_ci_image
 push_ci_image: build_ci_image
@@ -292,3 +348,37 @@ ready_for_pull_request: docs fix
 staticcheck:
 	go get honnef.co/go/tools/cmd/staticcheck
 	staticcheck ./...
+
+# Note --set flag currently needs helm 3 version < 3.0.3 https://github.com/helm/helm/issues/3141 - but hopefully they will reintroduce support
+bin/helm:
+	@echo Downloading helm...
+	mkdir -p bin
+	curl https://get.helm.sh/helm-v3.0.2-$(ARCH).tar.gz | tar xvzO $(ARCH)/helm > bin/helm && chmod +x bin/helm
+
+
+// TODO: reinstate
+
+.PHONY: helm_deps
+helm_deps: bin/helm
+	@bin/helm repo add --username "$(HELM_USERNAME)" --password "$(HELM_PASSWORD)" chartmuseum $(HELM_URL)
+
+.PHONY: helm_test
+helm_test: bin/helm
+	bin/helm dep up helm/burrow
+	bin/helm lint helm/burrow
+
+helm_package: $(HELM_PACKAGE)
+
+$(HELM_PACKAGE): helm_test bin/helm
+	bin/helm package helm/burrow \
+		--version "$(VERSION)" \
+		--app-version "$(VERSION)" \
+		--set "image.tag=$(VERSION)" \
+		--dependency-update \
+		--destination helm/package
+
+.PHONY: helm_push
+helm_push: helm_package
+	@echo pushing helm chart...
+	@curl -u ${CM_USERNAME}:${CM_PASSWORD} \
+		--data-binary "@$(HELM_PACKAGE)" $(CM_URL)/api/charts

@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package txs
 
@@ -76,7 +65,6 @@ func TestSendTx(t *testing.T) {
 }
 
 func TestCallTx(t *testing.T) {
-
 	toAddress := makePrivateAccount("contract1").GetAddress()
 	callTx := &payload.CallTx{
 		Input: &payload.TxInput{
@@ -220,5 +208,5 @@ func testTxSignVerify(t *testing.T, tx payload.Payload) {
 	}
 	txEnv := Enclose(chainID, tx)
 	require.NoError(t, txEnv.Sign(signers...), "Error signing tx: %s", debug.Stack())
-	require.NoError(t, txEnv.Verify(nil, chainID), "Error verifying tx: %s", debug.Stack())
+	require.NoError(t, txEnv.Verify(chainID), "Error verifying tx: %s", debug.Stack())
 }

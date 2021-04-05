@@ -69,8 +69,8 @@ jobs:
 - name: setRole
   call:
       destination: $deployPermK
-      function: addRole 
-      data: 
+      function: addRole
+      data:
         - $key2_addr
         - $role
 
@@ -129,9 +129,9 @@ jobs:
   call:
       destination: $deployPermK
       function: hasBase
-      data: 
+      data:
         - $key2_addr
-        - 59007
+        - 35838
 
 - name: assertBase2
   assert:
@@ -142,11 +142,11 @@ jobs:
 - name: setBase
   call:
       destination: $deployPermK
-      function: setBase 
+      function: setBase
       data:
         - $key2_addr
-        - 8263
-        - true
+        - 1
+        - false
 
 - name: checkBase3
   call:
@@ -154,13 +154,13 @@ jobs:
       function: hasBase
       data:
         - $key2_addr
-        - 8263
+        - 1
 
 - name: assertBase3
   assert:
       key: $checkBase3
       relation: eq
-      val: "true"
+      val: "false"
 
 - name: unsetBase
   call:
@@ -168,7 +168,7 @@ jobs:
       function: unsetBase
       data:
         - $key2_addr
-        - 8263
+        - 1
 
 - name: checkBase4
   call:
@@ -176,7 +176,7 @@ jobs:
       function: hasBase
       data:
         - $key2_addr
-        - 8263
+        - 1
 
 - name: assertBase4
   assert:

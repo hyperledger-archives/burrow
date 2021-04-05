@@ -7,6 +7,7 @@ import (
 	fmt "fmt"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
@@ -23,10 +24,10 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type Exception struct {
-	Code                 Code     `protobuf:"varint,1,opt,name=Code,proto3,casttype=Code" json:"Code,omitempty"`
+	CodeNumber           uint32   `protobuf:"varint,1,opt,name=Code,proto3" json:"Code,omitempty"`
 	Exception            string   `protobuf:"bytes,2,opt,name=Exception,proto3" json:"Exception,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -43,7 +44,7 @@ func (m *Exception) XXX_Unmarshal(b []byte) error {
 }
 func (m *Exception) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
-	n, err := m.MarshalTo(b)
+	n, err := m.MarshalToSizedBuffer(b)
 	if err != nil {
 		return nil, err
 	}
@@ -61,9 +62,9 @@ func (m *Exception) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Exception proto.InternalMessageInfo
 
-func (m *Exception) GetCode() Code {
+func (m *Exception) GetCodeNumber() uint32 {
 	if m != nil {
-		return m.Code
+		return m.CodeNumber
 	}
 	return 0
 }
@@ -87,26 +88,26 @@ func init() { proto.RegisterFile("errors.proto", fileDescriptor_24fe73c7f0ddb19c
 func init() { golang_proto.RegisterFile("errors.proto", fileDescriptor_24fe73c7f0ddb19c) }
 
 var fileDescriptor_24fe73c7f0ddb19c = []byte{
-	// 194 bytes of a gzipped FileDescriptorProto
+	// 193 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x49, 0x2d, 0x2a, 0xca,
-	0x2f, 0x2a, 0xd6, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x83, 0xf0, 0xa4, 0x74, 0xd3, 0x33,
-	0x4b, 0x32, 0x4a, 0x93, 0xf4, 0x92, 0xf3, 0x73, 0xf5, 0xd3, 0xf3, 0xd3, 0xf3, 0xf5, 0xc1, 0xd2,
-	0x49, 0xa5, 0x69, 0x60, 0x1e, 0x98, 0x03, 0x66, 0x41, 0xb4, 0x29, 0xf9, 0x72, 0x71, 0xba, 0x56,
-	0x24, 0xa7, 0x16, 0x94, 0x64, 0xe6, 0xe7, 0x09, 0xc9, 0x70, 0xb1, 0x38, 0xe7, 0xa7, 0xa4, 0x4a,
-	0x30, 0x2a, 0x30, 0x6a, 0xf0, 0x3a, 0x71, 0xfc, 0xba, 0x27, 0x0f, 0xe6, 0x07, 0x81, 0x49, 0x21,
-	0x19, 0x24, 0xa5, 0x12, 0x4c, 0x0a, 0x8c, 0x1a, 0x9c, 0x41, 0x08, 0x01, 0x2b, 0x96, 0x19, 0x0b,
-	0xe4, 0x19, 0x9c, 0x3c, 0x4e, 0x3c, 0x92, 0x63, 0xbc, 0xf0, 0x48, 0x8e, 0xf1, 0xc6, 0x23, 0x39,
-	0xc6, 0x07, 0x8f, 0xe4, 0x18, 0x0f, 0x3c, 0x96, 0x63, 0x3c, 0xf1, 0x58, 0x8e, 0x31, 0x4a, 0x0f,
-	0xc9, 0x5d, 0x19, 0x95, 0x05, 0xa9, 0x45, 0x39, 0xa9, 0x29, 0xe9, 0xa9, 0x45, 0xfa, 0x49, 0xa5,
-	0x45, 0x45, 0xf9, 0xe5, 0xfa, 0xa9, 0x15, 0xa9, 0xc9, 0xa5, 0x20, 0x83, 0xf4, 0x21, 0xfe, 0x48,
-	0x62, 0x03, 0xbb, 0xcf, 0x18, 0x10, 0x00, 0x00, 0xff, 0xff, 0x38, 0x0d, 0x6e, 0xa5, 0xe6, 0x00,
-	0x00, 0x00,
+	0x2f, 0x2a, 0xd6, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x83, 0xf0, 0xa4, 0x44, 0xd2, 0xf3,
+	0xd3, 0xf3, 0xc1, 0x42, 0xfa, 0x20, 0x16, 0x44, 0x56, 0x29, 0x98, 0x8b, 0xd3, 0xb5, 0x22, 0x39,
+	0xb5, 0xa0, 0x24, 0x33, 0x3f, 0x4f, 0x48, 0x89, 0x8b, 0xc5, 0x39, 0x3f, 0x25, 0x55, 0x82, 0x51,
+	0x81, 0x51, 0x83, 0xd7, 0x89, 0xef, 0xd1, 0x3d, 0x79, 0x2e, 0x10, 0xdf, 0xaf, 0x34, 0x37, 0x29,
+	0xb5, 0x28, 0x08, 0x2c, 0x27, 0x24, 0x83, 0xa4, 0x41, 0x82, 0x49, 0x81, 0x51, 0x83, 0x33, 0x08,
+	0x21, 0x60, 0xc5, 0x32, 0x63, 0x81, 0x3c, 0x83, 0x93, 0xc7, 0x89, 0x47, 0x72, 0x8c, 0x17, 0x1e,
+	0xc9, 0x31, 0xde, 0x78, 0x24, 0xc7, 0xf8, 0xe0, 0x91, 0x1c, 0xe3, 0x81, 0xc7, 0x72, 0x8c, 0x27,
+	0x1e, 0xcb, 0x31, 0x46, 0xe9, 0xa5, 0x67, 0x96, 0x64, 0x94, 0x26, 0xe9, 0x25, 0xe7, 0xe7, 0xea,
+	0x67, 0x54, 0x16, 0xa4, 0x16, 0xe5, 0xa4, 0xa6, 0xa4, 0xa7, 0x16, 0xe9, 0x27, 0x95, 0x16, 0x15,
+	0xe5, 0x97, 0xeb, 0xa7, 0x56, 0xa4, 0x26, 0x97, 0x82, 0x0c, 0xd2, 0x87, 0x38, 0x3a, 0x89, 0x0d,
+	0xec, 0x4a, 0x63, 0x40, 0x00, 0x00, 0x00, 0xff, 0xff, 0xe0, 0x6d, 0xcb, 0x28, 0xd3, 0x00, 0x00,
+	0x00,
 }
 
 func (m *Exception) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -114,35 +115,44 @@ func (m *Exception) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *Exception) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *Exception) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Code != 0 {
-		dAtA[i] = 0x8
-		i++
-		i = encodeVarintErrors(dAtA, i, uint64(m.Code))
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.Exception) > 0 {
-		dAtA[i] = 0x12
-		i++
+		i -= len(m.Exception)
+		copy(dAtA[i:], m.Exception)
 		i = encodeVarintErrors(dAtA, i, uint64(len(m.Exception)))
-		i += copy(dAtA[i:], m.Exception)
+		i--
+		dAtA[i] = 0x12
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if m.CodeNumber != 0 {
+		i = encodeVarintErrors(dAtA, i, uint64(m.CodeNumber))
+		i--
+		dAtA[i] = 0x8
 	}
-	return i, nil
+	return len(dAtA) - i, nil
 }
 
 func encodeVarintErrors(dAtA []byte, offset int, v uint64) int {
+	offset -= sovErrors(v)
+	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return offset + 1
+	return base
 }
 func (m *Exception) Size() (n int) {
 	if m == nil {
@@ -150,8 +160,8 @@ func (m *Exception) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.Code != 0 {
-		n += 1 + sovErrors(uint64(m.Code))
+	if m.CodeNumber != 0 {
+		n += 1 + sovErrors(uint64(m.CodeNumber))
 	}
 	l = len(m.Exception)
 	if l > 0 {
@@ -164,14 +174,7 @@ func (m *Exception) Size() (n int) {
 }
 
 func sovErrors(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozErrors(x uint64) (n int) {
 	return sovErrors(uint64((x << 1) ^ uint64((int64(x) >> 63))))
@@ -207,9 +210,9 @@ func (m *Exception) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Code", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field CodeNumber", wireType)
 			}
-			m.Code = 0
+			m.CodeNumber = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowErrors
@@ -219,7 +222,7 @@ func (m *Exception) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Code |= Code(b&0x7F) << shift
+				m.CodeNumber |= uint32(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -262,10 +265,7 @@ func (m *Exception) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthErrors
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthErrors
 			}
 			if (iNdEx + skippy) > l {
@@ -284,6 +284,7 @@ func (m *Exception) Unmarshal(dAtA []byte) error {
 func skipErrors(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0
+	depth := 0
 	for iNdEx < l {
 		var wire uint64
 		for shift := uint(0); ; shift += 7 {
@@ -315,10 +316,8 @@ func skipErrors(dAtA []byte) (n int, err error) {
 					break
 				}
 			}
-			return iNdEx, nil
 		case 1:
 			iNdEx += 8
-			return iNdEx, nil
 		case 2:
 			var length int
 			for shift := uint(0); ; shift += 7 {
@@ -339,55 +338,30 @@ func skipErrors(dAtA []byte) (n int, err error) {
 				return 0, ErrInvalidLengthErrors
 			}
 			iNdEx += length
-			if iNdEx < 0 {
-				return 0, ErrInvalidLengthErrors
-			}
-			return iNdEx, nil
 		case 3:
-			for {
-				var innerWire uint64
-				var start int = iNdEx
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return 0, ErrIntOverflowErrors
-					}
-					if iNdEx >= l {
-						return 0, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					innerWire |= (uint64(b) & 0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				innerWireType := int(innerWire & 0x7)
-				if innerWireType == 4 {
-					break
-				}
-				next, err := skipErrors(dAtA[start:])
-				if err != nil {
-					return 0, err
-				}
-				iNdEx = start + next
-				if iNdEx < 0 {
-					return 0, ErrInvalidLengthErrors
-				}
-			}
-			return iNdEx, nil
+			depth++
 		case 4:
-			return iNdEx, nil
+			if depth == 0 {
+				return 0, ErrUnexpectedEndOfGroupErrors
+			}
+			depth--
 		case 5:
 			iNdEx += 4
-			return iNdEx, nil
 		default:
 			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
 		}
+		if iNdEx < 0 {
+			return 0, ErrInvalidLengthErrors
+		}
+		if depth == 0 {
+			return iNdEx, nil
+		}
 	}
-	panic("unreachable")
+	return 0, io.ErrUnexpectedEOF
 }
 
 var (
-	ErrInvalidLengthErrors = fmt.Errorf("proto: negative length found during unmarshaling")
-	ErrIntOverflowErrors   = fmt.Errorf("proto: integer overflow")
+	ErrInvalidLengthErrors        = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowErrors          = fmt.Errorf("proto: integer overflow")
+	ErrUnexpectedEndOfGroupErrors = fmt.Errorf("proto: unexpected end of group")
 )

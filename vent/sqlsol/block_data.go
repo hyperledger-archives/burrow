@@ -38,13 +38,3 @@ func (b *BlockData) GetRows(tableName string) (types.EventDataTable, error) {
 	}
 	return nil, fmt.Errorf("GetRows: tableName does not exists as a table in data structure: %s ", tableName)
 }
-
-// PendingRows returns true if the given block has at least one pending row to upsert
-func (b *BlockData) PendingRows(height uint64) bool {
-	hasRows := false
-	// TODO: understand why the guard on height is needed - what does it prevent?
-	if b.Data.BlockHeight == height && len(b.Data.Tables) > 0 {
-		hasRows = true
-	}
-	return hasRows
-}

@@ -18,7 +18,7 @@ If your distribution of Linux has a version older than 6 then you can update it.
 ## Install
 
 ``` bash
-$ npm install @monax/burrow
+$ yarn install @hyperledger/burrow
 ```
 
 ## Usage
@@ -56,13 +56,13 @@ The table below links to the reference schema for either the protobuf files gove
 
 | Component Name | Accessor |
 | :----------- | :--------------- |
-| Transactions | [Burrow.transact](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpctransact.proto) |
-| Queries | [Burrow.query](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcquery.proto) |
-| EventStream | [Burrow.eventStream](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcevents.proto) |
-| Events | [Burrow.events](https://github.com/hyperledger/burrow/blob/develop/lib/events.js) |
-| NameReg | [Burrow.namereg](https://github.com/hyperledger/burrow/blob/develop/lib/namereg.js) |
+| Transactions | [Burrow.transact](https://github.com/hyperledger/burrow/blob/main/protobuf/rpctransact.proto) |
+| Queries | [Burrow.query](https://github.com/hyperledger/burrow/blob/main/protobuf/rpcquery.proto) |
+| EventStream | [Burrow.eventStream](https://github.com/hyperledger/burrow/blob/main/protobuf/rpcevents.proto) |
+| Events | [Burrow.events](https://github.com/hyperledger/burrow/blob/main/lib/events.js) |
+| NameReg | [Burrow.namereg](https://github.com/hyperledger/burrow/blob/main/lib/namereg.js) |
 
-| Contracts | [Burrow.contracts](https://github.com/hyperledger/burrow/blob/develop/lib/contractManager.js) |
+| Contracts | [Burrow.contracts](https://github.com/hyperledger/burrow/blob/main/lib/contractManager.js) |
 
 ### GRPC Access Components
 
@@ -117,7 +117,7 @@ burrow.transact.SendTxSync(
     .catch(err => console.error(err))
 ```
 
-The return `txe` (short for `TxExecution`) logged to the console in the `then` block  contains the history and fingerprint of the `SendTx` execution. You can see an example of this in [basic app](../example/basic-app/app.js). 
+The return `txe` (short for `TxExecution`) logged to the console in the `then` block  contains the history and fingerprint of the `SendTx` execution. You can see an example of this in [basic app](example/basic-app/app.js). 
 
 #### NameReg access
 
@@ -155,43 +155,43 @@ burrow.transact.NameTxSync(setPayload, function(error, data){
 
 | Method | Passed | Returns |
 | :----- | :--------- | :---- |
-| burrow.transact.BroadcastTxSync | [TxEnvelopeParam](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpctransact.proto#L74-L79) | [TxExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L34-L56) |
-| burrow.transact.BroadcastTxASync | [TxEnvelopeParam](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpctransact.proto#L74-L79) | [Receipt](https://github.com/hyperledger/burrow/blob/develop/protobuf/txs.proto#L38-L47) |
-| burrow.transact.SignTx | [TxEnvelopeParam](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpctransact.proto#L74-L79) | [TxEnvelope](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpctransact.proto#L70-L72) |
-| burrow.transact.FormulateTx | [PayloadParam](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpctransact.proto#L64-L68) | [TxEnvelope](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpctransact.proto#L70-L72) |
-| burrow.transact.CallTxSync | [CallTx](https://github.com/hyperledger/burrow/blob/develop/protobuf/payload.proto#L53-L66) | [TxExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L34-L56) |
-| burrow.transact.CallTxAsync | [CallTx](https://github.com/hyperledger/burrow/blob/develop/protobuf/payload.proto#L53-L66) | [Receipt](https://github.com/hyperledger/burrow/blob/develop/protobuf/txs.proto#L38-L47) |
-| burrow.transact.CallTxSim | [CallTx](https://github.com/hyperledger/burrow/blob/develop/protobuf/payload.proto#L53-L66) | [TxExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L34-L56) |
-| burrow.transact.SendTxSync | [SendTx](https://github.com/hyperledger/burrow/blob/develop/protobuf/payload.proto#L69-L76) | [TxExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L34-L56) |
-| burrow.transact.SendTxAsync | [SendTx](https://github.com/hyperledger/burrow/blob/develop/protobuf/payload.proto#L69-L76) | [Receipt](https://github.com/hyperledger/burrow/blob/develop/protobuf/txs.proto#L38-L47) |
-| burrow.transact.NameTxSync | [NameTx](https://github.com/hyperledger/burrow/blob/develop/protobuf/payload.proto#L88-L98) | [TxExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L34-L56) |
-| burrow.transact.NameTxAsync | [NameTx](https://github.com/hyperledger/burrow/blob/develop/protobuf/payload.proto#L88-L98) | [Receipt](https://github.com/hyperledger/burrow/blob/develop/protobuf/txs.proto#L38-L47) |
+| burrow.transact.BroadcastTxSync | [TxEnvelopeParam](https://github.com/hyperledger/burrow/blob/main/protobuf/rpctransact.proto#L74-L79) | [TxExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L34-L56) |
+| burrow.transact.BroadcastTxASync | [TxEnvelopeParam](https://github.com/hyperledger/burrow/blob/main/protobuf/rpctransact.proto#L74-L79) | [Receipt](https://github.com/hyperledger/burrow/blob/develop/protobuf/txs.proto#L38-L47) |
+| burrow.transact.SignTx | [TxEnvelopeParam](https://github.com/hyperledger/burrow/blob/main/protobuf/rpctransact.proto#L74-L79) | [TxEnvelope](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpctransact.proto#L70-L72) |
+| burrow.transact.FormulateTx | [PayloadParam](https://github.com/hyperledger/burrow/blob/main/protobuf/rpctransact.proto#L64-L68) | [TxEnvelope](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpctransact.proto#L70-L72) |
+| burrow.transact.CallTxSync | [CallTx](https://github.com/hyperledger/burrow/blob/main/protobuf/payload.proto#L53-L66) | [TxExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L34-L56) |
+| burrow.transact.CallTxAsync | [CallTx](https://github.com/hyperledger/burrow/blob/main/protobuf/payload.proto#L53-L66) | [Receipt](https://github.com/hyperledger/burrow/blob/develop/protobuf/txs.proto#L38-L47) |
+| burrow.transact.CallTxSim | [CallTx](https://github.com/hyperledger/burrow/blob/main/protobuf/payload.proto#L53-L66) | [TxExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L34-L56) |
+| burrow.transact.SendTxSync | [SendTx](https://github.com/hyperledger/burrow/blob/main/protobuf/payload.proto#L69-L76) | [TxExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L34-L56) |
+| burrow.transact.SendTxAsync | [SendTx](https://github.com/hyperledger/burrow/blob/main/protobuf/payload.proto#L69-L76) | [Receipt](https://github.com/hyperledger/burrow/blob/develop/protobuf/txs.proto#L38-L47) |
+| burrow.transact.NameTxSync | [NameTx](https://github.com/hyperledger/burrow/blob/main/protobuf/payload.proto#L88-L98) | [TxExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L34-L56) |
+| burrow.transact.NameTxAsync | [NameTx](https://github.com/hyperledger/burrow/blob/main/protobuf/payload.proto#L88-L98) | [Receipt](https://github.com/hyperledger/burrow/blob/develop/protobuf/txs.proto#L38-L47) |
 
 
 #### Queries
 
-`Burrow.query` provides access to the burrow GRPC service `rpcquery`. As a GRPC wrapper all the endpoints take a data argument and an optional callback. The format of the data object is specified in the [protobuf files](https://github.com/hyperledger/burrow/tree/develop/js/protobuf). Note that "STREAM" functions take a callback `function(error, data)` which is mandatory and is called any time data is returned. For list Accounts the queryable tags are Address, PublicKey, Sequence, Balance, Code, Permissions (Case sensitive). As an example you can get all accounts with a balance greater than 1000 by `burrow.query.ListAccounts('Balance > 1000', callback)`. Multiple tag criteria can be combined using 'AND' and 'OR' for an example of a combined query see [here](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcevents.proto#L87). Similarly for ListNames, the avaible tags are Name, Data, Owner and Exires (once again case sensitive) use is identical to List accounts.
+`Burrow.query` provides access to the burrow GRPC service `rpcquery`. As a GRPC wrapper all the endpoints take a data argument and an optional callback. The format of the data object is specified in the [protobuf files](https://github.com/hyperledger/burrow/tree/main/js/protobuf). Note that "STREAM" functions take a callback `function(error, data)` which is mandatory and is called any time data is returned. For list Accounts the queryable tags are Address, PublicKey, Sequence, Balance, Code, Permissions (Case sensitive). As an example you can get all accounts with a balance greater than 1000 by `burrow.query.ListAccounts('Balance > 1000', callback)`. Multiple tag criteria can be combined using 'AND' and 'OR' for an example of a combined query see [here](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcevents.proto#L87). Similarly for ListNames, the avaible tags are Name, Data, Owner and Exires (once again case sensitive) use is identical to List accounts.
 
 | Method | Passed | Returns | Notes |
 | :----- | :--------- | :---- | :------- |
-| burrow.query.GetAccount | [GetAccountParam](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcquery.proto#L25-L27) | [ConcreteAccount](https://github.com/hyperledger/burrow/blob/develop/protobuf/acm.proto#L23-L31) | |
-| burrow.query.ListAccounts | [ListAccountsParam](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcquery.proto#L29-L31) | [ConcreteAccount](https://github.com/hyperledger/burrow/blob/develop/protobuf/acm.proto#L23-L31) | STREAM |
-| burrow.query.GetNameParam | [GetNameParam](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcquery.proto#L33-L35) | [Entry](https://github.com/hyperledger/burrow/blob/develop/protobuf/names.proto#L22-L32) | |
-| burrow.query.ListNames | [ListNamesParam](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcquery.proto#L37-L39) | [Entry](https://github.com/hyperledger/burrow/blob/develop/protobuf/names.proto#L22-L32) | STREAM|
+| burrow.query.GetAccount | [GetAccountParam](https://github.com/hyperledger/burrow/blob/main/protobuf/rpcquery.proto#L25-L27) | [ConcreteAccount](https://github.com/hyperledger/burrow/blob/develop/protobuf/acm.proto#L23-L31) | |
+| burrow.query.ListAccounts | [ListAccountsParam](https://github.com/hyperledger/burrow/blob/main/protobuf/rpcquery.proto#L29-L31) | [ConcreteAccount](https://github.com/hyperledger/burrow/blob/develop/protobuf/acm.proto#L23-L31) | STREAM |
+| burrow.query.GetNameParam | [GetNameParam](https://github.com/hyperledger/burrow/blob/main/protobuf/rpcquery.proto#L33-L35) | [Entry](https://github.com/hyperledger/burrow/blob/develop/protobuf/names.proto#L22-L32) | |
+| burrow.query.ListNames | [ListNamesParam](https://github.com/hyperledger/burrow/blob/main/protobuf/rpcquery.proto#L37-L39) | [Entry](https://github.com/hyperledger/burrow/blob/develop/protobuf/names.proto#L22-L32) | STREAM|
 
 #### EventStream
 
 NB: When listening to contract events it is easier to use the contract interface (described below)
 
-`Burrow.executionEvents` provides access to the burrow GRPC service `ExecutionEvents`. As a GRPC wrapper all the endpoints take a data argument and an optional callback. The format of the data object is specified in the [protobuf files](https://github.com/hyperledger/burrow/tree/develop/js/protobuf). Note that "STREAM" functions take a callback `function(error, data)` which is mandatory and is called any time data is returned.
+`Burrow.executionEvents` provides access to the burrow GRPC service `ExecutionEvents`. As a GRPC wrapper all the endpoints take a data argument and an optional callback. The format of the data object is specified in the [protobuf files](https://github.com/hyperledger/burrow/tree/main/js/protobuf). Note that "STREAM" functions take a callback `function(error, data)` which is mandatory and is called any time data is returned.
 
 | Method | Passed | Returns | Notes |
 | :----- | :--------- | :---- | :------- |
-| burrow.executionEvents.GetBlock | [GetBlockRequest](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcevents.proto#L37-L42) | [BlockExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L20-L27) | |
-| burrow.executionEvents.GetBlocks | [BlocksRequest](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcevents.proto#L51-L89) | [BlockExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L20-L27) | STREAM |
-| burrow.executionEvents.GetTx | [GetTxRequest](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcevents.proto#L44-L49) | [TxExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L34-L56) | |
-| burrow.executionEvents.GetTxs | [BlocksRequest](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcevents.proto#L51-L89) | [GetTxsResponse](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcevents.proto#L96-L99) | STREAM |
-| burrow.executionEvents.GetEvents | [BlocksRequest](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcevents.proto#L51-L89) | [GetEventsResponse](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcevents.proto#L91-L94) | STREAM |
+| burrow.executionEvents.GetBlock | [GetBlockRequest](https://github.com/hyperledger/burrow/blob/main/protobuf/rpcevents.proto#L37-L42) | [BlockExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L20-L27) | |
+| burrow.executionEvents.GetBlocks | [BlocksRequest](https://github.com/hyperledger/burrow/blob/main/protobuf/rpcevents.proto#L51-L89) | [BlockExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L20-L27) | STREAM |
+| burrow.executionEvents.GetTx | [GetTxRequest](https://github.com/hyperledger/burrow/blob/main/protobuf/rpcevents.proto#L44-L49) | [TxExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L34-L56) | |
+| burrow.executionEvents.GetTxs | [BlocksRequest](https://github.com/hyperledger/burrow/blob/main/protobuf/rpcevents.proto#L51-L89) | [GetTxsResponse](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcevents.proto#L96-L99) | STREAM |
+| burrow.executionEvents.GetEvents | [BlocksRequest](https://github.com/hyperledger/burrow/blob/main/protobuf/rpcevents.proto#L51-L89) | [GetEventsResponse](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcevents.proto#L91-L94) | STREAM |
 
 
 ***
@@ -234,7 +234,7 @@ Sets an entry in the namereg. It returns a promise if callback not provided.
 3. `int` - The number of blocks to register the name for (more blocks = larger fee)
 4. `function` - (optional) Function to call upon completion of form `function(error, data)`.
 ###### Returns
-`TxExecution` - The return data object is a [TxExecution](https://github.com/hyperledger/burrow/blob/develop/protobuf/exec.proto#L34-L56).
+`TxExecution` - The return data object is a [TxExecution](https://github.com/hyperledger/burrow/blob/main/protobuf/exec.proto#L34-L56).
 ###### Example
 
 ```javascript
@@ -267,7 +267,7 @@ Listens to execution events which satisfy the filter query.
 2. `Object` - Currently unused. pass `{}`
 3. `function` - Signature of `function(error, data)` mandatory
 ###### Returns
-`GetEventsResponse` - The return data object is a [GetEventsResponse](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcevents.proto#L91-L94)
+`GetEventsResponse` - The return data object is a [GetEventsResponse](https://github.com/hyperledger/burrow/blob/main/protobuf/rpcevents.proto#L91-L94)
 
 
 
@@ -281,7 +281,7 @@ Listens to EVM event executions from specific contract.
 3. `Object` - Currently unused. pass `{}`
 4. `function` - Signature of `function(error, data)` mandatory.
 ###### Returns
-`GetEventsResponse` - The return data object is a [GetEventsResponse](https://github.com/hyperledger/burrow/blob/develop/protobuf/rpcevents.proto#L91-L94)
+`GetEventsResponse` - The return data object is a [GetEventsResponse](https://github.com/hyperledger/burrow/blob/main/protobuf/rpcevents.proto#L91-L94)
 
 
 
@@ -495,26 +495,26 @@ return Promise.all(								// Deployment of two contracts
 
 ## Documentation
 
-Generate documentation using the command `npm run doc`.
+Generate documentation using the command `yarn run doc`.
 
 ## Testing
 
 To test the library against pre-recorded vectors:
 
 ```
-npm test
+yarn test
 ```
 
 To test the library against Burrow while recording vectors:
 
 ```
-TEST=record npm test
+TEST=record yarn test
 ```
 
 To test Burrow against pre-recorded vectors without exercising the library:
 
 ```
-TEST=server npm test
+TEST=server yarn test
 ```
 
 ## Debugging

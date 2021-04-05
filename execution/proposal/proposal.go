@@ -9,9 +9,9 @@ type Reader interface {
 }
 
 type Writer interface {
-	// Updates the name entry creating it if it does not exist
+	// Updates the proposal, creating it if it does not exist
 	UpdateProposal(proposalHash []byte, proposal *payload.Ballot) error
-	// Remove the name entry
+	// Remove the proposal by hash
 	RemoveProposal(proposalHash []byte) error
 }
 

@@ -1,0 +1,35 @@
+syntax = 'proto3';
+
+package registry;
+
+option go_package = "github.com/hyperledger/burrow/execution/registry";
+
+import "gogoproto/gogo.proto";
+
+option (gogoproto.stable_marshaler_all) = true;
+// Enable custom Marshal method.
+option (gogoproto.marshaler_all) = true;
+// Enable custom Unmarshal method.
+option (gogoproto.unmarshaler_all) = true;
+// Enable custom Size method (Required by Marshal and Unmarshal).
+option (gogoproto.sizer_all) = true;
+// Enable registration with golang/protobuf for the grpc-gateway.
+option (gogoproto.goproto_registration) = true;
+// Enable generation of XXX_MessageName methods for grpc-go/status.
+option (gogoproto.messagename_all) = true;
+
+// NodeIdentity stores and establishes a binding between 4 different types of identifiers, a human readable name,
+// a advertised network address, a p2p station-to-station key, and a validator key. Updates must be signed
+// by the node key and the validator key to prove the update is consensual.
+message NodeIdentity {
+    option (gogoproto.goproto_stringer) = false;
+    // Peer moniker name
+	string Moniker = 1;
+	// Peer network address
+	string NetworkAddress = 2;
+	// The Tendermint p2p node ID
+	bytes TendermintNodeID = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.Address", (gogoproto.nullable) = false];
+	// The public key that this node will validate with if it becomes a validator
+	// (use this to create a binding between p2p node ID and validator)
+	bytes ValidatorPublicKey = 4 [(gogoproto.customtype) = "github.com/hyperledger/burrow/crypto.PublicKey"];
+}

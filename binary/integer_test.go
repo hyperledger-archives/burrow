@@ -31,7 +31,6 @@ func zero() *big.Int {
 
 var big2E255 = zero().Lsh(big1, 255)
 var big2E256 = zero().Lsh(big1, 256)
-var big2E257 = zero().Lsh(big1, 257)
 
 func TestU256(t *testing.T) {
 	expected := big2E255
@@ -90,62 +89,63 @@ func TestS256(t *testing.T) {
 	expected = zero()
 	signed = S256(expected)
 	assertBigIntEqual(t, expected, signed, "Twos complement of zero is fixed poount")
-
-	// Technically undefined but let's not let that stop us
-	expected = zero().Sub(big2E257, big2E256)
-	signed = S256(big2E257)
-	assertBigIntEqual(t, expected, signed, "Out of twos complement bounds")
 }
 
 func TestSignExtend(t *testing.T) {
-	assertSignExtend(t, 16, 0,
+	assertSignExtend(t, 16, 8,
 		"0000 0000 1001 0000",
 		"1111 1111 1001 0000")
 
-	assertSignExtend(t, 16, 1,
+	assertSignExtend(t, 16, 16,
 		"1001 0000",
 		"1001 0000")
 
-	assertSignExtend(t, 32, 2,
+	assertSignExtend(t, 32, 24,
 		"0000 0000 1000 0000 1101 0011 1001 0000",
 		"1111 1111 1000 0000 1101 0011 1001 0000")
 
-	assertSignExtend(t, 32, 2,
+	assertSignExtend(t, 32, 24,
 		"0000 0000 0000 0000 1101 0011 1001 0000",
 		"0000 0000 0000 0000 1101 0011 1001 0000")
 
 	// Here we have a stray bit set in the 4th most significant byte that gets wiped out
-	assertSignExtend(t, 32, 2,
+	assertSignExtend(t, 32, 24,
 		"0001 0000 0000 0000 1101 0011 1001 0000",
 		"0000 0000 0000 0000 1101 0011 1001 0000")
-	assertSignExtend(t, 32, 2,
+	assertSignExtend(t, 32, 24,
 		"0001 0000 1000 0000 1101 0011 1001 0000",
 		"1111 1111 1000 0000 1101 0011 1001 0000")
 
-	assertSignExtend(t, 32, 3,
+	assertSignExtend(t, 32, 32,
 		"0001 0000 1000 0000 1101 0011 1001 0000",
 		"0001 0000 1000 0000 1101 0011 1001 0000")
 
-	assertSignExtend(t, 32, 3,
+	assertSignExtend(t, 32, 32,
 		"1001 0000 1000 0000 1101 0011 1001 0000",
 		"1001 0000 1000 0000 1101 0011 1001 0000")
 
-	assertSignExtend(t, 64, 3,
+	assertSignExtend(t, 64, 32,
 		"0000 0000 0000 0000 0000 0000 0000 0000 1001 0000 1000 0000 1101 0011 1001 0000",
 		"1111 1111 1111 1111 1111 1111 1111 1111 1001 0000 1000 0000 1101 0011 1001 0000")
 
-	assertSignExtend(t, 64, 3,
+	assertSignExtend(t, 64, 32,
 		"0000 0000 0000 0000 0000 0000 0000 0000 0001 0000 1000 0000 1101 0011 1001 0000",
 		"0000 0000 0000 0000 0000 0000 0000 0000 0001 0000 1000 0000 1101 0011 1001 0000")
 }
 
-func assertSignExtend(t *testing.T, bitSize int, bytesBack uint64, inputString, expectedString string) bool {
-	input := intFromString(t, bitSize, inputString)
-	expected := intFromString(t, bitSize, expectedString)
-	//actual := SignExtend(big.NewInt(bytesBack), big.NewInt(int64(input)))
-	actual := SignExtend(bytesBack, big.NewInt(int64(input)))
+func TestLittleEndian(t *testing.T) {
+	x, ok := new(big.Int).SetString("234890234579042368982348972347234789897", 10)
+	require.True(t, ok)
+	y := BigIntFromLittleEndianBytes(BigIntToLittleEndianBytes(x))
+	require.Equal(t, x.Cmp(y), 0)
+}
+
+func assertSignExtend(t *testing.T, extendedBits int, embeddedBits uint, inputString, expectedString string) bool {
+	input := intFromString(t, extendedBits, inputString)
+	expected := intFromString(t, extendedBits, expectedString)
+	actual := SignExtend(big.NewInt(int64(input)), embeddedBits)
 	var ret bool
-	switch bitSize {
+	switch extendedBits {
 	case 8:
 		ret = assert.Equal(t, uint8(expected), uint8(actual.Int64()))
 	case 16:
@@ -155,7 +155,7 @@ func assertSignExtend(t *testing.T, bitSize int, bytesBack uint64, inputString, 
 	case 64:
 		ret = assert.Equal(t, uint64(expected), uint64(actual.Int64()))
 	default:
-		t.Fatalf("Cannot test SignExtend for non-Go-native bit size %v", bitSize)
+		t.Fatalf("Cannot test SignExtend for non-Go-native bit size %v", extendedBits)
 		return false
 	}
 	if !ret {

@@ -5,10 +5,10 @@ import (
 )
 
 func (s *ReadState) GetMetadata(metahash acmstate.MetadataHash) (string, error) {
-	return string(s.Plain.Get(keys.Abi.Key(metahash.Bytes()))), nil
+	data, err := s.Plain.Get(keys.Abi.Key(metahash.Bytes()))
+	return string(data), err
 }
 
 func (ws *writeState) SetMetadata(metahash acmstate.MetadataHash, abi string) error {
-	ws.plain.Set(keys.Abi.Key(metahash.Bytes()), []byte(abi))
-	return nil
+	return ws.plain.Set(keys.Abi.Key(metahash.Bytes()), []byte(abi))
 }

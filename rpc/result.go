@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package rpc
 
@@ -21,24 +10,14 @@ import (
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/names"
+	"github.com/hyperledger/burrow/execution/registry"
 	"github.com/hyperledger/burrow/genesis"
 	"github.com/hyperledger/burrow/txs"
-	amino "github.com/tendermint/go-amino"
-	"github.com/tendermint/tendermint/consensus"
 	ctypes "github.com/tendermint/tendermint/consensus/types"
+	tmjson "github.com/tendermint/tendermint/libs/json"
 	core_types "github.com/tendermint/tendermint/rpc/core/types"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
-
-// When using Tendermint types like Block and Vote we are forced to wrap the outer object and use amino marshalling
-var aminoCodec = NewAminoCodec()
-
-func NewAminoCodec() *amino.Codec {
-	aminoCodec := amino.NewCodec()
-	consensus.RegisterConsensusMessages(aminoCodec)
-	core_types.RegisterAmino(aminoCodec)
-	return aminoCodec
-}
 
 type ResultStorage struct {
 	Key   binary.HexBytes
@@ -74,24 +53,24 @@ type BlockMeta struct {
 }
 
 func (bm BlockMeta) MarshalJSON() ([]byte, error) {
-	return aminoCodec.MarshalJSON(bm.BlockMeta)
+	return tmjson.Marshal(bm.BlockMeta)
 }
 
 func (bm *BlockMeta) UnmarshalJSON(data []byte) (err error) {
-	return aminoCodec.UnmarshalJSON(data, &bm.BlockMeta)
+	return tmjson.Unmarshal(data, &bm.BlockMeta)
 }
 
-// Needed for go-amino handling of interface types
+// TODO: this wrapper was needed for go-amino handling of interface types, it _might_ not be needed any longer
 type Block struct {
 	*tmTypes.Block
 }
 
 func (b Block) MarshalJSON() ([]byte, error) {
-	return aminoCodec.MarshalJSON(b.Block)
+	return tmjson.Marshal(b.Block)
 }
 
 func (b *Block) UnmarshalJSON(data []byte) (err error) {
-	return aminoCodec.UnmarshalJSON(data, &b.Block)
+	return tmjson.Unmarshal(data, &b.Block)
 }
 
 type ResultChainId struct {
@@ -114,6 +93,11 @@ type ResultNetwork struct {
 	*core_types.ResultNetInfo
 }
 
+type ResultNetworkRegistry struct {
+	Address crypto.Address
+	registry.NodeIdentity
+}
+
 type ResultValidators struct {
 	BlockHeight         uint64
 	BondedValidators    []*validator.Validator
@@ -130,11 +114,11 @@ type RoundState struct {
 }
 
 func (rs RoundState) MarshalJSON() ([]byte, error) {
-	return aminoCodec.MarshalJSON(rs.RoundState)
+	return tmjson.Marshal(rs.RoundState)
 }
 
 func (rs *RoundState) UnmarshalJSON(data []byte) (err error) {
-	return aminoCodec.UnmarshalJSON(data, &rs.RoundState)
+	return tmjson.Unmarshal(data, &rs.RoundState)
 }
 
 type ResultPeers struct {
@@ -156,7 +140,7 @@ type ResultAccount struct {
 
 type AccountHumanReadable struct {
 	Address     crypto.Address
-	PublicKey   crypto.PublicKey
+	PublicKey   *crypto.PublicKey
 	Sequence    uint64
 	Balance     uint64
 	Code        []string

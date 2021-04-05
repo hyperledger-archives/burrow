@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package bcm
 
@@ -40,10 +29,12 @@ type BlockchainInfo interface {
 	LastCommitDuration() time.Duration
 	LastBlockHash() []byte
 	AppHashAfterLastBlock() []byte
-	// Gets the BlockHash at a height (or nil if no BlockStore mounted or block could not be found)
-	BlockHash(height uint64) []byte
-	// GetBlockHash returns	hash of the specific block
+	// BlockHash gets the hash at a height (or nil if no BlockStore mounted or block could not be found)
+	BlockHash(height uint64) ([]byte, error)
+	// GetBlockHeader returns the header at the specified height
 	GetBlockHeader(blockNumber uint64) (*types.Header, error)
+	// GetNumTxs returns the number of transactions included in a particular block
+	GetNumTxs(blockNumber uint64) (int, error)
 }
 
 type Blockchain struct {
@@ -114,8 +105,10 @@ func GetSyncInfo(blockchain BlockchainInfo) *SyncInfo {
 }
 
 func loadBlockchain(db dbm.DB, genesisDoc *genesis.GenesisDoc) (*Blockchain, error) {
-	buf := db.Get(stateKey)
-	if len(buf) == 0 {
+	buf, err := db.Get(stateKey)
+	if err != nil {
+		return nil, err
+	} else if len(buf) == 0 {
 		return nil, nil
 	}
 	bc, err := decodeBlockchain(buf, genesisDoc)
@@ -163,7 +156,10 @@ func (bc *Blockchain) save() error {
 		if err != nil {
 			return err
 		}
-		bc.db.SetSync(stateKey, encodedState)
+		err = bc.db.SetSync(stateKey, encodedState)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -190,7 +186,7 @@ func (bc *Blockchain) GenesisDoc() genesis.GenesisDoc {
 }
 
 func (bc *Blockchain) ChainID() string {
-	return bc.genesisDoc.ChainID()
+	return bc.genesisDoc.GetChainID()
 }
 
 func (bc *Blockchain) LastBlockHeight() uint64 {
@@ -238,23 +234,39 @@ func (bc *Blockchain) SetBlockStore(bs *BlockStore) {
 	bc.blockStore = bs
 }
 
-func (bc *Blockchain) BlockHash(height uint64) []byte {
+func (bc *Blockchain) BlockHash(height uint64) ([]byte, error) {
 	header, err := bc.GetBlockHeader(height)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return header.Hash()
+	return header.Hash(), nil
 }
 
-func (bc *Blockchain) GetBlockHeader(height uint64) (*types.Header, error) {
-	const errHeader = "GetBlockHeader():"
+func (bc *Blockchain) getBlockMeta(height uint64) (*types.BlockMeta, error) {
+	const errHeader = "getBlockMeta():"
 	if bc == nil {
 		return nil, fmt.Errorf("%s could not get block hash because Blockchain has not been given access to "+
 			"tendermint BlockStore", errHeader)
 	}
-	blockMeta, err := bc.blockStore.BlockMeta(int64(height))
+	return bc.blockStore.BlockMeta(int64(height))
+}
+
+// GetBlockHeader returns the block header at any given height
+func (bc *Blockchain) GetBlockHeader(height uint64) (*types.Header, error) {
+	const errHeader = "GetBlockHeader():"
+	blockMeta, err := bc.getBlockMeta(height)
 	if err != nil {
 		return nil, fmt.Errorf("%s could not get BlockMeta: %v", errHeader, err)
 	}
 	return &blockMeta.Header, nil
+}
+
+// GetNumTxs returns the number of transactions included in a block
+func (bc *Blockchain) GetNumTxs(height uint64) (int, error) {
+	const errHeader = "GetNumTxs():"
+	blockMeta, err := bc.getBlockMeta(height)
+	if err != nil {
+		return 0, fmt.Errorf("%s could not get BlockMeta: %v", errHeader, err)
+	}
+	return blockMeta.NumTxs, nil
 }

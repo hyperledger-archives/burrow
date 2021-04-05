@@ -1,16 +1,26 @@
 BurrowDir = ".burrow"
 
 [Tendermint]
+  Enabled = true
   Seeds = ""
+  SeedMode = false
   PersistentPeers = ""
-  ListenHost = "0.0.0.0"
-  ListenPort = "36656"
+  ListenHost = "127.0.0.1"
+  ListenPort = "26656"
   ExternalAddress = ""
-  Moniker = "BurrowIntegrationTestNode"
-  CreateEmptyBlocks = "always"
+  AddrBookStrict = false
+  Moniker = ""
+  IdentifyPeers = false
+  AuthorizedPeers = ""
+  CreateEmptyBlocks = "5m"
 
 [Execution]
-  TimeoutFactor = 0.33
+  TimeoutFactor = 0.2
+  CallStackMaxDepth = 0
+  DataStackInitialCapacity = 1024
+  DataStackMaxDepth = 0
+  # Uncomment for opcode splurge
+  # VMOptions = ["DebugOpcodes"]
 
 [Keys]
   GRPCServiceEnabled = true
@@ -19,30 +29,34 @@ BurrowDir = ".burrow"
   KeysDirectory = "../keys"
 
 [RPC]
-  [RPC.TM]
+  [RPC.Info]
     Enabled = true
     ListenHost = "127.0.0.1"
     ListenPort = "36658"
   [RPC.Profiler]
     Enabled = false
     ListenHost = "127.0.0.1"
-    ListenPort = "7060"
+    ListenPort = "6060"
   [RPC.GRPC]
     Enabled = true
     ListenHost = "127.0.0.1"
     ListenPort = "20997"
   [RPC.Metrics]
     Enabled = false
-    ListenAddress = "127.0.0.1"
-    ListenPort = "10102"
+    ListenHost = "127.0.0.1"
+    ListenPort = "9102"
     MetricsPath = "/metrics"
     BlockSampleSize = 100
+  [RPC.Web3]
+    Enabled = false
+    ListenHost = "127.0.0.1"
+    ListenPort = "26660"
 
 [Logging]
-  ExcludeTrace = false
+  Trace = false
   NonBlocking = false
   [Logging.RootSink]
-    [Logging.RootSink.Output]
-      OutputType = "stderr"
-      Format = "json"
+#    [Logging.RootSink.Output]
+#      OutputType = "stderr"
+#      Format = "json"
 

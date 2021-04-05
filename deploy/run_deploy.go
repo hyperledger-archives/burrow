@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/go-kit/kit/log"
@@ -27,7 +28,8 @@ type playbookResult struct {
 	duration time.Duration
 }
 
-func worker(playbooks <-chan playbookWork, results chan<- playbookResult, args *def.DeployArgs, logger *logging.Logger) {
+func worker(mtx *sync.RWMutex, playbooks <-chan playbookWork, results chan<- playbookResult, args *def.DeployArgs,
+	logger *logging.Logger) {
 
 	client := def.NewClient(args.Chain, args.KeysService, args.MempoolSign, time.Duration(args.Timeout)*time.Second)
 
@@ -59,10 +61,15 @@ func worker(playbooks <-chan playbookWork, results chan<- playbookResult, args *
 			// Load existing bin files to decode events
 			var abiError error
 			client.AllSpecs, abiError = abi.LoadPath(script.BinPath)
-			if err != nil {
+			if abiError != nil {
 				logger.InfoMsg("failed to load ABIs for Event parsing", "path", script.BinPath, "error", abiError)
 			}
-
+			locker := mtx.RLocker()
+			if script.NoParallel {
+				locker = mtx
+			}
+			locker.Lock()
+			defer locker.Unlock()
 			err = jobs.ExecutePlaybook(args, script, client, logger)
 			return
 		}
@@ -96,8 +103,9 @@ func RunPlaybooks(args *def.DeployArgs, playbooks []string, logger *logging.Logg
 	workQ := make(chan playbookWork, 100)
 	resultQ := make(chan playbookResult, 100)
 
+	mtx := new(sync.RWMutex)
 	for i := 1; i <= args.Jobs; i++ {
-		go worker(workQ, resultQ, args, logger)
+		go worker(mtx, workQ, resultQ, args, logger)
 	}
 
 	for i, playbook := range playbooks {
@@ -112,16 +120,19 @@ func RunPlaybooks(args *def.DeployArgs, playbooks []string, logger *logging.Logg
 	successes := 0
 
 	for range playbooks {
+		// Receive results as they come
 		jobResult := <-resultQ
 		results[jobResult.jobNo] = &jobResult
+		// Print them in order
 		for results[printed] != nil {
 			res := results[printed]
-			os.Stderr.Write(res.log.Bytes())
+			bs := res.log.Bytes()
+			os.Stderr.Write(bs)
 			if res.err != nil {
-				fmt.Fprintf(os.Stderr, "ERROR: %v", res.err)
+				fmt.Fprintf(os.Stderr, "Error in RunPlaybooks: %v\n", res.err)
 			}
 			res.log.Truncate(0)
-			if jobResult.err != nil {
+			if res.err != nil {
 				failures++
 			} else {
 				successes++
@@ -135,7 +146,7 @@ func RunPlaybooks(args *def.DeployArgs, playbooks []string, logger *logging.Logg
 	close(resultQ)
 
 	if successes > 0 {
-		logger.InfoMsg("JOBS THAT SUCCEEEDED", "count", successes)
+		logger.InfoMsg("JOBS THAT SUCCEEDED", "count", successes)
 		for i, playbook := range playbooks {
 			res := results[i]
 			if res.err != nil {

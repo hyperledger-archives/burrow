@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/tendermint/tendermint/abci/types"
+	"github.com/tendermint/tendermint/mempool"
 	tmTypes "github.com/tendermint/tendermint/types"
 )
 
@@ -47,7 +48,7 @@ func NewProcess(committer execution.BatchCommitter, blockchain *bcm.Blockchain, 
 	return p
 }
 
-func (p *Process) CheckTx(tx tmTypes.Tx, cb func(*types.Response)) error {
+func (p *Process) CheckTx(tx tmTypes.Tx, cb func(*types.Response), txInfo mempool.TxInfo) error {
 	const header = "DeliverTx"
 	p.committer.Lock()
 	defer p.committer.Unlock()

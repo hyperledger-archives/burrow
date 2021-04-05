@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package names
 
@@ -37,8 +26,7 @@ type nameInfo struct {
 var _ Writer = &Cache{}
 
 // Returns a Cache that wraps an underlying NameRegCacheGetter to use on a cache miss, can write to an
-// output Writer via Sync.
-// Not goroutine safe, use syncStateCache if you need concurrent access
+// output Writer via Sync. Not goroutine safe, use syncStateCache if you need concurrent access
 func NewCache(backend Reader) *Cache {
 	return &Cache{
 		backend: backend,
@@ -90,7 +78,7 @@ func (cache *Cache) RemoveName(name string) error {
 }
 
 // Writes whatever is in the cache to the output Writer state. Does not flush the cache, to do that call Reset()
-// after Sync or use Flusth if your wish to use the output state as your next backend
+// after Sync or use Flush if your wish to use the output state as your next backend
 func (cache *Cache) Sync(state Writer) error {
 	cache.Lock()
 	defer cache.Unlock()
@@ -102,7 +90,7 @@ func (cache *Cache) Sync(state Writer) error {
 	}
 	sort.Stable(names)
 
-	// Update or delete names.
+	// Update or delete names
 	for _, name := range names {
 		nameInfo := cache.names[name]
 		nameInfo.RLock()
@@ -124,22 +112,12 @@ func (cache *Cache) Sync(state Writer) error {
 	return nil
 }
 
-// Resets the cache to empty initialising the backing map to the same size as the previous iteration.
+// Resets the cache to empty initialising the backing map to the same size as the previous iteration
 func (cache *Cache) Reset(backend Reader) {
 	cache.Lock()
 	defer cache.Unlock()
 	cache.backend = backend
 	cache.names = make(map[string]*nameInfo)
-}
-
-// Syncs the Cache and Resets it to use Writer as the backend Reader
-func (cache *Cache) Flush(output Writer, backend Reader) error {
-	err := cache.Sync(output)
-	if err != nil {
-		return err
-	}
-	cache.Reset(backend)
-	return nil
 }
 
 func (cache *Cache) Backend() Reader {

@@ -1,12 +1,13 @@
 package binary
 
 import (
-	"testing"
-
 	"encoding/json"
+	"math/big"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tmthrgd/go-hex"
 )
 
 func TestWord256_UnpadLeft(t *testing.T) {
@@ -39,6 +40,21 @@ func TestLeftPadWord256(t *testing.T) {
 			0, 0, 0, 0, 0, 1, 2, 3,
 		},
 		LeftPadWord256([]byte{1, 2, 3}))
+}
+
+func TestTwosComplement(t *testing.T) {
+	v := Int64ToWord256(-10)
+	require.Equal(t, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF6",
+		hex.EncodeUpperToString(v[:]))
+
+	upper, ok := new(big.Int).SetString("32423973453453434237423", 10)
+	require.True(t, ok)
+	inc, ok := new(big.Int).SetString("3242397345345343421", 10)
+	require.True(t, ok)
+	for i := new(big.Int).Neg(upper); i.Cmp(upper) == -1; i.Add(i, inc) {
+		v := BigIntFromWord256(BigIntToWord256(i))
+		require.True(t, i.Cmp(v) == 0, "expected %d == %d", i, v)
+	}
 }
 
 func TestOne256(t *testing.T) {

@@ -2,11 +2,13 @@ version: "3"
 services:
   db:
     image: postgres:11-alpine
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
     ports:
       - 5432
 
   burrow:
-    build: .circleci
+    image: ${CI_IMAGE}
     environment:
       DB_URL: "postgres://postgres@db:5432/postgres?sslmode=disable"
       GO111MODULE: "on"

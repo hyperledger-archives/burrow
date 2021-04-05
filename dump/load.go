@@ -13,7 +13,8 @@ import (
 	"github.com/hyperledger/burrow/txs/payload"
 )
 
-// Load a dump into state
+// Load a dump into state. We store all the events from the source chain in a single zeroth block with all the events
+// at each height in their own pseudo transaction.
 func Load(source Source, st *state.State) error {
 	_, _, err := st.Update(func(s state.Updatable) error {
 		txs := make([]*exec.TxExecution, 0)
@@ -71,8 +72,10 @@ func Load(source Source, st *state.State) error {
 				if tx == nil {
 					tx = &exec.TxExecution{
 						TxHeader: &exec.TxHeader{
-							TxHash: dumpTxHash(row.EVMEvent.ChainID, row.Height),
 							TxType: payload.TypeCall,
+							TxHash: dumpTxHash(row.EVMEvent.ChainID, row.Height),
+							Height: 0,
+							Index:  uint64(len(txs)),
 							Origin: &exec.Origin{
 								ChainID: row.EVMEvent.ChainID,
 								Height:  row.Height,

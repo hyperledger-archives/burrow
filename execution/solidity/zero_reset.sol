@@ -1,4 +1,4 @@
-pragma solidity ^0.5.4;
+pragma solidity ^0.5;
 
 // Originally taken from: https://github.com/hyperledger/burrow/issues/847
 contract ZeroReset {

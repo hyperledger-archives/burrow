@@ -2,13 +2,15 @@ syntax = 'proto3';
 
 option go_package = "github.com/hyperledger/burrow/txs/payload";
 
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "gogoproto/gogo.proto";
 
 import "permission.proto";
+import "registry.proto";
 import "spec.proto";
 
 package payload;
 
+option (gogoproto.stable_marshaler_all) = true;
 // Enable custom Marshal method.
 option (gogoproto.marshaler_all) = true;
 // Enable custom Unmarshal method.
@@ -20,6 +22,7 @@ option (gogoproto.goproto_registration) = true;
 // Enable generation of XXX_MessageName methods for grpc-go/status.
 option (gogoproto.messagename_all) = true;
 
+// Any encodes a sum type for which only one should be set
 message Any {
     option (gogoproto.onlyone) = true;
 
@@ -32,6 +35,7 @@ message Any {
     UnbondTx UnbondTx = 7;
     BatchTx BatchTx = 8;
     ProposalTx ProposalTx = 9;
+    IdentifyTx IdentifyTx = 10;
 }
 
 // An input to a transaction that may carry an Amount as a charge and whose sequence number must be one greater than
@@ -72,6 +76,8 @@ message CallTx {
     bytes WASM = 6 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes", (gogoproto.nullable) = false, (gogoproto.jsontag)="tags,omitempty"];
     // Set of contracts this code will deploy
     repeated ContractMeta ContractMeta = 7;
+    // The upper bound on the price per unit of gas
+    uint64 GasPrice = 8;
 }
 
 message ContractMeta {
@@ -144,6 +150,16 @@ message ProposalTx {
     int64 VotingWeight = 2;
     bytes ProposalHash = 3 [(gogoproto.customtype) = "github.com/hyperledger/burrow/binary.HexBytes"];
     Proposal Proposal = 4;
+}
+
+message IdentifyTx {
+    option (gogoproto.goproto_stringer) = false;
+    option (gogoproto.goproto_getters) = false;
+
+    // Senders
+    repeated TxInput Inputs = 1;
+	// Node to register
+    registry.NodeIdentity Node = 2;
 }
 
 message BatchTx {

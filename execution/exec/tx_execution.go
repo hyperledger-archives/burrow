@@ -3,7 +3,6 @@ package exec
 import (
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/hyperledger/burrow/binary"
 
@@ -41,6 +40,7 @@ func (txe *TxExecution) StreamEvents() []*StreamEvent {
 		&StreamEvent{
 			BeginTx: &BeginTx{
 				TxHeader:  txe.TxHeader,
+				NumEvents: uint64(len(txe.Events)),
 				Exception: txe.Exception,
 				Result:    txe.Result,
 			},
@@ -128,10 +128,21 @@ func (txe *TxExecution) GovernAccount(governAccount *GovernAccountEvent, excepti
 	})
 }
 
+func (txe *TxExecution) Print(print *PrintEvent) error {
+	txe.Append(&Event{
+		Header: txe.Header(TypePrint, EventStringLogEvent(print.Address), nil),
+		Print:  print,
+	})
+	return nil
+}
+
 // Errors pushed to TxExecutions end up in merkle state so it is essential that they are deterministic and independent
 // of the code path taken to execution (e.g. replay takes a different path to that of normal consensus reactor so stack
 // traces may differ - as they may across architectures)
-func (txe *TxExecution) PushError(err error) {
+func (txe *TxExecution) PushError(err error) bool {
+	if err == nil {
+		return false
+	}
 	if txe.Exception == nil {
 		// Don't forget the nil jig
 		ex := errors.AsException(err)
@@ -139,51 +150,24 @@ func (txe *TxExecution) PushError(err error) {
 			txe.Exception = ex
 		}
 	}
+	return true
 }
 
 func (txe *TxExecution) CallTrace() string {
-	var calls []string
-	for _, ev := range txe.Events {
-		if ev.Call != nil {
-			ex := ""
-			if ev.Header.Exception != nil {
-				ex = fmt.Sprintf(" [%v]", ev.Header.Exception)
-			}
-			calls = append(calls, fmt.Sprintf("%v: %v -> %v: %v%s",
-				ev.Call.CallType, ev.Call.CallData.Caller, ev.Call.CallData.Callee, ev.Call.Return, ex))
-		}
-	}
-	return strings.Join(calls, "\n")
+	return Events(txe.Events).CallTrace()
 }
 
 func (txe *TxExecution) ExceptionalCalls() []*Event {
-	var exCalls []*Event
-	for _, ev := range txe.Events {
-		if ev.Call != nil && ev.Header.Exception != nil {
-			exCalls = append(exCalls, ev)
-		}
-	}
-	return exCalls
+	return Events(txe.Events).ExceptionalCalls()
 }
 
 func (txe *TxExecution) CallError() *errors.CallError {
 	if txe.Exception == nil {
 		return nil
 	}
-	var nestedErrors []errors.NestedCallError
-	for _, ev := range txe.Events {
-		if ev.Call != nil && ev.Header.Exception != nil {
-			nestedErrors = append(nestedErrors, errors.NestedCallError{
-				CodedError: ev.Header.Exception,
-				Caller:     ev.Call.CallData.Caller,
-				Callee:     ev.Call.CallData.Callee,
-				StackDepth: ev.Call.StackDepth,
-			})
-		}
-	}
 	return &errors.CallError{
 		CodedError:   txe.Exception,
-		NestedErrors: nestedErrors,
+		NestedErrors: Events(txe.Events).NestedCallErrors(),
 	}
 }
 

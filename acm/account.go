@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package acm
 
@@ -29,7 +18,7 @@ import (
 
 var GlobalPermissionsAddress = crypto.Address(binary.Zero160)
 
-func NewAccount(pubKey crypto.PublicKey) *Account {
+func NewAccount(pubKey *crypto.PublicKey) *Account {
 	return &Account{
 		Address:   pubKey.GetAddress(),
 		PublicKey: pubKey,
@@ -46,7 +35,7 @@ func (acc *Account) GetAddress() crypto.Address {
 
 func (acc *Account) AddToBalance(amount uint64) error {
 	if binary.IsUint64SumOverflow(acc.Balance, amount) {
-		return errors.ErrorCodef(errors.ErrorCodeIntegerOverflow,
+		return errors.Errorf(errors.Codes.IntegerOverflow,
 			"uint64 overflow: attempt to add %v to the balance of %s", amount, acc.Address)
 	}
 	acc.Balance += amount
@@ -55,10 +44,23 @@ func (acc *Account) AddToBalance(amount uint64) error {
 
 func (acc *Account) SubtractFromBalance(amount uint64) error {
 	if amount > acc.Balance {
-		return errors.ErrorCodef(errors.ErrorCodeInsufficientBalance,
+		return errors.Errorf(errors.Codes.InsufficientBalance,
 			"insufficient funds: attempt to subtract %v from the balance of %s", amount, acc.Address)
 	}
 	acc.Balance -= amount
+	return nil
+}
+
+// Return bytes of any code-type value that is set. EVM, WASM, or native name
+func (acc *Account) Code() []byte {
+	switch {
+	case len(acc.EVMCode) > 0:
+		return acc.EVMCode
+	case len(acc.WASMCode) > 0:
+		return acc.WASMCode
+	case acc.NativeName != "":
+		return []byte(acc.NativeName)
+	}
 	return nil
 }
 

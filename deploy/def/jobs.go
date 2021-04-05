@@ -1,6 +1,7 @@
 package def
 
 import (
+	"fmt"
 	"regexp"
 
 	validation "github.com/go-ozzo/ozzo-validation"
@@ -265,6 +266,30 @@ func (job *Permission) Validate() error {
 	)
 }
 
+type Identify struct {
+	// (Optional, if account job or global account set) address of the account from which to identify (the
+	// public key for the account must be available to burrow keys)
+	Source string `mapstructure:"source" json:"source" yaml:"source" toml:"source"`
+	// (Required) file containing the tendermint node to identify as
+	NodeKey string `mapstructure:"nodekey" json:"nodekey" yaml:"nodekey" toml:"nodekey"`
+	// (Required) publically available network address
+	NetAddress string `mapstructure:"netaddress" json:"netaddress" yaml:"netaddress" toml:"netaddress"`
+	// (Optional) publically available network moniker
+	Moniker string `mapstructure:"moniker" json:"moniker" yaml:"moniker" toml:"moniker"`
+
+	// (Optional, advanced only) sequence to use when burrow keys signs the transaction (do not use unless you
+	// know what you're doing)
+	Sequence string `mapstructure:"sequence" json:"sequence" yaml:"sequence" toml:"sequence"`
+}
+
+func (job *Identify) Validate() error {
+	return validation.ValidateStruct(job,
+		validation.Field(&job.NodeKey, validation.Required),
+		validation.Field(&job.NetAddress, validation.Required),
+		validation.Field(&job.Sequence, rule.Uint64OrPlaceholder),
+	)
+}
+
 // ------------------------------------------------------------------------
 // Contracts Jobs
 // ------------------------------------------------------------------------
@@ -292,6 +317,8 @@ type Build struct {
 	Instance string `mapstructure:"instance" json:"instance" yaml:"instance" toml:"instance"`
 	// (Optional) Path to store an extra copy of the bin file
 	Store string `mapstructure:"store" json:"store" yaml:"store" toml:"store"`
+	// (Optional) Use solang to compile to wasm
+	Wasm bool `mapstructure:"wasm" json:"wasm" yaml:"wasm" toml:"wasm"`
 }
 
 func (job *Build) Validate() error {
@@ -336,6 +363,8 @@ type Deploy struct {
 	Variables []*abi.Variable
 	// (Optional) Path to store an extra copy of the bin file
 	Store string `mapstructure:"store" json:"store" yaml:"store" toml:"store"`
+	// (Optional) Use solang to compile to wasm
+	Wasm bool `mapstructure:"wasm" json:"wasm" yaml:"wasm" toml:"wasm"`
 }
 
 func (job *Deploy) Validate() error {
@@ -379,6 +408,11 @@ type Call struct {
 	Save string `mapstructure:"save" json:"save" yaml:"save" toml:"save"`
 	// (Optional) the call job's returned variables
 	Variables []*abi.Variable
+}
+
+// TODO: maybe do for others...
+func (job *Call) String() string {
+	return fmt.Sprintf("%#v", job)
 }
 
 func (job *Call) Validate() error {

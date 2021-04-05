@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package binary
 
@@ -21,9 +10,6 @@ import (
 
 var big1 = big.NewInt(1)
 var Big256 = big.NewInt(256)
-var tt256 = new(big.Int).Lsh(big1, 256)
-var tt256m1 = new(big.Int).Sub(new(big.Int).Lsh(big1, 256), big1)
-var tt255 = new(big.Int).Lsh(big1, 255)
 
 // Returns whether a + b would be a uint64 overflow
 func IsUint64SumOverflow(a, b uint64) bool {
@@ -33,29 +19,43 @@ func IsUint64SumOverflow(a, b uint64) bool {
 // Converts a possibly negative big int x into a positive big int encoding a twos complement representation of x
 // truncated to 32 bytes
 func U256(x *big.Int) *big.Int {
-	// Note that the And operation induces big.Int to hold a positive representation of a negative number
-	return new(big.Int).And(x, tt256m1)
+	return ToTwosComplement(x, Word256Bits)
 }
 
 // Interprets a positive big.Int as a 256-bit two's complement signed integer
 func S256(x *big.Int) *big.Int {
-	// Sign bit not set, value is its positive self
-	if x.Cmp(tt255) < 0 {
+	return FromTwosComplement(x, Word256Bits)
+}
+
+// Convert a possibly negative big.Int x to a positive big.Int encoded in two's complement
+func ToTwosComplement(x *big.Int, n uint) *big.Int {
+	// And treats negative arguments a if they were twos complement encoded so we end up with a positive number here
+	// with the twos complement bit pattern
+	return new(big.Int).And(x, andMask(n))
+}
+
+// Interprets a positive big.Int as a n-bit two's complement signed integer
+func FromTwosComplement(x *big.Int, n uint) *big.Int {
+	signBit := int(n) - 1
+	if x.Bit(signBit) == 0 {
+		// Sign bit not set => value (v) is positive
+		// x = |v| = v
 		return x
 	} else {
-		// negative value is represented
-		return new(big.Int).Sub(x, tt256)
+		// Sign bit set => value (v) is negative
+		// x = 2^n - |v|
+		b := new(big.Int).Lsh(big1, n)
+		// v = -|v| = x - 2^n
+		return new(big.Int).Sub(x, b)
 	}
 }
 
-// Treats the positive big int x as if it contains an embedded a back + 1 byte signed integer in its least significant
+// Treats the positive big int x as if it contains an embedded n bit signed integer in its least significant
 // bits and extends that sign
-func SignExtend(back uint64, x *big.Int) *big.Int {
-	// we assume x contains a signed integer of back + 1 bytes width
-	// most significant bit of the back'th byte,
-	signBit := back*8 + 7
+func SignExtend(x *big.Int, n uint) *big.Int {
+	signBit := n - 1
 	// single bit set at sign bit position
-	mask := new(big.Int).Lsh(big1, uint(signBit))
+	mask := new(big.Int).Lsh(big1, signBit)
 	// all bits below sign bit set to 1 all above (including sign bit) set to 0
 	mask.Sub(mask, big1)
 	if x.Bit(int(signBit)) == 1 {
@@ -65,4 +65,27 @@ func SignExtend(back uint64, x *big.Int) *big.Int {
 		// Number represented is positive - clear all bits above sign bit (including sign bit)
 		return x.And(x, mask)
 	}
+}
+
+// Reverse bytes in-place
+func reverse(bs []byte) []byte {
+	n := len(bs) - 1
+	for i := 0; i < len(bs)/2; i++ {
+		bs[i], bs[n-i] = bs[n-i], bs[i]
+	}
+	return bs
+}
+
+// Note: this function destructively reverses its input slice - pass a copy if the original is used elsewhere
+func BigIntFromLittleEndianBytes(bs []byte) *big.Int {
+	return new(big.Int).SetBytes(reverse(bs))
+}
+
+func BigIntToLittleEndianBytes(x *big.Int) []byte {
+	return reverse(x.Bytes())
+}
+
+func andMask(n uint) *big.Int {
+	x := new(big.Int)
+	return x.Sub(x.Lsh(big1, n), big1)
 }

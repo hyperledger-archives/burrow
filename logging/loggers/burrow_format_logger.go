@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package loggers
 
@@ -33,7 +22,27 @@ import (
 // we control and generic output loggers are unlikely to know about.
 type burrowFormatLogger struct {
 	sync.Mutex
-	logger log.Logger
+	logger  log.Logger
+	options opt
+}
+
+type opt byte
+
+func (o opt) enabled(q opt) bool {
+	return o&q > 0
+}
+
+const (
+	DefaultOptions opt = iota
+	StringifyValues
+)
+
+func NewBurrowFormatLogger(logger log.Logger, options ...opt) *burrowFormatLogger {
+	bfl := &burrowFormatLogger{logger: logger}
+	for _, option := range options {
+		bfl.options |= option
+	}
+	return bfl
 }
 
 var _ log.Logger = &burrowFormatLogger{}
@@ -53,7 +62,10 @@ func (bfl *burrowFormatLogger) Log(keyvals ...interface{}) error {
 			case []byte:
 				value = hex.EncodeUpperToString(v)
 			}
-			return structure.StringifyKey(key), value
+			if bfl.options.enabled(StringifyValues) {
+				value = structure.Stringify(value)
+			}
+			return structure.Stringify(key), value
 		})
 	if err != nil {
 		return err
@@ -61,8 +73,4 @@ func (bfl *burrowFormatLogger) Log(keyvals ...interface{}) error {
 	bfl.Lock()
 	defer bfl.Unlock()
 	return bfl.logger.Log(keyvals...)
-}
-
-func BurrowFormatLogger(logger log.Logger) *burrowFormatLogger {
-	return &burrowFormatLogger{logger: logger}
 }

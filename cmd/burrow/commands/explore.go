@@ -37,7 +37,10 @@ func Explore(output Output) func(cmd *cli.Cmd) {
 				output.Fatalf("genesis doc is required")
 			}
 
-			explorer = bcm.NewBlockExplorer(dbm.DBBackendType(tmConf.DBBackend), tmConf.DBDir())
+			explorer, err = bcm.NewBlockExplorer(dbm.BackendType(tmConf.DBBackend), tmConf.DBDir())
+			if err != nil {
+				output.Fatalf("could not create BlockExplorer: %w", err)
+			}
 		}
 
 		cmd.Command("dump", "pretty print the state tree at the given height", func(cmd *cli.Cmd) {
@@ -52,7 +55,7 @@ func Explore(output Output) func(cmd *cli.Cmd) {
 			}
 
 			cmd.Action = func() {
-				replay := forensics.NewReplayFromDir(conf.GenesisDoc, *stateDir)
+				replay := forensics.NewSourceFromDir(conf.GenesisDoc, *stateDir)
 				height := uint64(*heightOpt)
 				if height == 0 {
 					height, err = replay.LatestHeight()
@@ -85,14 +88,20 @@ func Explore(output Output) func(cmd *cli.Cmd) {
 			}
 
 			cmd.Action = func() {
-				replay1 := forensics.NewReplayFromDir(conf.GenesisDoc, *goodDir)
-				replay2 := forensics.NewReplayFromDir(conf.GenesisDoc, *badDir)
+				replay1 := forensics.NewReplay(
+					forensics.NewSourceFromDir(conf.GenesisDoc, *goodDir),
+					forensics.NewSourceFromGenesis(conf.GenesisDoc),
+				)
+				replay2 := forensics.NewReplay(
+					forensics.NewSourceFromDir(conf.GenesisDoc, *badDir),
+					forensics.NewSourceFromGenesis(conf.GenesisDoc),
+				)
 
-				h1, err := replay1.LatestHeight()
+				h1, err := replay1.Src.LatestHeight()
 				if err != nil {
 					output.Fatalf("could not get height for first replay: %v", err)
 				}
-				h2, err := replay2.LatestHeight()
+				h2, err := replay2.Src.LatestHeight()
 				if err != nil {
 					output.Fatalf("could not get height for second replay: %v", err)
 				}
@@ -120,7 +129,7 @@ func Explore(output Output) func(cmd *cli.Cmd) {
 				if height, err := forensics.CompareCaptures(recap1, recap2); err != nil {
 					output.Printf("difference in capture: %v", err)
 					// TODO: compare at every height?
-					if err := forensics.CompareStateAtHeight(replay1.State, replay2.State, height); err != nil {
+					if err := forensics.CompareStateAtHeight(replay1.Dst.State, replay2.Dst.State, height); err != nil {
 						output.Fatalf("difference in state: %v", err)
 					}
 				}

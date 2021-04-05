@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/usr/bin/env bash
 
 # Test the dump restore functionality
 #
@@ -48,7 +48,7 @@ echo -e "${title//?/-}\n${title}\n${title//?/-}\n"
 
 $burrow_bin dump remote -b dump.bin
 $burrow_bin dump remote dump.json
-height=$(head -1  dump.json | jq .Height)
+height=$(head -n 1  dump.json | jq .Height)
 
 kill $burrow_pid
 

@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"reflect"
 	"strconv"
 	"time"
 
-	"reflect"
-
-	hex "github.com/tmthrgd/go-hex"
+	"github.com/hyperledger/burrow/encoding"
+	"github.com/tendermint/tendermint/p2p"
 
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger/burrow/execution/evm/abi"
 	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/execution/names"
+	"github.com/hyperledger/burrow/execution/registry"
 	"github.com/hyperledger/burrow/genesis/spec"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
@@ -28,7 +29,7 @@ import (
 	"github.com/hyperledger/burrow/rpc/rpctransact"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
-	"google.golang.org/grpc"
+	hex "github.com/tmthrgd/go-hex"
 )
 
 type Client struct {
@@ -58,7 +59,7 @@ func NewClient(chain, keysClientAddress string, mempoolSigning bool, timeout tim
 // Connect GRPC clients using ChainURL
 func (c *Client) dial(logger *logging.Logger) error {
 	if c.transactClient == nil {
-		conn, err := grpc.Dial(c.ChainAddress, grpc.WithInsecure())
+		conn, err := encoding.GRPCDial(c.ChainAddress)
 		if err != nil {
 			return err
 		}
@@ -259,25 +260,25 @@ func (c *Client) SignTx(tx payload.Payload, logger *logging.Logger) (*txs.Envelo
 }
 
 // Creates a keypair using attached keys service
-func (c *Client) CreateKey(keyName, curveTypeString string, logger *logging.Logger) (crypto.PublicKey, error) {
+func (c *Client) CreateKey(keyName, curveTypeString string, logger *logging.Logger) (*crypto.PublicKey, error) {
 	err := c.dial(logger)
 	if err != nil {
-		return crypto.PublicKey{}, err
+		return nil, err
 	}
 	if c.keyClient == nil {
-		return crypto.PublicKey{}, fmt.Errorf("could not create key pair since no keys service is attached, " +
+		return nil, fmt.Errorf("could not create key pair since no keys service is attached, " +
 			"pass --keys flag")
 	}
 	curveType := crypto.CurveTypeEd25519
 	if curveTypeString != "" {
 		curveType, err = crypto.CurveTypeFromString(curveTypeString)
 		if err != nil {
-			return crypto.PublicKey{}, err
+			return nil, err
 		}
 	}
 	address, err := c.keyClient.Generate(keyName, curveType)
 	if err != nil {
-		return crypto.PublicKey{}, err
+		return nil, err
 	}
 	return c.keyClient.PublicKey(address)
 }
@@ -359,7 +360,7 @@ func (c *Client) UpdateAccount(arg *GovArg, logger *logging.Logger) (*payload.Go
 	}
 	update := &spec.TemplateAccount{
 		Permissions: arg.Permissions,
-		Roles:       arg.Permissions,
+		Roles:       arg.Roles,
 	}
 	if arg.Address != "" {
 		addr, err := c.ParseAddress(arg.Address, logger)
@@ -369,11 +370,11 @@ func (c *Client) UpdateAccount(arg *GovArg, logger *logging.Logger) (*payload.Go
 		update.Address = &addr
 	}
 	if arg.PublicKey != "" {
-		pubKey, err := publicKeyFromString(arg.PublicKey)
+		pubKey, err := PublicKeyFromString(arg.PublicKey)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse publicKey: %v", err)
 		}
-		update.PublicKey = &pubKey
+		update.PublicKey = pubKey
 	} else {
 		// Attempt to get public key from connected key client
 		if arg.Address != "" {
@@ -424,13 +425,13 @@ func (c *Client) PublicKeyFromAddress(address *crypto.Address) (*crypto.PublicKe
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve public key from keys server: %v", err)
 	}
-	return &pubKey, nil
+	return pubKey, nil
 }
 
-func publicKeyFromString(publicKey string) (crypto.PublicKey, error) {
+func PublicKeyFromString(publicKey string) (*crypto.PublicKey, error) {
 	bs, err := hex.DecodeString(publicKey)
 	if err != nil {
-		return crypto.PublicKey{}, fmt.Errorf("could not parse public key string %s as hex: %v", publicKey, err)
+		return nil, fmt.Errorf("could not parse public key string %s as hex: %v", publicKey, err)
 	}
 	switch len(bs) {
 	case crypto.PublicKeyLength(crypto.CurveTypeEd25519):
@@ -438,8 +439,8 @@ func publicKeyFromString(publicKey string) (crypto.PublicKey, error) {
 	case crypto.PublicKeyLength(crypto.CurveTypeSecp256k1):
 		return crypto.PublicKeyFromBytes(bs, crypto.CurveTypeSecp256k1)
 	default:
-		return crypto.PublicKey{}, fmt.Errorf("public key string %s has byte length %d which is not the size of either "+
-			"ed25519 or compressed secp256k1 keys so cannot construct public key", publicKey, len(bs))
+		return nil, fmt.Errorf("public key string %s has byte length %d which is not the size of either "+
+			"ed25519 or uncompressed secp256k1 keys so cannot construct public key", publicKey, len(bs))
 	}
 }
 
@@ -672,6 +673,55 @@ func (c *Client) Permissions(arg *PermArg, logger *logging.Logger) (*payload.Per
 		PermArgs: permArgs,
 	}
 	return tx, nil
+}
+
+type IdentifyArg struct {
+	Input      string
+	NodeKey    string
+	Moniker    string
+	NetAddress string
+	Amount     string
+	Sequence   string
+}
+
+func (c *Client) Identify(arg *IdentifyArg, logger *logging.Logger) (*payload.IdentifyTx, error) {
+	logger.InfoMsg("IdentifyTx", "name", arg)
+	input, err := c.TxInput(arg.Input, arg.Amount, arg.Sequence, true, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	address, err := crypto.AddressFromHexString(arg.Input)
+	if err != nil {
+		return nil, err
+	}
+
+	signer, err := keys.AddressableSigner(c.keyClient, address)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeKey, err := p2p.LoadNodeKey(arg.NodeKey)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := crypto.AddressFromHexString(string(nodeKey.ID()))
+	if err != nil {
+		return nil, err
+	}
+
+	node := &registry.NodeIdentity{
+		Moniker:            arg.Moniker,
+		NetworkAddress:     arg.NetAddress,
+		TendermintNodeID:   id,
+		ValidatorPublicKey: signer.GetPublicKey(),
+	}
+
+	return &payload.IdentifyTx{
+		Inputs: []*payload.TxInput{input},
+		Node:   node,
+	}, nil
 }
 
 func (c *Client) TxInput(inputString, amountString, sequenceString string, allowMempoolSigning bool, logger *logging.Logger) (*payload.TxInput, error) {

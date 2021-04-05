@@ -120,7 +120,13 @@ func NewProjection(spec types.ProjectionSpec) (*Projection, error) {
 
 		i := 0
 		for _, mapping := range eventClass.FieldMappings {
-			sqlType, sqlTypeLength, err := getSQLType(mapping.Type, mapping.BytesToString)
+			var bytesMapping BytesMapping
+			if mapping.BytesToHex {
+				bytesMapping = BytesToHex
+			} else if mapping.BytesToString {
+				bytesMapping = BytesToString
+			}
+			sqlType, sqlTypeLength, err := getSQLType(mapping.Type, bytesMapping)
 			if err != nil {
 				return nil, err
 			}
@@ -220,9 +226,17 @@ func readFile(file string) ([]byte, error) {
 	return byteValue, nil
 }
 
+type BytesMapping int
+
+const (
+	BytesToBytes = iota
+	BytesToString
+	BytesToHex
+)
+
 // getSQLType maps event input types with corresponding SQL column types
 // takes into account related solidity types info and element indexed or hashed
-func getSQLType(evmSignature string, bytesToString bool) (types.SQLColumnType, int, error) {
+func getSQLType(evmSignature string, bytesMapping BytesMapping) (types.SQLColumnType, int, error) {
 	evmSignature = strings.ToLower(evmSignature)
 	re := regexp.MustCompile("[0-9]+")
 	typeSize, _ := strconv.Atoi(re.FindString(evmSignature))
@@ -237,41 +251,45 @@ func getSQLType(evmSignature string, bytesToString bool) (types.SQLColumnType, i
 		// solidity bytes => sql bytes
 		// bytesToString == true means there is a string in there so => sql varchar
 	case strings.HasPrefix(evmSignature, types.EventFieldTypeBytes):
-		if bytesToString {
-			return types.SQLColumnTypeVarchar, 40, nil
-		} else {
+		switch bytesMapping {
+		case BytesToString:
+			return types.SQLColumnTypeVarchar, 32, nil
+		case BytesToHex:
+			return types.SQLColumnTypeVarchar, 64, nil
+		default:
 			return types.SQLColumnTypeByteA, 0, nil
 		}
 		// solidity string => sql text
 	case evmSignature == types.EventFieldTypeString:
 		return types.SQLColumnTypeText, 0, nil
-		// solidity int or int256 => sql bigint
-		// solidity int <= 32 => sql int
-		// solidity int > 32 => sql numeric
+
 	case strings.HasPrefix(evmSignature, types.EventFieldTypeInt):
-		if typeSize == 0 || typeSize == 256 {
-			return types.SQLColumnTypeBigInt, 0, nil
-		}
-		if typeSize <= 32 {
-			return types.SQLColumnTypeInt, 0, nil
-		} else {
-			return types.SQLColumnTypeNumeric, 0, nil
-		}
-		// solidity uint or uint256 => sql bigint
-		// solidity uint <= 16 => sql int
-		// solidity uint > 16 => sql numeric
+		return evmIntegerSizeToSqlType(typeSize, true), 0, nil
+
 	case strings.HasPrefix(evmSignature, types.EventFieldTypeUInt):
-		if typeSize == 0 || typeSize == 256 {
-			return types.SQLColumnTypeBigInt, 0, nil
-		}
-		if typeSize <= 16 {
-			return types.SQLColumnTypeInt, 0, nil
-		} else {
-			return types.SQLColumnTypeNumeric, 0, nil
-		}
+		return evmIntegerSizeToSqlType(typeSize, false), 0, nil
 	default:
 		return -1, 0, fmt.Errorf("do not know how to map evmSignature: %s ", evmSignature)
 	}
+}
+
+func evmIntegerSizeToSqlType(size int, signed bool) types.SQLColumnType {
+	// Unsized ints default to 256-bit
+	if size == 0 {
+		return types.SQLColumnTypeNumeric
+	}
+	// since SQL integers are signed we need an extra bit headroom so high-order bit of a uint isn't interpreted as
+	// the sign bit
+	if !signed {
+		size++
+	}
+	switch {
+	case size <= 32:
+		return types.SQLColumnTypeInt
+	case size <= 64:
+		return types.SQLColumnTypeBigInt
+	}
+	return types.SQLColumnTypeNumeric
 }
 
 // getGlobalColumns returns global columns for event table structures,

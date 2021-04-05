@@ -1,5 +1,9 @@
 package rpc
 
+import (
+	"net"
+)
+
 // 'LocalHost' gets interpreted as ipv6
 // TODO: revisit this
 const LocalHost = "127.0.0.1"
@@ -10,12 +14,17 @@ type RPCConfig struct {
 	Profiler *ServerConfig  `json:",omitempty" toml:",omitempty"`
 	GRPC     *ServerConfig  `json:",omitempty" toml:",omitempty"`
 	Metrics  *MetricsConfig `json:",omitempty" toml:",omitempty"`
+	Web3     *ServerConfig  `json:",omitempty" toml:",omitempty"`
 }
 
 type ServerConfig struct {
 	Enabled    bool
 	ListenHost string
 	ListenPort string
+}
+
+func (sc *ServerConfig) ListenAddress() string {
+	return net.JoinHostPort(sc.ListenHost, sc.ListenPort)
 }
 
 type MetricsConfig struct {
@@ -30,6 +39,7 @@ func DefaultRPCConfig() *RPCConfig {
 		Profiler: DefaultProfilerConfig(),
 		GRPC:     DefaultGRPCConfig(),
 		Metrics:  DefaultMetricsConfig(),
+		Web3:     DefaultWeb3Config(),
 	}
 }
 
@@ -66,5 +76,13 @@ func DefaultMetricsConfig() *MetricsConfig {
 		},
 		MetricsPath:     "/metrics",
 		BlockSampleSize: 100,
+	}
+}
+
+func DefaultWeb3Config() *ServerConfig {
+	return &ServerConfig{
+		Enabled:    true,
+		ListenHost: AnyLocal,
+		ListenPort: "26660",
 	}
 }

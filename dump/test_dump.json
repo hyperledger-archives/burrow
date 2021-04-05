@@ -1,5 +1,119 @@
-{"Height":6,"Account":{"Address":"0000000000000000000000000000000000000000","PublicKey":{"CurveType":"","PublicKey":""},"Balance":1337,"EVMCode":"","Permissions":{"Base":{"Perms":"send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | hasRole","SetBit":"root | send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole"}}}}
-{"Height":6,"Account":{"Address":"4ABD4279D51DB2EDD2DB0BA0B07AF56ED78CDAC0","PublicKey":{"CurveType":"","PublicKey":""},"Balance":99999999999999,"EVMCode":"","Permissions":{"Base":{"Perms":"root | send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole","SetBit":"root | send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole"}}}}
-{"Height":6,"Account":{"Address":"674A8125610CAF8B9969DC38AAC573691DF926EC","PublicKey":{"CurveType":"","PublicKey":""},"EVMCode":"6080604052600436106049576000357C0100000000000000000000000000000000000000000000000000000000900463FFFFFFFF1680635197C7AA14604E578063F38BD57A146082575B600080FD5B348015605957600080FD5B5060606096565B604051808263FFFFFFFF1663FFFFFFFF16815260200191505060405180910390F35B348015608D57600080FD5B50609460AF565B005B60008060009054906101000A900463FFFFFFFF16905090565B7F2B69880ACA8C98F8F8CA0C47711FEB5DBC892B1D4614F2D9A9DF8D5F6E3A960B60666040518082815260200191505060405180910390A15600A165627A7A723058205121C5ED3D588194B76A15A35AA065F79D0C22EB50FCD97A24AAA60E01E191740029","Permissions":{"Base":{"Perms":"","SetBit":""}},"ContractMeta":[{"CodeHash":"139CBA1935D25D8E42741DA38F353577EB40E0F0E5EAB38F69A4478100BF3504","MetadataHash":"","Metadata":"{\"ContractName\":\"Maker\",\"SourceFile\":\"const.sol\",\"CompilerVersion\":\"0.4.25+commit.59dbf8f1\",\"Abi\":[{\"constant\":false,\"inputs\":[],\"name\":\"getX\",\"outputs\":[{\"name\":\"\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"emitMaker\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"a\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"MakerEvent\",\"type\":\"event\"}]}"}],"Forebear":"674A8125610CAF8B9969DC38AAC573691DF926EC"},"AccountStorage":{"Address":"674A8125610CAF8B9969DC38AAC573691DF926EC","Storage":[{"Key":"0000000000000000000000000000000000000000000000000000000000000000","Value":"0000000000000000000000000000000000000000000000000000000000000066"}]}}
-{"Height":6,"Account":{"Address":"787FEB2434C96FB3D33FB6A23DA82B39FD4D466A","PublicKey":{"CurveType":"ed25519","PublicKey":"CCF9DF46B8496A96C6266A4FE29166C5F3FA020CA240D1B237BC3ABB77228357"},"Sequence":3,"Balance":9999970002,"EVMCode":"","Permissions":{"Base":{"Perms":"bond","SetBit":"bond"}}}}
-{"Height":5,"EVMEvent":{"ChainID":"BurrowChain_7DB5BD-5BCE58","Index":2,"Time":"2019-07-23T07:23:41.701845678Z","Event":{"Address":"674A8125610CAF8B9969DC38AAC573691DF926EC","Data":"0000000000000000000000000000000000000000000000000000000000000066","Topics":["2B69880ACA8C98F8F8CA0C47711FEB5DBC892B1D4614F2D9A9DF8D5F6E3A960B"]}}}
+{
+  "Height": 6,
+  "Account": {
+    "Address": "0000000000000000000000000000000000000000",
+    "PublicKey": {
+      "CurveType": "",
+      "PublicKey": ""
+    },
+    "Balance": 1337,
+    "EVMCode": "",
+    "Permissions": {
+      "Base": {
+        "Perms": "send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | hasRole",
+        "SetBit": "root | send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole"
+      }
+    }
+  }
+}
+{
+  "Height": 6,
+  "Account": {
+    "Address": "4ABD4279D51DB2EDD2DB0BA0B07AF56ED78CDAC0",
+    "PublicKey": {
+      "CurveType": "",
+      "PublicKey": ""
+    },
+    "Balance": 99999999999999,
+    "EVMCode": "",
+    "Permissions": {
+      "Base": {
+        "Perms": "root | send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole",
+        "SetBit": "root | send | call | createContract | createAccount | bond | name | proposal | input | batch | hasBase | setBase | unsetBase | setGlobal | hasRole | addRole | removeRole"
+      }
+    }
+  }
+}
+{
+  "Height": 6,
+  "Account": {
+    "Address": "674A8125610CAF8B9969DC38AAC573691DF926EC",
+    "PublicKey": {
+      "CurveType": "",
+      "PublicKey": ""
+    },
+    "EVMCode": "6080604052600436106049576000357C0100000000000000000000000000000000000000000000000000000000900463FFFFFFFF1680635197C7AA14604E578063F38BD57A146082575B600080FD5B348015605957600080FD5B5060606096565B604051808263FFFFFFFF1663FFFFFFFF16815260200191505060405180910390F35B348015608D57600080FD5B50609460AF565B005B60008060009054906101000A900463FFFFFFFF16905090565B7F2B69880ACA8C98F8F8CA0C47711FEB5DBC892B1D4614F2D9A9DF8D5F6E3A960B60666040518082815260200191505060405180910390A15600A165627A7A723058205121C5ED3D588194B76A15A35AA065F79D0C22EB50FCD97A24AAA60E01E191740029",
+    "Permissions": {
+      "Base": {
+        "Perms": "",
+        "SetBit": ""
+      }
+    },
+    "ContractMeta": [
+      {
+        "CodeHash": "139CBA1935D25D8E42741DA38F353577EB40E0F0E5EAB38F69A4478100BF3504",
+        "MetadataHash": "",
+        "Metadata": "{\"ContractName\":\"Maker\",\"SourceFile\":\"const.sol\",\"CompilerVersion\":\"0.4.25+commit.59dbf8f1\",\"Abi\":[{\"constant\":false,\"inputs\":[],\"name\":\"getX\",\"outputs\":[{\"name\":\"\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"emitMaker\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"a\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"MakerEvent\",\"type\":\"event\"}]}"
+      }
+    ],
+    "Forebear": "674A8125610CAF8B9969DC38AAC573691DF926EC"
+  },
+  "AccountStorage": {
+    "Address": "674A8125610CAF8B9969DC38AAC573691DF926EC",
+    "Storage": [
+      {
+        "Key": "0000000000000000000000000000000000000000000000000000000000000000",
+        "Value": "0000000000000000000000000000000000000000000000000000000000000066"
+      }
+    ]
+  }
+}
+{
+  "Height": 6,
+  "Account": {
+    "Address": "787FEB2434C96FB3D33FB6A23DA82B39FD4D466A",
+    "PublicKey": {
+      "CurveType": "ed25519",
+      "PublicKey": "CCF9DF46B8496A96C6266A4FE29166C5F3FA020CA240D1B237BC3ABB77228357"
+    },
+    "Sequence": 3,
+    "Balance": 9999970002,
+    "EVMCode": "",
+    "Permissions": {
+      "Base": {
+        "Perms": "bond",
+        "SetBit": "bond"
+      }
+    }
+  }
+}
+{
+  "Height": 4,
+  "EVMEvent": {
+    "ChainID": "BurrowChain_7DB5BD-5BCE58",
+    "Index": 1,
+    "Time": "2019-07-22T07:23:41.701845678Z",
+    "Event": {
+      "Address": "674A8125610CAF8B9969DC38AAC573691DF926EC",
+      "Data": "CAFE000000000000000000000000000000000000000000000000000000000066",
+      "Topics": [
+        "2B69880ACA8C98F8F8CA0C47711FEB5DBC892B1D4614F2D9A9DF8D5F6E3A960B"
+      ]
+    }
+  }
+}
+{
+  "Height": 5,
+  "EVMEvent": {
+    "ChainID": "BurrowChain_7DB5BD-5BCE58",
+    "Index": 2,
+    "Time": "2019-07-23T07:23:41.701845678Z",
+    "Event": {
+      "Address": "674A8125610CAF8B9969DC38AAC573691DF926EC",
+      "Data": "0000000000000000000000000000000000000000000000000000000000000066",
+      "Topics": [
+        "2B69880ACA8C98F8F8CA0C47711FEB5DBC892B1D4614F2D9A9DF8D5F6E3A960B"
+      ]
+    }
+  }
+}

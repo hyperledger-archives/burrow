@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package acm
 
@@ -35,8 +24,8 @@ func (pa *PrivateAccount) GetAddress() crypto.Address {
 	return pa.concretePrivateAccount.Address
 }
 
-func (pa *PrivateAccount) GetPublicKey() crypto.PublicKey {
-	return pa.concretePrivateAccount.PublicKey
+func (pa *PrivateAccount) GetPublicKey() *crypto.PublicKey {
+	return &pa.concretePrivateAccount.PublicKey
 }
 
 func (pa *PrivateAccount) Sign(msg []byte) (*crypto.Signature, error) {
@@ -89,7 +78,7 @@ func PrivateAccountFromPrivateKey(privateKey crypto.PrivateKey) *PrivateAccount 
 	return &PrivateAccount{
 		concretePrivateAccount: &ConcretePrivateAccount{
 			PrivateKey: privateKey,
-			PublicKey:  publicKey,
+			PublicKey:  *publicKey,
 			Address:    publicKey.GetAddress(),
 		},
 	}
@@ -105,39 +94,34 @@ func SigningAccounts(concretePrivateAccounts []*PrivateAccount) []AddressableSig
 }
 
 // Generates a new account with private key.
-func GeneratePrivateAccount() (*PrivateAccount, error) {
-	privateKey, err := crypto.GeneratePrivateKey(nil, crypto.CurveTypeEd25519)
+func GeneratePrivateAccount(ct crypto.CurveType) (*PrivateAccount, error) {
+	privateKey, err := crypto.GeneratePrivateKey(nil, ct)
 	if err != nil {
 		return nil, err
 	}
 	publicKey := privateKey.GetPublicKey()
 	return ConcretePrivateAccount{
 		Address:    publicKey.GetAddress(),
-		PublicKey:  publicKey,
+		PublicKey:  *publicKey,
 		PrivateKey: privateKey,
 	}.PrivateAccount(), nil
 }
 
-// Generates a new account with private key from SHA256 hash of a secret
-func GeneratePrivateAccountFromSecret(secret string) *PrivateAccount {
-	privateKey := crypto.PrivateKeyFromSecret(secret, crypto.CurveTypeEd25519)
+func privateAccount(privateKey crypto.PrivateKey) *PrivateAccount {
 	publicKey := privateKey.GetPublicKey()
 	return ConcretePrivateAccount{
 		Address:    publicKey.GetAddress(),
-		PublicKey:  publicKey,
+		PublicKey:  *publicKey,
 		PrivateKey: privateKey,
 	}.PrivateAccount()
 }
 
-func PrivateAccountFromPrivateKeyBytes(privKeyBytes []byte) (*PrivateAccount, error) {
-	privateKey, err := crypto.PrivateKeyFromRawBytes(privKeyBytes, crypto.CurveTypeEd25519)
-	if err != nil {
-		return nil, err
-	}
-	publicKey := privateKey.GetPublicKey()
-	return ConcretePrivateAccount{
-		Address:    publicKey.GetAddress(),
-		PublicKey:  publicKey,
-		PrivateKey: privateKey,
-	}.PrivateAccount(), nil
+// Generates a new account with private key from SHA256 hash of a secret
+func GeneratePrivateAccountFromSecret(secret string) *PrivateAccount {
+	return privateAccount(crypto.PrivateKeyFromSecret(secret, crypto.CurveTypeEd25519))
+
+}
+
+func GenerateEthereumAccountFromSecret(secret string) *PrivateAccount {
+	return privateAccount(crypto.PrivateKeyFromSecret(secret, crypto.CurveTypeSecp256k1))
 }

@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package structure
 
@@ -76,7 +65,7 @@ func ValuesAndContext(keyvals []interface{},
 		for k := 0; k < len(keys); k++ {
 			if keyvals[i] == keys[k] {
 				// Pull the matching key-value pair into vals to return
-				vals[StringifyKey(keys[k])] = keyvals[i+1]
+				vals[Stringify(keys[k])] = keyvals[i+1]
 				// Delete the key once it's found
 				keys = DeleteAt(keys, k)
 				// And remove the key-value pair from context
@@ -96,7 +85,7 @@ func KeyValuesMap(keyvals []interface{}) map[string]interface{} {
 	length := len(keyvals) / 2
 	vals := make(map[string]interface{}, length)
 	for i := 0; i < 2*length; i += 2 {
-		vals[StringifyKey(keyvals[i])] = keyvals[i+1]
+		vals[Stringify(keyvals[i])] = keyvals[i+1]
 	}
 	return vals
 }
@@ -251,19 +240,19 @@ func DeleteAt(slice []interface{}, i int) []interface{} {
 }
 
 // Provides a canonical way to stringify keys
-func StringifyKey(key interface{}) string {
-	switch key {
+func Stringify(v interface{}) string {
+	switch v {
 	// For named keys we want to handle explicitly
 
 	default:
 		// Stringify keys
-		switch k := key.(type) {
+		switch k := v.(type) {
 		case string:
 			return k
 		case fmt.Stringer:
 			return k.String()
 		default:
-			return fmt.Sprint(key)
+			return fmt.Sprint(v)
 		}
 	}
 }

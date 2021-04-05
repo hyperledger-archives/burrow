@@ -6,7 +6,9 @@ import (
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/execution/contexts"
+	"github.com/hyperledger/burrow/execution/engine"
 	"github.com/hyperledger/burrow/execution/exec"
+	"github.com/hyperledger/burrow/execution/vms"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/txs"
 	"github.com/hyperledger/burrow/txs/payload"
@@ -19,10 +21,12 @@ func CallSim(reader acmstate.Reader, blockchain bcm.BlockchainInfo, fromAddress,
 
 	cache := acmstate.NewCache(reader)
 	exe := contexts.CallContext{
-		RunCall:     true,
-		StateWriter: cache,
-		Blockchain:  blockchain,
-		Logger:      logger,
+		VMS:           vms.NewConnectedVirtualMachines(engine.Options{}),
+		RunCall:       true,
+		State:         cache,
+		MetadataState: acmstate.NewMemoryState(),
+		Blockchain:    blockchain,
+		Logger:        logger,
 	}
 
 	txe := exec.NewTxExecution(txs.Enclose(blockchain.ChainID(), &payload.CallTx{
@@ -33,6 +37,9 @@ func CallSim(reader acmstate.Reader, blockchain bcm.BlockchainInfo, fromAddress,
 		Data:     data,
 		GasLimit: contexts.GasLimit,
 	}))
+
+	// Set height for downstream synchronisation purposes
+	txe.Height = blockchain.LastBlockHeight()
 	err := exe.Execute(txe, txe.Envelope.Tx.Payload)
 	if err != nil {
 		return nil, err

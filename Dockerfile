@@ -1,9 +1,9 @@
 # For solc binary
-FROM ethereum/solc:0.4.25 as solc-builder
+FROM ethereum/solc:0.5.12 as solc-builder
 # We use a multistage build to avoid bloating our deployment image with build dependencies
-FROM golang:1.12.0-alpine3.9 as builder
+FROM golang:1.15-alpine3.12 as builder
 
-RUN apk add --no-cache --update git bash make
+RUN apk add --no-cache --update git bash make musl-dev gcc libc6-compat
 
 ARG REPO=/src/burrow
 COPY . $REPO
@@ -13,7 +13,7 @@ WORKDIR $REPO
 RUN make build
 
 # This will be our base container image
-FROM alpine:3.9
+FROM alpine:3.11
 
 # Variable arguments to populate labels
 ARG USER=burrow
@@ -31,9 +31,11 @@ LABEL org.label-schema.vcs-url="https://github.com/hyperledger/burrow"
 ENV BURROW_PATH /home/$USER
 RUN addgroup -g 101 -S $USER && adduser -S -D -u 1000 $USER $USER
 WORKDIR $BURROW_PATH
+ADD --chown=$USER /testnet/ $BURROW_PATH
 
 # Copy binaries built in previous stage
 COPY --from=builder /src/burrow/bin/burrow $INSTALL_BASE/
+COPY --from=builder /src/burrow/bin/burrow-debug $INSTALL_BASE/
 COPY --from=solc-builder /usr/bin/solc $INSTALL_BASE/
 
 # Expose ports for 26656:peer; 26658:info; 10997:grpc
@@ -43,3 +45,4 @@ EXPOSE 10997
 
 USER $USER:$USER
 ENTRYPOINT [ "burrow" ]
+CMD [ "start" ]

@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package integration
 
@@ -25,8 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/validator"
 	"github.com/hyperledger/burrow/config"
@@ -34,12 +21,12 @@ import (
 	"github.com/hyperledger/burrow/core"
 	"github.com/hyperledger/burrow/execution"
 	"github.com/hyperledger/burrow/genesis"
-	"github.com/hyperledger/burrow/keys/mock"
+	"github.com/hyperledger/burrow/keys"
 	"github.com/hyperledger/burrow/logging"
 	"github.com/hyperledger/burrow/logging/logconfig"
-	lConfig "github.com/hyperledger/burrow/logging/logconfig"
 	"github.com/hyperledger/burrow/permission"
 	"github.com/hyperledger/burrow/rpc"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -63,14 +50,16 @@ func RunNode(t testing.TB, genesisDoc *genesis.GenesisDoc, privateAccounts []*ac
 	options ...func(*config.BurrowConfig)) (kern *core.Kernel, shutdown func()) {
 
 	var err error
-	var loggingConfig *logconfig.LoggingConfig
-
 	testConfig, cleanup := NewTestConfig(genesisDoc, options...)
 	// Uncomment for log output from tests
-	//loggingConfig = logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
-	//	return sink.SetOutput(logconfig.StderrOutput())
-	//})
-	kern, err = TestKernel(privateAccounts[0], privateAccounts, testConfig, loggingConfig)
+	// testConfig.Logging = logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
+	//   return sink.SetOutput(logconfig.StderrOutput())
+	// })
+	testConfig.Logging = logconfig.New().Root(func(sink *logconfig.SinkConfig) *logconfig.SinkConfig {
+		return sink.SetTransform(logconfig.FilterTransform(logconfig.IncludeWhenAllMatch,
+			"total_validator")).SetOutput(logconfig.StdoutOutput())
+	})
+	kern, err = TestKernel(privateAccounts[0], privateAccounts, testConfig)
 	require.NoError(t, err)
 	err = kern.Boot()
 	require.NoError(t, err)
@@ -87,6 +76,7 @@ func NewTestConfig(genesisDoc *genesis.GenesisDoc,
 	nodeNumber := atomic.AddUint64(&node, 1)
 	name := fmt.Sprintf("node_%03d", nodeNumber)
 	conf = config.DefaultBurrowConfig()
+	conf.Logging = nil
 	testDir, cleanup := EnterTestDirectory()
 	conf.BurrowDir = path.Join(testDir, fmt.Sprintf(".burrow_%s", name))
 	conf.GenesisDoc = genesisDoc
@@ -104,6 +94,8 @@ func NewTestConfig(genesisDoc *genesis.GenesisDoc,
 	conf.RPC.Metrics.ListenPort = freeport
 	conf.RPC.Info.ListenHost = rpc.LocalHost
 	conf.RPC.Info.ListenPort = freeport
+	conf.RPC.Web3.ListenHost = rpc.LocalHost
+	conf.RPC.Web3.ListenPort = freeport
 	conf.Execution.TimeoutFactor = 0.5
 	conf.Execution.VMOptions = []execution.VMOption{}
 	for _, opt := range options {
@@ -116,7 +108,8 @@ func NewTestConfig(genesisDoc *genesis.GenesisDoc,
 
 // We use this to wrap tests
 func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.PrivateAccount,
-	testConfig *config.BurrowConfig, loggingConfig *lConfig.LoggingConfig) (*core.Kernel, error) {
+	testConfig *config.BurrowConfig) (*core.Kernel, error) {
+
 	fmt.Println("Creating integration test Kernel...")
 
 	kern, err := core.NewKernel(testConfig.BurrowDir)
@@ -124,15 +117,16 @@ func TestKernel(validatorAccount *acm.PrivateAccount, keysAccounts []*acm.Privat
 		return nil, err
 	}
 
-	kern.SetLogger(logging.NewNoopLogger())
-	if loggingConfig != nil {
-		err := kern.LoadLoggerFromConfig(loggingConfig)
+	logger := logging.NewNoopLogger()
+	kern.SetLogger(logger)
+	if testConfig.Logging != nil {
+		err := kern.LoadLoggerFromConfig(testConfig.Logging)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	kern.SetKeyClient(mock.NewKeyClient(keysAccounts...))
+	kern.SetKeyClient(keys.NewLocalKeyClient(keys.NewMemoryKeyStore(keysAccounts...), logger))
 
 	err = kern.LoadExecutionOptionsFromConfig(testConfig.Execution)
 	if err != nil {
@@ -189,16 +183,26 @@ func TestGenesisDoc(addressables []*acm.PrivateAccount, vals ...int) *genesis.Ge
 	for _, i := range vals {
 		name := fmt.Sprintf("user_%d", i)
 		validators[name] = validator.FromAccount(accounts[name], 1<<16)
+		// Tendermint validators use a different addressing scheme for secp256k1
+		accounts[name].Address = validators[name].GetAddress()
 	}
 
 	return genesis.MakeGenesisDocFromAccounts(ChainName, nil, genesisTime, accounts, validators)
 }
 
-// Deterministic account generation helper. Pass number of accounts to make
+// Default deterministic account generation helper, pass number of accounts to make
 func MakePrivateAccounts(sec string, n int) []*acm.PrivateAccount {
 	accounts := make([]*acm.PrivateAccount, n)
 	for i := 0; i < n; i++ {
 		accounts[i] = acm.GeneratePrivateAccountFromSecret(sec + strconv.Itoa(i))
+	}
+	return accounts
+}
+
+func MakeEthereumAccounts(sec string, n int) []*acm.PrivateAccount {
+	accounts := make([]*acm.PrivateAccount, n)
+	for i := 0; i < n; i++ {
+		accounts[i] = acm.GenerateEthereumAccountFromSecret(sec + strconv.Itoa(i))
 	}
 	return accounts
 }

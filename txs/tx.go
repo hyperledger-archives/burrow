@@ -1,16 +1,5 @@
-// Copyright 2017 Monax Industries Limited
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright Monax Industries Limited
+// SPDX-License-Identifier: Apache-2.0
 
 package txs
 
@@ -21,6 +10,7 @@ import (
 	"reflect"
 
 	"github.com/hyperledger/burrow/acm"
+	"github.com/hyperledger/burrow/acm/balance"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
 	"github.com/hyperledger/burrow/encoding"
@@ -67,7 +57,7 @@ func (tx *Tx) Sign(signingAccounts ...acm.AddressableSigner) (*Envelope, error) 
 
 // Generate SignBytes, panicking on any failure
 func (tx *Tx) MustSignBytes() []byte {
-	bs, err := tx.SignBytes()
+	bs, err := tx.SignBytes(Envelope_JSON)
 	if err != nil {
 		panic(err)
 	}
@@ -75,12 +65,44 @@ func (tx *Tx) MustSignBytes() []byte {
 }
 
 // Produces the canonical SignBytes (the Tx message that will be signed) for a Tx
-func (tx *Tx) SignBytes() ([]byte, error) {
-	bs, err := json.Marshal(tx)
-	if err != nil {
-		return nil, fmt.Errorf("could not generate canonical SignBytes for Payload %v: %v", tx.Payload, err)
+func (tx *Tx) SignBytes(enc Envelope_EncodingType) ([]byte, error) {
+	switch enc {
+	case Envelope_JSON:
+		bs, err := json.Marshal(tx)
+		if err != nil {
+			return nil, fmt.Errorf("could not generate canonical SignBytes for Payload %v: %v", tx.Payload, err)
+		}
+		return bs, nil
+	case Envelope_RLP:
+		rawTx, err := tx.RLPRawTx()
+		if err != nil {
+			return nil, err
+		}
+		return rawTx.SignBytes()
+	default:
+		return nil, fmt.Errorf("encoding type %s not supported", enc.String())
 	}
-	return bs, nil
+}
+
+func (tx *Tx) RLPRawTx() (*EthRawTx, error) {
+	switch payload := tx.Payload.(type) {
+	case *payload.CallTx:
+		var to []byte
+		if payload.Address != nil {
+			to = payload.Address.Bytes()
+		}
+		return &EthRawTx{
+			Sequence: payload.Input.Sequence,
+			GasPrice: payload.GasPrice,
+			GasLimit: payload.GasLimit,
+			To:       to,
+			Amount:   balance.NativeToWei(payload.Input.Amount),
+			Data:     payload.Data.Bytes(),
+			chainID:  encoding.GetEthChainID(tx.ChainID),
+		}, nil
+	default:
+		return nil, fmt.Errorf("tx type %v not supported for rlp encoding", tx.Payload.Type())
+	}
 }
 
 // Serialisation intermediate for switching on type
@@ -168,7 +190,7 @@ func (tx *Tx) String() string {
 	if tx == nil {
 		return "Tx{nil}"
 	}
-	return fmt.Sprintf("Tx{TxHash: %s; Payload: %v}", tx.Hash(), tx.Payload)
+	return fmt.Sprintf("Tx{ChainID: %s; TxHash: %s; Payload: %s}", tx.ChainID, tx.Hash(), tx.MustSignBytes())
 }
 
 // Regenerate the Tx hash if it has been mutated or as called by Hash() in first instance
@@ -247,6 +269,9 @@ func EnvelopeFromAny(chainID string, p *payload.Any) *Envelope {
 	}
 	if p.UnbondTx != nil {
 		return Enclose(chainID, p.UnbondTx)
+	}
+	if p.IdentifyTx != nil {
+		return Enclose(chainID, p.IdentifyTx)
 	}
 	return nil
 }

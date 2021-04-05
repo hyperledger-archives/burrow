@@ -4,10 +4,10 @@
 package rpctransact
 
 import (
-	context "context"
 	fmt "fmt"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 	time "time"
 
 	_ "github.com/gogo/protobuf/gogoproto"
@@ -16,11 +16,10 @@ import (
 	golang_proto "github.com/golang/protobuf/proto"
 	_ "github.com/golang/protobuf/ptypes/duration"
 	github_com_hyperledger_burrow_crypto "github.com/hyperledger/burrow/crypto"
-	exec "github.com/hyperledger/burrow/execution/exec"
+	_ "github.com/hyperledger/burrow/execution/exec"
+	_ "github.com/hyperledger/burrow/txs"
 	github_com_hyperledger_burrow_txs "github.com/hyperledger/burrow/txs"
-	txs "github.com/hyperledger/burrow/txs"
 	payload "github.com/hyperledger/burrow/txs/payload"
-	grpc "google.golang.org/grpc"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -34,7 +33,7 @@ var _ = time.Kitchen
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
 type CallCodeParam struct {
 	FromAddress          github_com_hyperledger_burrow_crypto.Address `protobuf:"bytes,1,opt,name=FromAddress,proto3,customtype=github.com/hyperledger/burrow/crypto.Address" json:"FromAddress"`
@@ -55,16 +54,12 @@ func (m *CallCodeParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *CallCodeParam) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_CallCodeParam.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *CallCodeParam) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_CallCodeParam.Merge(m, src)
@@ -113,16 +108,12 @@ func (m *TxEnvelope) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *TxEnvelope) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_TxEnvelope.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *TxEnvelope) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_TxEnvelope.Merge(m, src)
@@ -164,16 +155,12 @@ func (m *TxEnvelopeParam) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
 func (m *TxEnvelopeParam) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_TxEnvelopeParam.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
 	}
+	return b[:n], nil
 }
 func (m *TxEnvelopeParam) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_TxEnvelopeParam.Merge(m, src)
@@ -217,511 +204,48 @@ func init() { proto.RegisterFile("rpctransact.proto", fileDescriptor_039da6ebb58
 func init() { golang_proto.RegisterFile("rpctransact.proto", fileDescriptor_039da6ebb58a8dc9) }
 
 var fileDescriptor_039da6ebb58a8dc9 = []byte{
-	// 555 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x53, 0x4d, 0x6f, 0xd3, 0x40,
-	0x10, 0xc5, 0x7c, 0xf4, 0x63, 0xdc, 0x2a, 0x74, 0x2f, 0x84, 0x08, 0x39, 0x28, 0x07, 0x84, 0x50,
-	0xbb, 0x8e, 0x42, 0x8f, 0x7c, 0x28, 0x4e, 0xdb, 0x23, 0xaa, 0x1c, 0x0b, 0x09, 0x6e, 0x1b, 0x7b,
-	0x71, 0x2d, 0xd9, 0x5e, 0x6b, 0xbd, 0x06, 0xe7, 0x57, 0x70, 0xe1, 0xc0, 0xcf, 0xe1, 0x98, 0x23,
-	0x12, 0xb7, 0x1e, 0x02, 0x4a, 0xff, 0x08, 0xf2, 0xae, 0xdd, 0xda, 0x49, 0xd3, 0x72, 0xe1, 0x36,
-	0xfb, 0x66, 0xdf, 0xdb, 0x79, 0x33, 0xb3, 0xb0, 0xc7, 0x13, 0x57, 0x70, 0x12, 0xa7, 0xc4, 0x15,
-	0x38, 0xe1, 0x4c, 0x30, 0xa4, 0xd7, 0xa0, 0xce, 0x81, 0x1f, 0x88, 0xb3, 0x6c, 0x82, 0x5d, 0x16,
-	0x99, 0x3e, 0xf3, 0x99, 0x29, 0xef, 0x4c, 0xb2, 0x4f, 0xf2, 0x24, 0x0f, 0x32, 0x52, 0xdc, 0x8e,
-	0xe1, 0x33, 0xe6, 0x87, 0xf4, 0xea, 0x96, 0x97, 0x71, 0x22, 0x02, 0x16, 0x97, 0x79, 0xa0, 0x39,
-	0x75, 0xcb, 0x78, 0x37, 0x21, 0xd3, 0x90, 0x11, 0xaf, 0x3c, 0x6e, 0x8b, 0x3c, 0x55, 0x61, 0xef,
-	0xab, 0x06, 0xbb, 0x23, 0x12, 0x86, 0x23, 0xe6, 0xd1, 0x53, 0xc2, 0x49, 0x84, 0xde, 0x83, 0x7e,
-	0xc2, 0x59, 0x34, 0xf4, 0x3c, 0x4e, 0xd3, 0xb4, 0xad, 0x3d, 0xd5, 0x9e, 0xef, 0x58, 0x87, 0xb3,
-	0x79, 0xf7, 0xce, 0xf9, 0xbc, 0xbb, 0x5f, 0xab, 0xf1, 0x6c, 0x9a, 0x50, 0x1e, 0x52, 0xcf, 0xa7,
-	0xdc, 0x9c, 0x64, 0x9c, 0xb3, 0x2f, 0xa6, 0xcb, 0xa7, 0x89, 0x60, 0xb8, 0xe4, 0xda, 0x75, 0x21,
-	0x84, 0xe0, 0x7e, 0xf1, 0x48, 0xfb, 0x6e, 0x21, 0x68, 0xcb, 0xb8, 0xc0, 0x8e, 0x88, 0x20, 0xed,
-	0x7b, 0x0a, 0x2b, 0xe2, 0x9e, 0x0f, 0xe0, 0xe4, 0xc7, 0xf1, 0x67, 0x1a, 0xb2, 0x84, 0xa2, 0x0f,
-	0xb0, 0x55, 0xc5, 0xb2, 0x14, 0x7d, 0xb0, 0x8b, 0x8b, 0xea, 0x2b, 0xd0, 0xc2, 0xe7, 0xf3, 0xee,
-	0x8b, 0x9b, 0xab, 0xaa, 0xdf, 0xb7, 0x2f, 0xe5, 0x7a, 0xbf, 0x34, 0x68, 0x5d, 0xbd, 0xa4, 0xcc,
-	0xff, 0xbf, 0xe7, 0xd0, 0x33, 0xd8, 0x3c, 0x55, 0x53, 0x90, 0x2d, 0xd0, 0x07, 0x3b, 0xb8, 0x9a,
-	0xca, 0x30, 0x9e, 0xda, 0x55, 0x12, 0xbd, 0x86, 0x4d, 0x27, 0x88, 0x28, 0xcb, 0x84, 0x6c, 0x8b,
-	0x3e, 0x78, 0x8c, 0xd5, 0xa4, 0x71, 0x35, 0x69, 0x7c, 0x54, 0x4e, 0xda, 0xda, 0x2a, 0xc6, 0xf2,
-	0xfd, 0x77, 0x57, 0xb3, 0x2b, 0xce, 0xe0, 0xdb, 0x03, 0xd8, 0x72, 0xca, 0x95, 0x42, 0x16, 0xb4,
-	0x2c, 0xce, 0x88, 0xe7, 0x92, 0x54, 0x38, 0xf9, 0x78, 0x1a, 0xbb, 0xe8, 0x09, 0xae, 0xaf, 0xe1,
-	0x92, 0xff, 0xce, 0x1e, 0x96, 0x5b, 0xe3, 0xe4, 0xc7, 0x39, 0x75, 0xb3, 0xe2, 0x0d, 0xf4, 0x06,
-	0x1e, 0xd6, 0x34, 0x86, 0xe9, 0xed, 0x22, 0x3b, 0xb2, 0x65, 0x36, 0x75, 0x69, 0x90, 0x08, 0xf4,
-	0x16, 0x36, 0xc6, 0x81, 0x1f, 0x3b, 0xf9, 0x2d, 0xac, 0x47, 0x6b, 0xb2, 0xe8, 0x10, 0xf4, 0x13,
-	0xc6, 0xa3, 0x2c, 0x24, 0x82, 0x3a, 0x39, 0x6a, 0xb4, 0x6d, 0x3d, 0xab, 0x0f, 0x50, 0xec, 0x75,
-	0xe9, 0xba, 0x75, 0x49, 0x52, 0xe0, 0x75, 0x46, 0xf7, 0x41, 0x57, 0x49, 0xe5, 0x71, 0x85, 0xd2,
-	0xb4, 0x65, 0xc2, 0x76, 0xa9, 0x1f, 0x44, 0xff, 0x24, 0xff, 0x4a, 0xc9, 0x17, 0x7b, 0x5f, 0x50,
-	0x3a, 0x8d, 0xc2, 0x1b, 0x5f, 0xf0, 0x3a, 0x76, 0x1f, 0x60, 0x4c, 0x63, 0x6f, 0xc5, 0x8e, 0x02,
-	0xd7, 0xd8, 0x51, 0xc9, 0x65, 0x3b, 0x25, 0xa5, 0x69, 0xa7, 0x0f, 0xf0, 0x8e, 0x44, 0x74, 0x45,
-	0x5f, 0x81, 0x6b, 0xf4, 0x55, 0x72, 0x59, 0xbf, 0xa4, 0x34, 0xf4, 0xad, 0xd1, 0x6c, 0x61, 0x68,
-	0x3f, 0x17, 0x86, 0xf6, 0x67, 0x61, 0x68, 0x3f, 0x2e, 0x0c, 0x6d, 0x76, 0x61, 0x68, 0x1f, 0x0f,
-	0x6e, 0xfe, 0x49, 0x3c, 0x71, 0xcd, 0x5a, 0x97, 0x26, 0x1b, 0xf2, 0x07, 0xbc, 0xfc, 0x1b, 0x00,
-	0x00, 0xff, 0xff, 0x70, 0x12, 0x34, 0xbe, 0x4a, 0x05, 0x00, 0x00,
-}
-
-// Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConn
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion4
-
-// TransactClient is the client API for Transact service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
-type TransactClient interface {
-	// Broadcast a transaction to the mempool - if the transaction is not signed signing will be attempted server-side
-	// and wait for it to be included in block
-	BroadcastTxSync(ctx context.Context, in *TxEnvelopeParam, opts ...grpc.CallOption) (*exec.TxExecution, error)
-	// Broadcast a transaction to the mempool - if the transaction is not signed signing will be attempted server-side
-	BroadcastTxAsync(ctx context.Context, in *TxEnvelopeParam, opts ...grpc.CallOption) (*txs.Receipt, error)
-	// Sign transaction server-side
-	SignTx(ctx context.Context, in *TxEnvelopeParam, opts ...grpc.CallOption) (*TxEnvelope, error)
-	// Formulate a transaction from a Payload and retrun the envelop with the Tx bytes ready to sign
-	FormulateTx(ctx context.Context, in *payload.Any, opts ...grpc.CallOption) (*TxEnvelope, error)
-	// Formulate and sign a CallTx transaction signed server-side and wait for it to be included in a block, retrieving response
-	CallTxSync(ctx context.Context, in *payload.CallTx, opts ...grpc.CallOption) (*exec.TxExecution, error)
-	// Formulate and sign a CallTx transaction signed server-side
-	CallTxAsync(ctx context.Context, in *payload.CallTx, opts ...grpc.CallOption) (*txs.Receipt, error)
-	// Perform a 'simulated' call of a contract against the current committed EVM state without any changes been saved
-	// and wait for the transaction to be included in a block
-	CallTxSim(ctx context.Context, in *payload.CallTx, opts ...grpc.CallOption) (*exec.TxExecution, error)
-	// Perform a 'simulated' execution of provided code against the current committed EVM state without any changes been saved
-	CallCodeSim(ctx context.Context, in *CallCodeParam, opts ...grpc.CallOption) (*exec.TxExecution, error)
-	// Formulate a SendTx transaction signed server-side and wait for it to be included in a block, retrieving response
-	SendTxSync(ctx context.Context, in *payload.SendTx, opts ...grpc.CallOption) (*exec.TxExecution, error)
-	// Formulate and  SendTx transaction signed server-side
-	SendTxAsync(ctx context.Context, in *payload.SendTx, opts ...grpc.CallOption) (*txs.Receipt, error)
-	// Formualte a NameTx signed server-side and wait for it to be included in a block returning the registered name
-	NameTxSync(ctx context.Context, in *payload.NameTx, opts ...grpc.CallOption) (*exec.TxExecution, error)
-	// Formulate a NameTx signed server-side
-	NameTxAsync(ctx context.Context, in *payload.NameTx, opts ...grpc.CallOption) (*txs.Receipt, error)
-}
-
-type transactClient struct {
-	cc *grpc.ClientConn
-}
-
-func NewTransactClient(cc *grpc.ClientConn) TransactClient {
-	return &transactClient{cc}
-}
-
-func (c *transactClient) BroadcastTxSync(ctx context.Context, in *TxEnvelopeParam, opts ...grpc.CallOption) (*exec.TxExecution, error) {
-	out := new(exec.TxExecution)
-	err := c.cc.Invoke(ctx, "/rpctransact.Transact/BroadcastTxSync", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *transactClient) BroadcastTxAsync(ctx context.Context, in *TxEnvelopeParam, opts ...grpc.CallOption) (*txs.Receipt, error) {
-	out := new(txs.Receipt)
-	err := c.cc.Invoke(ctx, "/rpctransact.Transact/BroadcastTxAsync", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *transactClient) SignTx(ctx context.Context, in *TxEnvelopeParam, opts ...grpc.CallOption) (*TxEnvelope, error) {
-	out := new(TxEnvelope)
-	err := c.cc.Invoke(ctx, "/rpctransact.Transact/SignTx", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *transactClient) FormulateTx(ctx context.Context, in *payload.Any, opts ...grpc.CallOption) (*TxEnvelope, error) {
-	out := new(TxEnvelope)
-	err := c.cc.Invoke(ctx, "/rpctransact.Transact/FormulateTx", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *transactClient) CallTxSync(ctx context.Context, in *payload.CallTx, opts ...grpc.CallOption) (*exec.TxExecution, error) {
-	out := new(exec.TxExecution)
-	err := c.cc.Invoke(ctx, "/rpctransact.Transact/CallTxSync", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *transactClient) CallTxAsync(ctx context.Context, in *payload.CallTx, opts ...grpc.CallOption) (*txs.Receipt, error) {
-	out := new(txs.Receipt)
-	err := c.cc.Invoke(ctx, "/rpctransact.Transact/CallTxAsync", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *transactClient) CallTxSim(ctx context.Context, in *payload.CallTx, opts ...grpc.CallOption) (*exec.TxExecution, error) {
-	out := new(exec.TxExecution)
-	err := c.cc.Invoke(ctx, "/rpctransact.Transact/CallTxSim", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *transactClient) CallCodeSim(ctx context.Context, in *CallCodeParam, opts ...grpc.CallOption) (*exec.TxExecution, error) {
-	out := new(exec.TxExecution)
-	err := c.cc.Invoke(ctx, "/rpctransact.Transact/CallCodeSim", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *transactClient) SendTxSync(ctx context.Context, in *payload.SendTx, opts ...grpc.CallOption) (*exec.TxExecution, error) {
-	out := new(exec.TxExecution)
-	err := c.cc.Invoke(ctx, "/rpctransact.Transact/SendTxSync", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *transactClient) SendTxAsync(ctx context.Context, in *payload.SendTx, opts ...grpc.CallOption) (*txs.Receipt, error) {
-	out := new(txs.Receipt)
-	err := c.cc.Invoke(ctx, "/rpctransact.Transact/SendTxAsync", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *transactClient) NameTxSync(ctx context.Context, in *payload.NameTx, opts ...grpc.CallOption) (*exec.TxExecution, error) {
-	out := new(exec.TxExecution)
-	err := c.cc.Invoke(ctx, "/rpctransact.Transact/NameTxSync", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *transactClient) NameTxAsync(ctx context.Context, in *payload.NameTx, opts ...grpc.CallOption) (*txs.Receipt, error) {
-	out := new(txs.Receipt)
-	err := c.cc.Invoke(ctx, "/rpctransact.Transact/NameTxAsync", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// TransactServer is the server API for Transact service.
-type TransactServer interface {
-	// Broadcast a transaction to the mempool - if the transaction is not signed signing will be attempted server-side
-	// and wait for it to be included in block
-	BroadcastTxSync(context.Context, *TxEnvelopeParam) (*exec.TxExecution, error)
-	// Broadcast a transaction to the mempool - if the transaction is not signed signing will be attempted server-side
-	BroadcastTxAsync(context.Context, *TxEnvelopeParam) (*txs.Receipt, error)
-	// Sign transaction server-side
-	SignTx(context.Context, *TxEnvelopeParam) (*TxEnvelope, error)
-	// Formulate a transaction from a Payload and retrun the envelop with the Tx bytes ready to sign
-	FormulateTx(context.Context, *payload.Any) (*TxEnvelope, error)
-	// Formulate and sign a CallTx transaction signed server-side and wait for it to be included in a block, retrieving response
-	CallTxSync(context.Context, *payload.CallTx) (*exec.TxExecution, error)
-	// Formulate and sign a CallTx transaction signed server-side
-	CallTxAsync(context.Context, *payload.CallTx) (*txs.Receipt, error)
-	// Perform a 'simulated' call of a contract against the current committed EVM state without any changes been saved
-	// and wait for the transaction to be included in a block
-	CallTxSim(context.Context, *payload.CallTx) (*exec.TxExecution, error)
-	// Perform a 'simulated' execution of provided code against the current committed EVM state without any changes been saved
-	CallCodeSim(context.Context, *CallCodeParam) (*exec.TxExecution, error)
-	// Formulate a SendTx transaction signed server-side and wait for it to be included in a block, retrieving response
-	SendTxSync(context.Context, *payload.SendTx) (*exec.TxExecution, error)
-	// Formulate and  SendTx transaction signed server-side
-	SendTxAsync(context.Context, *payload.SendTx) (*txs.Receipt, error)
-	// Formualte a NameTx signed server-side and wait for it to be included in a block returning the registered name
-	NameTxSync(context.Context, *payload.NameTx) (*exec.TxExecution, error)
-	// Formulate a NameTx signed server-side
-	NameTxAsync(context.Context, *payload.NameTx) (*txs.Receipt, error)
-}
-
-func RegisterTransactServer(s *grpc.Server, srv TransactServer) {
-	s.RegisterService(&_Transact_serviceDesc, srv)
-}
-
-func _Transact_BroadcastTxSync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TxEnvelopeParam)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TransactServer).BroadcastTxSync(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpctransact.Transact/BroadcastTxSync",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TransactServer).BroadcastTxSync(ctx, req.(*TxEnvelopeParam))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Transact_BroadcastTxAsync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TxEnvelopeParam)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TransactServer).BroadcastTxAsync(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpctransact.Transact/BroadcastTxAsync",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TransactServer).BroadcastTxAsync(ctx, req.(*TxEnvelopeParam))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Transact_SignTx_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TxEnvelopeParam)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TransactServer).SignTx(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpctransact.Transact/SignTx",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TransactServer).SignTx(ctx, req.(*TxEnvelopeParam))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Transact_FormulateTx_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(payload.Any)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TransactServer).FormulateTx(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpctransact.Transact/FormulateTx",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TransactServer).FormulateTx(ctx, req.(*payload.Any))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Transact_CallTxSync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(payload.CallTx)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TransactServer).CallTxSync(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpctransact.Transact/CallTxSync",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TransactServer).CallTxSync(ctx, req.(*payload.CallTx))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Transact_CallTxAsync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(payload.CallTx)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TransactServer).CallTxAsync(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpctransact.Transact/CallTxAsync",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TransactServer).CallTxAsync(ctx, req.(*payload.CallTx))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Transact_CallTxSim_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(payload.CallTx)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TransactServer).CallTxSim(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpctransact.Transact/CallTxSim",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TransactServer).CallTxSim(ctx, req.(*payload.CallTx))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Transact_CallCodeSim_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CallCodeParam)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TransactServer).CallCodeSim(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpctransact.Transact/CallCodeSim",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TransactServer).CallCodeSim(ctx, req.(*CallCodeParam))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Transact_SendTxSync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(payload.SendTx)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TransactServer).SendTxSync(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpctransact.Transact/SendTxSync",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TransactServer).SendTxSync(ctx, req.(*payload.SendTx))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Transact_SendTxAsync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(payload.SendTx)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TransactServer).SendTxAsync(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpctransact.Transact/SendTxAsync",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TransactServer).SendTxAsync(ctx, req.(*payload.SendTx))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Transact_NameTxSync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(payload.NameTx)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TransactServer).NameTxSync(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpctransact.Transact/NameTxSync",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TransactServer).NameTxSync(ctx, req.(*payload.NameTx))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Transact_NameTxAsync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(payload.NameTx)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TransactServer).NameTxAsync(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rpctransact.Transact/NameTxAsync",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TransactServer).NameTxAsync(ctx, req.(*payload.NameTx))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _Transact_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "rpctransact.Transact",
-	HandlerType: (*TransactServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "BroadcastTxSync",
-			Handler:    _Transact_BroadcastTxSync_Handler,
-		},
-		{
-			MethodName: "BroadcastTxAsync",
-			Handler:    _Transact_BroadcastTxAsync_Handler,
-		},
-		{
-			MethodName: "SignTx",
-			Handler:    _Transact_SignTx_Handler,
-		},
-		{
-			MethodName: "FormulateTx",
-			Handler:    _Transact_FormulateTx_Handler,
-		},
-		{
-			MethodName: "CallTxSync",
-			Handler:    _Transact_CallTxSync_Handler,
-		},
-		{
-			MethodName: "CallTxAsync",
-			Handler:    _Transact_CallTxAsync_Handler,
-		},
-		{
-			MethodName: "CallTxSim",
-			Handler:    _Transact_CallTxSim_Handler,
-		},
-		{
-			MethodName: "CallCodeSim",
-			Handler:    _Transact_CallCodeSim_Handler,
-		},
-		{
-			MethodName: "SendTxSync",
-			Handler:    _Transact_SendTxSync_Handler,
-		},
-		{
-			MethodName: "SendTxAsync",
-			Handler:    _Transact_SendTxAsync_Handler,
-		},
-		{
-			MethodName: "NameTxSync",
-			Handler:    _Transact_NameTxSync_Handler,
-		},
-		{
-			MethodName: "NameTxAsync",
-			Handler:    _Transact_NameTxAsync_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "rpctransact.proto",
+	// 557 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x53, 0x4d, 0x6f, 0xd3, 0x4c,
+	0x10, 0x7e, 0xfd, 0x02, 0xfd, 0x18, 0x37, 0x0a, 0x5d, 0x21, 0x11, 0x22, 0xe4, 0xa0, 0x1c, 0x10,
+	0x42, 0x65, 0x1d, 0x85, 0x1e, 0xf9, 0x50, 0xdc, 0x0f, 0x6e, 0xa8, 0x72, 0x2c, 0x24, 0xb8, 0x6d,
+	0xec, 0xc5, 0xb5, 0x64, 0x7b, 0xad, 0xf5, 0x1a, 0x9c, 0x5f, 0xc1, 0x85, 0x03, 0x3f, 0x87, 0x63,
+	0x8e, 0x48, 0x5c, 0x50, 0x0f, 0x01, 0xa5, 0x7f, 0x04, 0xad, 0xd7, 0x2e, 0x76, 0xd2, 0xb4, 0x5c,
+	0xb8, 0x8d, 0x9f, 0xf1, 0xf3, 0xcc, 0x3c, 0x33, 0xb3, 0xb0, 0xcb, 0x13, 0x57, 0x70, 0x12, 0xa7,
+	0xc4, 0x15, 0x38, 0xe1, 0x4c, 0x30, 0xa4, 0xd7, 0xa0, 0xee, 0x1d, 0x9f, 0xf9, 0xac, 0xc0, 0x4d,
+	0x19, 0xa9, 0x5f, 0xba, 0x86, 0xcf, 0x98, 0x1f, 0x52, 0xb3, 0xf8, 0x9a, 0x64, 0xef, 0x4d, 0x2f,
+	0xe3, 0x44, 0x04, 0x2c, 0x2e, 0xf3, 0x40, 0x73, 0xea, 0x96, 0x71, 0x2b, 0x21, 0xd3, 0x90, 0x11,
+	0xaf, 0xfc, 0xdc, 0x16, 0x79, 0xaa, 0xc2, 0xfe, 0x27, 0x0d, 0x5a, 0x07, 0x24, 0x0c, 0x0f, 0x98,
+	0x47, 0x4f, 0x08, 0x27, 0x11, 0x7a, 0x03, 0xfa, 0x31, 0x67, 0xd1, 0xc8, 0xf3, 0x38, 0x4d, 0xd3,
+	0x8e, 0xf6, 0x40, 0x7b, 0xb4, 0x63, 0xed, 0xcf, 0xe6, 0xbd, 0xff, 0xce, 0xe6, 0xbd, 0x3d, 0x3f,
+	0x10, 0xa7, 0xd9, 0x04, 0xbb, 0x2c, 0x32, 0x4f, 0xa7, 0x09, 0xe5, 0x21, 0xf5, 0x7c, 0xca, 0xcd,
+	0x49, 0xc6, 0x39, 0xfb, 0x68, 0xba, 0x7c, 0x9a, 0x08, 0x86, 0x4b, 0xae, 0x5d, 0x17, 0x42, 0x08,
+	0x6e, 0xca, 0x22, 0x9d, 0xff, 0xa5, 0xa0, 0x5d, 0xc4, 0x12, 0x3b, 0x24, 0x82, 0x74, 0x6e, 0x28,
+	0x4c, 0xc6, 0x7d, 0x1f, 0xc0, 0xc9, 0x8f, 0xe2, 0x0f, 0x34, 0x64, 0x09, 0x45, 0x6f, 0x61, 0xab,
+	0x8a, 0x8b, 0x56, 0xf4, 0x61, 0x0b, 0xcb, 0xee, 0x2b, 0xd0, 0xc2, 0x67, 0xf3, 0xde, 0xe3, 0xab,
+	0xbb, 0xaa, 0xff, 0x6f, 0x5f, 0xc8, 0xf5, 0xbf, 0x6b, 0xd0, 0xfe, 0x53, 0x49, 0x99, 0xff, 0x77,
+	0xe5, 0xd0, 0x43, 0xd8, 0x3c, 0x51, 0x5b, 0x28, 0x46, 0xa0, 0x0f, 0x77, 0x70, 0xb5, 0x95, 0x51,
+	0x3c, 0xb5, 0xab, 0x24, 0x7a, 0x0e, 0x9b, 0x4e, 0x10, 0x51, 0x96, 0x89, 0x62, 0x2c, 0xfa, 0xf0,
+	0x1e, 0x56, 0x9b, 0xc6, 0xd5, 0xa6, 0xf1, 0x61, 0xb9, 0x69, 0x6b, 0x4b, 0xae, 0xe5, 0xcb, 0xcf,
+	0x9e, 0x66, 0x57, 0x9c, 0xe1, 0xe7, 0x5b, 0xb0, 0xe5, 0x94, 0x97, 0x83, 0x2c, 0x68, 0x5b, 0x9c,
+	0x11, 0xcf, 0x25, 0xa9, 0x70, 0xf2, 0xf1, 0x34, 0x76, 0xd1, 0x7d, 0x5c, 0xbf, 0xb6, 0x25, 0xff,
+	0xdd, 0x5d, 0x5c, 0x5c, 0x8d, 0x93, 0x1f, 0xe5, 0xd4, 0xcd, 0x64, 0x0d, 0xf4, 0x02, 0x6e, 0xd7,
+	0x34, 0x46, 0xe9, 0xf5, 0x22, 0x3b, 0xc5, 0xc8, 0x6c, 0xea, 0xd2, 0x20, 0x11, 0xe8, 0x25, 0x6c,
+	0x8c, 0x03, 0x3f, 0x76, 0xf2, 0x6b, 0x58, 0x77, 0xd7, 0x64, 0xd1, 0x3e, 0xe8, 0xc7, 0x8c, 0x47,
+	0x59, 0x48, 0x04, 0x75, 0x72, 0xd4, 0x18, 0xdb, 0x7a, 0xd6, 0x00, 0x40, 0xde, 0x75, 0xe9, 0xba,
+	0x7d, 0x41, 0x52, 0xe0, 0x65, 0x46, 0xf7, 0x40, 0x57, 0x49, 0xe5, 0x71, 0x85, 0xd2, 0xb4, 0x65,
+	0xc2, 0x76, 0xa9, 0x1f, 0x44, 0x7f, 0x25, 0xff, 0x4c, 0xc9, 0xcb, 0xbb, 0x97, 0x94, 0x6e, 0xa3,
+	0xf1, 0xc6, 0x13, 0xbc, 0x8c, 0x3d, 0x00, 0x18, 0xd3, 0xd8, 0x5b, 0xb1, 0xa3, 0xc0, 0x35, 0x76,
+	0x54, 0x72, 0xd9, 0x4e, 0x49, 0x69, 0xda, 0x19, 0x00, 0xbc, 0x26, 0x11, 0x5d, 0xd1, 0x57, 0xe0,
+	0x1a, 0x7d, 0x95, 0x5c, 0xd6, 0x2f, 0x29, 0x0d, 0x7d, 0xeb, 0xd5, 0x6c, 0x61, 0x68, 0xdf, 0x16,
+	0x86, 0xf6, 0x63, 0x61, 0x68, 0xbf, 0x16, 0x86, 0xf6, 0xf5, 0xdc, 0xd0, 0x66, 0xe7, 0x86, 0xf6,
+	0xee, 0xc9, 0xd5, 0xaf, 0x89, 0x27, 0xae, 0x59, 0x9b, 0xd4, 0x64, 0xa3, 0x78, 0x05, 0x4f, 0x7f,
+	0x07, 0x00, 0x00, 0xff, 0xff, 0x69, 0x8d, 0x35, 0xa5, 0x35, 0x05, 0x00, 0x00,
 }
 
 func (m *CallCodeParam) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -729,40 +253,50 @@ func (m *CallCodeParam) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *CallCodeParam) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CallCodeParam) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	dAtA[i] = 0xa
-	i++
-	i = encodeVarintRpctransact(dAtA, i, uint64(m.FromAddress.Size()))
-	n1, err := m.FromAddress.MarshalTo(dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n1
-	if len(m.Code) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintRpctransact(dAtA, i, uint64(len(m.Code)))
-		i += copy(dAtA[i:], m.Code)
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
 	if len(m.Data) > 0 {
-		dAtA[i] = 0x1a
-		i++
+		i -= len(m.Data)
+		copy(dAtA[i:], m.Data)
 		i = encodeVarintRpctransact(dAtA, i, uint64(len(m.Data)))
-		i += copy(dAtA[i:], m.Data)
+		i--
+		dAtA[i] = 0x1a
 	}
-	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.Code) > 0 {
+		i -= len(m.Code)
+		copy(dAtA[i:], m.Code)
+		i = encodeVarintRpctransact(dAtA, i, uint64(len(m.Code)))
+		i--
+		dAtA[i] = 0x12
 	}
-	return i, nil
+	{
+		size := m.FromAddress.Size()
+		i -= size
+		if _, err := m.FromAddress.MarshalTo(dAtA[i:]); err != nil {
+			return 0, err
+		}
+		i = encodeVarintRpctransact(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
 }
 
 func (m *TxEnvelope) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -770,30 +304,38 @@ func (m *TxEnvelope) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *TxEnvelope) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *TxEnvelope) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Envelope != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintRpctransact(dAtA, i, uint64(m.Envelope.Size()))
-		n2, err := m.Envelope.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n2
-	}
 	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return i, nil
+	if m.Envelope != nil {
+		{
+			size := m.Envelope.Size()
+			i -= size
+			if _, err := m.Envelope.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+			i = encodeVarintRpctransact(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func (m *TxEnvelopeParam) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
 	if err != nil {
 		return nil, err
 	}
@@ -801,52 +343,64 @@ func (m *TxEnvelopeParam) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *TxEnvelopeParam) MarshalTo(dAtA []byte) (int, error) {
-	var i int
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *TxEnvelopeParam) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
 	_ = i
 	var l int
 	_ = l
-	if m.Envelope != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintRpctransact(dAtA, i, uint64(m.Envelope.Size()))
-		n3, err := m.Envelope.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n3
-	}
-	if m.Payload != nil {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintRpctransact(dAtA, i, uint64(m.Payload.Size()))
-		n4, err := m.Payload.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n4
-	}
-	dAtA[i] = 0x1a
-	i++
-	i = encodeVarintRpctransact(dAtA, i, uint64(github_com_gogo_protobuf_types.SizeOfStdDuration(m.Timeout)))
-	n5, err := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.Timeout, dAtA[i:])
-	if err != nil {
-		return 0, err
-	}
-	i += n5
 	if m.XXX_unrecognized != nil {
-		i += copy(dAtA[i:], m.XXX_unrecognized)
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return i, nil
+	n2, err2 := github_com_gogo_protobuf_types.StdDurationMarshalTo(m.Timeout, dAtA[i-github_com_gogo_protobuf_types.SizeOfStdDuration(m.Timeout):])
+	if err2 != nil {
+		return 0, err2
+	}
+	i -= n2
+	i = encodeVarintRpctransact(dAtA, i, uint64(n2))
+	i--
+	dAtA[i] = 0x1a
+	if m.Payload != nil {
+		{
+			size, err := m.Payload.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintRpctransact(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Envelope != nil {
+		{
+			size := m.Envelope.Size()
+			i -= size
+			if _, err := m.Envelope.MarshalTo(dAtA[i:]); err != nil {
+				return 0, err
+			}
+			i = encodeVarintRpctransact(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
 }
 
 func encodeVarintRpctransact(dAtA []byte, offset int, v uint64) int {
+	offset -= sovRpctransact(v)
+	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return offset + 1
+	return base
 }
 func (m *CallCodeParam) Size() (n int) {
 	if m == nil {
@@ -909,14 +463,7 @@ func (m *TxEnvelopeParam) Size() (n int) {
 }
 
 func sovRpctransact(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozRpctransact(x uint64) (n int) {
 	return sovRpctransact(uint64((x << 1) ^ uint64((int64(x) >> 63))))
@@ -1057,10 +604,7 @@ func (m *CallCodeParam) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthRpctransact
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthRpctransact
 			}
 			if (iNdEx + skippy) > l {
@@ -1147,10 +691,7 @@ func (m *TxEnvelope) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthRpctransact
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthRpctransact
 			}
 			if (iNdEx + skippy) > l {
@@ -1306,10 +847,7 @@ func (m *TxEnvelopeParam) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthRpctransact
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthRpctransact
 			}
 			if (iNdEx + skippy) > l {
@@ -1328,6 +866,7 @@ func (m *TxEnvelopeParam) Unmarshal(dAtA []byte) error {
 func skipRpctransact(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0
+	depth := 0
 	for iNdEx < l {
 		var wire uint64
 		for shift := uint(0); ; shift += 7 {
@@ -1359,10 +898,8 @@ func skipRpctransact(dAtA []byte) (n int, err error) {
 					break
 				}
 			}
-			return iNdEx, nil
 		case 1:
 			iNdEx += 8
-			return iNdEx, nil
 		case 2:
 			var length int
 			for shift := uint(0); ; shift += 7 {
@@ -1383,55 +920,30 @@ func skipRpctransact(dAtA []byte) (n int, err error) {
 				return 0, ErrInvalidLengthRpctransact
 			}
 			iNdEx += length
-			if iNdEx < 0 {
-				return 0, ErrInvalidLengthRpctransact
-			}
-			return iNdEx, nil
 		case 3:
-			for {
-				var innerWire uint64
-				var start int = iNdEx
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return 0, ErrIntOverflowRpctransact
-					}
-					if iNdEx >= l {
-						return 0, io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					innerWire |= (uint64(b) & 0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				innerWireType := int(innerWire & 0x7)
-				if innerWireType == 4 {
-					break
-				}
-				next, err := skipRpctransact(dAtA[start:])
-				if err != nil {
-					return 0, err
-				}
-				iNdEx = start + next
-				if iNdEx < 0 {
-					return 0, ErrInvalidLengthRpctransact
-				}
-			}
-			return iNdEx, nil
+			depth++
 		case 4:
-			return iNdEx, nil
+			if depth == 0 {
+				return 0, ErrUnexpectedEndOfGroupRpctransact
+			}
+			depth--
 		case 5:
 			iNdEx += 4
-			return iNdEx, nil
 		default:
 			return 0, fmt.Errorf("proto: illegal wireType %d", wireType)
 		}
+		if iNdEx < 0 {
+			return 0, ErrInvalidLengthRpctransact
+		}
+		if depth == 0 {
+			return iNdEx, nil
+		}
 	}
-	panic("unreachable")
+	return 0, io.ErrUnexpectedEOF
 }
 
 var (
-	ErrInvalidLengthRpctransact = fmt.Errorf("proto: negative length found during unmarshaling")
-	ErrIntOverflowRpctransact   = fmt.Errorf("proto: integer overflow")
+	ErrInvalidLengthRpctransact        = fmt.Errorf("proto: negative length found during unmarshaling")
+	ErrIntOverflowRpctransact          = fmt.Errorf("proto: integer overflow")
+	ErrUnexpectedEndOfGroupRpctransact = fmt.Errorf("proto: unexpected end of group")
 )

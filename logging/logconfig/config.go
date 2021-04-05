@@ -43,6 +43,16 @@ func New() *LoggingConfig {
 	}
 }
 
+func (lc *LoggingConfig) WithTrace() *LoggingConfig {
+	lc.Trace = true
+	return lc
+}
+
+func (lc *LoggingConfig) None() *LoggingConfig {
+	lc.RootSink = nil
+	return lc
+}
+
 func (lc *LoggingConfig) Root(configure func(sink *SinkConfig) *SinkConfig) *LoggingConfig {
 	lc.RootSink = configure(Sink())
 	return lc
@@ -65,8 +75,16 @@ func (lc *LoggingConfig) JSONString() string {
 	return JSONString(lc)
 }
 
+func (lc *LoggingConfig) MustLogger() *logging.Logger {
+	logger, err := lc.Logger()
+	if err != nil {
+		panic(err)
+	}
+	return logger
+}
+
 // Obtain a logger from this LoggingConfig
-func (lc *LoggingConfig) NewLogger() (*logging.Logger, error) {
+func (lc *LoggingConfig) Logger() (*logging.Logger, error) {
 	outputLogger, errCh, err := newLogger(lc)
 	if err != nil {
 		return nil, err
@@ -101,7 +119,7 @@ func newLogger(loggingConfig *LoggingConfig) (log.Logger, channels.Channel, erro
 		return nil, nil, err
 	}
 	var errCh channels.Channel = channels.NewDeadChannel()
-	var logger log.Logger = loggers.BurrowFormatLogger(outputLogger)
+	var logger log.Logger = loggers.NewBurrowFormatLogger(outputLogger)
 	if loggingConfig.NonBlocking {
 		logger, errCh = loggers.NonBlockingLogger(logger)
 		return logger, errCh, nil

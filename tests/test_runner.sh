@@ -19,13 +19,12 @@ script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 export burrow_bin=${burrow_bin:-burrow}
 export solc_bin=${solc_bin:-solc}
+export solang_bin=${solang_bin:-solang}
 
 # If false we will not try to start Burrow and expect them to be running
 export boot=${boot:-true}
 export debug=${debug:-false}
 export clean=${clean:-true}
-
-export failures="not supplied by test"
 
 export test_exit=0
 
@@ -39,8 +38,8 @@ fi
 # Constants
 
 # Ports etc must match those in burrow.toml
-export BURROW_GRPC_PORT=20997
 export BURROW_HOST=127.0.0.1
+export BURROW_GRPC_PORT=20123
 
 
 export chain_dir="$script_dir/chain"
@@ -69,15 +68,17 @@ test_setup(){
   echo
   echo "Using binaries:"
   echo "  $(type ${solc_bin}) (version: $(${solc_bin} --version))"
+  echo "  $(type ${solang_bin}) (version: $(${solang_bin} --version))"
   echo "  $(type ${burrow_bin}) (version: $(${burrow_bin} --version))"
   echo
   # start test chain
+  BURROW_ADDRESS="$BURROW_HOST:$BURROW_GRPC_PORT"
   if [[ "$boot" = true ]]; then
-    echo "Starting Burrow using GRPC address: $BURROW_HOST:$BURROW_GRPC_PORT..."
+    echo "Starting Burrow using GRPC address: $BURROW_ADDRESS..."
     echo
     rm -rf ${burrow_root}
     pushd "$chain_dir"
-    ${burrow_bin} start -i0 2> "$burrow_log"&
+    ${burrow_bin} start --index 0 --grpc-address $BURROW_ADDRESS 2> "$burrow_log"&
     burrow_pid=$!
     popd
   else
@@ -114,11 +115,6 @@ test_teardown(){
     echo "Tests complete! Tests are Green. :)"
   else
     echo "Tests complete. Tests are Red. :("
-    echo "Failures in:"
-    for failure in "${failures[@]}"
-    do
-      echo "$failure"
-    done
    fi
   exit ${test_exit}
 }

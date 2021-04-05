@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 
+	"github.com/alecthomas/jsonschema"
 	"github.com/hyperledger/burrow/config/source"
 	"github.com/hyperledger/burrow/consensus/tendermint"
 	"github.com/hyperledger/burrow/crypto"
@@ -20,8 +21,8 @@ const DefaultGenesisDocJSONFileName = "genesis.json"
 
 type BurrowConfig struct {
 	// Set on startup
-	Address    *crypto.Address `json:",omitempty" toml:",omitempty"`
-	Passphrase *string         `json:",omitempty" toml:",omitempty"`
+	ValidatorAddress *crypto.Address `json:",omitempty" toml:",omitempty"`
+	Passphrase       *string         `json:",omitempty" toml:",omitempty"`
 	// From config file
 	BurrowDir  string
 	GenesisDoc *genesis.GenesisDoc                `json:",omitempty" toml:",omitempty"`
@@ -31,6 +32,8 @@ type BurrowConfig struct {
 	RPC        *rpc.RPCConfig                     `json:",omitempty" toml:",omitempty"`
 	Logging    *logconfig.LoggingConfig           `json:",omitempty" toml:",omitempty"`
 }
+
+var burrowConfigSchema = jsonschema.Reflect(&BurrowConfig{})
 
 func DefaultBurrowConfig() *BurrowConfig {
 	return &BurrowConfig{
@@ -44,7 +47,7 @@ func DefaultBurrowConfig() *BurrowConfig {
 }
 
 func (conf *BurrowConfig) Verify() error {
-	if conf.Address == nil {
+	if conf.ValidatorAddress == nil {
 		return fmt.Errorf("could not finalise address - please provide one in config or via --account-address")
 	}
 	return nil

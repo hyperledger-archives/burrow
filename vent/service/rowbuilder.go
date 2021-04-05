@@ -2,32 +2,28 @@ package service
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/hyperledger/burrow/execution/evm/abi"
-	"github.com/hyperledger/burrow/execution/exec"
 	"github.com/hyperledger/burrow/logging"
+	"github.com/hyperledger/burrow/vent/chain"
 	"github.com/hyperledger/burrow/vent/sqlsol"
 	"github.com/hyperledger/burrow/vent/types"
 	"github.com/pkg/errors"
+	"github.com/tmthrgd/go-hex"
 )
 
 // buildEventData builds event data from transactions
-func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass, event *exec.Event,
-	txOrigin *exec.Origin, evAbi *abi.EventSpec, logger *logging.Logger) (types.EventDataRow, error) {
+func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass, event chain.Event,
+	txOrigin *chain.Origin, evAbi *abi.EventSpec, logger *logging.Logger) (types.EventDataRow, error) {
 
 	// a fresh new row to store column/value data
 	row := make(map[string]interface{})
 
-	// get header & log data for the given event
-	eventHeader := event.GetHeader()
-	eventLog := event.GetLog()
-
 	// decode event data using the provided abi specification
-	decodedData, err := decodeEvent(eventHeader, eventLog, txOrigin, evAbi)
+	decodedData, err := decodeEvent(event, txOrigin, evAbi)
 	if err != nil {
 		return types.EventDataRow{}, errors.Wrapf(err, "Error decoding event (filter: %s)", eventClass.Filter)
 	}
@@ -50,11 +46,12 @@ func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass,
 		}
 		column, err := projection.GetColumn(eventClass.TableName, fieldMapping.ColumnName)
 		if err == nil {
-			if fieldMapping.BytesToString {
-				if bs, ok := value.(*[]byte); ok {
+			if bs, ok := value.(*[]byte); ok {
+				if fieldMapping.BytesToString {
 					str := sanitiseBytesForString(*bs, logger)
-					row[column.Name] = interface{}(str)
-					continue
+					value = interface{}(str)
+				} else if fieldMapping.BytesToHex {
+					value = hex.EncodeUpperToString(*bs)
 				}
 			}
 			row[column.Name] = value
@@ -66,74 +63,29 @@ func buildEventData(projection *sqlsol.Projection, eventClass *types.EventClass,
 	return types.EventDataRow{Action: rowAction, RowData: row, EventClass: eventClass}, nil
 }
 
-// buildBlkData builds block data from block stream
-func buildBlkData(tbls types.EventTables, block *exec.BlockExecution) (types.EventDataRow, error) {
-	// a fresh new row to store column/value data
-	row := make(map[string]interface{})
-
+func buildBlkData(tbls types.EventTables, block chain.Block) (types.EventDataRow, error) {
 	// block raw data
 	if _, ok := tbls[tables.Block]; ok {
-		blockHeader, err := json.Marshal(block.Header)
+		row, err := block.GetMetadata(columns)
 		if err != nil {
-			return types.EventDataRow{}, fmt.Errorf("could not marshal BlockHeader in block %v", block)
+			return types.EventDataRow{}, err
 		}
-
-		row[columns.Height] = fmt.Sprintf("%v", block.Height)
-		row[columns.BlockHeader] = string(blockHeader)
-	} else {
-		return types.EventDataRow{}, fmt.Errorf("table: %s not found in table structure %v", tables.Block, tbls)
+		return types.EventDataRow{Action: types.ActionUpsert, RowData: row}, nil
 	}
+	return types.EventDataRow{}, fmt.Errorf("table: %s not found in table structure %v", tables.Block, tbls)
 
-	return types.EventDataRow{Action: types.ActionUpsert, RowData: row}, nil
 }
 
 // buildTxData builds transaction data from tx stream
-func buildTxData(txe *exec.TxExecution) (types.EventDataRow, error) {
-	// transaction raw data
-	envelope, err := json.Marshal(txe.Envelope)
+func buildTxData(txe chain.Transaction) (types.EventDataRow, error) {
+	row, err := txe.GetMetadata(columns)
 	if err != nil {
-		return types.EventDataRow{}, fmt.Errorf("couldn't marshal envelope in tx %v: %v", txe, err)
-	}
-
-	events, err := json.Marshal(txe.Events)
-	if err != nil {
-		return types.EventDataRow{}, fmt.Errorf("couldn't marshal events in tx %v: %v", txe, err)
-	}
-
-	result, err := json.Marshal(txe.Result)
-	if err != nil {
-		return types.EventDataRow{}, fmt.Errorf("couldn't marshal result in tx %v: %v", txe, err)
-	}
-
-	receipt, err := json.Marshal(txe.Receipt)
-	if err != nil {
-		return types.EventDataRow{}, fmt.Errorf("couldn't marshal receipt in tx %v: %v", txe, err)
-	}
-
-	exception, err := json.Marshal(txe.Exception)
-	if err != nil {
-		return types.EventDataRow{}, fmt.Errorf("couldn't marshal exception in tx %v: %v", txe, err)
-	}
-
-	origin, err := json.Marshal(txe.Origin)
-	if err != nil {
-		return types.EventDataRow{}, fmt.Errorf("couldn't marshal origin in tx %v: %v", txe, err)
+		return types.EventDataRow{}, fmt.Errorf("could not get transaction metadata: %w", err)
 	}
 
 	return types.EventDataRow{
-		Action: types.ActionUpsert,
-		RowData: map[string]interface{}{
-			columns.Height:    txe.Height,
-			columns.TxHash:    txe.TxHash.String(),
-			columns.TxIndex:   txe.Index,
-			columns.TxType:    txe.TxType.String(),
-			columns.Envelope:  string(envelope),
-			columns.Events:    string(events),
-			columns.Result:    string(result),
-			columns.Receipt:   string(receipt),
-			columns.Origin:    string(origin),
-			columns.Exception: string(exception),
-		},
+		Action:  types.ActionUpsert,
+		RowData: row,
 	}, nil
 }
 

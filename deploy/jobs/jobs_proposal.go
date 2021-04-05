@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/hyperledger/burrow/execution/contexts"
+
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
 	"github.com/hyperledger/burrow/crypto"
@@ -179,7 +181,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playb
 		return "", err
 	}
 	proposal.BatchTx.Inputs = []*payload.TxInput{proposalInput}
-	proposalHash := proposal.Hash()
+	proposalHash := contexts.HashProposal(&proposal)
 
 	var proposalTx *payload.ProposalTx
 	if do.ProposeVerify {
@@ -242,8 +244,7 @@ func ProposalJob(prop *def.Proposal, do *def.DeployArgs, parentScript *def.Playb
 
 	txe, err := client.SignAndBroadcast(proposalTx, logger)
 	if err != nil {
-		var err = util.ChainErrorHandler(proposalTx.Input.Address.String(), err, logger)
-		return "", err
+		return "", fmt.Errorf("error in ProposalJob with proposal %v: %w", prop, err)
 	}
 
 	result := fmt.Sprintf("%X", txe.Receipt.TxHash)

@@ -12,7 +12,7 @@ func TestQueryBuilder(t *testing.T) {
 	qb := NewBuilder()
 	qry, err := qb.Query()
 	require.NoError(t, err)
-	assert.Equal(t, emptyString, qry.String())
+	assert.Equal(t, "", qry.String())
 
 	qb = qb.AndGreaterThanOrEqual("foo.size", 45)
 	qry, err = qb.Query()
@@ -41,12 +41,17 @@ func TestQueryBuilder(t *testing.T) {
 	qry, err = qb.Query()
 	require.NoError(t, err)
 	assert.Equal(t, "foo = 'bar' AND frogs >= 4", qry.String())
+
+	qb = qb.Not()
+	qry, err = qb.Query()
+	require.NoError(t, err)
+	assert.Equal(t, "NOT (foo = 'bar' AND frogs >= 4)", qry.String())
 }
 
 func makeTagMap(keyvals ...interface{}) TagMap {
 	tmap := make(TagMap)
 	for i := 0; i < len(keyvals); i += 2 {
-		tmap[keyvals[i].(string)] = structure.StringifyKey(keyvals[i+1])
+		tmap[keyvals[i].(string)] = structure.Stringify(keyvals[i+1])
 	}
 	return tmap
 }
