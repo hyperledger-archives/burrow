@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/golang/protobuf/proto"
 
@@ -62,11 +63,13 @@ type ForestReader interface {
 // where the global version for the forest is returned.
 
 type MutableForest struct {
-	// A tree containing a reference for all contained trees in the form of prefix -> CommitID
-	commitsTree *RWTree
 	// Much of the implementation of MutableForest is contained in ImmutableForest which is embedded here and used
 	// mutable via its private API. This embedded instance holds a reference to commitsTree above.
-	*ImmutableForest
+	ImmutableForest
+	// A tree containing a reference for all contained trees in the form of prefix -> CommitID. Note: thread-safe.
+	commitsTree *RWTree
+	// Synchronises dirty state
+	sync.RWMutex
 	// Map of prefix -> tree for trees that may require a save (but only will be if they have actually been updated)
 	dirty map[string]*RWTree
 	// List of dirty prefixes in deterministic order so we may loop over them on Save() and obtain a consistent commitTree hash
@@ -75,6 +78,8 @@ type MutableForest struct {
 
 // ImmutableForest contains much of the implementation for MutableForest yet it's external API is immutable
 type ImmutableForest struct {
+	// Synchronises tree loading
+	sync.Mutex
 	// Store of tree prefix -> last commitID (version + hash) - serves as a set of all known trees and provides a global hash
 	commitsTree KVCallbackIterableReader
 	treeDB      dbm.DB
@@ -92,6 +97,11 @@ type ForestOption func(*ImmutableForest)
 
 var WithOverwriting ForestOption = func(imf *ImmutableForest) { imf.overwriting = true }
 
+// Create a new MutableForest against the backing database with tree cache and node caches of size cacheSize.
+//
+// MutableForest is concurrency safe for all reads and writes. Most read operations are designed to be lock-free.
+// Writes are accumulated within a mutable 'head' until MutableForest.Save is called. Read operations bypass the
+// mutable pending state and read from the last good committed state.
 func NewMutableForest(db dbm.DB, cacheSize int) (*MutableForest, error) {
 	// The tree whose state root hash is the global state hash
 	commitsTree, err := NewRWTree(NewPrefixDB(db, commitsPrefix), cacheSize)
@@ -103,7 +113,7 @@ func NewMutableForest(db dbm.DB, cacheSize int) (*MutableForest, error) {
 		return nil, err
 	}
 	return &MutableForest{
-		ImmutableForest: forest,
+		ImmutableForest: *forest,
 		commitsTree:     commitsTree,
 		dirty:           make(map[string]*RWTree),
 	}, nil
@@ -127,12 +137,15 @@ func NewImmutableForest(commitsTree KVCallbackIterableReader, treeDB dbm.DB, cac
 	return imf, nil
 }
 
-// Load mutable forest from database
+// Load mutable forest from database.
 func (muf *MutableForest) Load(version int64) error {
 	return muf.commitsTree.Load(version, true)
 }
 
+// Save accumulated writes into the latest version of the forest.
 func (muf *MutableForest) Save() (hash []byte, version int64, _ error) {
+	muf.Lock()
+	defer muf.Unlock()
 	// Save each tree in forest that requires save
 	for _, prefix := range muf.dirtyPrefixes {
 		tree := muf.dirty[prefix]
@@ -149,6 +162,7 @@ func (muf *MutableForest) Save() (hash []byte, version int64, _ error) {
 	return muf.commitsTree.Save()
 }
 
+// Get an immutable snapshot of tree state at the given previously committed version.
 func (muf *MutableForest) GetImmutable(version int64) (*ImmutableForest, error) {
 	commitsTree, err := muf.commitsTree.GetImmutable(version)
 	if err != nil {
@@ -158,26 +172,40 @@ func (muf *MutableForest) GetImmutable(version int64) (*ImmutableForest, error) 
 	return NewImmutableForest(commitsTree, muf.treeDB, muf.cacheSize)
 }
 
-// Calls to writer should be serialised as should writes to the tree
-func (muf *MutableForest) Writer(prefix []byte) (*RWTree, error) {
+// Get a mutable tree to write to.
+func (muf *MutableForest) Write(prefix []byte, writer func(tree *RWTree) error) error {
+	// Read dirty state
+	muf.RLock()
 	// Try dirty cache first (if tree is new it may only be in this location)
 	prefixString := string(prefix)
-	if tree, ok := muf.dirty[prefixString]; ok {
-		return tree, nil
+	tree, ok := muf.dirty[prefixString]
+	muf.RUnlock()
+	if ok {
+		return writer(tree)
 	}
-	tree, err := muf.tree(prefix)
+	// Write lock on dirty state
+	muf.Lock()
+	defer muf.Unlock()
+	// Check for interleaved writes to dirty
+	tree, ok = muf.dirty[prefixString]
+	if ok {
+		return writer(tree)
+	}
+	// First time we are writing to this tree since last save
+	tree, err := muf.loadOrCreateTree(prefix)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	// Mark tree as dirty
 	muf.dirty[prefixString] = tree
 	muf.dirtyPrefixes = append(muf.dirtyPrefixes, prefixString)
-	return tree, nil
+	return writer(tree)
 }
 
+// Iterate trees in forest
 func (muf *MutableForest) IterateRWTree(start, end []byte, ascending bool, fn func(prefix []byte, tree *RWTree) error) error {
 	return muf.commitsTree.Iterate(start, end, ascending, func(prefix []byte, _ []byte) error {
-		rwt, err := muf.tree(prefix)
+		rwt, err := muf.loadOrCreateTree(prefix)
 		if err != nil {
 			return err
 		}
@@ -185,7 +213,7 @@ func (muf *MutableForest) IterateRWTree(start, end []byte, ascending bool, fn fu
 	})
 }
 
-// Delete a tree - if the tree exists will return the CommitID of the latest saved version
+// Delete a tree from forest. If the tree exists will return the CommitID of the latest saved version.
 func (muf *MutableForest) Delete(prefix []byte) (*CommitID, error) {
 	bs, removed := muf.commitsTree.Delete(prefix)
 	if !removed {
@@ -194,12 +222,12 @@ func (muf *MutableForest) Delete(prefix []byte) (*CommitID, error) {
 	return unmarshalCommitID(bs)
 }
 
-// Get the current global hash for all trees in this forest
+// Get the current global hash for all trees in this forest.
 func (muf *MutableForest) Hash() []byte {
 	return muf.commitsTree.Hash()
 }
 
-// Get the current global version for all versions of all trees in this forest
+// Get the current global version for all versions of all trees in this forest.
 func (muf *MutableForest) Version() int64 {
 	return muf.commitsTree.Version()
 }
@@ -217,20 +245,21 @@ func (muf *MutableForest) setCommit(prefix, hash []byte, version int64) error {
 	if err != nil {
 		return fmt.Errorf("MutableForest.setCommit() could not marshal CommitID: %v", err)
 	}
-	muf.commitsTree.Set([]byte(prefix), bs)
+	muf.commitsTree.Set(prefix, bs)
 	return nil
 }
 
 // ImmutableForest
 
-// Get the tree at prefix for making reads
+// Get the tree at prefix for making reads. Calls to Reader are thread-safe as are reads from the returned tree.
 func (imf *ImmutableForest) Reader(prefix []byte) (KVCallbackIterableReader, error) {
-	return imf.tree(prefix)
+	return imf.loadOrCreateTree(prefix)
 }
 
+// Iterate over the trees in the forest. Thread-safe.
 func (imf *ImmutableForest) Iterate(start, end []byte, ascending bool, fn func(prefix []byte, tree KVCallbackIterableReader) error) error {
 	return imf.commitsTree.Iterate(start, end, ascending, func(prefix []byte, _ []byte) error {
-		rwt, err := imf.tree(prefix)
+		rwt, err := imf.loadOrCreateTree(prefix)
 		if err != nil {
 			return err
 		}
@@ -238,12 +267,15 @@ func (imf *ImmutableForest) Iterate(start, end []byte, ascending bool, fn func(p
 	})
 }
 
+// Dump a text representation of the the forest. Thread-safe.
 func (imf *ImmutableForest) Dump() string {
 	dump := treeprint.New()
-	AddTreePrintTree("Commits", dump, imf.commitsTree)
-	err := imf.Iterate(nil, nil, true, func(prefix []byte, tree KVCallbackIterableReader) error {
-		AddTreePrintTree(string(prefix), dump, tree)
-		return nil
+	err := AddTreePrintTree("Commits", dump, imf.commitsTree)
+	if err != nil {
+		return fmt.Sprintf("Could not dump ImmutableForest: %v", err)
+	}
+	err = imf.Iterate(nil, nil, true, func(prefix []byte, tree KVCallbackIterableReader) error {
+		return AddTreePrintTree(string(prefix), dump, tree)
 	})
 	if err != nil {
 		return fmt.Sprintf("ImmutableForest.Dump(): iteration error: %v", err)
@@ -254,13 +286,39 @@ func (imf *ImmutableForest) Dump() string {
 // Shared implementation - these methods
 
 // Lazy load tree
-func (imf *ImmutableForest) tree(prefix []byte) (*RWTree, error) {
+func (imf *ImmutableForest) loadOrCreateTree(prefix []byte) (*RWTree, error) {
+	const errHeader = "ImmutableForest.loadOrCreateTree():"
 	// Try cache
-	if value, ok := imf.treeCache.Get(string(prefix)); ok {
+	value, ok := imf.treeCache.Get(string(prefix))
+	if ok {
 		return value.(*RWTree), nil
 	}
 	// Not in caches but non-negative version - we should be able to load into memory
-	return imf.loadOrCreateTree(prefix)
+	imf.Lock()
+	defer imf.Unlock()
+	// Check we haven't missed a cache fill
+	value, ok = imf.treeCache.Get(string(prefix))
+	if ok {
+		return value.(*RWTree), nil
+	}
+	tree, err := NewRWTree(NewPrefixDB(imf.treeDB, string(prefix)), imf.cacheSize)
+	if err != nil {
+		return nil, err
+	}
+	commitID, err := imf.commitID(prefix)
+	if err != nil {
+		return nil, fmt.Errorf("%s %v", errHeader, err)
+	}
+	// Load the tree if it has commits
+	if commitID.Version > 0 {
+		err = tree.Load(commitID.Version, imf.overwriting)
+		if err != nil {
+			return nil, fmt.Errorf("%s could not load tree: %v", errHeader, err)
+		}
+	}
+	// Now tree is initialised, add it to the LRU cache
+	imf.treeCache.Add(string(prefix), tree)
+	return tree, nil
 }
 
 func (imf *ImmutableForest) commitID(prefix []byte) (*CommitID, error) {
@@ -273,38 +331,6 @@ func (imf *ImmutableForest) commitID(prefix []byte) (*CommitID, error) {
 		return nil, fmt.Errorf("could not get commitID for prefix %X: %v", prefix, err)
 	}
 	return commitID, nil
-}
-
-func (imf *ImmutableForest) loadOrCreateTree(prefix []byte) (*RWTree, error) {
-	const errHeader = "ImmutableForest.loadOrCreateTree():"
-	tree, err := imf.newTree(prefix)
-	if err != nil {
-		return nil, err
-	}
-	commitID, err := imf.commitID(prefix)
-	if err != nil {
-		return nil, fmt.Errorf("%s %v", errHeader, err)
-	}
-	if commitID.Version == 0 {
-		// This is the first time we have been asked to load this tree
-		return imf.newTree(prefix)
-	}
-	err = tree.Load(commitID.Version, imf.overwriting)
-	if err != nil {
-		return nil, fmt.Errorf("%s could not load tree: %v", errHeader, err)
-	}
-	return tree, nil
-}
-
-// Create a new in-memory IAVL tree
-func (imf *ImmutableForest) newTree(prefix []byte) (*RWTree, error) {
-	p := string(prefix)
-	tree, err := NewRWTree(NewPrefixDB(imf.treeDB, p), imf.cacheSize)
-	if err != nil {
-		return nil, err
-	}
-	imf.treeCache.Add(p, tree)
-	return tree, nil
 }
 
 // CommitID serialisation

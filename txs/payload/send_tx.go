@@ -48,12 +48,11 @@ func (tx *SendTx) AddInputWithSequence(pubkey *crypto.PublicKey, amt uint64, seq
 	return nil
 }
 
-func (tx *SendTx) AddOutput(addr crypto.Address, amt uint64) error {
+func (tx *SendTx) AddOutput(addr crypto.Address, amt uint64) {
 	tx.Outputs = append(tx.Outputs, &TxOutput{
 		Address: addr,
 		Amount:  amt,
 	})
-	return nil
 }
 
 func (tx *SendTx) Any() *Any {

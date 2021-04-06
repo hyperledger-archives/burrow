@@ -45,18 +45,15 @@ func (ws *writeState) AddBlock(be *exec.BlockExecution) error {
 		offset += n
 	}
 
-	tree, err := ws.forest.Writer(keys.Event.Prefix())
-	if err != nil {
-		return err
-	}
-	key := keys.Event.KeyNoPrefix(be.Height)
-	tree.Set(key, buf.Bytes())
-
-	return nil
+	return ws.forest.Write(keys.Event.Prefix(), func(tree *storage.RWTree) error {
+		key := keys.Event.KeyNoPrefix(be.Height)
+		tree.Set(key, buf.Bytes())
+		return nil
+	})
 }
 
 // Iterate SteamEvents over the closed interval [startHeight, endHeight] - i.e. startHeight and endHeight inclusive
-func (s *ReadState) IterateStreamEvents(startHeight, endHeight *uint64, sortOrder storage.SortOrder,
+func (s *ImmutableState) IterateStreamEvents(startHeight, endHeight *uint64, sortOrder storage.SortOrder,
 	consumer func(*exec.StreamEvent) error) error {
 	tree, err := s.Forest.Reader(keys.Event.Prefix())
 	if err != nil {
@@ -91,7 +88,7 @@ func (s *ReadState) IterateStreamEvents(startHeight, endHeight *uint64, sortOrde
 	})
 }
 
-func (s *ReadState) TxsAtHeight(height uint64) ([]*exec.TxExecution, error) {
+func (s *ImmutableState) TxsAtHeight(height uint64) ([]*exec.TxExecution, error) {
 	const errHeader = "TxAtHeight():"
 	var stack exec.TxStack
 	var txExecutions []*exec.TxExecution
@@ -162,7 +159,7 @@ func (s *ReadState) TxByHash(txHash []byte) (*exec.TxExecution, error) {
 }
 
 // Get the last block height we stored in state
-func (s *ReadState) LastStoredHeight() (uint64, error) {
+func (s *ImmutableState) LastStoredHeight() (uint64, error) {
 	var height uint64
 	err := s.IterateStreamEvents(nil, nil, storage.DescendingSort,
 		func(event *exec.StreamEvent) error {

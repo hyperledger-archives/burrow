@@ -70,7 +70,7 @@ func (ds *Dumper) Transmit(sink Sink, startHeight, endHeight uint64, options Opt
 	if endHeight == 0 || endHeight > lastHeight {
 		endHeight = lastHeight
 	}
-	st, err := ds.state.LoadHeight(endHeight)
+	st, err := ds.state.AtHeight(endHeight)
 	if err != nil {
 		return err
 	}
