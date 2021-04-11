@@ -3,6 +3,8 @@ package state
 import (
 	"fmt"
 
+	"github.com/hyperledger/burrow/storage"
+
 	"github.com/hyperledger/burrow/acm"
 	"github.com/hyperledger/burrow/acm/acmstate"
 	"github.com/hyperledger/burrow/binary"
@@ -11,7 +13,7 @@ import (
 )
 
 // Returns nil if account does not exist with given address.
-func (s *ReadState) GetAccount(address crypto.Address) (*acm.Account, error) {
+func (s *ImmutableState) GetAccount(address crypto.Address) (*acm.Account, error) {
 	tree, err := s.Forest.Reader(keys.Account.Prefix())
 	if err != nil {
 		return nil, err
@@ -58,40 +60,36 @@ func (ws *writeState) UpdateAccount(account *acm.Account) error {
 	if err != nil {
 		return fmt.Errorf("UpdateAccount could not encode account: %v", err)
 	}
-	tree, err := ws.forest.Writer(keys.Account.Prefix())
-	if err != nil {
-		return err
-	}
-	updated := tree.Set(keys.Account.KeyNoPrefix(account.Address), bs)
-	if updated {
-		ws.statsAddAccount(account)
-	}
-	return nil
+	return ws.forest.Write(keys.Account.Prefix(), func(tree *storage.RWTree) error {
+		updated := tree.Set(keys.Account.KeyNoPrefix(account.Address), bs)
+		if updated {
+			ws.statsAddAccount(account)
+		}
+		return nil
+	})
 }
 
 func (ws *writeState) RemoveAccount(address crypto.Address) error {
-	tree, err := ws.forest.Writer(keys.Account.Prefix())
-	if err != nil {
-		return err
-	}
-	accBytes, deleted := tree.Delete(keys.Account.KeyNoPrefix(address))
-	if deleted {
-		account := new(acm.Account)
-		err := encoding.Decode(accBytes, account)
-		if err != nil {
-			return err
+	return ws.forest.Write(keys.Account.Prefix(), func(tree *storage.RWTree) error {
+		accBytes, deleted := tree.Delete(keys.Account.KeyNoPrefix(address))
+		if deleted {
+			account := new(acm.Account)
+			err := encoding.Decode(accBytes, account)
+			if err != nil {
+				return err
+			}
+			ws.statsRemoveAccount(account)
+			// Delete storage associated with account too
+			_, err = ws.forest.Delete(keys.Storage.Key(address))
+			if err != nil {
+				return err
+			}
 		}
-		ws.statsRemoveAccount(account)
-		// Delete storage associated with account too
-		_, err = ws.forest.Delete(keys.Storage.Key(address))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+		return nil
+	})
 }
 
-func (s *ReadState) IterateAccounts(consumer func(*acm.Account) error) error {
+func (s *ImmutableState) IterateAccounts(consumer func(*acm.Account) error) error {
 	tree, err := s.Forest.Reader(keys.Account.Prefix())
 	if err != nil {
 		return err
@@ -112,7 +110,7 @@ func (s *State) GetAccountStats() acmstate.AccountStats {
 
 // Storage
 
-func (s *ReadState) GetStorage(address crypto.Address, key binary.Word256) ([]byte, error) {
+func (s *ImmutableState) GetStorage(address crypto.Address, key binary.Word256) ([]byte, error) {
 	keyFormat := keys.Storage.Fix(address)
 	tree, err := s.Forest.Reader(keyFormat.Prefix())
 	if err != nil {
@@ -123,26 +121,24 @@ func (s *ReadState) GetStorage(address crypto.Address, key binary.Word256) ([]by
 
 func (ws *writeState) SetStorage(address crypto.Address, key binary.Word256, value []byte) error {
 	keyFormat := keys.Storage.Fix(address)
-	tree, err := ws.forest.Writer(keyFormat.Prefix())
-	if err != nil {
-		return err
-	}
-	zero := true
-	for _, b := range value {
-		if b != 0 {
-			zero = false
-			break
+	return ws.forest.Write(keyFormat.Prefix(), func(tree *storage.RWTree) error {
+		zero := true
+		for _, b := range value {
+			if b != 0 {
+				zero = false
+				break
+			}
 		}
-	}
-	if zero {
-		tree.Delete(keyFormat.KeyNoPrefix(key))
-	} else {
-		tree.Set(keyFormat.KeyNoPrefix(key), value)
-	}
-	return nil
+		if zero {
+			tree.Delete(keyFormat.KeyNoPrefix(key))
+		} else {
+			tree.Set(keyFormat.KeyNoPrefix(key), value)
+		}
+		return nil
+	})
 }
 
-func (s *ReadState) IterateStorage(address crypto.Address, consumer func(key binary.Word256, value []byte) error) error {
+func (s *ImmutableState) IterateStorage(address crypto.Address, consumer func(key binary.Word256, value []byte) error) error {
 	keyFormat := keys.Storage.Fix(address)
 	tree, err := s.Forest.Reader(keyFormat.Prefix())
 	if err != nil {

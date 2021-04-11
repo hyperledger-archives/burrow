@@ -54,6 +54,7 @@ type ExecutorState interface {
 	proposal.Reader
 	validator.IterableReader
 }
+
 type BatchExecutor interface {
 	// Provides access to write lock for a BatchExecutor so reads can be prevented for the duration of a commit
 	sync.Locker
@@ -284,7 +285,7 @@ func (exe *executor) validateInputsAndStorePublicKeys(txEnv *txs.Envelope) error
 	for s, in := range txEnv.Tx.GetInputs() {
 		err := exe.updateSignatory(txEnv.Signatories[s])
 		if err != nil {
-			return fmt.Errorf("failed to update public key for input %v: %v", in.Address, err)
+			return fmt.Errorf("failed to update public key for input %v: %w", in.Address, err)
 		}
 		acc, err := exe.stateCache.GetAccount(in.Address)
 		if err != nil {

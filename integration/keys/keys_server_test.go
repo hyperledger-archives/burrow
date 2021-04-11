@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/hyperledger/burrow/encoding"
+	"github.com/hyperledger/burrow/testutil"
 
 	"github.com/hyperledger/burrow/crypto"
 
-	"github.com/hyperledger/burrow/integration"
 	"github.com/hyperledger/burrow/keys"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,7 +22,7 @@ type hashInfo struct {
 }
 
 func TestKeysServer(t *testing.T) {
-	testDir, cleanup := integration.EnterTestDirectory()
+	testDir, cleanup := testutil.EnterTestDirectory()
 	defer cleanup()
 	failedCh := make(chan error)
 	server := keys.StandAloneServer(testDir, false)
