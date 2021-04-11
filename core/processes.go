@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/hyperledger/burrow/acm/acmstate"
+
 	"github.com/hyperledger/burrow/bcm"
 	"github.com/hyperledger/burrow/consensus/abci"
 	"github.com/hyperledger/burrow/execution"
@@ -320,7 +322,9 @@ func GRPCLauncher(kern *Kernel, conf *rpc.ServerConfig, keyConfig *keys.KeysConf
 
 			txCodec := txs.NewProtobufCodec()
 			rpctransact.RegisterTransactServer(grpcServer,
-				rpctransact.NewTransactServer(kern.State, kern.Blockchain, kern.Transactor, txCodec, kern.Logger))
+				rpctransact.NewTransactServer(func() (acmstate.Reader, error) {
+					return kern.State.AtLatestVersion()
+				}, kern.Blockchain, kern.Transactor, txCodec, kern.Logger))
 
 			rpcevents.RegisterExecutionEventsServer(grpcServer, rpcevents.NewExecutionEventsServer(kern.State,
 				kern.Emitter, kern.Blockchain, kern.Logger))

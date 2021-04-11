@@ -90,7 +90,7 @@ func (ws *writeState) MakeGenesisValidators(genesisDoc *genesis.GenesisDoc) erro
 	return nil
 }
 
-func (s *ReadState) Power(id crypto.Address) (*big.Int, error) {
+func (s *ImmutableState) Power(id crypto.Address) (*big.Int, error) {
 	tree, err := s.Forest.Reader(keys.Validator.Prefix())
 	if err != nil {
 		return nil, err
@@ -109,7 +109,7 @@ func (s *ReadState) Power(id crypto.Address) (*big.Int, error) {
 	return v.BigPower(), nil
 }
 
-func (s *ReadState) IterateValidators(fn func(id crypto.Addressable, power *big.Int) error) error {
+func (s *ImmutableState) IterateValidators(fn func(id crypto.Addressable, power *big.Int) error) error {
 	tree, err := s.Forest.Reader(keys.Validator.Prefix())
 	if err != nil {
 		return err
@@ -135,19 +135,17 @@ func (ws *writeState) SetPower(id *crypto.PublicKey, power *big.Int) (*big.Int, 
 }
 
 func (ws *writeState) setPower(id *crypto.PublicKey, power *big.Int) error {
-	tree, err := ws.forest.Writer(keys.Validator.Prefix())
-	if err != nil {
-		return err
-	}
-	key := keys.Validator.KeyNoPrefix(id.GetAddress())
-	if power.Sign() == 0 {
-		tree.Delete(key)
+	return ws.forest.Write(keys.Validator.Prefix(), func(tree *storage.RWTree) error {
+		key := keys.Validator.KeyNoPrefix(id.GetAddress())
+		if power.Sign() == 0 {
+			tree.Delete(key)
+			return nil
+		}
+		bs, err := encoding.Encode(validator.New(id, power))
+		if err != nil {
+			return err
+		}
+		tree.Set(key, bs)
 		return nil
-	}
-	bs, err := encoding.Encode(validator.New(id, power))
-	if err != nil {
-		return err
-	}
-	tree.Set(key, bs)
-	return nil
+	})
 }

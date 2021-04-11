@@ -57,7 +57,7 @@ func (n *Node) Close() {
 }
 
 func NewNode(conf *config.Config, privValidator tmTypes.PrivValidator, genesisDoc *tmTypes.GenesisDoc,
-	app *abci.App, metricsProvider node.MetricsProvider, logger *logging.Logger) (*Node, error) {
+	app *abci.App, metricsProvider node.MetricsProvider, logger *logging.Logger, options ...node.Option) (*Node, error) {
 
 	var err error
 	// disable Tendermint's RPC
@@ -77,7 +77,8 @@ func NewNode(conf *config.Config, privValidator tmTypes.PrivValidator, genesisDo
 		nde.DBProvider,
 		metricsProvider,
 		NewLogger(logger.WithPrefix(structure.ComponentKey, structure.Tendermint).
-			With(structure.ScopeKey, "tendermint.NewNode")))
+			With(structure.ScopeKey, "tendermint.NewNode")),
+		options...)
 	if err != nil {
 		return nil, err
 	}

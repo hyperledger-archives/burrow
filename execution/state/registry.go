@@ -28,7 +28,7 @@ func getNode(forest storage.ForestReader, id crypto.Address) (*registry.NodeIden
 
 }
 
-func (s *ReadState) GetNodeByID(id crypto.Address) (*registry.NodeIdentity, error) {
+func (s *ImmutableState) GetNodeByID(id crypto.Address) (*registry.NodeIdentity, error) {
 	return getNode(s.Forest, id)
 }
 
@@ -45,39 +45,33 @@ func (ws *writeState) UpdateNode(id crypto.Address, node *registry.NodeIdentity)
 	if err != nil {
 		return fmt.Errorf("RegisterNode could not encode node: %v", err)
 	}
-	tree, err := ws.forest.Writer(keys.Registry.Prefix())
-	if err != nil {
-		return err
-	}
+	return ws.forest.Write(keys.Registry.Prefix(), func(tree *storage.RWTree) error {
+		prev, err := getNode(ws.forest, id)
+		if err != nil {
+			return err
+		}
 
-	prev, err := getNode(ws.forest, id)
-	if err != nil {
-		return err
-	}
-
-	ws.nodeStats.Remove(prev)
-	ws.nodeStats.Insert(node.GetNetworkAddress(), id)
-	tree.Set(keys.Registry.KeyNoPrefix(id), bs)
-	return nil
+		ws.nodeStats.Remove(prev)
+		ws.nodeStats.Insert(node.GetNetworkAddress(), id)
+		tree.Set(keys.Registry.KeyNoPrefix(id), bs)
+		return nil
+	})
 }
 
 func (ws *writeState) RemoveNode(id crypto.Address) error {
-	tree, err := ws.forest.Writer(keys.Registry.Prefix())
-	if err != nil {
-		return err
-	}
+	return ws.forest.Write(keys.Registry.Prefix(), func(tree *storage.RWTree) error {
+		prev, err := getNode(ws.forest, id)
+		if err != nil {
+			return err
+		}
 
-	prev, err := getNode(ws.forest, id)
-	if err != nil {
-		return err
-	}
-
-	ws.nodeStats.Remove(prev)
-	tree.Delete(keys.Registry.KeyNoPrefix(id))
-	return nil
+		ws.nodeStats.Remove(prev)
+		tree.Delete(keys.Registry.KeyNoPrefix(id))
+		return nil
+	})
 }
 
-func (s *ReadState) IterateNodes(consumer func(crypto.Address, *registry.NodeIdentity) error) error {
+func (s *ImmutableState) IterateNodes(consumer func(crypto.Address, *registry.NodeIdentity) error) error {
 	tree, err := s.Forest.Reader(keys.Registry.Prefix())
 	if err != nil {
 		return err
