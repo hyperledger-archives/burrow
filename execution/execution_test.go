@@ -234,7 +234,7 @@ func TestSendPermission(t *testing.T) {
 	tx = payload.NewSendTx()
 	require.NoError(t, tx.AddInput(exe.stateCache, users[0].GetPublicKey(), 5))
 	require.NoError(t, tx.AddInput(exe.stateCache, users[1].GetPublicKey(), 5))
-	require.NoError(t, tx.AddOutput(users[2].GetAddress(), 10))
+	tx.AddOutput(users[2].GetAddress(), 10)
 	err = exe.signExecuteCommit(tx, users[:2]...)
 	require.Error(t, err)
 }
@@ -1202,6 +1202,11 @@ func TestMerklePanic(t *testing.T) {
 
 	acc0 := getAccount(t, st, privAccounts[0].GetAddress())
 	acc1 := getAccount(t, st, privAccounts[1].GetAddress())
+
+	acc, err := st.GetAccount(acc0.Address)
+
+	require.NoError(t, err)
+	require.NotNil(t, acc)
 
 	// SendTx.
 	{

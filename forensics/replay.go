@@ -231,7 +231,7 @@ func (re *Replay) Commit(height uint64) (*ReplayCapture, error) {
 	return recap, err
 }
 
-func iterComp(exp, act *state.ReadState, tree treeprint.Tree, prefix []byte) (uint, error) {
+func iterComp(exp, act *state.ImmutableState, tree treeprint.Tree, prefix []byte) (uint, error) {
 	reader1, err := exp.Forest.Reader(prefix)
 	if err != nil {
 		return 0, err
@@ -260,11 +260,11 @@ func iterComp(exp, act *state.ReadState, tree treeprint.Tree, prefix []byte) (ui
 
 // CompareStateAtHeight of two replays
 func CompareStateAtHeight(exp, act *state.State, height uint64) error {
-	rs1, err := exp.LoadHeight(height)
+	rs1, err := exp.AtHeight(height)
 	if err != nil {
 		return errors.Wrap(err, "could not load expected state")
 	}
-	rs2, err := act.LoadHeight(height)
+	rs2, err := act.AtHeight(height)
 	if err != nil {
 		return errors.Wrap(err, "could not load actual state")
 	}

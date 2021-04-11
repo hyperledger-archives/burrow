@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
+	"strings"
 )
 
 type codes struct {
@@ -88,4 +90,17 @@ func (es *codes) Get(number uint32) *Code {
 		return nil
 	}
 	return es.codes[number]
+}
+
+func (es *codes) String() string {
+	sb := new(strings.Builder)
+	for _, c := range es.codes {
+		sb.WriteString(strconv.FormatUint(uint64(c.Number), 10))
+		sb.WriteString(": ")
+		sb.WriteString(c.Name)
+		sb.WriteString(" - ")
+		sb.WriteString(c.Description)
+		sb.WriteRune('\n')
+	}
+	return sb.String()
 }

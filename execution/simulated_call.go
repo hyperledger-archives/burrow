@@ -18,7 +18,6 @@ import (
 // Cannot be used to create new contracts
 func CallSim(reader acmstate.Reader, blockchain bcm.BlockchainInfo, fromAddress, address crypto.Address, data []byte,
 	logger *logging.Logger) (*exec.TxExecution, error) {
-
 	cache := acmstate.NewCache(reader)
 	exe := contexts.CallContext{
 		VMS:           vms.NewConnectedVirtualMachines(engine.Options{}),
@@ -29,14 +28,15 @@ func CallSim(reader acmstate.Reader, blockchain bcm.BlockchainInfo, fromAddress,
 		Logger:        logger,
 	}
 
-	txe := exec.NewTxExecution(txs.Enclose(blockchain.ChainID(), &payload.CallTx{
-		Input: &payload.TxInput{
-			Address: fromAddress,
-		},
-		Address:  &address,
-		Data:     data,
-		GasLimit: contexts.GasLimit,
-	}))
+	txe := exec.NewTxExecution(txs.Enclose(blockchain.ChainID(),
+		&payload.CallTx{
+			Input: &payload.TxInput{
+				Address: fromAddress,
+			},
+			Address:  &address,
+			Data:     data,
+			GasLimit: contexts.GasLimit,
+		}))
 
 	// Set height for downstream synchronisation purposes
 	txe.Height = blockchain.LastBlockHeight()

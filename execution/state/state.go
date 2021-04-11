@@ -106,10 +106,15 @@ type writeState struct {
 	nodeStats    registry.NodeStats
 }
 
-type ReadState struct {
+// This is the immutable merklised read state at a given finalised height
+type ImmutableState struct {
 	Forest storage.ForestReader
-	Plain  *storage.PrefixDB
 	validator.History
+}
+
+type ReadState struct {
+	ImmutableState
+	Plain *storage.PrefixDB
 }
 
 // Writers to state are responsible for calling State.Lock() before calling
@@ -133,9 +138,11 @@ func NewState(db dbm.DB) *State {
 	return &State{
 		db: db,
 		ReadState: ReadState{
-			Forest:  forest,
-			Plain:   plain,
-			History: ring,
+			ImmutableState: ImmutableState{
+				Forest:  forest,
+				History: ring,
+			},
+			Plain: plain,
 		},
 		writeState: writeState{
 			forest:    forest,
@@ -247,8 +254,17 @@ func (s *State) Hash() []byte {
 	return s.writeState.forest.Hash()
 }
 
-func (s *State) LoadHeight(height uint64) (*ReadState, error) {
-	version := VersionAtHeight(height)
+func (s *State) AtLatestVersion() (*ImmutableState, error) {
+	return s.AtVersion(s.Version())
+}
+
+// Return a concurrent-safe immutable read state at the given height
+func (s *State) AtHeight(height uint64) (*ImmutableState, error) {
+	return s.AtVersion(VersionAtHeight(height))
+}
+
+// Return a concurrent-safe immutable read state at the given version
+func (s *State) AtVersion(version int64) (*ImmutableState, error) {
 	forest, err := s.writeState.forest.GetImmutable(version)
 	if err != nil {
 		return nil, err
@@ -257,7 +273,7 @@ func (s *State) LoadHeight(height uint64) (*ReadState, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ReadState{
+	return &ImmutableState{
 		Forest:  forest,
 		History: ring,
 	}, nil
@@ -297,13 +313,11 @@ func (s *State) Copy(db dbm.DB) (*State, error) {
 	stateCopy := NewState(db)
 	err := s.writeState.forest.IterateRWTree(nil, nil, true,
 		func(prefix []byte, tree *storage.RWTree) error {
-			treeCopy, err := stateCopy.writeState.forest.Writer(prefix)
-			if err != nil {
-				return err
-			}
-			return tree.IterateWriteTree(nil, nil, true, func(key []byte, value []byte) error {
-				treeCopy.Set(key, value)
-				return nil
+			return stateCopy.writeState.forest.Write(prefix, func(treeCopy *storage.RWTree) error {
+				return tree.IterateWriteTree(nil, nil, true, func(key []byte, value []byte) error {
+					treeCopy.Set(key, value)
+					return nil
+				})
 			})
 		})
 	if err != nil {
