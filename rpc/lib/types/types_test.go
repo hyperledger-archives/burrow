@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,6 +32,14 @@ func TestResponses(t *testing.T) {
 	h, _ := json.Marshal(g)
 	i := `{"jsonrpc":"2.0","id":"2","error":{"code":-32601,"message":"Method Not Found"}}`
 	assert.Equal(i, string(h))
+}
+
+func TestRequests(t *testing.T) {
+	// Make sure empty params omitted
+	req := NewRPCRequest("foo", "NoParamsMethod", nil)
+	bs, err := json.Marshal(req)
+	require.NoError(t, err)
+	require.Equal(t, `{"jsonrpc":"2.0","id":"foo","method":"NoParamsMethod"}`, string(bs))
 }
 
 func TestRPCError(t *testing.T) {
