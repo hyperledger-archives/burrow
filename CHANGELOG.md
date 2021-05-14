@@ -1,4 +1,19 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.32.0] - 2021-05-14
+### Changed
+- [JS] Significant refactor/rewrite of Burrow.js into idiomatic Typescript including some breaking changes to API
+- [JS] Change to use ethers.js for ABI encoding
+
+### Fixed
+- [State] Fixed cache-concurrency bug (https://github.com/hyperledger/burrow/commit/314357e0789b0ec7033a2a419b816d2f1025cad0) and ensured consistency snapshot is used when performing simulated call reads
+- [Web3] Omit empty values from JSONRPC calls
+
+### Added
+- [Tendermint] Added support for passing node options to Tendermint - e.g. custom reactors (thanks @nmanchovski!)
+- [JS] Historic events can now be requested via API
+- [JS] Contract deployments will now include ABIs via contract metadata so Burrow's ABI registry can be used
+
+
 ## [0.31.3] - 2020-03-25
 ### Fixed
 - [Dump] Make load from dump set tx index so BlockAccumulator continuity conditions are met
@@ -732,6 +747,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.32.0]: https://github.com/hyperledger/burrow/compare/v0.31.3...v0.32.0
 [0.31.3]: https://github.com/hyperledger/burrow/compare/v0.31.2...v0.31.3
 [0.31.2]: https://github.com/hyperledger/burrow/compare/v0.31.1...v0.31.2
 [0.31.1]: https://github.com/hyperledger/burrow/compare/v0.31.0...v0.31.1

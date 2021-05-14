@@ -13,12 +13,10 @@ export class AccountPermissions extends jspb.Message {
     clearBase(): void;
     getBase(): BasePermissions | undefined;
     setBase(value?: BasePermissions): AccountPermissions;
-
     clearRolesList(): void;
     getRolesList(): Array<string>;
     setRolesList(value: Array<string>): AccountPermissions;
     addRoles(value: string, index?: number): string;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): AccountPermissions.AsObject;
@@ -44,12 +42,10 @@ export class BasePermissions extends jspb.Message {
     getPerms(): number | undefined;
     setPerms(value: number): BasePermissions;
 
-
     hasSetbit(): boolean;
     clearSetbit(): void;
     getSetbit(): number | undefined;
     setSetbit(value: number): BasePermissions;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): BasePermissions.AsObject;
@@ -75,7 +71,6 @@ export class PermArgs extends jspb.Message {
     getAction(): number | undefined;
     setAction(value: number): PermArgs;
 
-
     hasTarget(): boolean;
     clearTarget(): void;
     getTarget(): Uint8Array | string;
@@ -83,24 +78,20 @@ export class PermArgs extends jspb.Message {
     getTarget_asB64(): string;
     setTarget(value: Uint8Array | string): PermArgs;
 
-
     hasPermission(): boolean;
     clearPermission(): void;
     getPermission(): number | undefined;
     setPermission(value: number): PermArgs;
-
 
     hasRole(): boolean;
     clearRole(): void;
     getRole(): string | undefined;
     setRole(value: string): PermArgs;
 
-
     hasValue(): boolean;
     clearValue(): void;
     getValue(): boolean | undefined;
     setValue(value: boolean): PermArgs;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): PermArgs.AsObject;

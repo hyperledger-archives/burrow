@@ -17,10 +17,8 @@ export class MsgInfo extends jspb.Message {
     clearMsg(): void;
     getMsg(): tendermint_consensus_types_pb.Message | undefined;
     setMsg(value?: tendermint_consensus_types_pb.Message): MsgInfo;
-
     getPeerId(): string;
     setPeerId(value: string): MsgInfo;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): MsgInfo.AsObject;
@@ -45,16 +43,12 @@ export class TimeoutInfo extends jspb.Message {
     clearDuration(): void;
     getDuration(): google_protobuf_duration_pb.Duration | undefined;
     setDuration(value?: google_protobuf_duration_pb.Duration): TimeoutInfo;
-
     getHeight(): number;
     setHeight(value: number): TimeoutInfo;
-
     getRound(): number;
     setRound(value: number): TimeoutInfo;
-
     getStep(): number;
     setStep(value: number): TimeoutInfo;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TimeoutInfo.AsObject;
@@ -79,7 +73,6 @@ export class EndHeight extends jspb.Message {
     getHeight(): number;
     setHeight(value: number): EndHeight;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): EndHeight.AsObject;
     static toObject(includeInstance: boolean, msg: EndHeight): EndHeight.AsObject;
@@ -103,24 +96,20 @@ export class WALMessage extends jspb.Message {
     getEventDataRoundState(): tendermint_types_events_pb.EventDataRoundState | undefined;
     setEventDataRoundState(value?: tendermint_types_events_pb.EventDataRoundState): WALMessage;
 
-
     hasMsgInfo(): boolean;
     clearMsgInfo(): void;
     getMsgInfo(): MsgInfo | undefined;
     setMsgInfo(value?: MsgInfo): WALMessage;
-
 
     hasTimeoutInfo(): boolean;
     clearTimeoutInfo(): void;
     getTimeoutInfo(): TimeoutInfo | undefined;
     setTimeoutInfo(value?: TimeoutInfo): WALMessage;
 
-
     hasEndHeight(): boolean;
     clearEndHeight(): void;
     getEndHeight(): EndHeight | undefined;
     setEndHeight(value?: EndHeight): WALMessage;
-
 
     getSumCase(): WALMessage.SumCase;
 
@@ -144,15 +133,10 @@ export namespace WALMessage {
 
     export enum SumCase {
         SUM_NOT_SET = 0,
-    
-    EVENT_DATA_ROUND_STATE = 1,
-
-    MSG_INFO = 2,
-
-    TIMEOUT_INFO = 3,
-
-    END_HEIGHT = 4,
-
+        EVENT_DATA_ROUND_STATE = 1,
+        MSG_INFO = 2,
+        TIMEOUT_INFO = 3,
+        END_HEIGHT = 4,
     }
 
 }
@@ -164,12 +148,10 @@ export class TimedWALMessage extends jspb.Message {
     getTime(): google_protobuf_timestamp_pb.Timestamp | undefined;
     setTime(value?: google_protobuf_timestamp_pb.Timestamp): TimedWALMessage;
 
-
     hasMsg(): boolean;
     clearMsg(): void;
     getMsg(): WALMessage | undefined;
     setMsg(value?: WALMessage): TimedWALMessage;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TimedWALMessage.AsObject;

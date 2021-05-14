@@ -1,7 +1,9 @@
 import * as assert from 'assert';
-import {burrow, compile} from '../test';
+import { compile } from '../contracts/compile';
+import { burrow } from './test';
 
-describe('#61', function () {it('#61', async () => {
+describe('#61', function () {
+  it('#61', async () => {
     const source = `
       pragma solidity >=0.0.0;
       contract SimpleStorage {
@@ -15,12 +17,10 @@ describe('#61', function () {it('#61', async () => {
               return storedData;
           }
       }
-    `
-    const {abi, code} = compile(source, 'SimpleStorage')
-    return burrow.contracts.deploy(abi, code, null, '88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F')
-      .then((contract: any) => contract.get())
-      .then((value) => {
-        assert.deepStrictEqual(value, ['88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F'])
-      })
-  })
-})
+    `;
+    const contract = compile(source, 'SimpleStorage');
+    const instance = await contract.deploy(burrow, '88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F');
+    const value = await instance.get();
+    assert.deepStrictEqual([...value], ['88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F']);
+  });
+});

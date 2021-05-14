@@ -45,15 +45,12 @@ export namespace PacketPong {
 export class PacketMsg extends jspb.Message { 
     getChannelId(): number;
     setChannelId(value: number): PacketMsg;
-
     getEof(): boolean;
     setEof(value: boolean): PacketMsg;
-
     getData(): Uint8Array | string;
     getData_asU8(): Uint8Array;
     getData_asB64(): string;
     setData(value: Uint8Array | string): PacketMsg;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): PacketMsg.AsObject;
@@ -80,18 +77,15 @@ export class Packet extends jspb.Message {
     getPacketPing(): PacketPing | undefined;
     setPacketPing(value?: PacketPing): Packet;
 
-
     hasPacketPong(): boolean;
     clearPacketPong(): void;
     getPacketPong(): PacketPong | undefined;
     setPacketPong(value?: PacketPong): Packet;
 
-
     hasPacketMsg(): boolean;
     clearPacketMsg(): void;
     getPacketMsg(): PacketMsg | undefined;
     setPacketMsg(value?: PacketMsg): Packet;
-
 
     getSumCase(): Packet.SumCase;
 
@@ -114,13 +108,9 @@ export namespace Packet {
 
     export enum SumCase {
         SUM_NOT_SET = 0,
-    
-    PACKET_PING = 1,
-
-    PACKET_PONG = 2,
-
-    PACKET_MSG = 3,
-
+        PACKET_PING = 1,
+        PACKET_PONG = 2,
+        PACKET_MSG = 3,
     }
 
 }
@@ -131,12 +121,10 @@ export class AuthSigMessage extends jspb.Message {
     clearPubKey(): void;
     getPubKey(): tendermint_crypto_keys_pb.PublicKey | undefined;
     setPubKey(value?: tendermint_crypto_keys_pb.PublicKey): AuthSigMessage;
-
     getSig(): Uint8Array | string;
     getSig_asU8(): Uint8Array;
     getSig_asB64(): string;
     setSig(value: Uint8Array | string): AuthSigMessage;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): AuthSigMessage.AsObject;

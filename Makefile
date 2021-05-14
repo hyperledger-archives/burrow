@@ -84,7 +84,7 @@ TENDERMINT_VERSION?=$(shell go list -m -f '{{ .Version }}' $(TENDERMINT_MOD))
 TENDERMINT_SRC?=$(shell go env GOMODCACHE)/$(TENDERMINT_MOD)@$(TENDERMINT_VERSION)
 TENDERMINT_PROTO?=$(TENDERMINT_SRC)/proto
 
-PROTO_FILES = $(shell find . $(TENDERMINT_PROTO) -path $(BURROW_TS_PATH) -prune -o -path ./node_modules -prune -o -type f -name '*.proto' -print)
+PROTO_FILES = $(shell find . $(TENDERMINT_PROTO) -path $(BURROW_TS_PATH) -prune -o -path '*/node_modules' -prune -o -type f -name '*.proto' -print)
 PROTO_GO_FILES = $(patsubst %.proto, %.pb.go, $(PROTO_FILES))
 PROTO_GO_FILES_REAL = $(shell find . -type f -name '*.pb.go' -print)
 PROTO_TS_FILES = $(patsubst %.proto, %.pb.ts, $(PROTO_FILES))
@@ -97,14 +97,15 @@ protobuf: $(PROTO_GO_FILES) $(PROTO_TS_FILES) fix
 %.pb.go: %.proto
 	protoc -I ./protobuf -I $(TENDERMINT_PROTO) $< --gogo_out=${GOPATH}/src --go-grpc_out=${GOPATH}/src
 
+# Note: we are not actually building any of the target .pb.ts files here, but nevermind
 # Using this: https://github.com/agreatfool/grpc_tools_node_protoc_ts
 %.pb.ts: %.proto
 	mkdir -p $(PROTO_GEN_TS_PATH)
 	$(NODE_BIN)/grpc_tools_node_protoc -I protobuf -I $(TENDERMINT_PROTO) \
 		--plugin="protoc-gen-ts=$(NODE_BIN)/protoc-gen-ts" \
 		--js_out="import_style=commonjs,binary:${PROTO_GEN_TS_PATH}" \
-		--ts_out="generate_package_definition:${PROTO_GEN_TS_PATH}" \
-		--grpc_out="generate_package_definition:${PROTO_GEN_TS_PATH}" \
+		--ts_out="grpc_js:${PROTO_GEN_TS_PATH}" \
+		--grpc_out="grpc_js:${PROTO_GEN_TS_PATH}" \
 		$<
 
 .PHONY: protobuf_deps

@@ -1,6 +1,7 @@
 // GENERATED CODE -- DO NOT EDIT!
 
 'use strict';
+var grpc = require('@grpc/grpc-js');
 var rpcdump_pb = require('./rpcdump_pb.js');
 var gogoproto_gogo_pb = require('./gogoproto/gogo_pb.js');
 var dump_pb = require('./dump_pb.js');
@@ -28,7 +29,7 @@ function deserialize_rpcdump_GetDumpParam(buffer_arg) {
 }
 
 
-var DumpService = exports['rpcdump.Dump'] = {
+var DumpService = exports.DumpService = {
   getDump: {
     path: '/rpcdump.Dump/GetDump',
     requestStream: false,
@@ -42,3 +43,4 @@ var DumpService = exports['rpcdump.Dump'] = {
   },
 };
 
+exports.DumpClient = grpc.makeGenericClientConstructor(DumpService);

@@ -1,9 +1,10 @@
 import * as assert from 'assert';
-import {burrow, compile} from '../test';
+import { compile } from '../contracts/compile';
+import { burrow } from './test';
 
-describe.skip('Really Long Loop', function () {
-  let contract
-  this.timeout(1000000)
+describe('Really Long Loop', function () {
+  let instance: any;
+  this.timeout(1000000);
 
   before(async () => {
     const source = `
@@ -14,7 +15,7 @@ describe.skip('Really Long Loop', function () {
             return sub.getString();
           }
         }
-        contract c {
+      contract c {
         string s = "secret";
         uint n = 0;
         function getString() public returns (string memory){
@@ -24,19 +25,29 @@ describe.skip('Really Long Loop', function () {
           return s;
         }
       }
-    `
+    `;
 
-    const {abi, code} = compile(source, 'main')
-    const c = await burrow.contracts.deploy(abi, code.bytecode);
-    contract = c;
-  })
+    const contract = compile(source, 'main');
+    instance = await contract.deployWith(burrow, {
+      middleware: (callTx) => {
+        // Normal gas for deploy (when address === '')
+        if (callTx.getAddress()) {
+          // Hardly any for call
+          callTx.setGaslimit(11);
+        }
+        return callTx;
+      },
+    });
+  });
 
   it('It catches a revert when gas runs out', async () => {
-    return contract.test()
-      .then((str) => {
-        throw new Error('Did not catch revert error')
-      }).catch((err) => {
-        assert.strictEqual(err.message, 'ERR_EXECUTION_REVERT')
+    await instance
+      .test()
+      .then((str: string) => {
+        throw new Error('Did not catch revert error');
       })
-  })
-})
+      .catch((err: Error) => {
+        assert.match(err.message, /Error 5: insufficient gas/);
+      });
+  });
+});

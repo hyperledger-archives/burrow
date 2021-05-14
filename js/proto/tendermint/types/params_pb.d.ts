@@ -15,24 +15,20 @@ export class ConsensusParams extends jspb.Message {
     getBlock(): BlockParams | undefined;
     setBlock(value?: BlockParams): ConsensusParams;
 
-
     hasEvidence(): boolean;
     clearEvidence(): void;
     getEvidence(): EvidenceParams | undefined;
     setEvidence(value?: EvidenceParams): ConsensusParams;
-
 
     hasValidator(): boolean;
     clearValidator(): void;
     getValidator(): ValidatorParams | undefined;
     setValidator(value?: ValidatorParams): ConsensusParams;
 
-
     hasVersion(): boolean;
     clearVersion(): void;
     getVersion(): VersionParams | undefined;
     setVersion(value?: VersionParams): ConsensusParams;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ConsensusParams.AsObject;
@@ -56,13 +52,10 @@ export namespace ConsensusParams {
 export class BlockParams extends jspb.Message { 
     getMaxBytes(): number;
     setMaxBytes(value: number): BlockParams;
-
     getMaxGas(): number;
     setMaxGas(value: number): BlockParams;
-
     getTimeIotaMs(): number;
     setTimeIotaMs(value: number): BlockParams;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): BlockParams.AsObject;
@@ -86,15 +79,12 @@ export class EvidenceParams extends jspb.Message {
     getMaxAgeNumBlocks(): number;
     setMaxAgeNumBlocks(value: number): EvidenceParams;
 
-
     hasMaxAgeDuration(): boolean;
     clearMaxAgeDuration(): void;
     getMaxAgeDuration(): google_protobuf_duration_pb.Duration | undefined;
     setMaxAgeDuration(value?: google_protobuf_duration_pb.Duration): EvidenceParams;
-
     getMaxBytes(): number;
     setMaxBytes(value: number): EvidenceParams;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): EvidenceParams.AsObject;
@@ -120,7 +110,6 @@ export class ValidatorParams extends jspb.Message {
     setPubKeyTypesList(value: Array<string>): ValidatorParams;
     addPubKeyTypes(value: string, index?: number): string;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ValidatorParams.AsObject;
     static toObject(includeInstance: boolean, msg: ValidatorParams): ValidatorParams.AsObject;
@@ -141,7 +130,6 @@ export class VersionParams extends jspb.Message {
     getAppVersion(): number;
     setAppVersion(value: number): VersionParams;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): VersionParams.AsObject;
     static toObject(includeInstance: boolean, msg: VersionParams): VersionParams.AsObject;
@@ -161,10 +149,8 @@ export namespace VersionParams {
 export class HashedParams extends jspb.Message { 
     getBlockMaxBytes(): number;
     setBlockMaxBytes(value: number): HashedParams;
-
     getBlockMaxGas(): number;
     setBlockMaxGas(value: number): HashedParams;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): HashedParams.AsObject;

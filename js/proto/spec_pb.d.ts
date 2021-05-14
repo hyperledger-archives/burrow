@@ -12,38 +12,31 @@ import * as balance_pb from "./balance_pb";
 export class TemplateAccount extends jspb.Message { 
     getName(): string;
     setName(value: string): TemplateAccount;
-
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
     setAddress(value: Uint8Array | string): TemplateAccount;
 
-
     hasPublickey(): boolean;
     clearPublickey(): void;
     getPublickey(): crypto_pb.PublicKey | undefined;
     setPublickey(value?: crypto_pb.PublicKey): TemplateAccount;
-
     clearAmountsList(): void;
     getAmountsList(): Array<balance_pb.Balance>;
     setAmountsList(value: Array<balance_pb.Balance>): TemplateAccount;
     addAmounts(value?: balance_pb.Balance, index?: number): balance_pb.Balance;
-
     clearPermissionsList(): void;
     getPermissionsList(): Array<string>;
     setPermissionsList(value: Array<string>): TemplateAccount;
     addPermissions(value: string, index?: number): string;
-
     clearRolesList(): void;
     getRolesList(): Array<string>;
     setRolesList(value: Array<string>): TemplateAccount;
     addRoles(value: string, index?: number): string;
-
     getCode(): Uint8Array | string;
     getCode_asU8(): Uint8Array;
     getCode_asB64(): string;
     setCode(value: Uint8Array | string): TemplateAccount;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TemplateAccount.AsObject;

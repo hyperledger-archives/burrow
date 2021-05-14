@@ -12,10 +12,8 @@ import * as gogoproto_gogo_pb from "../../gogoproto/gogo_pb";
 export class RemoteSignerError extends jspb.Message { 
     getCode(): number;
     setCode(value: number): RemoteSignerError;
-
     getDescription(): string;
     setDescription(value: string): RemoteSignerError;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RemoteSignerError.AsObject;
@@ -37,7 +35,6 @@ export namespace RemoteSignerError {
 export class PubKeyRequest extends jspb.Message { 
     getChainId(): string;
     setChainId(value: string): PubKeyRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): PubKeyRequest.AsObject;
@@ -62,12 +59,10 @@ export class PubKeyResponse extends jspb.Message {
     getPubKey(): tendermint_crypto_keys_pb.PublicKey | undefined;
     setPubKey(value?: tendermint_crypto_keys_pb.PublicKey): PubKeyResponse;
 
-
     hasError(): boolean;
     clearError(): void;
     getError(): RemoteSignerError | undefined;
     setError(value?: RemoteSignerError): PubKeyResponse;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): PubKeyResponse.AsObject;
@@ -92,10 +87,8 @@ export class SignVoteRequest extends jspb.Message {
     clearVote(): void;
     getVote(): tendermint_types_types_pb.Vote | undefined;
     setVote(value?: tendermint_types_types_pb.Vote): SignVoteRequest;
-
     getChainId(): string;
     setChainId(value: string): SignVoteRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): SignVoteRequest.AsObject;
@@ -121,12 +114,10 @@ export class SignedVoteResponse extends jspb.Message {
     getVote(): tendermint_types_types_pb.Vote | undefined;
     setVote(value?: tendermint_types_types_pb.Vote): SignedVoteResponse;
 
-
     hasError(): boolean;
     clearError(): void;
     getError(): RemoteSignerError | undefined;
     setError(value?: RemoteSignerError): SignedVoteResponse;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): SignedVoteResponse.AsObject;
@@ -151,10 +142,8 @@ export class SignProposalRequest extends jspb.Message {
     clearProposal(): void;
     getProposal(): tendermint_types_types_pb.Proposal | undefined;
     setProposal(value?: tendermint_types_types_pb.Proposal): SignProposalRequest;
-
     getChainId(): string;
     setChainId(value: string): SignProposalRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): SignProposalRequest.AsObject;
@@ -180,12 +169,10 @@ export class SignedProposalResponse extends jspb.Message {
     getProposal(): tendermint_types_types_pb.Proposal | undefined;
     setProposal(value?: tendermint_types_types_pb.Proposal): SignedProposalResponse;
 
-
     hasError(): boolean;
     clearError(): void;
     getError(): RemoteSignerError | undefined;
     setError(value?: RemoteSignerError): SignedProposalResponse;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): SignedProposalResponse.AsObject;
@@ -245,48 +232,40 @@ export class Message extends jspb.Message {
     getPubKeyRequest(): PubKeyRequest | undefined;
     setPubKeyRequest(value?: PubKeyRequest): Message;
 
-
     hasPubKeyResponse(): boolean;
     clearPubKeyResponse(): void;
     getPubKeyResponse(): PubKeyResponse | undefined;
     setPubKeyResponse(value?: PubKeyResponse): Message;
-
 
     hasSignVoteRequest(): boolean;
     clearSignVoteRequest(): void;
     getSignVoteRequest(): SignVoteRequest | undefined;
     setSignVoteRequest(value?: SignVoteRequest): Message;
 
-
     hasSignedVoteResponse(): boolean;
     clearSignedVoteResponse(): void;
     getSignedVoteResponse(): SignedVoteResponse | undefined;
     setSignedVoteResponse(value?: SignedVoteResponse): Message;
-
 
     hasSignProposalRequest(): boolean;
     clearSignProposalRequest(): void;
     getSignProposalRequest(): SignProposalRequest | undefined;
     setSignProposalRequest(value?: SignProposalRequest): Message;
 
-
     hasSignedProposalResponse(): boolean;
     clearSignedProposalResponse(): void;
     getSignedProposalResponse(): SignedProposalResponse | undefined;
     setSignedProposalResponse(value?: SignedProposalResponse): Message;
-
 
     hasPingRequest(): boolean;
     clearPingRequest(): void;
     getPingRequest(): PingRequest | undefined;
     setPingRequest(value?: PingRequest): Message;
 
-
     hasPingResponse(): boolean;
     clearPingResponse(): void;
     getPingResponse(): PingResponse | undefined;
     setPingResponse(value?: PingResponse): Message;
-
 
     getSumCase(): Message.SumCase;
 
@@ -314,23 +293,14 @@ export namespace Message {
 
     export enum SumCase {
         SUM_NOT_SET = 0,
-    
-    PUB_KEY_REQUEST = 1,
-
-    PUB_KEY_RESPONSE = 2,
-
-    SIGN_VOTE_REQUEST = 3,
-
-    SIGNED_VOTE_RESPONSE = 4,
-
-    SIGN_PROPOSAL_REQUEST = 5,
-
-    SIGNED_PROPOSAL_RESPONSE = 6,
-
-    PING_REQUEST = 7,
-
-    PING_RESPONSE = 8,
-
+        PUB_KEY_REQUEST = 1,
+        PUB_KEY_RESPONSE = 2,
+        SIGN_VOTE_REQUEST = 3,
+        SIGNED_VOTE_RESPONSE = 4,
+        SIGN_PROPOSAL_REQUEST = 5,
+        SIGNED_PROPOSAL_RESPONSE = 6,
+        PING_REQUEST = 7,
+        PING_RESPONSE = 8,
     }
 
 }

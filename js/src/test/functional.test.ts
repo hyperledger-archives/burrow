@@ -1,8 +1,10 @@
 import * as assert from 'assert';
-import {burrow, compile} from '../test';
-import { Contract } from '..';
+import { compile } from '../contracts/compile';
+import { getMetadata } from '../contracts/contract';
+import { burrow } from './test';
 
-describe('Functional Contract Usage', function () {it('#Constructor usage', async () => {
+describe('Functional Contract Usage', function () {
+  it('#Constructor usage', async () => {
     const source = `
       pragma solidity >=0.0.0;
       contract Test {
@@ -28,33 +30,39 @@ describe('Functional Contract Usage', function () {it('#Constructor usage', asyn
         }
 
       }
-    `
-    const {abi, code} = compile(source, 'Test')
-    const contract: any = new Contract(abi, code, null, burrow)
+    `;
+    const contract = compile(source, 'Test');
 
-    let A1
-    let A2
+    const [instance1, instance2] = await Promise.all([
+      contract.deploy(burrow, '88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F'),
+      contract.deploy(burrow, 'ABCDEFABCDEFABCDEFABCDEFABCDEFABCDEF0123'),
+    ]);
 
-    assert.strictEqual(contract.address, null)
+    const address1 = getMetadata(instance1).address;
+    const address2 = getMetadata(instance2).address;
 
-    // Use the _contructor method to creat two contracts
-    return Promise.all(
-      [contract._constructor('88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F'),
-        contract._constructor('ABCDEFABCDEFABCDEFABCDEFABCDEFABCDEF0123')])
-      .then(([address1, address2]) => {
-        assert.strictEqual(contract.address, null)
-        A1 = address1
-        A2 = address2
+    const [ret1, ret2] = await Promise.all([
+      instance1.getCombination.at(address1)(),
+      instance1.getCombination.at(address2)(),
+    ]);
 
-        return Promise.all(
-          [contract.getCombination.at(A1),
-            contract.getCombination.at(A2)])
-      })
-      .then(([object1, object2]) => {
-        const expected1 = [100, A1, 'hello moto', '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE', '88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F']
-        const expected2 = [100, A2, 'hello moto', '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE', 'ABCDEFABCDEFABCDEFABCDEFABCDEFABCDEF0123']
-        assert.deepEqual(object1, expected1)
-        assert.deepEqual(object2, expected2)
-      })
-  })
-})
+    const expected1 = [
+      100,
+      address1,
+      'hello moto',
+      '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE',
+      '88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F',
+    ];
+    const expected2 = [
+      100,
+      address2,
+      'hello moto',
+      '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE',
+      'ABCDEFABCDEFABCDEFABCDEFABCDEFABCDEF0123',
+    ];
+    assert.deepStrictEqual([...ret1], expected1);
+    assert.deepStrictEqual([...ret2], expected2);
+    // Check we are assigning names to hybrid record/array Result object
+    assert.strictEqual(ret2._saying, 'hello moto');
+  });
+});

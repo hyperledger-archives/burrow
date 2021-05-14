@@ -12,7 +12,6 @@ export class ListRequest extends jspb.Message {
     getKeyname(): string;
     setKeyname(value: string): ListRequest;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ListRequest.AsObject;
     static toObject(includeInstance: boolean, msg: ListRequest): ListRequest.AsObject;
@@ -84,7 +83,6 @@ export class RemoveNameRequest extends jspb.Message {
     getKeyname(): string;
     setKeyname(value: string): RemoveNameRequest;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RemoveNameRequest.AsObject;
     static toObject(includeInstance: boolean, msg: RemoveNameRequest): RemoveNameRequest.AsObject;
@@ -104,13 +102,10 @@ export namespace RemoveNameRequest {
 export class GenRequest extends jspb.Message { 
     getPassphrase(): string;
     setPassphrase(value: string): GenRequest;
-
     getCurvetype(): string;
     setCurvetype(value: string): GenRequest;
-
     getKeyname(): string;
     setKeyname(value: string): GenRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): GenRequest.AsObject;
@@ -134,7 +129,6 @@ export class GenResponse extends jspb.Message {
     getAddress(): string;
     setAddress(value: string): GenResponse;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): GenResponse.AsObject;
     static toObject(includeInstance: boolean, msg: GenResponse): GenResponse.AsObject;
@@ -154,10 +148,8 @@ export namespace GenResponse {
 export class PubRequest extends jspb.Message { 
     getAddress(): string;
     setAddress(value: string): PubRequest;
-
     getName(): string;
     setName(value: string): PubRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): PubRequest.AsObject;
@@ -181,10 +173,8 @@ export class PubResponse extends jspb.Message {
     getPublickey_asU8(): Uint8Array;
     getPublickey_asB64(): string;
     setPublickey(value: Uint8Array | string): PubResponse;
-
     getCurvetype(): string;
     setCurvetype(value: string): PubResponse;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): PubResponse.AsObject;
@@ -206,10 +196,8 @@ export namespace PubResponse {
 export class ImportJSONRequest extends jspb.Message { 
     getPassphrase(): string;
     setPassphrase(value: string): ImportJSONRequest;
-
     getJson(): string;
     setJson(value: string): ImportJSONRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ImportJSONRequest.AsObject;
@@ -232,7 +220,6 @@ export class ImportResponse extends jspb.Message {
     getAddress(): string;
     setAddress(value: string): ImportResponse;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ImportResponse.AsObject;
     static toObject(includeInstance: boolean, msg: ImportResponse): ImportResponse.AsObject;
@@ -252,18 +239,14 @@ export namespace ImportResponse {
 export class ImportRequest extends jspb.Message { 
     getPassphrase(): string;
     setPassphrase(value: string): ImportRequest;
-
     getName(): string;
     setName(value: string): ImportRequest;
-
     getCurvetype(): string;
     setCurvetype(value: string): ImportRequest;
-
     getKeybytes(): Uint8Array | string;
     getKeybytes_asU8(): Uint8Array;
     getKeybytes_asB64(): string;
     setKeybytes(value: Uint8Array | string): ImportRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ImportRequest.AsObject;
@@ -287,13 +270,10 @@ export namespace ImportRequest {
 export class ExportRequest extends jspb.Message { 
     getPassphrase(): string;
     setPassphrase(value: string): ExportRequest;
-
     getName(): string;
     setName(value: string): ExportRequest;
-
     getAddress(): string;
     setAddress(value: string): ExportRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ExportRequest.AsObject;
@@ -318,20 +298,16 @@ export class ExportResponse extends jspb.Message {
     getPublickey_asU8(): Uint8Array;
     getPublickey_asB64(): string;
     setPublickey(value: Uint8Array | string): ExportResponse;
-
     getPrivatekey(): Uint8Array | string;
     getPrivatekey_asU8(): Uint8Array;
     getPrivatekey_asB64(): string;
     setPrivatekey(value: Uint8Array | string): ExportResponse;
-
     getAddress(): Uint8Array | string;
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
     setAddress(value: Uint8Array | string): ExportResponse;
-
     getCurvetype(): string;
     setCurvetype(value: string): ExportResponse;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ExportResponse.AsObject;
@@ -355,18 +331,14 @@ export namespace ExportResponse {
 export class SignRequest extends jspb.Message { 
     getPassphrase(): string;
     setPassphrase(value: string): SignRequest;
-
     getAddress(): string;
     setAddress(value: string): SignRequest;
-
     getName(): string;
     setName(value: string): SignRequest;
-
     getMessage(): Uint8Array | string;
     getMessage_asU8(): Uint8Array;
     getMessage_asB64(): string;
     setMessage(value: Uint8Array | string): SignRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): SignRequest.AsObject;
@@ -394,7 +366,6 @@ export class SignResponse extends jspb.Message {
     getSignature(): crypto_pb.Signature | undefined;
     setSignature(value?: crypto_pb.Signature): SignResponse;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): SignResponse.AsObject;
     static toObject(includeInstance: boolean, msg: SignResponse): SignResponse.AsObject;
@@ -416,18 +387,15 @@ export class VerifyRequest extends jspb.Message {
     getPublickey_asU8(): Uint8Array;
     getPublickey_asB64(): string;
     setPublickey(value: Uint8Array | string): VerifyRequest;
-
     getMessage(): Uint8Array | string;
     getMessage_asU8(): Uint8Array;
     getMessage_asB64(): string;
     setMessage(value: Uint8Array | string): VerifyRequest;
 
-
     hasSignature(): boolean;
     clearSignature(): void;
     getSignature(): crypto_pb.Signature | undefined;
     setSignature(value?: crypto_pb.Signature): VerifyRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): VerifyRequest.AsObject;
@@ -450,12 +418,10 @@ export namespace VerifyRequest {
 export class HashRequest extends jspb.Message { 
     getHashtype(): string;
     setHashtype(value: string): HashRequest;
-
     getMessage(): Uint8Array | string;
     getMessage_asU8(): Uint8Array;
     getMessage_asB64(): string;
     setMessage(value: Uint8Array | string): HashRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): HashRequest.AsObject;
@@ -478,7 +444,6 @@ export class HashResponse extends jspb.Message {
     getHash(): string;
     setHash(value: string): HashResponse;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): HashResponse.AsObject;
     static toObject(includeInstance: boolean, msg: HashResponse): HashResponse.AsObject;
@@ -498,12 +463,10 @@ export namespace HashResponse {
 export class KeyID extends jspb.Message { 
     getAddress(): string;
     setAddress(value: string): KeyID;
-
     clearKeynameList(): void;
     getKeynameList(): Array<string>;
     setKeynameList(value: Array<string>): KeyID;
     addKeyname(value: string, index?: number): string;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): KeyID.AsObject;
@@ -528,7 +491,6 @@ export class ListResponse extends jspb.Message {
     setKeyList(value: Array<KeyID>): ListResponse;
     addKey(value?: KeyID, index?: number): KeyID;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ListResponse.AsObject;
     static toObject(includeInstance: boolean, msg: ListResponse): ListResponse.AsObject;
@@ -548,10 +510,8 @@ export namespace ListResponse {
 export class AddNameRequest extends jspb.Message { 
     getKeyname(): string;
     setKeyname(value: string): AddNameRequest;
-
     getAddress(): string;
     setAddress(value: string): AddNameRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): AddNameRequest.AsObject;

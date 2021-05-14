@@ -11,7 +11,6 @@ export class BlockRequest extends jspb.Message {
     getHeight(): number;
     setHeight(value: number): BlockRequest;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): BlockRequest.AsObject;
     static toObject(includeInstance: boolean, msg: BlockRequest): BlockRequest.AsObject;
@@ -31,7 +30,6 @@ export namespace BlockRequest {
 export class NoBlockResponse extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): NoBlockResponse;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): NoBlockResponse.AsObject;
@@ -55,7 +53,6 @@ export class BlockResponse extends jspb.Message {
     clearBlock(): void;
     getBlock(): tendermint_types_block_pb.Block | undefined;
     setBlock(value?: tendermint_types_block_pb.Block): BlockResponse;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): BlockResponse.AsObject;
@@ -93,10 +90,8 @@ export namespace StatusRequest {
 export class StatusResponse extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): StatusResponse;
-
     getBase(): number;
     setBase(value: number): StatusResponse;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): StatusResponse.AsObject;
@@ -122,30 +117,25 @@ export class Message extends jspb.Message {
     getBlockRequest(): BlockRequest | undefined;
     setBlockRequest(value?: BlockRequest): Message;
 
-
     hasNoBlockResponse(): boolean;
     clearNoBlockResponse(): void;
     getNoBlockResponse(): NoBlockResponse | undefined;
     setNoBlockResponse(value?: NoBlockResponse): Message;
-
 
     hasBlockResponse(): boolean;
     clearBlockResponse(): void;
     getBlockResponse(): BlockResponse | undefined;
     setBlockResponse(value?: BlockResponse): Message;
 
-
     hasStatusRequest(): boolean;
     clearStatusRequest(): void;
     getStatusRequest(): StatusRequest | undefined;
     setStatusRequest(value?: StatusRequest): Message;
 
-
     hasStatusResponse(): boolean;
     clearStatusResponse(): void;
     getStatusResponse(): StatusResponse | undefined;
     setStatusResponse(value?: StatusResponse): Message;
-
 
     getSumCase(): Message.SumCase;
 
@@ -170,17 +160,11 @@ export namespace Message {
 
     export enum SumCase {
         SUM_NOT_SET = 0,
-    
-    BLOCK_REQUEST = 1,
-
-    NO_BLOCK_RESPONSE = 2,
-
-    BLOCK_RESPONSE = 3,
-
-    STATUS_REQUEST = 4,
-
-    STATUS_RESPONSE = 5,
-
+        BLOCK_REQUEST = 1,
+        NO_BLOCK_RESPONSE = 2,
+        BLOCK_RESPONSE = 3,
+        STATUS_REQUEST = 4,
+        STATUS_RESPONSE = 5,
     }
 
 }

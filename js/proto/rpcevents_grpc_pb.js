@@ -1,6 +1,7 @@
 // GENERATED CODE -- DO NOT EDIT!
 
 'use strict';
+var grpc = require('@grpc/grpc-js');
 var rpcevents_pb = require('./rpcevents_pb.js');
 var gogoproto_gogo_pb = require('./gogoproto/gogo_pb.js');
 var exec_pb = require('./exec_pb.js');
@@ -63,7 +64,7 @@ function deserialize_rpcevents_TxRequest(buffer_arg) {
 
 // --------------------------------------------------
 // Execution events
-var ExecutionEventsService = exports['rpcevents.ExecutionEvents'] = {
+var ExecutionEventsService = exports.ExecutionEventsService = {
   // Get StreamEvents (including transactions) for a range of block heights
 stream: {
     path: '/rpcevents.ExecutionEvents/Stream',
@@ -103,3 +104,4 @@ events: {
   },
 };
 
+exports.ExecutionEventsClient = grpc.makeGenericClientConstructor(ExecutionEventsService);

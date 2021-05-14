@@ -1,8 +1,9 @@
-import {Contract} from '..';
-import {burrow, compile} from "../test";
+import { compile } from '../contracts/compile';
+import { ContractEvent, getAddress } from '../contracts/contract';
+import { Contract } from '../index';
+import { burrow } from './test';
 
 describe('Nested contract event emission', function () {
-
   it('#38', async () => {
     const source = `
       pragma solidity >=0.0.0;
@@ -13,17 +14,17 @@ describe('Nested contract event emission', function () {
               emit Event();
           }
       }
-    `
-    const {abi, code} = compile(source, 'Contract')
-    const contract: any = await burrow.contracts.deploy(abi, code)
-    const secondContract: any = new Contract(abi, null, contract.address, burrow)
-    const stream = secondContract.Event.at(contract.address, function (error, event) {
+    `;
+    const contract = compile(source, 'Contract');
+    const instance: any = await contract.deploy(burrow);
+    const event = instance.Event as ContractEvent;
+    const stream = event.at(getAddress(instance), function (error, result) {
       if (error) {
-        throw error
+        throw error;
       } else {
-        stream.cancel()
+        stream.cancel();
       }
-      secondContract.announce()
-    })
-  })
-})
+      instance.announce();
+    });
+  });
+});

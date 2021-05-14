@@ -13,24 +13,20 @@ export class Message extends jspb.Message {
     getSnapshotsRequest(): SnapshotsRequest | undefined;
     setSnapshotsRequest(value?: SnapshotsRequest): Message;
 
-
     hasSnapshotsResponse(): boolean;
     clearSnapshotsResponse(): void;
     getSnapshotsResponse(): SnapshotsResponse | undefined;
     setSnapshotsResponse(value?: SnapshotsResponse): Message;
-
 
     hasChunkRequest(): boolean;
     clearChunkRequest(): void;
     getChunkRequest(): ChunkRequest | undefined;
     setChunkRequest(value?: ChunkRequest): Message;
 
-
     hasChunkResponse(): boolean;
     clearChunkResponse(): void;
     getChunkResponse(): ChunkResponse | undefined;
     setChunkResponse(value?: ChunkResponse): Message;
-
 
     getSumCase(): Message.SumCase;
 
@@ -54,15 +50,10 @@ export namespace Message {
 
     export enum SumCase {
         SUM_NOT_SET = 0,
-    
-    SNAPSHOTS_REQUEST = 1,
-
-    SNAPSHOTS_RESPONSE = 2,
-
-    CHUNK_REQUEST = 3,
-
-    CHUNK_RESPONSE = 4,
-
+        SNAPSHOTS_REQUEST = 1,
+        SNAPSHOTS_RESPONSE = 2,
+        CHUNK_REQUEST = 3,
+        CHUNK_RESPONSE = 4,
     }
 
 }
@@ -87,23 +78,18 @@ export namespace SnapshotsRequest {
 export class SnapshotsResponse extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): SnapshotsResponse;
-
     getFormat(): number;
     setFormat(value: number): SnapshotsResponse;
-
     getChunks(): number;
     setChunks(value: number): SnapshotsResponse;
-
     getHash(): Uint8Array | string;
     getHash_asU8(): Uint8Array;
     getHash_asB64(): string;
     setHash(value: Uint8Array | string): SnapshotsResponse;
-
     getMetadata(): Uint8Array | string;
     getMetadata_asU8(): Uint8Array;
     getMetadata_asB64(): string;
     setMetadata(value: Uint8Array | string): SnapshotsResponse;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): SnapshotsResponse.AsObject;
@@ -128,13 +114,10 @@ export namespace SnapshotsResponse {
 export class ChunkRequest extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): ChunkRequest;
-
     getFormat(): number;
     setFormat(value: number): ChunkRequest;
-
     getIndex(): number;
     setIndex(value: number): ChunkRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ChunkRequest.AsObject;
@@ -157,21 +140,16 @@ export namespace ChunkRequest {
 export class ChunkResponse extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): ChunkResponse;
-
     getFormat(): number;
     setFormat(value: number): ChunkResponse;
-
     getIndex(): number;
     setIndex(value: number): ChunkResponse;
-
     getChunk(): Uint8Array | string;
     getChunk_asU8(): Uint8Array;
     getChunk_asB64(): string;
     setChunk(value: Uint8Array | string): ChunkResponse;
-
     getMissing(): boolean;
     setMissing(value: boolean): ChunkResponse;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ChunkResponse.AsObject;

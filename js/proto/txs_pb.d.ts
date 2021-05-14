@@ -13,15 +13,12 @@ export class Envelope extends jspb.Message {
     getSignatoriesList(): Array<Signatory>;
     setSignatoriesList(value: Array<Signatory>): Envelope;
     addSignatories(value?: Signatory, index?: number): Signatory;
-
     getTx(): Uint8Array | string;
     getTx_asU8(): Uint8Array;
     getTx_asB64(): string;
     setTx(value: Uint8Array | string): Envelope;
-
     getEncoding(): Envelope.EncodingType;
     setEncoding(value: Envelope.EncodingType): Envelope;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Envelope.AsObject;
@@ -53,18 +50,15 @@ export class Signatory extends jspb.Message {
     getAddress_asB64(): string;
     setAddress(value: Uint8Array | string): Signatory;
 
-
     hasPublickey(): boolean;
     clearPublickey(): void;
     getPublickey(): crypto_pb.PublicKey | undefined;
     setPublickey(value?: crypto_pb.PublicKey): Signatory;
 
-
     hasSignature(): boolean;
     clearSignature(): void;
     getSignature(): crypto_pb.Signature | undefined;
     setSignature(value?: crypto_pb.Signature): Signatory;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Signatory.AsObject;
@@ -87,20 +81,16 @@ export namespace Signatory {
 export class Receipt extends jspb.Message { 
     getTxtype(): number;
     setTxtype(value: number): Receipt;
-
     getTxhash(): Uint8Array | string;
     getTxhash_asU8(): Uint8Array;
     getTxhash_asB64(): string;
     setTxhash(value: Uint8Array | string): Receipt;
-
     getCreatescontract(): boolean;
     setCreatescontract(value: boolean): Receipt;
-
     getContractaddress(): Uint8Array | string;
     getContractaddress_asU8(): Uint8Array;
     getContractaddress_asB64(): string;
     setContractaddress(value: Uint8Array | string): Receipt;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Receipt.AsObject;

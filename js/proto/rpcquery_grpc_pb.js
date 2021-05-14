@@ -1,6 +1,7 @@
 // GENERATED CODE -- DO NOT EDIT!
 
 'use strict';
+var grpc = require('@grpc/grpc-js');
 var rpcquery_pb = require('./rpcquery_pb.js');
 var gogoproto_gogo_pb = require('./gogoproto/gogo_pb.js');
 var tendermint_types_types_pb = require('./tendermint/types/types_pb.js');
@@ -298,7 +299,7 @@ function deserialize_tendermint_types_Header(buffer_arg) {
 }
 
 
-var QueryService = exports['rpcquery.Query'] = {
+var QueryService = exports.QueryService = {
   status: {
     path: '/rpcquery.Query/Status',
     requestStream: false,
@@ -456,3 +457,4 @@ getNetworkRegistry: {
   },
 };
 
+exports.QueryClient = grpc.makeGenericClientConstructor(QueryService);

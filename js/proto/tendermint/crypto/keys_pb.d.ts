@@ -16,14 +16,12 @@ export class PublicKey extends jspb.Message {
     getEd25519_asB64(): string;
     setEd25519(value: Uint8Array | string): PublicKey;
 
-
     hasSecp256k1(): boolean;
     clearSecp256k1(): void;
     getSecp256k1(): Uint8Array | string;
     getSecp256k1_asU8(): Uint8Array;
     getSecp256k1_asB64(): string;
     setSecp256k1(value: Uint8Array | string): PublicKey;
-
 
     getSumCase(): PublicKey.SumCase;
 
@@ -45,11 +43,8 @@ export namespace PublicKey {
 
     export enum SumCase {
         SUM_NOT_SET = 0,
-    
-    ED25519 = 1,
-
-    SECP256K1 = 2,
-
+        ED25519 = 1,
+        SECP256K1 = 2,
     }
 
 }

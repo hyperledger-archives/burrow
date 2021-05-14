@@ -14,12 +14,10 @@ import * as tendermint_types_validator_pb from "../../tendermint/types/validator
 export class PartSetHeader extends jspb.Message { 
     getTotal(): number;
     setTotal(value: number): PartSetHeader;
-
     getHash(): Uint8Array | string;
     getHash_asU8(): Uint8Array;
     getHash_asB64(): string;
     setHash(value: Uint8Array | string): PartSetHeader;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): PartSetHeader.AsObject;
@@ -41,18 +39,15 @@ export namespace PartSetHeader {
 export class Part extends jspb.Message { 
     getIndex(): number;
     setIndex(value: number): Part;
-
     getBytes(): Uint8Array | string;
     getBytes_asU8(): Uint8Array;
     getBytes_asB64(): string;
     setBytes(value: Uint8Array | string): Part;
 
-
     hasProof(): boolean;
     clearProof(): void;
     getProof(): tendermint_crypto_proof_pb.Proof | undefined;
     setProof(value?: tendermint_crypto_proof_pb.Proof): Part;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Part.AsObject;
@@ -78,12 +73,10 @@ export class BlockID extends jspb.Message {
     getHash_asB64(): string;
     setHash(value: Uint8Array | string): BlockID;
 
-
     hasPartSetHeader(): boolean;
     clearPartSetHeader(): void;
     getPartSetHeader(): PartSetHeader | undefined;
     setPartSetHeader(value?: PartSetHeader): BlockID;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): BlockID.AsObject;
@@ -108,70 +101,56 @@ export class Header extends jspb.Message {
     clearVersion(): void;
     getVersion(): tendermint_version_types_pb.Consensus | undefined;
     setVersion(value?: tendermint_version_types_pb.Consensus): Header;
-
     getChainId(): string;
     setChainId(value: string): Header;
-
     getHeight(): number;
     setHeight(value: number): Header;
-
 
     hasTime(): boolean;
     clearTime(): void;
     getTime(): google_protobuf_timestamp_pb.Timestamp | undefined;
     setTime(value?: google_protobuf_timestamp_pb.Timestamp): Header;
 
-
     hasLastBlockId(): boolean;
     clearLastBlockId(): void;
     getLastBlockId(): BlockID | undefined;
     setLastBlockId(value?: BlockID): Header;
-
     getLastCommitHash(): Uint8Array | string;
     getLastCommitHash_asU8(): Uint8Array;
     getLastCommitHash_asB64(): string;
     setLastCommitHash(value: Uint8Array | string): Header;
-
     getDataHash(): Uint8Array | string;
     getDataHash_asU8(): Uint8Array;
     getDataHash_asB64(): string;
     setDataHash(value: Uint8Array | string): Header;
-
     getValidatorsHash(): Uint8Array | string;
     getValidatorsHash_asU8(): Uint8Array;
     getValidatorsHash_asB64(): string;
     setValidatorsHash(value: Uint8Array | string): Header;
-
     getNextValidatorsHash(): Uint8Array | string;
     getNextValidatorsHash_asU8(): Uint8Array;
     getNextValidatorsHash_asB64(): string;
     setNextValidatorsHash(value: Uint8Array | string): Header;
-
     getConsensusHash(): Uint8Array | string;
     getConsensusHash_asU8(): Uint8Array;
     getConsensusHash_asB64(): string;
     setConsensusHash(value: Uint8Array | string): Header;
-
     getAppHash(): Uint8Array | string;
     getAppHash_asU8(): Uint8Array;
     getAppHash_asB64(): string;
     setAppHash(value: Uint8Array | string): Header;
-
     getLastResultsHash(): Uint8Array | string;
     getLastResultsHash_asU8(): Uint8Array;
     getLastResultsHash_asB64(): string;
     setLastResultsHash(value: Uint8Array | string): Header;
-
     getEvidenceHash(): Uint8Array | string;
     getEvidenceHash_asU8(): Uint8Array;
     getEvidenceHash_asB64(): string;
     setEvidenceHash(value: Uint8Array | string): Header;
-
     getProposerAddress(): Uint8Array | string;
     getProposerAddress_asU8(): Uint8Array;
     getProposerAddress_asB64(): string;
     setProposerAddress(value: Uint8Array | string): Header;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Header.AsObject;
@@ -210,7 +189,6 @@ export class Data extends jspb.Message {
     setTxsList(value: Array<Uint8Array | string>): Data;
     addTxs(value: Uint8Array | string, index?: number): Uint8Array | string;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Data.AsObject;
     static toObject(includeInstance: boolean, msg: Data): Data.AsObject;
@@ -230,38 +208,30 @@ export namespace Data {
 export class Vote extends jspb.Message { 
     getType(): SignedMsgType;
     setType(value: SignedMsgType): Vote;
-
     getHeight(): number;
     setHeight(value: number): Vote;
-
     getRound(): number;
     setRound(value: number): Vote;
-
 
     hasBlockId(): boolean;
     clearBlockId(): void;
     getBlockId(): BlockID | undefined;
     setBlockId(value?: BlockID): Vote;
 
-
     hasTimestamp(): boolean;
     clearTimestamp(): void;
     getTimestamp(): google_protobuf_timestamp_pb.Timestamp | undefined;
     setTimestamp(value?: google_protobuf_timestamp_pb.Timestamp): Vote;
-
     getValidatorAddress(): Uint8Array | string;
     getValidatorAddress_asU8(): Uint8Array;
     getValidatorAddress_asB64(): string;
     setValidatorAddress(value: Uint8Array | string): Vote;
-
     getValidatorIndex(): number;
     setValidatorIndex(value: number): Vote;
-
     getSignature(): Uint8Array | string;
     getSignature_asU8(): Uint8Array;
     getSignature_asB64(): string;
     setSignature(value: Uint8Array | string): Vote;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Vote.AsObject;
@@ -289,21 +259,17 @@ export namespace Vote {
 export class Commit extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): Commit;
-
     getRound(): number;
     setRound(value: number): Commit;
-
 
     hasBlockId(): boolean;
     clearBlockId(): void;
     getBlockId(): BlockID | undefined;
     setBlockId(value?: BlockID): Commit;
-
     clearSignaturesList(): void;
     getSignaturesList(): Array<CommitSig>;
     setSignaturesList(value: Array<CommitSig>): Commit;
     addSignatures(value?: CommitSig, index?: number): CommitSig;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Commit.AsObject;
@@ -327,23 +293,19 @@ export namespace Commit {
 export class CommitSig extends jspb.Message { 
     getBlockIdFlag(): BlockIDFlag;
     setBlockIdFlag(value: BlockIDFlag): CommitSig;
-
     getValidatorAddress(): Uint8Array | string;
     getValidatorAddress_asU8(): Uint8Array;
     getValidatorAddress_asB64(): string;
     setValidatorAddress(value: Uint8Array | string): CommitSig;
 
-
     hasTimestamp(): boolean;
     clearTimestamp(): void;
     getTimestamp(): google_protobuf_timestamp_pb.Timestamp | undefined;
     setTimestamp(value?: google_protobuf_timestamp_pb.Timestamp): CommitSig;
-
     getSignature(): Uint8Array | string;
     getSignature_asU8(): Uint8Array;
     getSignature_asB64(): string;
     setSignature(value: Uint8Array | string): CommitSig;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): CommitSig.AsObject;
@@ -367,33 +329,26 @@ export namespace CommitSig {
 export class Proposal extends jspb.Message { 
     getType(): SignedMsgType;
     setType(value: SignedMsgType): Proposal;
-
     getHeight(): number;
     setHeight(value: number): Proposal;
-
     getRound(): number;
     setRound(value: number): Proposal;
-
     getPolRound(): number;
     setPolRound(value: number): Proposal;
-
 
     hasBlockId(): boolean;
     clearBlockId(): void;
     getBlockId(): BlockID | undefined;
     setBlockId(value?: BlockID): Proposal;
 
-
     hasTimestamp(): boolean;
     clearTimestamp(): void;
     getTimestamp(): google_protobuf_timestamp_pb.Timestamp | undefined;
     setTimestamp(value?: google_protobuf_timestamp_pb.Timestamp): Proposal;
-
     getSignature(): Uint8Array | string;
     getSignature_asU8(): Uint8Array;
     getSignature_asB64(): string;
     setSignature(value: Uint8Array | string): Proposal;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Proposal.AsObject;
@@ -424,12 +379,10 @@ export class SignedHeader extends jspb.Message {
     getHeader(): Header | undefined;
     setHeader(value?: Header): SignedHeader;
 
-
     hasCommit(): boolean;
     clearCommit(): void;
     getCommit(): Commit | undefined;
     setCommit(value?: Commit): SignedHeader;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): SignedHeader.AsObject;
@@ -455,12 +408,10 @@ export class LightBlock extends jspb.Message {
     getSignedHeader(): SignedHeader | undefined;
     setSignedHeader(value?: SignedHeader): LightBlock;
 
-
     hasValidatorSet(): boolean;
     clearValidatorSet(): void;
     getValidatorSet(): tendermint_types_validator_pb.ValidatorSet | undefined;
     setValidatorSet(value?: tendermint_types_validator_pb.ValidatorSet): LightBlock;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): LightBlock.AsObject;
@@ -485,19 +436,15 @@ export class BlockMeta extends jspb.Message {
     clearBlockId(): void;
     getBlockId(): BlockID | undefined;
     setBlockId(value?: BlockID): BlockMeta;
-
     getBlockSize(): number;
     setBlockSize(value: number): BlockMeta;
-
 
     hasHeader(): boolean;
     clearHeader(): void;
     getHeader(): Header | undefined;
     setHeader(value?: Header): BlockMeta;
-
     getNumTxs(): number;
     setNumTxs(value: number): BlockMeta;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): BlockMeta.AsObject;
@@ -523,18 +470,15 @@ export class TxProof extends jspb.Message {
     getRootHash_asU8(): Uint8Array;
     getRootHash_asB64(): string;
     setRootHash(value: Uint8Array | string): TxProof;
-
     getData(): Uint8Array | string;
     getData_asU8(): Uint8Array;
     getData_asB64(): string;
     setData(value: Uint8Array | string): TxProof;
 
-
     hasProof(): boolean;
     clearProof(): void;
     getProof(): tendermint_crypto_proof_pb.Proof | undefined;
     setProof(value?: tendermint_crypto_proof_pb.Proof): TxProof;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TxProof.AsObject;

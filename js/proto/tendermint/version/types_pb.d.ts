@@ -10,10 +10,8 @@ import * as gogoproto_gogo_pb from "../../gogoproto/gogo_pb";
 export class App extends jspb.Message { 
     getProtocol(): number;
     setProtocol(value: number): App;
-
     getSoftware(): string;
     setSoftware(value: string): App;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): App.AsObject;
@@ -35,10 +33,8 @@ export namespace App {
 export class Consensus extends jspb.Message { 
     getBlock(): number;
     setBlock(value: number): Consensus;
-
     getApp(): number;
     setApp(value: number): Consensus;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Consensus.AsObject;

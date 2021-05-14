@@ -1,8 +1,10 @@
 import * as assert from 'assert';
-import {burrow, compile} from '../test';
+import { LogDescription } from 'ethers/lib/utils';
+import { compile } from '../contracts/compile';
+import { ContractEvent } from '../contracts/contract';
+import { burrow } from './test';
 
 describe('Event listening', function () {
-
   it('listens to an event from a contract', async () => {
     const source = `
       pragma solidity >=0.0.0;
@@ -29,47 +31,35 @@ describe('Event listening', function () {
           );
         }
       }
-    `
+    `;
 
-    const {abi, code} = compile(source, 'Contract')
-    const contract: any = await burrow.contracts.deploy(abi, code)
-    const promise = new Promise<void>((resolve, reject) => {
-      const stream = contract.Pay((error, result) => {
-        if (error) {
+    const contract = compile(source, 'Contract');
+    const instance = await contract.deploy(burrow);
+    const promise = new Promise<LogDescription>((resolve, reject) => {
+      const pay = instance.Pay as ContractEvent;
+      const stream = pay((error, result) => {
+        if (error || !result) {
           reject(error);
         } else {
-          const actual = Object.assign(
-            {},
-            result.args,
-            {amount: Number(result.args.amount)}
-          )
-
-          assert.deepStrictEqual(
-            actual,
-            {
-              originator: '88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F',
-              beneficiary: '721584FA4F1B9F51950018073A8E5ECF47F2D3B8',
-              amount: 1,
-
-              servicename: 'Energy',
-
-              nickname: 'wasmachine',
-
-              providername: 'Eneco',
-
-              randomBytes: '000000000000000000000000000000000000000000000000DEADFEEDBEEFFACE'
-            }
-          )
-
-          stream.cancel()
-          resolve()
+          resolve(result);
+          stream.cancel();
         }
       });
-    })
+    });
+    await instance.announce();
 
-    await contract.announce()
+    const result = await promise;
 
-    return promise
-  })
+    assert.strictEqual(result.args.originator, '88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F');
+    assert.strictEqual(result.args.beneficiary, '721584FA4F1B9F51950018073A8E5ECF47F2D3B8');
+    assert.strictEqual(Number(result.args.amount), 1);
+    assert.strictEqual(result.args.servicename, 'Energy');
+    assert.strictEqual(result.args.nickname, 'wasmachine');
+    assert.strictEqual(result.args.providername, 'Eneco');
+    const randomBytes = result.args.randomBytes as Buffer;
+    assert.strictEqual(
+      randomBytes.toString('hex').toUpperCase(),
+      '000000000000000000000000000000000000000000000000DEADFEEDBEEFFACE',
+    );
+  });
 });
-

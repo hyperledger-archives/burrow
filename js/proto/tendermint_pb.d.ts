@@ -12,30 +12,22 @@ export class NodeInfo extends jspb.Message {
     getId_asU8(): Uint8Array;
     getId_asB64(): string;
     setId(value: Uint8Array | string): NodeInfo;
-
     getListenaddress(): string;
     setListenaddress(value: string): NodeInfo;
-
     getNetwork(): string;
     setNetwork(value: string): NodeInfo;
-
     getVersion(): string;
     setVersion(value: string): NodeInfo;
-
     getChannels(): Uint8Array | string;
     getChannels_asU8(): Uint8Array;
     getChannels_asB64(): string;
     setChannels(value: Uint8Array | string): NodeInfo;
-
     getMoniker(): string;
     setMoniker(value: string): NodeInfo;
-
     getRpcaddress(): string;
     setRpcaddress(value: string): NodeInfo;
-
     getTxindex(): string;
     setTxindex(value: string): NodeInfo;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): NodeInfo.AsObject;

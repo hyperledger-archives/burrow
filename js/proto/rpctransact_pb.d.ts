@@ -16,17 +16,14 @@ export class CallCodeParam extends jspb.Message {
     getFromaddress_asU8(): Uint8Array;
     getFromaddress_asB64(): string;
     setFromaddress(value: Uint8Array | string): CallCodeParam;
-
     getCode(): Uint8Array | string;
     getCode_asU8(): Uint8Array;
     getCode_asB64(): string;
     setCode(value: Uint8Array | string): CallCodeParam;
-
     getData(): Uint8Array | string;
     getData_asU8(): Uint8Array;
     getData_asB64(): string;
     setData(value: Uint8Array | string): CallCodeParam;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): CallCodeParam.AsObject;
@@ -53,7 +50,6 @@ export class TxEnvelope extends jspb.Message {
     getEnvelope(): txs_pb.Envelope | undefined;
     setEnvelope(value?: txs_pb.Envelope): TxEnvelope;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TxEnvelope.AsObject;
     static toObject(includeInstance: boolean, msg: TxEnvelope): TxEnvelope.AsObject;
@@ -77,18 +73,15 @@ export class TxEnvelopeParam extends jspb.Message {
     getEnvelope(): txs_pb.Envelope | undefined;
     setEnvelope(value?: txs_pb.Envelope): TxEnvelopeParam;
 
-
     hasPayload(): boolean;
     clearPayload(): void;
     getPayload(): payload_pb.Any | undefined;
     setPayload(value?: payload_pb.Any): TxEnvelopeParam;
 
-
     hasTimeout(): boolean;
     clearTimeout(): void;
     getTimeout(): google_protobuf_duration_pb.Duration | undefined;
     setTimeout(value?: google_protobuf_duration_pb.Duration): TxEnvelopeParam;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TxEnvelopeParam.AsObject;

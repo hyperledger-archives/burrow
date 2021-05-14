@@ -14,15 +14,12 @@ export class ValidatorSet extends jspb.Message {
     setValidatorsList(value: Array<Validator>): ValidatorSet;
     addValidators(value?: Validator, index?: number): Validator;
 
-
     hasProposer(): boolean;
     clearProposer(): void;
     getProposer(): Validator | undefined;
     setProposer(value?: Validator): ValidatorSet;
-
     getTotalVotingPower(): number;
     setTotalVotingPower(value: number): ValidatorSet;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ValidatorSet.AsObject;
@@ -48,18 +45,14 @@ export class Validator extends jspb.Message {
     getAddress_asB64(): string;
     setAddress(value: Uint8Array | string): Validator;
 
-
     hasPubKey(): boolean;
     clearPubKey(): void;
     getPubKey(): tendermint_crypto_keys_pb.PublicKey | undefined;
     setPubKey(value?: tendermint_crypto_keys_pb.PublicKey): Validator;
-
     getVotingPower(): number;
     setVotingPower(value: number): Validator;
-
     getProposerPriority(): number;
     setProposerPriority(value: number): Validator;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Validator.AsObject;
@@ -86,10 +79,8 @@ export class SimpleValidator extends jspb.Message {
     clearPubKey(): void;
     getPubKey(): tendermint_crypto_keys_pb.PublicKey | undefined;
     setPubKey(value?: tendermint_crypto_keys_pb.PublicKey): SimpleValidator;
-
     getVotingPower(): number;
     setVotingPower(value: number): SimpleValidator;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): SimpleValidator.AsObject;

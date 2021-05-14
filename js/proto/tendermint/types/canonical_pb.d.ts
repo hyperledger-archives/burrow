@@ -15,12 +15,10 @@ export class CanonicalBlockID extends jspb.Message {
     getHash_asB64(): string;
     setHash(value: Uint8Array | string): CanonicalBlockID;
 
-
     hasPartSetHeader(): boolean;
     clearPartSetHeader(): void;
     getPartSetHeader(): CanonicalPartSetHeader | undefined;
     setPartSetHeader(value?: CanonicalPartSetHeader): CanonicalBlockID;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): CanonicalBlockID.AsObject;
@@ -42,12 +40,10 @@ export namespace CanonicalBlockID {
 export class CanonicalPartSetHeader extends jspb.Message { 
     getTotal(): number;
     setTotal(value: number): CanonicalPartSetHeader;
-
     getHash(): Uint8Array | string;
     getHash_asU8(): Uint8Array;
     getHash_asB64(): string;
     setHash(value: Uint8Array | string): CanonicalPartSetHeader;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): CanonicalPartSetHeader.AsObject;
@@ -69,31 +65,24 @@ export namespace CanonicalPartSetHeader {
 export class CanonicalProposal extends jspb.Message { 
     getType(): tendermint_types_types_pb.SignedMsgType;
     setType(value: tendermint_types_types_pb.SignedMsgType): CanonicalProposal;
-
     getHeight(): number;
     setHeight(value: number): CanonicalProposal;
-
     getRound(): number;
     setRound(value: number): CanonicalProposal;
-
     getPolRound(): number;
     setPolRound(value: number): CanonicalProposal;
-
 
     hasBlockId(): boolean;
     clearBlockId(): void;
     getBlockId(): CanonicalBlockID | undefined;
     setBlockId(value?: CanonicalBlockID): CanonicalProposal;
 
-
     hasTimestamp(): boolean;
     clearTimestamp(): void;
     getTimestamp(): google_protobuf_timestamp_pb.Timestamp | undefined;
     setTimestamp(value?: google_protobuf_timestamp_pb.Timestamp): CanonicalProposal;
-
     getChainId(): string;
     setChainId(value: string): CanonicalProposal;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): CanonicalProposal.AsObject;
@@ -120,28 +109,22 @@ export namespace CanonicalProposal {
 export class CanonicalVote extends jspb.Message { 
     getType(): tendermint_types_types_pb.SignedMsgType;
     setType(value: tendermint_types_types_pb.SignedMsgType): CanonicalVote;
-
     getHeight(): number;
     setHeight(value: number): CanonicalVote;
-
     getRound(): number;
     setRound(value: number): CanonicalVote;
-
 
     hasBlockId(): boolean;
     clearBlockId(): void;
     getBlockId(): CanonicalBlockID | undefined;
     setBlockId(value?: CanonicalBlockID): CanonicalVote;
 
-
     hasTimestamp(): boolean;
     clearTimestamp(): void;
     getTimestamp(): google_protobuf_timestamp_pb.Timestamp | undefined;
     setTimestamp(value?: google_protobuf_timestamp_pb.Timestamp): CanonicalVote;
-
     getChainId(): string;
     setChainId(value: string): CanonicalVote;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): CanonicalVote.AsObject;

@@ -14,12 +14,12 @@ import (
 	proto "github.com/gogo/protobuf/proto"
 	github_com_gogo_protobuf_types "github.com/gogo/protobuf/types"
 	golang_proto "github.com/golang/protobuf/proto"
-	_ "github.com/golang/protobuf/ptypes/duration"
 	github_com_hyperledger_burrow_crypto "github.com/hyperledger/burrow/crypto"
 	_ "github.com/hyperledger/burrow/execution/exec"
 	_ "github.com/hyperledger/burrow/txs"
 	github_com_hyperledger_burrow_txs "github.com/hyperledger/burrow/txs"
 	payload "github.com/hyperledger/burrow/txs/payload"
+	_ "google.golang.org/protobuf/types/known/durationpb"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

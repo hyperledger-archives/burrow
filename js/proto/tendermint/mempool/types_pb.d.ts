@@ -14,7 +14,6 @@ export class Txs extends jspb.Message {
     setTxsList(value: Array<Uint8Array | string>): Txs;
     addTxs(value: Uint8Array | string, index?: number): Uint8Array | string;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Txs.AsObject;
     static toObject(includeInstance: boolean, msg: Txs): Txs.AsObject;
@@ -38,7 +37,6 @@ export class Message extends jspb.Message {
     getTxs(): Txs | undefined;
     setTxs(value?: Txs): Message;
 
-
     getSumCase(): Message.SumCase;
 
     serializeBinary(): Uint8Array;
@@ -58,9 +56,7 @@ export namespace Message {
 
     export enum SumCase {
         SUM_NOT_SET = 0,
-    
-    TXS = 1,
-
+        TXS = 1,
     }
 
 }

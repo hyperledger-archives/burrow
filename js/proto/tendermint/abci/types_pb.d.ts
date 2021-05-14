@@ -19,90 +19,75 @@ export class Request extends jspb.Message {
     getEcho(): RequestEcho | undefined;
     setEcho(value?: RequestEcho): Request;
 
-
     hasFlush(): boolean;
     clearFlush(): void;
     getFlush(): RequestFlush | undefined;
     setFlush(value?: RequestFlush): Request;
-
 
     hasInfo(): boolean;
     clearInfo(): void;
     getInfo(): RequestInfo | undefined;
     setInfo(value?: RequestInfo): Request;
 
-
     hasSetOption(): boolean;
     clearSetOption(): void;
     getSetOption(): RequestSetOption | undefined;
     setSetOption(value?: RequestSetOption): Request;
-
 
     hasInitChain(): boolean;
     clearInitChain(): void;
     getInitChain(): RequestInitChain | undefined;
     setInitChain(value?: RequestInitChain): Request;
 
-
     hasQuery(): boolean;
     clearQuery(): void;
     getQuery(): RequestQuery | undefined;
     setQuery(value?: RequestQuery): Request;
-
 
     hasBeginBlock(): boolean;
     clearBeginBlock(): void;
     getBeginBlock(): RequestBeginBlock | undefined;
     setBeginBlock(value?: RequestBeginBlock): Request;
 
-
     hasCheckTx(): boolean;
     clearCheckTx(): void;
     getCheckTx(): RequestCheckTx | undefined;
     setCheckTx(value?: RequestCheckTx): Request;
-
 
     hasDeliverTx(): boolean;
     clearDeliverTx(): void;
     getDeliverTx(): RequestDeliverTx | undefined;
     setDeliverTx(value?: RequestDeliverTx): Request;
 
-
     hasEndBlock(): boolean;
     clearEndBlock(): void;
     getEndBlock(): RequestEndBlock | undefined;
     setEndBlock(value?: RequestEndBlock): Request;
-
 
     hasCommit(): boolean;
     clearCommit(): void;
     getCommit(): RequestCommit | undefined;
     setCommit(value?: RequestCommit): Request;
 
-
     hasListSnapshots(): boolean;
     clearListSnapshots(): void;
     getListSnapshots(): RequestListSnapshots | undefined;
     setListSnapshots(value?: RequestListSnapshots): Request;
-
 
     hasOfferSnapshot(): boolean;
     clearOfferSnapshot(): void;
     getOfferSnapshot(): RequestOfferSnapshot | undefined;
     setOfferSnapshot(value?: RequestOfferSnapshot): Request;
 
-
     hasLoadSnapshotChunk(): boolean;
     clearLoadSnapshotChunk(): void;
     getLoadSnapshotChunk(): RequestLoadSnapshotChunk | undefined;
     setLoadSnapshotChunk(value?: RequestLoadSnapshotChunk): Request;
 
-
     hasApplySnapshotChunk(): boolean;
     clearApplySnapshotChunk(): void;
     getApplySnapshotChunk(): RequestApplySnapshotChunk | undefined;
     setApplySnapshotChunk(value?: RequestApplySnapshotChunk): Request;
-
 
     getValueCase(): Request.ValueCase;
 
@@ -137,37 +122,21 @@ export namespace Request {
 
     export enum ValueCase {
         VALUE_NOT_SET = 0,
-    
-    ECHO = 1,
-
-    FLUSH = 2,
-
-    INFO = 3,
-
-    SET_OPTION = 4,
-
-    INIT_CHAIN = 5,
-
-    QUERY = 6,
-
-    BEGIN_BLOCK = 7,
-
-    CHECK_TX = 8,
-
-    DELIVER_TX = 9,
-
-    END_BLOCK = 10,
-
-    COMMIT = 11,
-
-    LIST_SNAPSHOTS = 12,
-
-    OFFER_SNAPSHOT = 13,
-
-    LOAD_SNAPSHOT_CHUNK = 14,
-
-    APPLY_SNAPSHOT_CHUNK = 15,
-
+        ECHO = 1,
+        FLUSH = 2,
+        INFO = 3,
+        SET_OPTION = 4,
+        INIT_CHAIN = 5,
+        QUERY = 6,
+        BEGIN_BLOCK = 7,
+        CHECK_TX = 8,
+        DELIVER_TX = 9,
+        END_BLOCK = 10,
+        COMMIT = 11,
+        LIST_SNAPSHOTS = 12,
+        OFFER_SNAPSHOT = 13,
+        LOAD_SNAPSHOT_CHUNK = 14,
+        APPLY_SNAPSHOT_CHUNK = 15,
     }
 
 }
@@ -175,7 +144,6 @@ export namespace Request {
 export class RequestEcho extends jspb.Message { 
     getMessage(): string;
     setMessage(value: string): RequestEcho;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RequestEcho.AsObject;
@@ -213,13 +181,10 @@ export namespace RequestFlush {
 export class RequestInfo extends jspb.Message { 
     getVersion(): string;
     setVersion(value: string): RequestInfo;
-
     getBlockVersion(): number;
     setBlockVersion(value: number): RequestInfo;
-
     getP2pVersion(): number;
     setP2pVersion(value: number): RequestInfo;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RequestInfo.AsObject;
@@ -242,10 +207,8 @@ export namespace RequestInfo {
 export class RequestSetOption extends jspb.Message { 
     getKey(): string;
     setKey(value: string): RequestSetOption;
-
     getValue(): string;
     setValue(value: string): RequestSetOption;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RequestSetOption.AsObject;
@@ -270,29 +233,23 @@ export class RequestInitChain extends jspb.Message {
     clearTime(): void;
     getTime(): google_protobuf_timestamp_pb.Timestamp | undefined;
     setTime(value?: google_protobuf_timestamp_pb.Timestamp): RequestInitChain;
-
     getChainId(): string;
     setChainId(value: string): RequestInitChain;
-
 
     hasConsensusParams(): boolean;
     clearConsensusParams(): void;
     getConsensusParams(): ConsensusParams | undefined;
     setConsensusParams(value?: ConsensusParams): RequestInitChain;
-
     clearValidatorsList(): void;
     getValidatorsList(): Array<ValidatorUpdate>;
     setValidatorsList(value: Array<ValidatorUpdate>): RequestInitChain;
     addValidators(value?: ValidatorUpdate, index?: number): ValidatorUpdate;
-
     getAppStateBytes(): Uint8Array | string;
     getAppStateBytes_asU8(): Uint8Array;
     getAppStateBytes_asB64(): string;
     setAppStateBytes(value: Uint8Array | string): RequestInitChain;
-
     getInitialHeight(): number;
     setInitialHeight(value: number): RequestInitChain;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RequestInitChain.AsObject;
@@ -320,16 +277,12 @@ export class RequestQuery extends jspb.Message {
     getData_asU8(): Uint8Array;
     getData_asB64(): string;
     setData(value: Uint8Array | string): RequestQuery;
-
     getPath(): string;
     setPath(value: string): RequestQuery;
-
     getHeight(): number;
     setHeight(value: number): RequestQuery;
-
     getProve(): boolean;
     setProve(value: boolean): RequestQuery;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RequestQuery.AsObject;
@@ -356,23 +309,19 @@ export class RequestBeginBlock extends jspb.Message {
     getHash_asB64(): string;
     setHash(value: Uint8Array | string): RequestBeginBlock;
 
-
     hasHeader(): boolean;
     clearHeader(): void;
     getHeader(): tendermint_types_types_pb.Header | undefined;
     setHeader(value?: tendermint_types_types_pb.Header): RequestBeginBlock;
 
-
     hasLastCommitInfo(): boolean;
     clearLastCommitInfo(): void;
     getLastCommitInfo(): LastCommitInfo | undefined;
     setLastCommitInfo(value?: LastCommitInfo): RequestBeginBlock;
-
     clearByzantineValidatorsList(): void;
     getByzantineValidatorsList(): Array<Evidence>;
     setByzantineValidatorsList(value: Array<Evidence>): RequestBeginBlock;
     addByzantineValidators(value?: Evidence, index?: number): Evidence;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RequestBeginBlock.AsObject;
@@ -398,10 +347,8 @@ export class RequestCheckTx extends jspb.Message {
     getTx_asU8(): Uint8Array;
     getTx_asB64(): string;
     setTx(value: Uint8Array | string): RequestCheckTx;
-
     getType(): CheckTxType;
     setType(value: CheckTxType): RequestCheckTx;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RequestCheckTx.AsObject;
@@ -426,7 +373,6 @@ export class RequestDeliverTx extends jspb.Message {
     getTx_asB64(): string;
     setTx(value: Uint8Array | string): RequestDeliverTx;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RequestDeliverTx.AsObject;
     static toObject(includeInstance: boolean, msg: RequestDeliverTx): RequestDeliverTx.AsObject;
@@ -446,7 +392,6 @@ export namespace RequestDeliverTx {
 export class RequestEndBlock extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): RequestEndBlock;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RequestEndBlock.AsObject;
@@ -504,12 +449,10 @@ export class RequestOfferSnapshot extends jspb.Message {
     clearSnapshot(): void;
     getSnapshot(): Snapshot | undefined;
     setSnapshot(value?: Snapshot): RequestOfferSnapshot;
-
     getAppHash(): Uint8Array | string;
     getAppHash_asU8(): Uint8Array;
     getAppHash_asB64(): string;
     setAppHash(value: Uint8Array | string): RequestOfferSnapshot;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RequestOfferSnapshot.AsObject;
@@ -531,13 +474,10 @@ export namespace RequestOfferSnapshot {
 export class RequestLoadSnapshotChunk extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): RequestLoadSnapshotChunk;
-
     getFormat(): number;
     setFormat(value: number): RequestLoadSnapshotChunk;
-
     getChunk(): number;
     setChunk(value: number): RequestLoadSnapshotChunk;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RequestLoadSnapshotChunk.AsObject;
@@ -560,15 +500,12 @@ export namespace RequestLoadSnapshotChunk {
 export class RequestApplySnapshotChunk extends jspb.Message { 
     getIndex(): number;
     setIndex(value: number): RequestApplySnapshotChunk;
-
     getChunk(): Uint8Array | string;
     getChunk_asU8(): Uint8Array;
     getChunk_asB64(): string;
     setChunk(value: Uint8Array | string): RequestApplySnapshotChunk;
-
     getSender(): string;
     setSender(value: string): RequestApplySnapshotChunk;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): RequestApplySnapshotChunk.AsObject;
@@ -595,96 +532,80 @@ export class Response extends jspb.Message {
     getException(): ResponseException | undefined;
     setException(value?: ResponseException): Response;
 
-
     hasEcho(): boolean;
     clearEcho(): void;
     getEcho(): ResponseEcho | undefined;
     setEcho(value?: ResponseEcho): Response;
-
 
     hasFlush(): boolean;
     clearFlush(): void;
     getFlush(): ResponseFlush | undefined;
     setFlush(value?: ResponseFlush): Response;
 
-
     hasInfo(): boolean;
     clearInfo(): void;
     getInfo(): ResponseInfo | undefined;
     setInfo(value?: ResponseInfo): Response;
-
 
     hasSetOption(): boolean;
     clearSetOption(): void;
     getSetOption(): ResponseSetOption | undefined;
     setSetOption(value?: ResponseSetOption): Response;
 
-
     hasInitChain(): boolean;
     clearInitChain(): void;
     getInitChain(): ResponseInitChain | undefined;
     setInitChain(value?: ResponseInitChain): Response;
-
 
     hasQuery(): boolean;
     clearQuery(): void;
     getQuery(): ResponseQuery | undefined;
     setQuery(value?: ResponseQuery): Response;
 
-
     hasBeginBlock(): boolean;
     clearBeginBlock(): void;
     getBeginBlock(): ResponseBeginBlock | undefined;
     setBeginBlock(value?: ResponseBeginBlock): Response;
-
 
     hasCheckTx(): boolean;
     clearCheckTx(): void;
     getCheckTx(): ResponseCheckTx | undefined;
     setCheckTx(value?: ResponseCheckTx): Response;
 
-
     hasDeliverTx(): boolean;
     clearDeliverTx(): void;
     getDeliverTx(): ResponseDeliverTx | undefined;
     setDeliverTx(value?: ResponseDeliverTx): Response;
-
 
     hasEndBlock(): boolean;
     clearEndBlock(): void;
     getEndBlock(): ResponseEndBlock | undefined;
     setEndBlock(value?: ResponseEndBlock): Response;
 
-
     hasCommit(): boolean;
     clearCommit(): void;
     getCommit(): ResponseCommit | undefined;
     setCommit(value?: ResponseCommit): Response;
-
 
     hasListSnapshots(): boolean;
     clearListSnapshots(): void;
     getListSnapshots(): ResponseListSnapshots | undefined;
     setListSnapshots(value?: ResponseListSnapshots): Response;
 
-
     hasOfferSnapshot(): boolean;
     clearOfferSnapshot(): void;
     getOfferSnapshot(): ResponseOfferSnapshot | undefined;
     setOfferSnapshot(value?: ResponseOfferSnapshot): Response;
-
 
     hasLoadSnapshotChunk(): boolean;
     clearLoadSnapshotChunk(): void;
     getLoadSnapshotChunk(): ResponseLoadSnapshotChunk | undefined;
     setLoadSnapshotChunk(value?: ResponseLoadSnapshotChunk): Response;
 
-
     hasApplySnapshotChunk(): boolean;
     clearApplySnapshotChunk(): void;
     getApplySnapshotChunk(): ResponseApplySnapshotChunk | undefined;
     setApplySnapshotChunk(value?: ResponseApplySnapshotChunk): Response;
-
 
     getValueCase(): Response.ValueCase;
 
@@ -720,39 +641,22 @@ export namespace Response {
 
     export enum ValueCase {
         VALUE_NOT_SET = 0,
-    
-    EXCEPTION = 1,
-
-    ECHO = 2,
-
-    FLUSH = 3,
-
-    INFO = 4,
-
-    SET_OPTION = 5,
-
-    INIT_CHAIN = 6,
-
-    QUERY = 7,
-
-    BEGIN_BLOCK = 8,
-
-    CHECK_TX = 9,
-
-    DELIVER_TX = 10,
-
-    END_BLOCK = 11,
-
-    COMMIT = 12,
-
-    LIST_SNAPSHOTS = 13,
-
-    OFFER_SNAPSHOT = 14,
-
-    LOAD_SNAPSHOT_CHUNK = 15,
-
-    APPLY_SNAPSHOT_CHUNK = 16,
-
+        EXCEPTION = 1,
+        ECHO = 2,
+        FLUSH = 3,
+        INFO = 4,
+        SET_OPTION = 5,
+        INIT_CHAIN = 6,
+        QUERY = 7,
+        BEGIN_BLOCK = 8,
+        CHECK_TX = 9,
+        DELIVER_TX = 10,
+        END_BLOCK = 11,
+        COMMIT = 12,
+        LIST_SNAPSHOTS = 13,
+        OFFER_SNAPSHOT = 14,
+        LOAD_SNAPSHOT_CHUNK = 15,
+        APPLY_SNAPSHOT_CHUNK = 16,
     }
 
 }
@@ -760,7 +664,6 @@ export namespace Response {
 export class ResponseException extends jspb.Message { 
     getError(): string;
     setError(value: string): ResponseException;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResponseException.AsObject;
@@ -781,7 +684,6 @@ export namespace ResponseException {
 export class ResponseEcho extends jspb.Message { 
     getMessage(): string;
     setMessage(value: string): ResponseEcho;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResponseEcho.AsObject;
@@ -819,21 +721,16 @@ export namespace ResponseFlush {
 export class ResponseInfo extends jspb.Message { 
     getData(): string;
     setData(value: string): ResponseInfo;
-
     getVersion(): string;
     setVersion(value: string): ResponseInfo;
-
     getAppVersion(): number;
     setAppVersion(value: number): ResponseInfo;
-
     getLastBlockHeight(): number;
     setLastBlockHeight(value: number): ResponseInfo;
-
     getLastBlockAppHash(): Uint8Array | string;
     getLastBlockAppHash_asU8(): Uint8Array;
     getLastBlockAppHash_asB64(): string;
     setLastBlockAppHash(value: Uint8Array | string): ResponseInfo;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResponseInfo.AsObject;
@@ -858,13 +755,10 @@ export namespace ResponseInfo {
 export class ResponseSetOption extends jspb.Message { 
     getCode(): number;
     setCode(value: number): ResponseSetOption;
-
     getLog(): string;
     setLog(value: string): ResponseSetOption;
-
     getInfo(): string;
     setInfo(value: string): ResponseSetOption;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResponseSetOption.AsObject;
@@ -890,17 +784,14 @@ export class ResponseInitChain extends jspb.Message {
     clearConsensusParams(): void;
     getConsensusParams(): ConsensusParams | undefined;
     setConsensusParams(value?: ConsensusParams): ResponseInitChain;
-
     clearValidatorsList(): void;
     getValidatorsList(): Array<ValidatorUpdate>;
     setValidatorsList(value: Array<ValidatorUpdate>): ResponseInitChain;
     addValidators(value?: ValidatorUpdate, index?: number): ValidatorUpdate;
-
     getAppHash(): Uint8Array | string;
     getAppHash_asU8(): Uint8Array;
     getAppHash_asB64(): string;
     setAppHash(value: Uint8Array | string): ResponseInitChain;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResponseInitChain.AsObject;
@@ -923,38 +814,29 @@ export namespace ResponseInitChain {
 export class ResponseQuery extends jspb.Message { 
     getCode(): number;
     setCode(value: number): ResponseQuery;
-
     getLog(): string;
     setLog(value: string): ResponseQuery;
-
     getInfo(): string;
     setInfo(value: string): ResponseQuery;
-
     getIndex(): number;
     setIndex(value: number): ResponseQuery;
-
     getKey(): Uint8Array | string;
     getKey_asU8(): Uint8Array;
     getKey_asB64(): string;
     setKey(value: Uint8Array | string): ResponseQuery;
-
     getValue(): Uint8Array | string;
     getValue_asU8(): Uint8Array;
     getValue_asB64(): string;
     setValue(value: Uint8Array | string): ResponseQuery;
 
-
     hasProofOps(): boolean;
     clearProofOps(): void;
     getProofOps(): tendermint_crypto_proof_pb.ProofOps | undefined;
     setProofOps(value?: tendermint_crypto_proof_pb.ProofOps): ResponseQuery;
-
     getHeight(): number;
     setHeight(value: number): ResponseQuery;
-
     getCodespace(): string;
     setCodespace(value: string): ResponseQuery;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResponseQuery.AsObject;
@@ -986,7 +868,6 @@ export class ResponseBeginBlock extends jspb.Message {
     setEventsList(value: Array<Event>): ResponseBeginBlock;
     addEvents(value?: Event, index?: number): Event;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResponseBeginBlock.AsObject;
     static toObject(includeInstance: boolean, msg: ResponseBeginBlock): ResponseBeginBlock.AsObject;
@@ -1006,32 +887,24 @@ export namespace ResponseBeginBlock {
 export class ResponseCheckTx extends jspb.Message { 
     getCode(): number;
     setCode(value: number): ResponseCheckTx;
-
     getData(): Uint8Array | string;
     getData_asU8(): Uint8Array;
     getData_asB64(): string;
     setData(value: Uint8Array | string): ResponseCheckTx;
-
     getLog(): string;
     setLog(value: string): ResponseCheckTx;
-
     getInfo(): string;
     setInfo(value: string): ResponseCheckTx;
-
     getGasWanted(): number;
     setGasWanted(value: number): ResponseCheckTx;
-
     getGasUsed(): number;
     setGasUsed(value: number): ResponseCheckTx;
-
     clearEventsList(): void;
     getEventsList(): Array<Event>;
     setEventsList(value: Array<Event>): ResponseCheckTx;
     addEvents(value?: Event, index?: number): Event;
-
     getCodespace(): string;
     setCodespace(value: string): ResponseCheckTx;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResponseCheckTx.AsObject;
@@ -1059,32 +932,24 @@ export namespace ResponseCheckTx {
 export class ResponseDeliverTx extends jspb.Message { 
     getCode(): number;
     setCode(value: number): ResponseDeliverTx;
-
     getData(): Uint8Array | string;
     getData_asU8(): Uint8Array;
     getData_asB64(): string;
     setData(value: Uint8Array | string): ResponseDeliverTx;
-
     getLog(): string;
     setLog(value: string): ResponseDeliverTx;
-
     getInfo(): string;
     setInfo(value: string): ResponseDeliverTx;
-
     getGasWanted(): number;
     setGasWanted(value: number): ResponseDeliverTx;
-
     getGasUsed(): number;
     setGasUsed(value: number): ResponseDeliverTx;
-
     clearEventsList(): void;
     getEventsList(): Array<Event>;
     setEventsList(value: Array<Event>): ResponseDeliverTx;
     addEvents(value?: Event, index?: number): Event;
-
     getCodespace(): string;
     setCodespace(value: string): ResponseDeliverTx;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResponseDeliverTx.AsObject;
@@ -1115,17 +980,14 @@ export class ResponseEndBlock extends jspb.Message {
     setValidatorUpdatesList(value: Array<ValidatorUpdate>): ResponseEndBlock;
     addValidatorUpdates(value?: ValidatorUpdate, index?: number): ValidatorUpdate;
 
-
     hasConsensusParamUpdates(): boolean;
     clearConsensusParamUpdates(): void;
     getConsensusParamUpdates(): ConsensusParams | undefined;
     setConsensusParamUpdates(value?: ConsensusParams): ResponseEndBlock;
-
     clearEventsList(): void;
     getEventsList(): Array<Event>;
     setEventsList(value: Array<Event>): ResponseEndBlock;
     addEvents(value?: Event, index?: number): Event;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResponseEndBlock.AsObject;
@@ -1150,10 +1012,8 @@ export class ResponseCommit extends jspb.Message {
     getData_asU8(): Uint8Array;
     getData_asB64(): string;
     setData(value: Uint8Array | string): ResponseCommit;
-
     getRetainHeight(): number;
     setRetainHeight(value: number): ResponseCommit;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResponseCommit.AsObject;
@@ -1178,7 +1038,6 @@ export class ResponseListSnapshots extends jspb.Message {
     setSnapshotsList(value: Array<Snapshot>): ResponseListSnapshots;
     addSnapshots(value?: Snapshot, index?: number): Snapshot;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResponseListSnapshots.AsObject;
     static toObject(includeInstance: boolean, msg: ResponseListSnapshots): ResponseListSnapshots.AsObject;
@@ -1198,7 +1057,6 @@ export namespace ResponseListSnapshots {
 export class ResponseOfferSnapshot extends jspb.Message { 
     getResult(): ResponseOfferSnapshot.Result;
     setResult(value: ResponseOfferSnapshot.Result): ResponseOfferSnapshot;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResponseOfferSnapshot.AsObject;
@@ -1232,7 +1090,6 @@ export class ResponseLoadSnapshotChunk extends jspb.Message {
     getChunk_asB64(): string;
     setChunk(value: Uint8Array | string): ResponseLoadSnapshotChunk;
 
-
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResponseLoadSnapshotChunk.AsObject;
     static toObject(includeInstance: boolean, msg: ResponseLoadSnapshotChunk): ResponseLoadSnapshotChunk.AsObject;
@@ -1252,17 +1109,14 @@ export namespace ResponseLoadSnapshotChunk {
 export class ResponseApplySnapshotChunk extends jspb.Message { 
     getResult(): ResponseApplySnapshotChunk.Result;
     setResult(value: ResponseApplySnapshotChunk.Result): ResponseApplySnapshotChunk;
-
     clearRefetchChunksList(): void;
     getRefetchChunksList(): Array<number>;
     setRefetchChunksList(value: Array<number>): ResponseApplySnapshotChunk;
     addRefetchChunks(value: number, index?: number): number;
-
     clearRejectSendersList(): void;
     getRejectSendersList(): Array<string>;
     setRejectSendersList(value: Array<string>): ResponseApplySnapshotChunk;
     addRejectSenders(value: string, index?: number): string;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResponseApplySnapshotChunk.AsObject;
@@ -1299,24 +1153,20 @@ export class ConsensusParams extends jspb.Message {
     getBlock(): BlockParams | undefined;
     setBlock(value?: BlockParams): ConsensusParams;
 
-
     hasEvidence(): boolean;
     clearEvidence(): void;
     getEvidence(): tendermint_types_params_pb.EvidenceParams | undefined;
     setEvidence(value?: tendermint_types_params_pb.EvidenceParams): ConsensusParams;
-
 
     hasValidator(): boolean;
     clearValidator(): void;
     getValidator(): tendermint_types_params_pb.ValidatorParams | undefined;
     setValidator(value?: tendermint_types_params_pb.ValidatorParams): ConsensusParams;
 
-
     hasVersion(): boolean;
     clearVersion(): void;
     getVersion(): tendermint_types_params_pb.VersionParams | undefined;
     setVersion(value?: tendermint_types_params_pb.VersionParams): ConsensusParams;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ConsensusParams.AsObject;
@@ -1340,10 +1190,8 @@ export namespace ConsensusParams {
 export class BlockParams extends jspb.Message { 
     getMaxBytes(): number;
     setMaxBytes(value: number): BlockParams;
-
     getMaxGas(): number;
     setMaxGas(value: number): BlockParams;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): BlockParams.AsObject;
@@ -1365,12 +1213,10 @@ export namespace BlockParams {
 export class LastCommitInfo extends jspb.Message { 
     getRound(): number;
     setRound(value: number): LastCommitInfo;
-
     clearVotesList(): void;
     getVotesList(): Array<VoteInfo>;
     setVotesList(value: Array<VoteInfo>): LastCommitInfo;
     addVotes(value?: VoteInfo, index?: number): VoteInfo;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): LastCommitInfo.AsObject;
@@ -1392,12 +1238,10 @@ export namespace LastCommitInfo {
 export class Event extends jspb.Message { 
     getType(): string;
     setType(value: string): Event;
-
     clearAttributesList(): void;
     getAttributesList(): Array<EventAttribute>;
     setAttributesList(value: Array<EventAttribute>): Event;
     addAttributes(value?: EventAttribute, index?: number): EventAttribute;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Event.AsObject;
@@ -1421,15 +1265,12 @@ export class EventAttribute extends jspb.Message {
     getKey_asU8(): Uint8Array;
     getKey_asB64(): string;
     setKey(value: Uint8Array | string): EventAttribute;
-
     getValue(): Uint8Array | string;
     getValue_asU8(): Uint8Array;
     getValue_asB64(): string;
     setValue(value: Uint8Array | string): EventAttribute;
-
     getIndex(): boolean;
     setIndex(value: boolean): EventAttribute;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): EventAttribute.AsObject;
@@ -1452,21 +1293,17 @@ export namespace EventAttribute {
 export class TxResult extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): TxResult;
-
     getIndex(): number;
     setIndex(value: number): TxResult;
-
     getTx(): Uint8Array | string;
     getTx_asU8(): Uint8Array;
     getTx_asB64(): string;
     setTx(value: Uint8Array | string): TxResult;
 
-
     hasResult(): boolean;
     clearResult(): void;
     getResult(): ResponseDeliverTx | undefined;
     setResult(value?: ResponseDeliverTx): TxResult;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TxResult.AsObject;
@@ -1492,10 +1329,8 @@ export class Validator extends jspb.Message {
     getAddress_asU8(): Uint8Array;
     getAddress_asB64(): string;
     setAddress(value: Uint8Array | string): Validator;
-
     getPower(): number;
     setPower(value: number): Validator;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Validator.AsObject;
@@ -1520,10 +1355,8 @@ export class ValidatorUpdate extends jspb.Message {
     clearPubKey(): void;
     getPubKey(): tendermint_crypto_keys_pb.PublicKey | undefined;
     setPubKey(value?: tendermint_crypto_keys_pb.PublicKey): ValidatorUpdate;
-
     getPower(): number;
     setPower(value: number): ValidatorUpdate;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ValidatorUpdate.AsObject;
@@ -1548,10 +1381,8 @@ export class VoteInfo extends jspb.Message {
     clearValidator(): void;
     getValidator(): Validator | undefined;
     setValidator(value?: Validator): VoteInfo;
-
     getSignedLastBlock(): boolean;
     setSignedLastBlock(value: boolean): VoteInfo;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): VoteInfo.AsObject;
@@ -1574,24 +1405,19 @@ export class Evidence extends jspb.Message {
     getType(): EvidenceType;
     setType(value: EvidenceType): Evidence;
 
-
     hasValidator(): boolean;
     clearValidator(): void;
     getValidator(): Validator | undefined;
     setValidator(value?: Validator): Evidence;
-
     getHeight(): number;
     setHeight(value: number): Evidence;
-
 
     hasTime(): boolean;
     clearTime(): void;
     getTime(): google_protobuf_timestamp_pb.Timestamp | undefined;
     setTime(value?: google_protobuf_timestamp_pb.Timestamp): Evidence;
-
     getTotalVotingPower(): number;
     setTotalVotingPower(value: number): Evidence;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Evidence.AsObject;
@@ -1616,23 +1442,18 @@ export namespace Evidence {
 export class Snapshot extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): Snapshot;
-
     getFormat(): number;
     setFormat(value: number): Snapshot;
-
     getChunks(): number;
     setChunks(value: number): Snapshot;
-
     getHash(): Uint8Array | string;
     getHash_asU8(): Uint8Array;
     getHash_asB64(): string;
     setHash(value: Uint8Array | string): Snapshot;
-
     getMetadata(): Uint8Array | string;
     getMetadata_asU8(): Uint8Array;
     getMetadata_asB64(): string;
     setMetadata(value: Uint8Array | string): Snapshot;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Snapshot.AsObject;

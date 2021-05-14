@@ -1,6 +1,7 @@
 // GENERATED CODE -- DO NOT EDIT!
 
 'use strict';
+var grpc = require('@grpc/grpc-js');
 var rpctransact_pb = require('./rpctransact_pb.js');
 var gogoproto_gogo_pb = require('./gogoproto/gogo_pb.js');
 var google_protobuf_duration_pb = require('google-protobuf/google/protobuf/duration_pb.js');
@@ -109,7 +110,7 @@ function deserialize_txs_Receipt(buffer_arg) {
 
 
 // Transaction Service Definition
-var TransactService = exports['rpctransact.Transact'] = {
+var TransactService = exports.TransactService = {
   // Broadcast a transaction to the mempool - if the transaction is not signed signing will be attempted server-side
 // and wait for it to be included in block
 broadcastTxSync: {
@@ -258,3 +259,4 @@ nameTxAsync: {
   },
 };
 
+exports.TransactClient = grpc.makeGenericClientConstructor(TransactService);

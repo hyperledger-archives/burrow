@@ -13,39 +13,31 @@ import * as bcm_pb from "./bcm_pb";
 export class ResultStatus extends jspb.Message { 
     getChainid(): string;
     setChainid(value: string): ResultStatus;
-
     getRunid(): string;
     setRunid(value: string): ResultStatus;
-
     getBurrowversion(): string;
     setBurrowversion(value: string): ResultStatus;
-
     getGenesishash(): Uint8Array | string;
     getGenesishash_asU8(): Uint8Array;
     getGenesishash_asB64(): string;
     setGenesishash(value: Uint8Array | string): ResultStatus;
-
 
     hasNodeinfo(): boolean;
     clearNodeinfo(): void;
     getNodeinfo(): tendermint_pb.NodeInfo | undefined;
     setNodeinfo(value?: tendermint_pb.NodeInfo): ResultStatus;
 
-
     hasSyncinfo(): boolean;
     clearSyncinfo(): void;
     getSyncinfo(): bcm_pb.SyncInfo | undefined;
     setSyncinfo(value?: bcm_pb.SyncInfo): ResultStatus;
-
     getCatchingup(): boolean;
     setCatchingup(value: boolean): ResultStatus;
-
 
     hasValidatorinfo(): boolean;
     clearValidatorinfo(): void;
     getValidatorinfo(): validator_pb.Validator | undefined;
     setValidatorinfo(value?: validator_pb.Validator): ResultStatus;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ResultStatus.AsObject;

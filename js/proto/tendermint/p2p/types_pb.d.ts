@@ -10,13 +10,10 @@ import * as gogoproto_gogo_pb from "../../gogoproto/gogo_pb";
 export class NetAddress extends jspb.Message { 
     getId(): string;
     setId(value: string): NetAddress;
-
     getIp(): string;
     setIp(value: string): NetAddress;
-
     getPort(): number;
     setPort(value: number): NetAddress;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): NetAddress.AsObject;
@@ -39,13 +36,10 @@ export namespace NetAddress {
 export class ProtocolVersion extends jspb.Message { 
     getP2p(): number;
     setP2p(value: number): ProtocolVersion;
-
     getBlock(): number;
     setBlock(value: number): ProtocolVersion;
-
     getApp(): number;
     setApp(value: number): ProtocolVersion;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ProtocolVersion.AsObject;
@@ -71,33 +65,25 @@ export class DefaultNodeInfo extends jspb.Message {
     clearProtocolVersion(): void;
     getProtocolVersion(): ProtocolVersion | undefined;
     setProtocolVersion(value?: ProtocolVersion): DefaultNodeInfo;
-
     getDefaultNodeId(): string;
     setDefaultNodeId(value: string): DefaultNodeInfo;
-
     getListenAddr(): string;
     setListenAddr(value: string): DefaultNodeInfo;
-
     getNetwork(): string;
     setNetwork(value: string): DefaultNodeInfo;
-
     getVersion(): string;
     setVersion(value: string): DefaultNodeInfo;
-
     getChannels(): Uint8Array | string;
     getChannels_asU8(): Uint8Array;
     getChannels_asB64(): string;
     setChannels(value: Uint8Array | string): DefaultNodeInfo;
-
     getMoniker(): string;
     setMoniker(value: string): DefaultNodeInfo;
-
 
     hasOther(): boolean;
     clearOther(): void;
     getOther(): DefaultNodeInfoOther | undefined;
     setOther(value?: DefaultNodeInfoOther): DefaultNodeInfo;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): DefaultNodeInfo.AsObject;
@@ -125,10 +111,8 @@ export namespace DefaultNodeInfo {
 export class DefaultNodeInfoOther extends jspb.Message { 
     getTxIndex(): string;
     setTxIndex(value: string): DefaultNodeInfoOther;
-
     getRpcAddress(): string;
     setRpcAddress(value: string): DefaultNodeInfoOther;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): DefaultNodeInfoOther.AsObject;

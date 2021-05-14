@@ -19,18 +19,15 @@ export class ABCIResponses extends jspb.Message {
     setDeliverTxsList(value: Array<tendermint_abci_types_pb.ResponseDeliverTx>): ABCIResponses;
     addDeliverTxs(value?: tendermint_abci_types_pb.ResponseDeliverTx, index?: number): tendermint_abci_types_pb.ResponseDeliverTx;
 
-
     hasEndBlock(): boolean;
     clearEndBlock(): void;
     getEndBlock(): tendermint_abci_types_pb.ResponseEndBlock | undefined;
     setEndBlock(value?: tendermint_abci_types_pb.ResponseEndBlock): ABCIResponses;
 
-
     hasBeginBlock(): boolean;
     clearBeginBlock(): void;
     getBeginBlock(): tendermint_abci_types_pb.ResponseBeginBlock | undefined;
     setBeginBlock(value?: tendermint_abci_types_pb.ResponseBeginBlock): ABCIResponses;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ABCIResponses.AsObject;
@@ -56,10 +53,8 @@ export class ValidatorsInfo extends jspb.Message {
     clearValidatorSet(): void;
     getValidatorSet(): tendermint_types_validator_pb.ValidatorSet | undefined;
     setValidatorSet(value?: tendermint_types_validator_pb.ValidatorSet): ValidatorsInfo;
-
     getLastHeightChanged(): number;
     setLastHeightChanged(value: number): ValidatorsInfo;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ValidatorsInfo.AsObject;
@@ -84,10 +79,8 @@ export class ConsensusParamsInfo extends jspb.Message {
     clearConsensusParams(): void;
     getConsensusParams(): tendermint_types_params_pb.ConsensusParams | undefined;
     setConsensusParams(value?: tendermint_types_params_pb.ConsensusParams): ConsensusParamsInfo;
-
     getLastHeightChanged(): number;
     setLastHeightChanged(value: number): ConsensusParamsInfo;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ConsensusParamsInfo.AsObject;
@@ -112,10 +105,8 @@ export class Version extends jspb.Message {
     clearConsensus(): void;
     getConsensus(): tendermint_version_types_pb.Consensus | undefined;
     setConsensus(value?: tendermint_version_types_pb.Consensus): Version;
-
     getSoftware(): string;
     setSoftware(value: string): Version;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Version.AsObject;
@@ -140,68 +131,54 @@ export class State extends jspb.Message {
     clearVersion(): void;
     getVersion(): Version | undefined;
     setVersion(value?: Version): State;
-
     getChainId(): string;
     setChainId(value: string): State;
-
     getInitialHeight(): number;
     setInitialHeight(value: number): State;
-
     getLastBlockHeight(): number;
     setLastBlockHeight(value: number): State;
-
 
     hasLastBlockId(): boolean;
     clearLastBlockId(): void;
     getLastBlockId(): tendermint_types_types_pb.BlockID | undefined;
     setLastBlockId(value?: tendermint_types_types_pb.BlockID): State;
 
-
     hasLastBlockTime(): boolean;
     clearLastBlockTime(): void;
     getLastBlockTime(): google_protobuf_timestamp_pb.Timestamp | undefined;
     setLastBlockTime(value?: google_protobuf_timestamp_pb.Timestamp): State;
-
 
     hasNextValidators(): boolean;
     clearNextValidators(): void;
     getNextValidators(): tendermint_types_validator_pb.ValidatorSet | undefined;
     setNextValidators(value?: tendermint_types_validator_pb.ValidatorSet): State;
 
-
     hasValidators(): boolean;
     clearValidators(): void;
     getValidators(): tendermint_types_validator_pb.ValidatorSet | undefined;
     setValidators(value?: tendermint_types_validator_pb.ValidatorSet): State;
 
-
     hasLastValidators(): boolean;
     clearLastValidators(): void;
     getLastValidators(): tendermint_types_validator_pb.ValidatorSet | undefined;
     setLastValidators(value?: tendermint_types_validator_pb.ValidatorSet): State;
-
     getLastHeightValidatorsChanged(): number;
     setLastHeightValidatorsChanged(value: number): State;
-
 
     hasConsensusParams(): boolean;
     clearConsensusParams(): void;
     getConsensusParams(): tendermint_types_params_pb.ConsensusParams | undefined;
     setConsensusParams(value?: tendermint_types_params_pb.ConsensusParams): State;
-
     getLastHeightConsensusParamsChanged(): number;
     setLastHeightConsensusParamsChanged(value: number): State;
-
     getLastResultsHash(): Uint8Array | string;
     getLastResultsHash_asU8(): Uint8Array;
     getLastResultsHash_asB64(): string;
     setLastResultsHash(value: Uint8Array | string): State;
-
     getAppHash(): Uint8Array | string;
     getAppHash_asU8(): Uint8Array;
     getAppHash_asB64(): string;
     setAppHash(value: Uint8Array | string): State;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): State.AsObject;

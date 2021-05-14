@@ -10,22 +10,18 @@ import * as gogoproto_gogo_pb from "../../gogoproto/gogo_pb";
 export class Proof extends jspb.Message { 
     getTotal(): number;
     setTotal(value: number): Proof;
-
     getIndex(): number;
     setIndex(value: number): Proof;
-
     getLeafHash(): Uint8Array | string;
     getLeafHash_asU8(): Uint8Array;
     getLeafHash_asB64(): string;
     setLeafHash(value: Uint8Array | string): Proof;
-
     clearAuntsList(): void;
     getAuntsList(): Array<Uint8Array | string>;
     getAuntsList_asU8(): Array<Uint8Array>;
     getAuntsList_asB64(): Array<string>;
     setAuntsList(value: Array<Uint8Array | string>): Proof;
     addAunts(value: Uint8Array | string, index?: number): Uint8Array | string;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Proof.AsObject;
@@ -52,12 +48,10 @@ export class ValueOp extends jspb.Message {
     getKey_asB64(): string;
     setKey(value: Uint8Array | string): ValueOp;
 
-
     hasProof(): boolean;
     clearProof(): void;
     getProof(): Proof | undefined;
     setProof(value?: Proof): ValueOp;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ValueOp.AsObject;
@@ -79,13 +73,10 @@ export namespace ValueOp {
 export class DominoOp extends jspb.Message { 
     getKey(): string;
     setKey(value: string): DominoOp;
-
     getInput(): string;
     setInput(value: string): DominoOp;
-
     getOutput(): string;
     setOutput(value: string): DominoOp;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): DominoOp.AsObject;
@@ -108,17 +99,14 @@ export namespace DominoOp {
 export class ProofOp extends jspb.Message { 
     getType(): string;
     setType(value: string): ProofOp;
-
     getKey(): Uint8Array | string;
     getKey_asU8(): Uint8Array;
     getKey_asB64(): string;
     setKey(value: Uint8Array | string): ProofOp;
-
     getData(): Uint8Array | string;
     getData_asU8(): Uint8Array;
     getData_asB64(): string;
     setData(value: Uint8Array | string): ProofOp;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ProofOp.AsObject;
@@ -143,7 +131,6 @@ export class ProofOps extends jspb.Message {
     getOpsList(): Array<ProofOp>;
     setOpsList(value: Array<ProofOp>): ProofOps;
     addOps(value?: ProofOp, index?: number): ProofOp;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): ProofOps.AsObject;

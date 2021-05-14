@@ -14,15 +14,12 @@ export class Validator extends jspb.Message {
     getAddress_asB64(): string;
     setAddress(value: Uint8Array | string): Validator;
 
-
     hasPublickey(): boolean;
     clearPublickey(): void;
     getPublickey(): crypto_pb.PublicKey | undefined;
     setPublickey(value?: crypto_pb.PublicKey): Validator;
-
     getPower(): number;
     setPower(value: number): Validator;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Validator.AsObject;

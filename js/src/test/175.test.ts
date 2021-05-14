@@ -1,7 +1,10 @@
 import * as assert from 'assert';
-import {burrow, compile} from '../test';
+import { compile } from '../contracts/compile';
+import { ContractInstance, getMetadata } from '../contracts/contract';
+import { burrow } from './test';
 
-describe('#175', function () {it('#175', async () => {
+describe('#175', function () {
+  it('#175', async () => {
     const source = `
     pragma solidity >=0.0.0;
       contract Contract {
@@ -13,22 +16,22 @@ describe('#175', function () {it('#175', async () => {
           return thename;
         }
       }
-    `
-    var contract
-    let A2
+    `;
 
-    const {abi, code} = compile(source, 'Contract')
-    return burrow.contracts.deploy(abi, code, null, 'contract1').then((C) => {
-      contract = C
-      return contract._constructor('contract2')
-    }).then((address) => {
-      A2 = address
-      return Promise.all(
-        [contract.getName(),      // Note using the default address from the deploy
-          contract.getName.at(A2)])   // Using the .at() to specify the second deployed contract
-    }).then(([result1, result2]) => {
-      assert.strictEqual(result1[0], 'contract1')
-      assert.strictEqual(result2[0], 'contract2')
-    })
-  })
-})
+    const contract = compile<ContractInstance>(source, 'Contract');
+
+    const instance1 = (await contract.deploy(burrow, 'contract1')) as any;
+    const instance2 = await contract.deploy(burrow, 'contract2');
+
+    const address = getMetadata(instance2).address;
+    const ps = await Promise.all([
+      // Note using the default address from the deploy
+      instance1.getName(),
+      // Using the .at() to specify the second deployed contract
+      instance1.getName.at(address)(),
+    ]);
+    const [[name1], [name2]] = ps;
+    assert.strictEqual(name1, 'contract1');
+    assert.strictEqual(name2, 'contract2');
+  });
+});

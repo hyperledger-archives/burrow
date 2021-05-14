@@ -10,10 +10,8 @@ import * as gogoproto_gogo_pb from "./gogoproto/gogo_pb";
 export class Balance extends jspb.Message { 
     getType(): number;
     setType(value: number): Balance;
-
     getAmount(): number;
     setAmount(value: number): Balance;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Balance.AsObject;

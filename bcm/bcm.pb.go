@@ -14,9 +14,9 @@ import (
 	proto "github.com/gogo/protobuf/proto"
 	github_com_gogo_protobuf_types "github.com/gogo/protobuf/types"
 	golang_proto "github.com/golang/protobuf/proto"
-	_ "github.com/golang/protobuf/ptypes/duration"
 	_ "github.com/golang/protobuf/ptypes/timestamp"
 	github_com_hyperledger_burrow_binary "github.com/hyperledger/burrow/binary"
+	_ "google.golang.org/protobuf/types/known/durationpb"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

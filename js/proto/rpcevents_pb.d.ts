@@ -11,10 +11,8 @@ import * as exec_pb from "./exec_pb";
 export class GetBlockRequest extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): GetBlockRequest;
-
     getWait(): boolean;
     setWait(value: boolean): GetBlockRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): GetBlockRequest.AsObject;
@@ -38,10 +36,8 @@ export class TxRequest extends jspb.Message {
     getTxhash_asU8(): Uint8Array;
     getTxhash_asB64(): string;
     setTxhash(value: Uint8Array | string): TxRequest;
-
     getWait(): boolean;
     setWait(value: boolean): TxRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TxRequest.AsObject;
@@ -66,10 +62,8 @@ export class BlocksRequest extends jspb.Message {
     clearBlockrange(): void;
     getBlockrange(): BlockRange | undefined;
     setBlockrange(value?: BlockRange): BlocksRequest;
-
     getQuery(): string;
     setQuery(value: string): BlocksRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): BlocksRequest.AsObject;
@@ -91,12 +85,10 @@ export namespace BlocksRequest {
 export class EventsResponse extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): EventsResponse;
-
     clearEventsList(): void;
     getEventsList(): Array<exec_pb.Event>;
     setEventsList(value: Array<exec_pb.Event>): EventsResponse;
     addEvents(value?: exec_pb.Event, index?: number): exec_pb.Event;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): EventsResponse.AsObject;
@@ -118,13 +110,10 @@ export namespace EventsResponse {
 export class GetTxsRequest extends jspb.Message { 
     getStartheight(): number;
     setStartheight(value: number): GetTxsRequest;
-
     getEndheight(): number;
     setEndheight(value: number): GetTxsRequest;
-
     getQuery(): string;
     setQuery(value: string): GetTxsRequest;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): GetTxsRequest.AsObject;
@@ -147,12 +136,10 @@ export namespace GetTxsRequest {
 export class GetTxsResponse extends jspb.Message { 
     getHeight(): number;
     setHeight(value: number): GetTxsResponse;
-
     clearTxexecutionsList(): void;
     getTxexecutionsList(): Array<exec_pb.TxExecution>;
     setTxexecutionsList(value: Array<exec_pb.TxExecution>): GetTxsResponse;
     addTxexecutions(value?: exec_pb.TxExecution, index?: number): exec_pb.TxExecution;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): GetTxsResponse.AsObject;
@@ -174,10 +161,8 @@ export namespace GetTxsResponse {
 export class Bound extends jspb.Message { 
     getType(): Bound.BoundType;
     setType(value: Bound.BoundType): Bound;
-
     getIndex(): number;
     setIndex(value: number): Bound;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): Bound.AsObject;
@@ -212,12 +197,10 @@ export class BlockRange extends jspb.Message {
     getStart(): Bound | undefined;
     setStart(value?: Bound): BlockRange;
 
-
     hasEnd(): boolean;
     clearEnd(): void;
     getEnd(): Bound | undefined;
     setEnd(value?: Bound): BlockRange;
-
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): BlockRange.AsObject;
