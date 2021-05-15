@@ -1,4 +1,9 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.32.1] - 2021-05-15
+### Changed
+- [Execution] CallErrors no longer emit very long rather pointless (since there is no tooling to help interpret them currently) EVM call traces
+
+
 ## [0.32.0] - 2021-05-14
 ### Changed
 - [JS] Significant refactor/rewrite of Burrow.js into idiomatic Typescript including some breaking changes to API
@@ -747,6 +752,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.32.1]: https://github.com/hyperledger/burrow/compare/v0.32.0...v0.32.1
 [0.32.0]: https://github.com/hyperledger/burrow/compare/v0.31.3...v0.32.0
 [0.31.3]: https://github.com/hyperledger/burrow/compare/v0.31.2...v0.31.3
 [0.31.2]: https://github.com/hyperledger/burrow/compare/v0.31.1...v0.31.2

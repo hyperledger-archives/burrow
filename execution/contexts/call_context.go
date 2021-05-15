@@ -229,8 +229,7 @@ func (ctx *CallContext) Deliver(inAcc, outAcc *acm.Account, value uint64) error 
 			ctx.Logger.InfoMsg("Error on EVM execution",
 				structure.ErrorKey, err)
 
-			ctx.txe.PushError(errors.Wrapf(err, "call error: %v\nEVM call trace: %s",
-				err, ctx.txe.CallTrace()))
+			ctx.txe.PushError(err)
 		} else {
 			ctx.Logger.TraceMsg("Successful execution")
 			if createContract {

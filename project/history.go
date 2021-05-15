@@ -47,7 +47,11 @@ func FullVersion() string {
 // To cut a new release add a release to the front of this slice then run the
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
-	MustDeclareReleases("0.32.0 - 2021-05-14",
+	MustDeclareReleases("0.32.1 - 2021-05-15",
+		`### Changed
+- [Execution] CallErrors no longer emit very long rather pointless (since there is no tooling to help interpret them currently) EVM call traces
+`,
+		"0.32.0 - 2021-05-14",
 		`### Changed
 - [JS] Significant refactor/rewrite of Burrow.js into idiomatic Typescript including some breaking changes to API
 - [JS] Change to use ethers.js for ABI encoding
