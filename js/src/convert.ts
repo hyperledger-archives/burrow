@@ -48,13 +48,17 @@ export function withoutArrayElements(result: Result): Record<string, unknown> {
 function abiToBurrow(arg: unknown, type: string): unknown {
   if (/address/.test(type)) {
     return recApply(unprefixedHexString, arg as NestedArray<string>);
-  } else if (/bytes/.test(type)) {
+  } else if (/bytes[0-9]+/.test(type)) {
+    // Handle bytes32 differently - for legacy reasons they are used as identifiers and represented as hex strings
     return recApply(unprefixedHexString, arg as NestedArray<string>);
+  } else if (/bytes/.test(type)) {
+    return recApply(toBuffer, arg as NestedArray<string>);
   } else if (/int/.test(type)) {
     return recApply(numberToBurrow, arg as NestedArray<BigNumber>);
   }
   return arg;
 }
+
 
 function burrowToAbi(arg: unknown, type: string): unknown {
   if (/address/.test(type)) {
