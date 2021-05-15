@@ -2,6 +2,7 @@
 ## [0.32.1] - 2021-05-15
 ### Changed
 - [Execution] CallErrors no longer emit very long rather pointless (since there is no tooling to help interpret them currently) EVM call traces
+- [JS] Return byte arrays as Buffers from decode (only return fixed-width byteNN types as hex strings)
 
 
 ## [0.32.0] - 2021-05-14
