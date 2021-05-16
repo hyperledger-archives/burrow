@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { CreateCall, CreateParameter, DeclareConstant, StringType } from './syntax';
+import { createCall, createParameter, declareConstant, StringType } from './syntax';
 
 export const ReplacerName = ts.createIdentifier('Replace');
 
@@ -17,7 +17,7 @@ export const Replacer = () => {
     undefined,
     ReplacerName,
     undefined,
-    [CreateParameter(bytecode, StringType), CreateParameter(name, StringType), CreateParameter(address, StringType)],
+    [createParameter(bytecode, StringType), createParameter(name, StringType), createParameter(address, StringType)],
     StringType,
     ts.createBlock(
       [
@@ -36,14 +36,14 @@ export const Replacer = () => {
             ),
           ),
         ),
-        DeclareConstant(
+        declareConstant(
           truncated,
-          CreateCall(ts.createPropertyAccess(name, 'slice'), [
+          createCall(ts.createPropertyAccess(name, 'slice'), [
             ts.createNumericLiteral('0'),
             ts.createNumericLiteral('36'),
           ]),
         ),
-        DeclareConstant(
+        declareConstant(
           label,
           adds(
             ts.createAdd(ts.createStringLiteral('__'), truncated),
@@ -56,12 +56,12 @@ export const Replacer = () => {
         ),
         ts.createWhile(
           ts.createBinary(
-            CreateCall(ts.createPropertyAccess(bytecode, 'indexOf'), [label]),
+            createCall(ts.createPropertyAccess(bytecode, 'indexOf'), [label]),
             ts.SyntaxKind.GreaterThanEqualsToken,
             ts.createNumericLiteral('0'),
           ),
           ts.createExpressionStatement(
-            ts.createAssignment(bytecode, CreateCall(ts.createPropertyAccess(bytecode, 'replace'), [label, address])),
+            ts.createAssignment(bytecode, createCall(ts.createPropertyAccess(bytecode, 'replace'), [label, address])),
           ),
         ),
         ts.createReturn(bytecode),
@@ -78,8 +78,8 @@ function adds(...exp: ts.Expression[]) {
 }
 
 function arrayJoin(length: ts.Expression, literal: string) {
-  return CreateCall(
-    ts.createPropertyAccess(CreateCall(ts.createIdentifier('Array'), [length]), ts.createIdentifier('join')),
+  return createCall(
+    ts.createPropertyAccess(createCall(ts.createIdentifier('Array'), [length]), ts.createIdentifier('join')),
     [ts.createStringLiteral(literal)],
   );
 }

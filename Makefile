@@ -217,6 +217,10 @@ publish_js:
 	yarn --cwd js build
 	yarn --cwd js publish --access public --non-interactive --no-git-tag-version --new-version $(shell ./scripts/local_version.sh)
 
+.PHONY: clean_js
+clean_js:
+	find js -name '*.abi.ts' -exec rm '{}' ';' -print
+
 .PHONY: test
 test: check bin/solc bin/solang
 	@tests/scripts/bin_wrapper.sh go test ./... ${GO_TEST_ARGS}

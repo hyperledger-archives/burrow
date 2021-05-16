@@ -1,10 +1,10 @@
 import assert from 'assert';
 import { ABI } from './abi';
-import { GetSize, Hash, NameFromABI, TokenizeString } from './solidity';
+import { getSize, sha3, nameFromABI, tokenizeString } from './solidity';
 
 describe('abi helpers', function () {
   it('should compute a valid method id', async function () {
-    assert.equal(Hash('baz(uint32,bool)').slice(0, 8), 'CDCD77C0');
+    assert.equal(sha3('baz(uint32,bool)').slice(0, 8), 'CDCD77C0');
   });
 
   it('should return the full function name with args', async function () {
@@ -23,14 +23,14 @@ describe('abi helpers', function () {
         },
       ],
     };
-    assert.equal(NameFromABI(abi), 'baz(uint32,bool)');
+    assert.equal(nameFromABI(abi), 'baz(uint32,bool)');
   });
 
   it('should strip array size', () => {
-    assert.equal(GetSize('uint[3]'), 3);
+    assert.equal(getSize('uint[3]'), 3);
   });
 
   it('should tokenize string', () => {
-    assert.equal(TokenizeString('sol/Storage.sol:Storage'), 'sol_Storage_sol_Storage');
+    assert.equal(tokenizeString('sol/Storage.sol:Storage'), 'sol_Storage_sol_Storage');
   });
 });

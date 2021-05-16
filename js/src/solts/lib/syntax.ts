@@ -1,4 +1,4 @@
-import ts from 'typescript';
+import ts, { MethodDeclaration, VariableStatement } from 'typescript';
 
 export const Uint8ArrayType = ts.createTypeReferenceNode('Uint8Array', undefined);
 export const ErrorType = ts.createTypeReferenceNode('Error', undefined);
@@ -18,15 +18,15 @@ export const ExportToken = ts.createToken(ts.SyntaxKind.ExportKeyword);
 export const EllipsisToken = ts.createToken(ts.SyntaxKind.DotDotDotToken);
 export const QuestionToken = ts.createToken(ts.SyntaxKind.QuestionToken);
 
-export const CreateCall = (fn: ts.Expression, args: ts.Expression[]) => ts.createCall(fn, undefined, args);
+export const createCall = (fn: ts.Expression, args?: ts.Expression[]) => ts.createCall(fn, undefined, args);
 export const AccessThis = (name: ts.Identifier) => ts.createPropertyAccess(ts.createThis(), name);
 export const BufferFrom = (...args: ts.Expression[]) =>
-  CreateCall(ts.createPropertyAccess(BufferType, ts.createIdentifier('from')), args);
+  createCall(ts.createPropertyAccess(BufferType, ts.createIdentifier('from')), args);
 export const AsArray = (type: ts.TypeNode) => ts.createArrayTypeNode(type);
 export const AsTuple = (type: ts.TypeNode, size: number) => ts.createTupleTypeNode(Array(size).fill(type));
 export const AsRefNode = (id: ts.Identifier) => ts.createTypeReferenceNode(id, undefined);
 
-export function CreateParameter(
+export function createParameter(
   name: string | ts.Identifier,
   typeNode: ts.TypeNode | undefined,
   initializer?: ts.Expression,
@@ -44,14 +44,14 @@ export function CreateParameter(
   );
 }
 
-export function DeclareConstant(name: ts.Identifier, initializer?: ts.Expression, extern?: boolean) {
+export function declareConstant(name: ts.Identifier, initializer?: ts.Expression, extern?: boolean): VariableStatement {
   return ts.createVariableStatement(
     extern ? [ExportToken] : [],
     ts.createVariableDeclarationList([ts.createVariableDeclaration(name, undefined, initializer)], ts.NodeFlags.Const),
   );
 }
 
-export function DeclareLet(name: ts.Identifier, initializer?: ts.Expression, extern?: boolean) {
+export function declareLet(name: ts.Identifier, initializer?: ts.Expression, extern?: boolean) {
   return ts.createVariableStatement(
     extern ? [ExportToken] : [],
     ts.createVariableDeclarationList([ts.createVariableDeclaration(name, undefined, initializer)], ts.NodeFlags.Let),
@@ -61,21 +61,21 @@ export function DeclareLet(name: ts.Identifier, initializer?: ts.Expression, ext
 const resolveFn = ts.createIdentifier('resolve');
 const rejectFn = ts.createIdentifier('reject');
 
-export function CreatePromiseBody(error: ts.Identifier, statements: ts.Expression[]) {
+export function createPromiseBody(error: ts.Identifier, statements: ts.Expression[]) {
   return ts.createExpressionStatement(
     ts.createConditional(
       error,
-      CreateCall(rejectFn, [error]),
-      CreateCall(resolveFn, statements ? statements : undefined),
+      createCall(rejectFn, [error]),
+      createCall(resolveFn, statements ? statements : undefined),
     ),
   );
 }
 
-export function RejectOrResolve(error: ts.Identifier, statements: ts.Statement[], success: ts.Expression[]) {
+export function rejectOrResolve(error: ts.Identifier, statements: ts.Statement[], success: ts.Expression[]) {
   return ts.createIf(
     error,
-    ts.createExpressionStatement(CreateCall(rejectFn, [error])),
-    ts.createBlock([...statements, ts.createExpressionStatement(CreateCall(resolveFn, success))]),
+    ts.createExpressionStatement(createCall(rejectFn, [error])),
+    ts.createBlock([...statements, ts.createExpressionStatement(createCall(resolveFn, success))]),
   );
 }
 
@@ -99,7 +99,7 @@ export function CreateCallbackDeclaration(
   return ts.createArrowFunction(
     undefined,
     undefined,
-    [CreateParameter(first, undefined), CreateParameter(second, undefined)],
+    [createParameter(first, undefined), createParameter(second, undefined)],
     returnType,
     undefined,
     ts.createBlock(body, multiLine),
@@ -124,18 +124,17 @@ export function ImportReadable() {
 }
 
 export class Method {
-  id: ts.Identifier;
-  type: ts.TypeReferenceNode;
-  params: ts.ParameterDeclaration[];
-  ret: ts.TypeNode;
+  readonly id: ts.Identifier;
+  type?: ts.TypeReferenceNode;
+  params: ts.ParameterDeclaration[] = [];
+  ret?: ts.TypeNode;
 
   constructor(name: string) {
     this.id = ts.createIdentifier(name);
-    this.params = [];
   }
 
   parameter(name: string | ts.Identifier, type: ts.TypeNode, optional?: boolean, isVariadic?: boolean) {
-    this.params.push(CreateParameter(name, type, undefined, optional, isVariadic));
+    this.params.push(createParameter(name, type, undefined, optional, isVariadic));
     return this;
   }
 
@@ -153,7 +152,7 @@ export class Method {
     return ts.createMethodSignature(undefined, this.params, this.ret, this.id, undefined);
   }
 
-  declaration(statements: ts.Statement[], multiLine?: boolean) {
+  declaration(statements: ts.Statement[], multiLine?: boolean): MethodDeclaration {
     return ts.createMethod(
       undefined,
       undefined,

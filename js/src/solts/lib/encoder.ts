@@ -1,18 +1,9 @@
-import ts from 'typescript';
+import ts, { FunctionDeclaration, VariableStatement } from 'typescript';
 import { Provider } from './provider';
-import { CollapseInputs, CombineTypes, ContractMethodsList, Signature } from './solidity';
-import { CreateParameter, DeclareConstant } from './syntax';
+import { collapseInputs, combineTypes, ContractMethodsList, Signature } from './solidity';
+import { createParameter, declareConstant } from './syntax';
 
 export const EncodeName = ts.createIdentifier('Encode');
-
-function join(...exp: ts.Expression[]) {
-  if (exp.length === 0) {
-    return undefined;
-  }
-  return exp.reduce((all, next) => {
-    return ts.createLogicalAnd(all, next);
-  });
-}
 
 function output(signatures: Array<Signature>, client: ts.Identifier, provider: Provider): ts.Block {
   if (signatures.length === 0) {
@@ -22,23 +13,18 @@ function output(signatures: Array<Signature>, client: ts.Identifier, provider: P
   }
 
   return ts.createBlock(
-    [
-      ...signatures
-        .filter((sig) => sig.inputs.length > 0)
-        .map((sig) => {
-          return ts.createIf(
-            join(
-              ...sig.inputs.map((input) => {
-                return ts.createStrictEquality(
-                  ts.createTypeOf(ts.createIdentifier(input.name)),
-                  ts.createLiteral('string'),
-                );
-              }),
-            ),
-            ts.createReturn(encoder(sig, client, provider)),
-          );
-        }),
-    ],
+    signatures
+      .filter((sig) => sig.inputs.length > 0)
+      .map((sig) => {
+        return ts.createIf(
+          sig.inputs
+            .map((input) =>
+              ts.createStrictEquality(ts.createTypeOf(ts.createIdentifier(input.name)), ts.createLiteral('string')),
+            )
+            .reduce((all, next) => ts.createLogicalAnd(all, next)),
+          ts.createReturn(encoder(sig, client, provider)),
+        );
+      }),
     true,
   );
 }
@@ -46,19 +32,18 @@ function output(signatures: Array<Signature>, client: ts.Identifier, provider: P
 function encoder(sig: Signature, client: ts.Identifier, provider: Provider) {
   const inputs = ts.createArrayLiteral(sig.inputs.map((arg) => ts.createLiteral(arg.type)));
   const args = sig.inputs.map((arg) => ts.createIdentifier(arg.name));
-  const encodeFn = provider.methods.encode.call(client, ts.createLiteral(sig.hash), inputs, ...args);
-  return encodeFn;
+  return provider.methods.encode.call(client, ts.createLiteral(sig.hash), inputs, ...args);
 }
 
-export const Encode = (methods: ContractMethodsList, provider: Provider) => {
+export function generateEncodeObject(methods: ContractMethodsList, provider: Provider): VariableStatement {
   const client = ts.createIdentifier('client');
 
-  return DeclareConstant(
+  return declareConstant(
     EncodeName,
     ts.createArrowFunction(
       undefined,
       [provider.getTypeArgumentDecl()],
-      [CreateParameter(client, provider.getTypeNode())],
+      [createParameter(client, provider.getTypeNode())],
       undefined,
       undefined,
       ts.createBlock([
@@ -66,24 +51,23 @@ export const Encode = (methods: ContractMethodsList, provider: Provider) => {
           ts.createObjectLiteral(
             methods
               .filter((method) => method.type === 'function')
-              .map((method) => {
-                if (method.type !== 'function') {
-                  return;
-                }
-                return ts.createPropertyAssignment(
-                  method.name,
-                  ts.createArrowFunction(
-                    undefined,
-                    undefined,
-                    Array.from(CollapseInputs(method.signatures), ([key, value]) =>
-                      CreateParameter(key, CombineTypes(value)),
+              .map(
+                (method) =>
+                  ts.createPropertyAssignment(
+                    method.name,
+                    ts.createArrowFunction(
+                      undefined,
+                      undefined,
+                      Array.from(collapseInputs(method.signatures), ([key, value]) =>
+                        createParameter(key, combineTypes(value)),
+                      ),
+                      undefined,
+                      undefined,
+                      output(method.signatures, client, provider),
                     ),
-                    undefined,
-                    undefined,
-                    output(method.signatures, client, provider),
                   ),
-                );
-              }, true),
+                true,
+              ),
             true,
           ),
         ),

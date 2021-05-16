@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { TokenizeLinks } from './compile';
+import { tokenizeLinks } from './compile';
 
 describe('compilation helpers', function () {
   it('should tokenize links', () => {
@@ -12,7 +12,7 @@ describe('compilation helpers', function () {
       },
     };
 
-    const actual = TokenizeLinks(links);
+    const actual = tokenizeLinks(links);
     assert.equal(actual[0], 'dir/Errors.sol:Errors');
     assert.equal(actual[1], 'lib/Utils.sol:Utils');
   });

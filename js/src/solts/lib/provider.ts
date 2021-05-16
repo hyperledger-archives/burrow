@@ -3,9 +3,9 @@ import {
   AnyType,
   AsArray,
   AsRefNode,
-  CreateCall,
+  createCall,
   CreateCallbackExpression,
-  CreateParameter,
+  createParameter,
   ErrorType,
   Method,
   ReadableType,
@@ -14,18 +14,18 @@ import {
   VoidType,
 } from './syntax';
 
-export const ErrParameter = CreateParameter(ts.createIdentifier('err'), ErrorType);
-export const ExecParameter = CreateParameter(ts.createIdentifier('exec'), Uint8ArrayType);
-export const AddrParameter = CreateParameter(ts.createIdentifier('addr'), Uint8ArrayType);
-export const EventParameter = CreateParameter(ts.createIdentifier('event'), AnyType);
+export const ErrParameter = createParameter(ts.createIdentifier('err'), ErrorType);
+export const ExecParameter = createParameter(ts.createIdentifier('exec'), Uint8ArrayType);
+export const AddrParameter = createParameter(ts.createIdentifier('addr'), Uint8ArrayType);
+export const EventParameter = createParameter(ts.createIdentifier('event'), AnyType);
 
 const type = ts.createIdentifier('Tx');
 const typeArgument = ts.createTypeReferenceNode(type, undefined);
 
 class Deploy extends Method {
   params = [
-    CreateParameter('msg', typeArgument),
-    CreateParameter('callback', CreateCallbackExpression([ErrParameter, AddrParameter])),
+    createParameter('msg', typeArgument),
+    createParameter('callback', CreateCallbackExpression([ErrParameter, AddrParameter])),
   ];
   ret = VoidType;
 
@@ -33,14 +33,14 @@ class Deploy extends Method {
     super('deploy');
   }
   call(exp: ts.Expression, tx: ts.Identifier, callback: ts.ArrowFunction) {
-    return CreateCall(ts.createPropertyAccess(exp, this.id), [tx, callback]);
+    return createCall(ts.createPropertyAccess(exp, this.id), [tx, callback]);
   }
 }
 
 class Call extends Method {
   params = [
-    CreateParameter('msg', typeArgument),
-    CreateParameter('callback', CreateCallbackExpression([ErrParameter, ExecParameter])),
+    createParameter('msg', typeArgument),
+    createParameter('callback', CreateCallbackExpression([ErrParameter, ExecParameter])),
   ];
   ret = VoidType;
 
@@ -48,14 +48,14 @@ class Call extends Method {
     super('call');
   }
   call(exp: ts.Expression, tx: ts.Identifier, callback: ts.ArrowFunction) {
-    return CreateCall(ts.createPropertyAccess(exp, this.id), [tx, callback]);
+    return createCall(ts.createPropertyAccess(exp, this.id), [tx, callback]);
   }
 }
 
 class CallSim extends Method {
   params = [
-    CreateParameter('msg', typeArgument),
-    CreateParameter('callback', CreateCallbackExpression([ErrParameter, ExecParameter])),
+    createParameter('msg', typeArgument),
+    createParameter('callback', CreateCallbackExpression([ErrParameter, ExecParameter])),
   ];
   ret = VoidType;
 
@@ -63,15 +63,15 @@ class CallSim extends Method {
     super('callSim');
   }
   call(exp: ts.Expression, tx: ts.Identifier, callback: ts.ArrowFunction) {
-    return CreateCall(ts.createPropertyAccess(exp, this.id), [tx, callback]);
+    return createCall(ts.createPropertyAccess(exp, this.id), [tx, callback]);
   }
 }
 
 class Listen extends Method {
   params = [
-    CreateParameter('signature', StringType),
-    CreateParameter('address', StringType),
-    CreateParameter('callback', CreateCallbackExpression([ErrParameter, EventParameter])),
+    createParameter('signature', StringType),
+    createParameter('address', StringType),
+    createParameter('callback', CreateCallbackExpression([ErrParameter, EventParameter])),
   ];
   ret = AsRefNode(ReadableType);
 
@@ -79,29 +79,29 @@ class Listen extends Method {
     super('listen');
   }
   call(exp: ts.Expression, sig: ts.StringLiteral, addr: ts.Expression, callback: ts.Identifier) {
-    return CreateCall(ts.createPropertyAccess(exp, this.id), [sig, addr, callback]);
+    return createCall(ts.createPropertyAccess(exp, this.id), [sig, addr, callback]);
   }
 }
 
 class Payload extends Method {
-  params = [CreateParameter('data', StringType), CreateParameter('address', StringType, undefined, true)];
+  params = [createParameter('data', StringType), createParameter('address', StringType, undefined, true)];
   ret = typeArgument;
 
   constructor() {
     super('payload');
   }
-  call(exp: ts.Expression, data: ts.Identifier, addr: ts.Expression) {
+  call(exp: ts.Expression, data: ts.Identifier, addr?: ts.Expression) {
     return addr
-      ? CreateCall(ts.createPropertyAccess(exp, this.id), [data, addr])
-      : CreateCall(ts.createPropertyAccess(exp, this.id), [data]);
+      ? createCall(ts.createPropertyAccess(exp, this.id), [data, addr])
+      : createCall(ts.createPropertyAccess(exp, this.id), [data]);
   }
 }
 
 class Encode extends Method {
   params = [
-    CreateParameter('name', StringType),
-    CreateParameter('inputs', AsArray(StringType)),
-    CreateParameter('args', AsArray(AnyType), undefined, false, true),
+    createParameter('name', StringType),
+    createParameter('inputs', AsArray(StringType)),
+    createParameter('args', AsArray(AnyType), undefined, false, true),
   ];
   ret = StringType;
 
@@ -109,19 +109,19 @@ class Encode extends Method {
     super('encode');
   }
   call(exp: ts.Expression, name: ts.StringLiteral, inputs: ts.ArrayLiteralExpression, ...args: ts.Identifier[]) {
-    return CreateCall(ts.createPropertyAccess(exp, this.id), [name, inputs, ...args]);
+    return createCall(ts.createPropertyAccess(exp, this.id), [name, inputs, ...args]);
   }
 }
 
 class Decode extends Method {
-  params = [CreateParameter('data', Uint8ArrayType), CreateParameter('outputs', AsArray(StringType))];
+  params = [createParameter('data', Uint8ArrayType), createParameter('outputs', AsArray(StringType))];
   ret = AnyType;
 
   constructor() {
     super('decode');
   }
   call(exp: ts.Expression, data: ts.Identifier, outputs: ts.ArrayLiteralExpression) {
-    return CreateCall(ts.createPropertyAccess(exp, this.id), [data, outputs]);
+    return createCall(ts.createPropertyAccess(exp, this.id), [data, outputs]);
   }
 }
 

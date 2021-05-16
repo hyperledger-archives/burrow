@@ -1,5 +1,7 @@
 import * as fs from 'fs';
+import { ResolvedImport } from 'solc';
 import { ABI } from './abi';
+import InputDescription = Solidity.InputDescription;
 
 export namespace Solidity {
   type Bytecode = {
@@ -29,8 +31,8 @@ export namespace Solidity {
 
   export type InputDescription = {
     language: string;
-    sources?: Record<string, { content: string }>;
-    settings?: {
+    sources: Record<string, { content: string }>;
+    settings: {
       outputSelection: Record<string, Record<string, Array<string>>>;
     };
   };
@@ -64,10 +66,15 @@ function NewInputDescription(): Solidity.InputDescription {
   };
 }
 
-export const EncodeInput = (obj: Solidity.InputDescription): string => JSON.stringify(obj);
-export const DecodeOutput = (str: string): Solidity.OutputDescription => JSON.parse(str);
+export function encodeInput(obj: Solidity.InputDescription): string {
+  return JSON.stringify(obj);
+}
 
-export function InputDescriptionFromFiles(...names: string[]) {
+export function decodeOutput(str: string): Solidity.OutputDescription {
+  return JSON.parse(str);
+}
+
+export function inputDescriptionFromFiles(names: string[]): InputDescription {
   const desc = NewInputDescription();
   names.map((name) => {
     desc.sources[name] = { content: fs.readFileSync(name).toString() };
@@ -77,13 +84,13 @@ export function InputDescriptionFromFiles(...names: string[]) {
   return desc;
 }
 
-export function ImportLocal(path: string) {
+export function importLocal(path: string): ResolvedImport {
   return {
     contents: fs.readFileSync(path).toString(),
   };
 }
 
-export function TokenizeLinks(links: Record<string, Record<string, any>>) {
+export function tokenizeLinks(links: Record<string, Record<string, unknown>>): string[] {
   const libraries: Array<string> = [];
   for (const file in links) {
     for (const library in links[file]) {

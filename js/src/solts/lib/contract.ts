@@ -1,16 +1,16 @@
-import ts from 'typescript';
+import ts, { ClassDeclaration, MethodDeclaration } from 'typescript';
 import { CallName } from './caller';
 import { DecodeName } from './decoder';
 import { EncodeName } from './encoder';
 import { ErrParameter, EventParameter, Provider } from './provider';
-import { CollapseInputs, CombineTypes, ContractMethodsList, OutputToType, Signature } from './solidity';
+import { collapseInputs, combineTypes, ContractMethodsList, outputToType, Signature } from './solidity';
 import {
   AccessThis,
   AsRefNode,
-  CreateCall,
+  createCall,
   CreateCallbackExpression,
-  CreateParameter,
-  DeclareConstant,
+  createParameter,
+  declareConstant,
   ExportToken,
   Method,
   PrivateToken,
@@ -27,16 +27,16 @@ const address = ts.createIdentifier('address');
 
 export const ContractName = ts.createIdentifier('Contract');
 
-function SolidityFunction(name: string, signatures: Signature[]) {
-  const args = Array.from(CollapseInputs(signatures).keys()).map((key) => ts.createIdentifier(key));
-  const encode = DeclareConstant(
+function solidityFunction(name: string, signatures: Signature[]): MethodDeclaration {
+  const args = Array.from(collapseInputs(signatures).keys()).map((key) => ts.createIdentifier(key));
+  const encode = declareConstant(
     data,
-    CreateCall(ts.createPropertyAccess(CreateCall(EncodeName, [AccessThis(client)]), name), args),
+    createCall(ts.createPropertyAccess(createCall(EncodeName, [AccessThis(client)]), name), args),
   );
 
   const call = ts.createCall(
     CallName,
-    [ts.createTypeReferenceNode('Tx', undefined), OutputToType(signatures[0])],
+    [ts.createTypeReferenceNode('Tx', undefined), outputToType(signatures[0])],
     [
       AccessThis(client),
       AccessThis(address),
@@ -45,13 +45,13 @@ function SolidityFunction(name: string, signatures: Signature[]) {
       ts.createArrowFunction(
         undefined,
         undefined,
-        [CreateParameter(exec, Uint8ArrayType)],
+        [createParameter(exec, Uint8ArrayType)],
         undefined,
         undefined,
         ts.createBlock(
           [
             ts.createReturn(
-              CreateCall(ts.createPropertyAccess(CreateCall(DecodeName, [AccessThis(client), exec]), name), []),
+              createCall(ts.createPropertyAccess(createCall(DecodeName, [AccessThis(client), exec]), name), []),
             ),
           ],
           true,
@@ -60,11 +60,11 @@ function SolidityFunction(name: string, signatures: Signature[]) {
     ],
   );
 
-  const params = Array.from(CollapseInputs(signatures), ([key, value]) => CreateParameter(key, CombineTypes(value)));
+  const params = Array.from(collapseInputs(signatures), ([key, value]) => createParameter(key, combineTypes(value)));
   return new Method(name).parameters(params).declaration([encode, ts.createReturn(call)], true);
 }
 
-function SolidityEvent(name: string, provider: Provider) {
+function solidityEvent(name: string, provider: Provider): MethodDeclaration {
   const callback = ts.createIdentifier('callback');
   return new Method(name)
     .parameter(callback, CreateCallbackExpression([ErrParameter, EventParameter]))
@@ -76,15 +76,22 @@ function SolidityEvent(name: string, provider: Provider) {
     ]);
 }
 
-function createMethodFromABI(name: string, type: 'function' | 'event', signatures: Signature[], provider: Provider) {
+function createMethodFromABI(
+  name: string,
+  type: 'function' | 'event',
+  signatures: Signature[],
+  provider: Provider,
+): MethodDeclaration {
   if (type === 'function') {
-    return SolidityFunction(name, signatures);
+    return solidityFunction(name, signatures);
   } else if (type === 'event') {
-    return SolidityEvent(name, provider);
+    return solidityEvent(name, provider);
   }
+  // FIXME: Not sure why this is not inferred since if is exhaustive
+  return undefined as never;
 }
 
-export const Contract = (abi: ContractMethodsList, provider: Provider) => {
+export function generateContractClass(abi: ContractMethodsList, provider: Provider): ClassDeclaration {
   return ts.createClassDeclaration(
     undefined,
     [ExportToken],
@@ -97,7 +104,7 @@ export const Contract = (abi: ContractMethodsList, provider: Provider) => {
       ts.createConstructor(
         undefined,
         undefined,
-        [CreateParameter(client, provider.getTypeNode()), CreateParameter(address, StringType)],
+        [createParameter(client, provider.getTypeNode()), createParameter(address, StringType)],
         ts.createBlock(
           [
             ts.createStatement(ts.createAssignment(AccessThis(client), client)),
@@ -109,4 +116,4 @@ export const Contract = (abi: ContractMethodsList, provider: Provider) => {
       ...abi.map((abi) => createMethodFromABI(abi.name, abi.type, abi.signatures, provider)),
     ],
   );
-};
+}

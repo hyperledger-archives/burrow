@@ -2,12 +2,12 @@ import ts from 'typescript';
 import { Provider } from './provider';
 import {
   BooleanType,
-  CreateCall,
+  createCall,
   CreateCallbackDeclaration,
   CreateNewPromise,
-  CreateParameter,
-  CreatePromiseBody,
-  DeclareConstant,
+  createParameter,
+  createPromiseBody,
+  declareConstant,
   PromiseType,
   StringType,
   Uint8ArrayType,
@@ -34,15 +34,15 @@ export const Caller = (provider: Provider) => {
     CallName,
     [ts.createTypeParameterDeclaration(input), ts.createTypeParameterDeclaration(output)],
     [
-      CreateParameter(client, provider.getTypeNode()),
-      CreateParameter(addr, StringType),
-      CreateParameter(data, StringType),
-      CreateParameter(isSim, BooleanType),
-      CreateParameter(
+      createParameter(client, provider.getTypeNode()),
+      createParameter(addr, StringType),
+      createParameter(data, StringType),
+      createParameter(isSim, BooleanType),
+      createParameter(
         callback,
         ts.createFunctionTypeNode(
           undefined,
-          [CreateParameter('exec', Uint8ArrayType)],
+          [createParameter('exec', Uint8ArrayType)],
           ts.createTypeReferenceNode(output, undefined),
         ),
       ),
@@ -50,7 +50,7 @@ export const Caller = (provider: Provider) => {
     ts.createTypeReferenceNode(PromiseType, [ts.createTypeReferenceNode(output, undefined)]),
     ts.createBlock(
       [
-        DeclareConstant(payload, provider.methods.payload.call(client, data, addr)),
+        declareConstant(payload, provider.methods.payload.call(client, data, addr)),
         ts.createIf(
           isSim,
           ts.createReturn(
@@ -59,7 +59,7 @@ export const Caller = (provider: Provider) => {
                 provider.methods.callSim.call(
                   client,
                   payload,
-                  CreateCallbackDeclaration(err, exec, [CreatePromiseBody(err, [CreateCall(callback, [exec])])]),
+                  CreateCallbackDeclaration(err, exec, [createPromiseBody(err, [createCall(callback, [exec])])]),
                 ),
               ),
             ]),
@@ -70,7 +70,7 @@ export const Caller = (provider: Provider) => {
                 provider.methods.call.call(
                   client,
                   payload,
-                  CreateCallbackDeclaration(err, exec, [CreatePromiseBody(err, [CreateCall(callback, [exec])])]),
+                  CreateCallbackDeclaration(err, exec, [createPromiseBody(err, [createCall(callback, [exec])])]),
                 ),
               ),
             ]),

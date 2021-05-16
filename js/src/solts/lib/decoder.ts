@@ -1,7 +1,7 @@
-import ts from 'typescript';
+import ts, { Expression, VariableStatement } from 'typescript';
 import { Provider } from './provider';
-import { ContractMethodsList, OutputToType, Signature } from './solidity';
-import { CreateParameter, DeclareConstant, Uint8ArrayType } from './syntax';
+import { ContractMethodsList, outputToType, Signature } from './solidity';
+import { createParameter, declareConstant, Uint8ArrayType } from './syntax';
 
 export const DecodeName = ts.createIdentifier('Decode');
 
@@ -11,7 +11,7 @@ function output(decodeFn: ts.CallExpression, sig: Signature): ts.Block {
     named = sig.outputs.filter((out) => out.name !== '');
   }
 
-  if (sig.outputs.length !== 0 && sig.outputs.length === named.length) {
+  if (sig.outputs?.length && sig.outputs.length === named.length) {
     const setter = ts.createVariableStatement(
       [],
       ts.createVariableDeclarationList(
@@ -40,30 +40,29 @@ function output(decodeFn: ts.CallExpression, sig: Signature): ts.Block {
       true,
     );
   } else {
-    return ts.createBlock([ts.createReturn(sig.outputs.length > 0 ? decodeFn : undefined)]);
+    return ts.createBlock([ts.createReturn(sig.outputs?.length ? decodeFn : undefined)]);
   }
 }
 
 function decoder(sig: Signature, client: ts.Identifier, provider: Provider, data: ts.Identifier) {
-  let args = [];
+  let args: Expression[] = [];
   if (sig.outputs && sig.outputs[0] !== undefined) {
     args = sig.outputs.map((arg) => ts.createLiteral(arg.type));
   }
   const types = ts.createArrayLiteral(args);
-  const decodeFn = provider.methods.decode.call(client, data, types);
-  return decodeFn;
+  return provider.methods.decode.call(client, data, types);
 }
 
-export const Decode = (methods: ContractMethodsList, provider: Provider) => {
+export function generateDecodeObject(methods: ContractMethodsList, provider: Provider): VariableStatement {
   const client = ts.createIdentifier('client');
   const data = ts.createIdentifier('data');
 
-  return DeclareConstant(
+  return declareConstant(
     DecodeName,
     ts.createArrowFunction(
       undefined,
       [provider.getTypeArgumentDecl()],
-      [CreateParameter(client, provider.getTypeNode()), CreateParameter(data, Uint8ArrayType)],
+      [createParameter(client, provider.getTypeNode()), createParameter(data, Uint8ArrayType)],
       undefined,
       undefined,
       ts.createBlock([
@@ -78,7 +77,7 @@ export const Decode = (methods: ContractMethodsList, provider: Provider) => {
                     undefined,
                     undefined,
                     [],
-                    OutputToType(method.signatures[0]),
+                    outputToType(method.signatures[0]),
                     undefined,
                     output(decoder(method.signatures[0], client, provider, data), method.signatures[0]),
                   ),
@@ -91,4 +90,4 @@ export const Decode = (methods: ContractMethodsList, provider: Provider) => {
     ),
     true,
   );
-};
+}

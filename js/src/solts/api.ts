@@ -1,16 +1,17 @@
 import ts from 'typescript';
 import { ABI } from './lib/abi';
 import { Caller } from './lib/caller';
-import { Contract } from './lib/contract';
-import { Decode } from './lib/decoder';
-import { Deploy } from './lib/deployer';
-import { Encode } from './lib/encoder';
+import { generateContractClass } from './lib/contract';
+import { generateDecodeObject } from './lib/decoder';
+import { generateDeployFunction } from './lib/deployer';
+import { generateEncodeObject } from './lib/encoder';
 import { Provider } from './lib/provider';
 import { Replacer } from './lib/replacer';
-import { GetContractMethods } from './lib/solidity';
+import { getContractMethods } from './lib/solidity';
 import { ExportToken, ImportReadable } from './lib/syntax';
+import Func = ABI.Func;
 
-export { DecodeOutput, EncodeInput, ImportLocal, InputDescriptionFromFiles, TokenizeLinks } from './lib/compile';
+export { decodeOutput, encodeInput, importLocal, inputDescriptionFromFiles, tokenizeLinks } from './lib/compile';
 
 export type Compiled = {
   name: string;
@@ -19,7 +20,7 @@ export type Compiled = {
   links: Array<string>;
 };
 
-export function NewFile(contracts: Compiled[]): ts.Node[] {
+export function newFile(contracts: Compiled[]): ts.Node[] {
   const provider = new Provider();
 
   return [
@@ -32,31 +33,31 @@ export function NewFile(contracts: Compiled[]): ts.Node[] {
     Caller(provider),
     Replacer(),
     ...contracts.map((contract) => {
-      const methods = GetContractMethods(contract.abi);
+      const methods = getContractMethods(contract.abi);
 
-      let deploy: ABI.Func;
-      contract.abi.map((abi) => {
-        if (abi.type == 'constructor') {
-          deploy = abi;
-        }
-      });
+      const deploy = contract.abi.find((abi): abi is Func => abi.type === 'constructor');
 
+      // No deploy function for interfaces
+      const deployFunction = contract.bin
+        ? [generateDeployFunction(deploy, contract.bin, contract.links, provider)]
+        : [];
+      const statements = [
+        ...deployFunction,
+        generateContractClass(methods, provider),
+        generateEncodeObject(methods, provider),
+        generateDecodeObject(methods, provider),
+      ];
       return ts.createModuleDeclaration(
         undefined,
         [ExportToken],
         ts.createIdentifier(contract.name),
-        ts.createModuleBlock([
-          Deploy(deploy, contract.bin, contract.links, provider),
-          Contract(methods, provider),
-          Encode(methods, provider),
-          Decode(methods, provider),
-        ]),
+        ts.createModuleBlock(statements),
       );
     }),
   ];
 }
 
-export function Print(...nodes: ts.Node[]) {
+export function printNodes(...nodes: ts.Node[]): string {
   const target = ts.createSourceFile('', '', ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
   const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
   return nodes.map((node) => printer.printNode(ts.EmitHint.Unspecified, node, target)).join('\n');
