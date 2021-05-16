@@ -1,5 +1,4 @@
 import * as grpc from '@grpc/grpc-js';
-import { Readable } from 'stream';
 import { TxExecution } from '../proto/exec_pb';
 import { CallTx, ContractMeta } from '../proto/payload_pb';
 import { ExecutionEventsClient, IExecutionEventsClient } from '../proto/rpcevents_grpc_pb';
@@ -11,7 +10,7 @@ import { callTx } from './contracts/call';
 import { CallOptions, Contract, ContractInstance } from './contracts/contract';
 import { toBuffer } from './convert';
 import { getException } from './error';
-import { EventCallback, Events, latestStreamingBlockRange } from './events';
+import { EventCallback, Events, EventStream, latestStreamingBlockRange } from './events';
 import { Namereg } from './namereg';
 
 type TxCallback = (error: grpc.ServiceError | null, txe: TxExecution) => void;
@@ -112,7 +111,7 @@ export class Burrow {
     address: string,
     callback: EventCallback,
     range: BlockRange = latestStreamingBlockRange,
-  ): Readable {
+  ): EventStream {
     return this.events.listen(range, address, signature, callback);
   }
 

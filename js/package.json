@@ -17,7 +17,7 @@
   "scripts": {
     "build": "tsc --build",
     "test": "./with-burrow.sh mocha 'src/test/**/*.test.ts'",
-    "lint:fix": "eslint --fix src/**/*.ts"
+    "lint:fix": "eslint --fix 'src/**/*.ts'"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.3.0",

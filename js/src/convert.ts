@@ -59,7 +59,6 @@ function abiToBurrow(arg: unknown, type: string): unknown {
   return arg;
 }
 
-
 function burrowToAbi(arg: unknown, type: string): unknown {
   if (/address/.test(type)) {
     return recApply(prefixedHexString, arg as NestedArray<string>);

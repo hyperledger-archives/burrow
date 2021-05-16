@@ -64,7 +64,7 @@ function boundsToBound(bounds: Bounds): Bound {
       bound.setType(BoundType.STREAM);
       break;
     default:
-      bound.setType(BoundType.LATEST);
+      bound.setType(BoundType.ABSOLUTE);
       bound.setIndex(bounds);
   }
 
