@@ -1,69 +1,74 @@
-import ts from 'typescript';
+import ts, { factory } from 'typescript';
 import {
-  AnyType,
-  AsArray,
-  AsRefNode,
+  AddressType,
+  asRefNode,
+  BlockRangeType,
+  CallTxType,
+  ContractCodecType,
   createCall,
-  CreateCallbackExpression,
+  createCallbackExpression,
   createParameter,
+  createPromiseOf,
+  declareConstant,
+  EndOfStreamType,
   ErrorType,
+  EventStream,
+  ExportToken,
+  LogEventType,
+  MaybeUint8ArrayType,
   Method,
-  ReadableType,
   StringType,
   Uint8ArrayType,
-  VoidType,
 } from './syntax';
 
-export const ErrParameter = createParameter(ts.createIdentifier('err'), ErrorType);
-export const ExecParameter = createParameter(ts.createIdentifier('exec'), Uint8ArrayType);
-export const AddrParameter = createParameter(ts.createIdentifier('addr'), Uint8ArrayType);
-export const EventParameter = createParameter(ts.createIdentifier('event'), AnyType);
+export const errName = factory.createIdentifier('err');
+export const contractCodecName = factory.createIdentifier('codec');
+export const logName = factory.createIdentifier('log');
 
-const type = ts.createIdentifier('Tx');
-const typeArgument = ts.createTypeReferenceNode(type, undefined);
+export const EventErrParameter = createParameter(
+  errName,
+  factory.createUnionTypeNode([ErrorType, EndOfStreamType]),
+  undefined,
+  true,
+);
+export const LogEventParameter = createParameter(logName, LogEventType, undefined, true);
 
 class Deploy extends Method {
-  params = [
-    createParameter('msg', typeArgument),
-    createParameter('callback', CreateCallbackExpression([ErrParameter, AddrParameter])),
-  ];
-  ret = VoidType;
+  params = [createParameter('msg', CallTxType)];
+  ret = createPromiseOf(AddressType);
 
   constructor() {
     super('deploy');
   }
-  call(exp: ts.Expression, tx: ts.Identifier, callback: ts.ArrowFunction) {
-    return createCall(ts.createPropertyAccess(exp, this.id), [tx, callback]);
+
+  call(exp: ts.Expression, tx: ts.Identifier): ts.CallExpression {
+    return createCall(factory.createPropertyAccessExpression(exp, this.id), [tx]);
   }
 }
 
 class Call extends Method {
-  params = [
-    createParameter('msg', typeArgument),
-    createParameter('callback', CreateCallbackExpression([ErrParameter, ExecParameter])),
-  ];
-  ret = VoidType;
+  params = [createParameter('msg', CallTxType)];
+  ret = createPromiseOf(MaybeUint8ArrayType);
 
   constructor() {
     super('call');
   }
-  call(exp: ts.Expression, tx: ts.Identifier, callback: ts.ArrowFunction) {
-    return createCall(ts.createPropertyAccess(exp, this.id), [tx, callback]);
+
+  call(exp: ts.Expression, tx: ts.Identifier) {
+    return createCall(factory.createPropertyAccessExpression(exp, this.id), [tx]);
   }
 }
 
 class CallSim extends Method {
-  params = [
-    createParameter('msg', typeArgument),
-    createParameter('callback', CreateCallbackExpression([ErrParameter, ExecParameter])),
-  ];
-  ret = VoidType;
+  params = [createParameter('msg', CallTxType)];
+  ret = createPromiseOf(MaybeUint8ArrayType);
 
   constructor() {
     super('callSim');
   }
-  call(exp: ts.Expression, tx: ts.Identifier, callback: ts.ArrowFunction) {
-    return createCall(ts.createPropertyAccess(exp, this.id), [tx, callback]);
+
+  call(exp: ts.Expression, tx: ts.Identifier) {
+    return createCall(factory.createPropertyAccessExpression(exp, this.id), [tx]);
   }
 }
 
@@ -71,62 +76,53 @@ class Listen extends Method {
   params = [
     createParameter('signature', StringType),
     createParameter('address', StringType),
-    createParameter('callback', CreateCallbackExpression([ErrParameter, EventParameter])),
+    createParameter('callback', createCallbackExpression([EventErrParameter, LogEventParameter])),
+    createParameter('range', BlockRangeType, undefined, true),
   ];
-  ret = AsRefNode(ReadableType);
+  ret = asRefNode(EventStream);
 
   constructor() {
     super('listen');
   }
-  call(exp: ts.Expression, sig: ts.StringLiteral, addr: ts.Expression, callback: ts.Identifier) {
-    return createCall(ts.createPropertyAccess(exp, this.id), [sig, addr, callback]);
+
+  call(exp: ts.Expression, sig: ts.StringLiteral, addr: ts.Expression, callback: ts.Expression, range: ts.Expression) {
+    return createCall(factory.createPropertyAccessExpression(exp, this.id), [sig, addr, callback, range]);
   }
 }
 
 class Payload extends Method {
-  params = [createParameter('data', StringType), createParameter('address', StringType, undefined, true)];
-  ret = typeArgument;
+  params = [
+    createParameter('data', factory.createUnionTypeNode([StringType, Uint8ArrayType])),
+    createParameter('address', StringType, undefined, true),
+  ];
+  ret = CallTxType;
 
   constructor() {
     super('payload');
   }
-  call(exp: ts.Expression, data: ts.Identifier, addr?: ts.Expression) {
+
+  call(provider: ts.Expression, data: ts.Expression, addr?: ts.Expression) {
     return addr
-      ? createCall(ts.createPropertyAccess(exp, this.id), [data, addr])
-      : createCall(ts.createPropertyAccess(exp, this.id), [data]);
+      ? createCall(factory.createPropertyAccessExpression(provider, this.id), [data, addr])
+      : createCall(factory.createPropertyAccessExpression(provider, this.id), [data]);
   }
 }
 
-class Encode extends Method {
-  params = [
-    createParameter('name', StringType),
-    createParameter('inputs', AsArray(StringType)),
-    createParameter('args', AsArray(AnyType), undefined, false, true),
-  ];
-  ret = StringType;
+class ContractCodec extends Method {
+  params = [createParameter('contractABI', StringType)];
+  ret = ContractCodecType;
 
   constructor() {
-    super('encode');
+    super('contractCodec');
   }
-  call(exp: ts.Expression, name: ts.StringLiteral, inputs: ts.ArrayLiteralExpression, ...args: ts.Identifier[]) {
-    return createCall(ts.createPropertyAccess(exp, this.id), [name, inputs, ...args]);
-  }
-}
 
-class Decode extends Method {
-  params = [createParameter('data', Uint8ArrayType), createParameter('outputs', AsArray(StringType))];
-  ret = AnyType;
-
-  constructor() {
-    super('decode');
-  }
-  call(exp: ts.Expression, data: ts.Identifier, outputs: ts.ArrayLiteralExpression) {
-    return createCall(ts.createPropertyAccess(exp, this.id), [data, outputs]);
+  call(provider: ts.Expression, contractABI: ts.Expression) {
+    return createCall(factory.createPropertyAccessExpression(provider, this.id), [contractABI]);
   }
 }
 
 export class Provider {
-  private name = ts.createIdentifier('Provider');
+  private name = factory.createIdentifier('Provider');
 
   methods = {
     deploy: new Deploy(),
@@ -134,35 +130,63 @@ export class Provider {
     callSim: new CallSim(),
     listen: new Listen(),
     payload: new Payload(),
-    encode: new Encode(),
-    decode: new Decode(),
+    contractCodec: new ContractCodec(),
   };
 
-  createInterface() {
-    return ts.createInterfaceDeclaration(undefined, undefined, this.name, [this.getTypeArgumentDecl()], undefined, [
-      this.methods.deploy.signature(),
-      this.methods.call.signature(),
-      this.methods.callSim.signature(),
-      this.methods.listen.signature(),
-      this.methods.payload.signature(),
-      this.methods.encode.signature(),
-      this.methods.decode.signature(),
-    ]);
+  createInterface(extern?: boolean): ts.InterfaceDeclaration {
+    return factory.createInterfaceDeclaration(
+      undefined,
+      extern ? [ExportToken] : undefined,
+      this.name,
+      undefined,
+      undefined,
+      [
+        this.methods.deploy.signature(),
+        this.methods.call.signature(),
+        this.methods.callSim.signature(),
+        this.methods.listen.signature(),
+        this.methods.payload.signature(),
+        this.methods.contractCodec.signature(),
+      ],
+    );
   }
 
-  getType() {
-    return type;
+  declareContractCodec(client: ts.Identifier, abiName: ts.Identifier): ts.VariableStatement {
+    return declareConstant(contractCodecName, this.methods.contractCodec.call(client, abiName));
   }
 
-  getTypeNode() {
-    return ts.createTypeReferenceNode(this.name, [typeArgument]);
+  type(): ts.TypeReferenceNode {
+    return factory.createTypeReferenceNode(this.name);
   }
+}
 
-  getTypeArgument() {
-    return typeArgument;
-  }
+const encodeDeploy = factory.createIdentifier('encodeDeploy');
+const encodeFunctionData = factory.createIdentifier('encodeFunctionData');
+const decodeFunctionResult = factory.createIdentifier('decodeFunctionResult ');
+const decodeEventLog = factory.createIdentifier('decodeEventLog ');
 
-  getTypeArgumentDecl() {
-    return ts.createTypeParameterDeclaration(type);
-  }
+export function callEncodeDeploy(args: ts.Expression[]): ts.CallExpression {
+  return createCall(factory.createPropertyAccessExpression(contractCodecName, encodeDeploy), [...args]);
+}
+
+export function callEncodeFunctionData(signature: string, args: ts.Expression[]): ts.CallExpression {
+  return createCall(factory.createPropertyAccessExpression(contractCodecName, encodeFunctionData), [
+    factory.createStringLiteral(signature),
+    ...args,
+  ]);
+}
+
+export function callDecodeFunctionResult(signature: string, data: ts.Expression): ts.CallExpression {
+  return createCall(factory.createPropertyAccessExpression(contractCodecName, decodeFunctionResult), [
+    factory.createStringLiteral(signature),
+    data,
+  ]);
+}
+
+export function callDecodeEventLog(signature: string, data: ts.Expression, topics: ts.Expression): ts.CallExpression {
+  return createCall(factory.createPropertyAccessExpression(contractCodecName, decodeEventLog), [
+    factory.createStringLiteral(signature),
+    data,
+    topics,
+  ]);
 }

@@ -75,7 +75,7 @@ declare module 'solc_v5' {
 
   export type OutputDescription = {
     contracts: Record<string, Record<string, Contract>>;
-    errors: Array<Error>;
+    errors?: Array<Error>;
     sourceList: Array<string>;
     sources: Record<string, Source>;
   };

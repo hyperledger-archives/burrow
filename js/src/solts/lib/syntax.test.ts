@@ -1,14 +1,23 @@
 import assert from 'assert';
-import ts from 'typescript';
+import { factory, Node } from 'typescript';
 import { printNodes } from '../api';
-import { CreateCallbackExpression, createParameter } from './syntax';
+import { createCallbackExpression, createParameter, createPromiseOf, PromiseType, StringType } from './syntax';
 
 describe('syntax helpers', function () {
   it('should create callback expression', async function () {
     const ErrAndResult = [
-      createParameter(ts.createIdentifier('err'), undefined),
-      createParameter(ts.createIdentifier('result'), undefined),
+      createParameter(factory.createIdentifier('err'), undefined),
+      createParameter(factory.createIdentifier('result'), undefined),
     ];
-    assert.equal(printNodes(CreateCallbackExpression(ErrAndResult)), '(err, result) => void');
+    assertGenerates(createCallbackExpression(ErrAndResult), '(err, result) => void');
+  });
+
+  it('should create promise type', () => {
+    assertGenerates(factory.createExpressionWithTypeArguments(PromiseType, [StringType]), 'Promise<string>');
+    assertGenerates(createPromiseOf(StringType), 'Promise<string>');
   });
 });
+
+function assertGenerates(node: Node, expected: string) {
+  assert.strictEqual(printNodes(node), expected);
+}

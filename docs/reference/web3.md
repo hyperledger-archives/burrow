@@ -24,7 +24,8 @@ you can simply add Burrow to the list of networks.
 ## Remix
 
 [Remix](https://remix.ethereum.org/) is a web-based integrated development environment for Solidity.
-To deploy and run transactions, select `Web3 Provider` as the `Environment` and enter your local RPC
+To deploy and run transactions, select `Web3 
+Provider` as the `Environment` and enter your local RPC
 address when prompted.
 
 ## Truffle

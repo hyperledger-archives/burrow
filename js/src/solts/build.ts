@@ -10,6 +10,14 @@ const solcCompilers = {
   v8: solcv8,
 } as const;
 
+export const defaultBuildOptions = {
+  solcVersion: 'v5' as keyof typeof solcCompilers,
+  burrowImportPath: '@hyperledger/burrow' as string,
+  binPath: 'bin' as string,
+} as const;
+
+export type BuildOptions = typeof defaultBuildOptions;
+
 /**
  * This is our Solidity -> Typescript code generation function, it:
  *  - Compiles Solidity source
@@ -17,11 +25,8 @@ const solcCompilers = {
  *  - Generates typescript code to deploy the contracts
  *  - Outputs the ABI files into bin to be later included in the distribution (for Vent and other ABI-consuming services)
  */
-export function build(
-  srcPathOrFiles: string | string[],
-  binPath = 'bin',
-  solcVersion: keyof typeof solcCompilers = 'v5',
-): void {
+export function build(srcPathOrFiles: string | string[], opts?: Partial<BuildOptions>): void {
+  const { solcVersion, binPath, burrowImportPath } = { ...defaultBuildOptions, ...opts };
   fs.mkdirSync(binPath, { recursive: true });
   const solidityFiles = getSourceFilesList(srcPathOrFiles);
   const inputDescription = inputDescriptionFromFiles(solidityFiles);
@@ -52,9 +57,10 @@ export function build(
     for (const [name, contract] of Object.entries(solidity)) {
       fs.writeFileSync(path.join('bin', name + '.bin'), JSON.stringify(contract));
     }
-    fs.writeFileSync(target, printNodes(...newFile(compiled)));
+    fs.writeFileSync(target, printNodes(...newFile(compiled, burrowImportPath)));
   }
 }
+
 function getSourceFilesList(srcPathOrFiles: string | string[]): string[] {
   if (typeof srcPathOrFiles === 'string') {
     return fs

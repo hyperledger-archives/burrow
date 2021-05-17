@@ -2,7 +2,7 @@
 // functional dependency on those types minimal
 
 // Same as ethers hybrid array/record type used for dynamic returns
-type Result<T = any> = readonly T[] & { readonly [key: string]: T };
+export type Result<T = any> = readonly T[] & { readonly [key: string]: T };
 
 // Bash-in-place version of Result
 type Presult<T = any> = T[] & { [key: string]: T };
@@ -18,52 +18,65 @@ type BigNumber = {
   toNumber(): number;
 };
 
+const bytesNN = /bytes([0-9]+)/;
+const zeroAddress = '0x0000000000000000000000000000000000000000';
+
+// Converts values from those returned by Burrow's GRPC bindings to those expected by ABI encoder
+export function preEncodeResult(args: Result, inputs: ParamType[]): Result {
+  const out: Presult = [];
+  checkParamTypesAndArgs('burrowToAbi', inputs, args);
+  for (let i = 0; i < inputs.length; i++) {
+    pushValue(out, preEncode(args[i], inputs[i].type), inputs[i]);
+  }
+  return Object.freeze(out);
+}
+
+function preEncode(arg: unknown, type: string): unknown {
+  if (/address/.test(type)) {
+    return recApply(
+      (input) => (input === '0x0' || !input ? zeroAddress : prefixedHexString(input)),
+      arg as NestedArray<string>,
+    );
+  }
+  const match = bytesNN.exec(type);
+  if (match) {
+    // Handle bytes32 differently - for legacy reasons they are used as identifiers and represented as hex strings
+    return recApply((input) => {
+      return padBytes(input, Number(match[1]));
+    }, arg as NestedArray<string>);
+  }
+  if (/bytes/.test(type)) {
+    return recApply(toBuffer, arg as NestedArray<string>);
+  }
+  return arg;
+}
+
 // Converts values from those returned by ABI decoder to those expected by Burrow's GRPC bindings
-export function abiToBurrowResult(args: Result, outputs: ParamType[] | undefined): Result {
+export function postDecodeResult(args: Result, outputs: ParamType[] | undefined): Result {
   const out: Presult = [];
   if (!outputs) {
     return Object.freeze(out);
   }
   checkParamTypesAndArgs('abiToBurrow', outputs, args);
   for (let i = 0; i < outputs.length; i++) {
-    pushValue(out, abiToBurrow(args[i], outputs[i].type), outputs[i]);
+    pushValue(out, postDecode(args[i], outputs[i].type), outputs[i]);
   }
   return Object.freeze(out);
 }
 
-// Converts values from those returned by Burrow's GRPC bindings to those expected by ABI encoder
-export function burrowToAbiResult(args: Result, inputs: ParamType[]): Result {
-  const out: Presult = [];
-  checkParamTypesAndArgs('burrowToAbi', inputs, args);
-  for (let i = 0; i < inputs.length; i++) {
-    pushValue(out, burrowToAbi(args[i], inputs[i].type), inputs[i]);
-  }
-  return Object.freeze(out);
-}
-
-export function withoutArrayElements(result: Result): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(result).filter(([k]) => isNaN(Number(k))));
-}
-
-function abiToBurrow(arg: unknown, type: string): unknown {
+function postDecode(arg: unknown, type: string): unknown {
   if (/address/.test(type)) {
     return recApply(unprefixedHexString, arg as NestedArray<string>);
-  } else if (/bytes[0-9]+/.test(type)) {
+  }
+  if (bytesNN.test(type)) {
     // Handle bytes32 differently - for legacy reasons they are used as identifiers and represented as hex strings
     return recApply(unprefixedHexString, arg as NestedArray<string>);
-  } else if (/bytes/.test(type)) {
-    return recApply(toBuffer, arg as NestedArray<string>);
-  } else if (/int/.test(type)) {
-    return recApply(numberToBurrow, arg as NestedArray<BigNumber>);
   }
-  return arg;
-}
-
-function burrowToAbi(arg: unknown, type: string): unknown {
-  if (/address/.test(type)) {
-    return recApply(prefixedHexString, arg as NestedArray<string>);
-  } else if (/bytes/.test(type)) {
+  if (/bytes/.test(type)) {
     return recApply(toBuffer, arg as NestedArray<string>);
+  }
+  if (/int/.test(type)) {
+    return recApply(numberToBurrow, arg as NestedArray<BigNumber>);
   }
   return arg;
 }
@@ -78,6 +91,10 @@ function numberToBurrow(arg: BigNumber): BigNumber | number {
   }
 }
 
+export function withoutArrayElements(result: Result): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(result).filter(([k]) => isNaN(Number(k))));
+}
+
 export function unprefixedHexString(arg: string | Uint8Array): string {
   if (arg instanceof Uint8Array) {
     return Buffer.from(arg).toString('hex').toUpperCase();
@@ -89,7 +106,10 @@ export function unprefixedHexString(arg: string | Uint8Array): string {
 }
 
 // Adds a 0x prefix to a hex string if it doesn't have one already or returns a prefixed hex string from bytes
-export function prefixedHexString(arg: string | Uint8Array): string {
+export function prefixedHexString(arg?: string | Uint8Array): string {
+  if (!arg) {
+    return '';
+  }
   if (typeof arg === 'string' && !/^0x/i.test(arg)) {
     return '0x' + arg.toLowerCase();
   }
@@ -135,4 +155,17 @@ function pushValue(out: Presult, value: unknown, type: ParamType): void {
   if (type.name) {
     out[type.name] = value;
   }
+}
+
+export function padBytes(buf: Uint8Array | string, n: number): Buffer {
+  if (typeof buf === 'string') {
+    // Parse hex (possible 0x prefixed) into bytes!
+    buf = toBuffer(buf);
+  }
+  if (buf.length > n) {
+    throw new Error(`cannot pad buffer ${buf} of length ${buf.length} to ${n} because it is longer than ${n}`);
+  }
+  const padded = Buffer.alloc(n);
+  Buffer.from(buf).copy(padded);
+  return padded;
 }

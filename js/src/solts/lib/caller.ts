@@ -1,83 +1,71 @@
-import ts from 'typescript';
+import * as ts from 'typescript';
+import { factory } from 'typescript';
 import { Provider } from './provider';
 import {
+  AsyncToken,
   BooleanType,
+  ColonToken,
   createCall,
-  CreateCallbackDeclaration,
-  CreateNewPromise,
   createParameter,
-  createPromiseBody,
   declareConstant,
+  MaybeUint8ArrayType,
   PromiseType,
+  QuestionToken,
   StringType,
   Uint8ArrayType,
 } from './syntax';
 
-export const CallName = ts.createIdentifier('Call');
+export const callName = factory.createIdentifier('call');
 
-export const Caller = (provider: Provider) => {
-  const input = provider.getType();
-  const output = ts.createIdentifier('Output');
-  const client = ts.createIdentifier('client');
-  const payload = ts.createIdentifier('payload');
-  const data = ts.createIdentifier('data');
-  const isSim = ts.createIdentifier('isSim');
-  const callback = ts.createIdentifier('callback');
-  const err = ts.createIdentifier('err');
-  const exec = ts.createIdentifier('exec');
-  const addr = ts.createIdentifier('addr');
+export function createCallerFunction(provider: Provider): ts.FunctionDeclaration {
+  const output = factory.createIdentifier('Output');
+  const client = factory.createIdentifier('client');
+  const payload = factory.createIdentifier('payload');
+  const txe = factory.createIdentifier('txe');
+  const data = factory.createIdentifier('data');
+  const isSim = factory.createIdentifier('isSim');
+  const callback = factory.createIdentifier('callback');
+  const addr = factory.createIdentifier('addr');
 
-  return ts.createFunctionDeclaration(
+  return factory.createFunctionDeclaration(
     undefined,
+    [AsyncToken],
     undefined,
-    undefined,
-    CallName,
-    [ts.createTypeParameterDeclaration(input), ts.createTypeParameterDeclaration(output)],
+    callName,
+    [factory.createTypeParameterDeclaration(output)],
     [
-      createParameter(client, provider.getTypeNode()),
+      createParameter(client, provider.type()),
       createParameter(addr, StringType),
-      createParameter(data, StringType),
+      createParameter(data, Uint8ArrayType),
       createParameter(isSim, BooleanType),
       createParameter(
         callback,
-        ts.createFunctionTypeNode(
+        factory.createFunctionTypeNode(
           undefined,
-          [createParameter('exec', Uint8ArrayType)],
-          ts.createTypeReferenceNode(output, undefined),
+          [createParameter('exec', MaybeUint8ArrayType)],
+          factory.createTypeReferenceNode(output, undefined),
         ),
       ),
     ],
-    ts.createTypeReferenceNode(PromiseType, [ts.createTypeReferenceNode(output, undefined)]),
-    ts.createBlock(
+    factory.createTypeReferenceNode(PromiseType, [factory.createTypeReferenceNode(output, undefined)]),
+    factory.createBlock(
       [
         declareConstant(payload, provider.methods.payload.call(client, data, addr)),
-        ts.createIf(
-          isSim,
-          ts.createReturn(
-            CreateNewPromise([
-              ts.createExpressionStatement(
-                provider.methods.callSim.call(
-                  client,
-                  payload,
-                  CreateCallbackDeclaration(err, exec, [createPromiseBody(err, [createCall(callback, [exec])])]),
-                ),
-              ),
-            ]),
-          ),
-          ts.createReturn(
-            CreateNewPromise([
-              ts.createExpressionStatement(
-                provider.methods.call.call(
-                  client,
-                  payload,
-                  CreateCallbackDeclaration(err, exec, [createPromiseBody(err, [createCall(callback, [exec])])]),
-                ),
-              ),
-            ]),
+        declareConstant(
+          txe,
+          factory.createAwaitExpression(
+            factory.createConditionalExpression(
+              isSim,
+              QuestionToken,
+              provider.methods.callSim.call(client, payload),
+              ColonToken,
+              provider.methods.call.call(client, payload),
+            ),
           ),
         ),
+        factory.createReturnStatement(createCall(callback, [txe])),
       ],
       true,
     ),
   );
-};
+}

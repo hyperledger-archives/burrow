@@ -1,119 +1,158 @@
-import ts, { ClassDeclaration, MethodDeclaration } from 'typescript';
-import { CallName } from './caller';
-import { DecodeName } from './decoder';
-import { EncodeName } from './encoder';
-import { ErrParameter, EventParameter, Provider } from './provider';
-import { collapseInputs, combineTypes, ContractMethodsList, outputToType, Signature } from './solidity';
+import ts, { ClassDeclaration, factory, MethodDeclaration } from 'typescript';
+import { callName } from './caller';
+import { decodeName } from './decoder';
+import { encodeName } from './encoder';
+import { callGetDataFromLog, callGetTopicsFromLog, eventSigHash } from './events';
+import { errName, EventErrParameter, LogEventParameter, logName, Provider } from './provider';
+import { ContractMethodsList, getRealType, inputOuputsToType, Signature } from './solidity';
 import {
-  AccessThis,
-  AsRefNode,
+  accessThis,
+  asRefNode,
+  BlockRangeType,
   createCall,
-  CreateCallbackExpression,
+  createCallbackExpression,
   createParameter,
+  createPromiseOf,
   declareConstant,
+  EventStream,
   ExportToken,
+  MaybeUint8ArrayType,
   Method,
   PrivateToken,
+  prop,
   PublicToken,
-  ReadableType,
   StringType,
-  Uint8ArrayType,
+  Undefined,
 } from './syntax';
 
-const exec = ts.createIdentifier('exec');
-const data = ts.createIdentifier('data');
-const client = ts.createIdentifier('client');
-const address = ts.createIdentifier('address');
+const dataName = factory.createIdentifier('data');
+const clientName = factory.createIdentifier('client');
+const addressName = factory.createIdentifier('address');
+const eventName = factory.createIdentifier('eventName');
 
-export const ContractName = ts.createIdentifier('Contract');
+export const ContractName = factory.createIdentifier('Contract');
 
-function solidityFunction(name: string, signatures: Signature[]): MethodDeclaration {
-  const args = Array.from(collapseInputs(signatures).keys()).map((key) => ts.createIdentifier(key));
-  const encode = declareConstant(
-    data,
-    createCall(ts.createPropertyAccess(createCall(EncodeName, [AccessThis(client)]), name), args),
-  );
+function solidityFunction(name: string, signatures: Signature[], index: number): ts.MethodDeclaration {
+  const signature = signatures[index];
+  const args = signature.inputs.map((input) => factory.createIdentifier(input.name));
+  const encodeFunctionOrOverloadsArray = prop(createCall(encodeName, [accessThis(clientName)]), name);
 
-  const call = ts.createCall(
-    CallName,
-    [ts.createTypeReferenceNode('Tx', undefined), outputToType(signatures[0])],
+  // Special case for overloads
+  const hasOverloads = signatures.length > 1;
+
+  const encoderFunction = hasOverloads
+    ? factory.createElementAccessExpression(encodeFunctionOrOverloadsArray, index)
+    : encodeFunctionOrOverloadsArray;
+
+  const decoderFunctionOrOverloadsArray = prop(createCall(decodeName, [accessThis(clientName), dataName]), name);
+
+  const decoderFunction = hasOverloads
+    ? factory.createElementAccessExpression(decoderFunctionOrOverloadsArray, index)
+    : decoderFunctionOrOverloadsArray;
+
+  const encode = declareConstant(dataName, createCall(encoderFunction, args));
+
+  const returnType = inputOuputsToType(signature.outputs);
+
+  const call = factory.createCallExpression(
+    callName,
+    [returnType],
     [
-      AccessThis(client),
-      AccessThis(address),
-      data,
-      ts.createLiteral(signatures[0].constant),
-      ts.createArrowFunction(
+      accessThis(clientName),
+      accessThis(addressName),
+      dataName,
+      signature.constant ? factory.createTrue() : factory.createFalse(),
+      factory.createArrowFunction(
         undefined,
         undefined,
-        [createParameter(exec, Uint8ArrayType)],
+        [createParameter(dataName, MaybeUint8ArrayType)],
         undefined,
         undefined,
-        ts.createBlock(
-          [
-            ts.createReturn(
-              createCall(ts.createPropertyAccess(createCall(DecodeName, [AccessThis(client), exec]), name), []),
-            ),
-          ],
-          true,
-        ),
+        factory.createBlock([factory.createReturnStatement(createCall(decoderFunction, []))], true),
       ),
     ],
   );
 
-  const params = Array.from(collapseInputs(signatures), ([key, value]) => createParameter(key, combineTypes(value)));
-  return new Method(name).parameters(params).declaration([encode, ts.createReturn(call)], true);
+  const params = signature.inputs.map((input) => createParameter(input.name, getRealType(input.type)));
+  // Suffix overloads
+  return new Method(index > 0 ? `${name}_${index}` : name)
+    .parameters(params)
+    .returns(createPromiseOf(returnType))
+    .declaration([encode, factory.createReturnStatement(call)], true);
 }
 
-function solidityEvent(name: string, provider: Provider): MethodDeclaration {
-  const callback = ts.createIdentifier('callback');
+function solidityEvent(name: string, signature: Signature, provider: Provider): ts.MethodDeclaration {
+  const callback = factory.createIdentifier('callback');
+  const range = factory.createIdentifier('range');
+  // Receivers of LogEventParameter
+  const data = callGetDataFromLog(logName);
+  const topics = callGetTopicsFromLog(logName);
+  const decoderFunction = prop(createCall(decodeName, [accessThis(clientName), data, topics]), name);
   return new Method(name)
-    .parameter(callback, CreateCallbackExpression([ErrParameter, EventParameter]))
-    .returns(AsRefNode(ReadableType))
+    .parameter(
+      callback,
+      createCallbackExpression([
+        EventErrParameter,
+        createParameter(eventName, inputOuputsToType(signature.inputs), undefined, true),
+      ]),
+    )
+    .parameter(range, BlockRangeType, true)
+    .returns(asRefNode(EventStream))
     .declaration([
-      ts.createReturn(
-        provider.methods.listen.call(AccessThis(client), ts.createLiteral(name), AccessThis(address), callback),
+      factory.createReturnStatement(
+        provider.methods.listen.call(
+          accessThis(clientName),
+          factory.createStringLiteral(eventSigHash(name, signature.inputs)),
+          accessThis(addressName),
+
+          factory.createArrowFunction(
+            undefined,
+            undefined,
+            [EventErrParameter, LogEventParameter],
+            undefined,
+            undefined,
+            factory.createBlock([
+              factory.createIfStatement(errName, factory.createReturnStatement(createCall(callback, [errName]))),
+              factory.createReturnStatement(createCall(callback, [Undefined, createCall(decoderFunction)])),
+            ]),
+          ),
+          range,
+        ),
       ),
     ]);
 }
 
-function createMethodFromABI(
+function createMethodsFromABI(
   name: string,
   type: 'function' | 'event',
   signatures: Signature[],
   provider: Provider,
-): MethodDeclaration {
+): MethodDeclaration[] {
   if (type === 'function') {
-    return solidityFunction(name, signatures);
+    return signatures.map((signature, index) => solidityFunction(name, signatures, index));
   } else if (type === 'event') {
-    return solidityEvent(name, provider);
+    return [solidityEvent(name, signatures[0], provider)];
   }
   // FIXME: Not sure why this is not inferred since if is exhaustive
   return undefined as never;
 }
 
 export function generateContractClass(abi: ContractMethodsList, provider: Provider): ClassDeclaration {
-  return ts.createClassDeclaration(
-    undefined,
-    [ExportToken],
-    ContractName,
-    [provider.getTypeArgumentDecl()],
-    undefined,
-    [
-      ts.createProperty(undefined, [PrivateToken], client, undefined, provider.getTypeNode(), undefined),
-      ts.createProperty(undefined, [PublicToken], address, undefined, StringType, undefined),
-      ts.createConstructor(
-        undefined,
-        undefined,
-        [createParameter(client, provider.getTypeNode()), createParameter(address, StringType)],
-        ts.createBlock(
-          [
-            ts.createStatement(ts.createAssignment(AccessThis(client), client)),
-            ts.createStatement(ts.createAssignment(AccessThis(address), address)),
-          ],
-          true,
-        ),
+  return factory.createClassDeclaration(undefined, [ExportToken], ContractName, undefined, undefined, [
+    factory.createPropertyDeclaration(undefined, [PrivateToken], clientName, undefined, provider.type(), undefined),
+    factory.createPropertyDeclaration(undefined, [PublicToken], addressName, undefined, StringType, undefined),
+    factory.createConstructorDeclaration(
+      undefined,
+      undefined,
+      [createParameter(clientName, provider.type()), createParameter(addressName, StringType)],
+      factory.createBlock(
+        [
+          factory.createExpressionStatement(factory.createAssignment(accessThis(clientName), clientName)),
+          factory.createExpressionStatement(factory.createAssignment(accessThis(addressName), addressName)),
+        ],
+        true,
       ),
-      ...abi.map((abi) => createMethodFromABI(abi.name, abi.type, abi.signatures, provider)),
-    ],
-  );
+    ),
+    ...abi.flatMap((abi) => createMethodsFromABI(abi.name, abi.type, abi.signatures, provider)),
+  ]);
 }

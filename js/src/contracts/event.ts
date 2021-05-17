@@ -1,16 +1,16 @@
 import { EventFragment, FormatTypes, Interface, LogDescription } from 'ethers/lib/utils';
 import { Keccak } from 'sha3';
-import { Burrow } from '../burrow';
-import { abiToBurrowResult, prefixedHexString } from '../convert';
-import { EventStream, latestStreamingBlockRange } from '../events';
+import { Client } from '../client';
+import { postDecodeResult, prefixedHexString } from '../convert';
+import { EndOfStream, EventStream, latestStreamingBlockRange } from '../events';
 
-export type EventCallback = (err?: Error, result?: LogDescription) => void;
+export type EventCallback = (err?: Error | EndOfStream, result?: LogDescription) => void;
 
 export function listen(
   iface: Interface,
   frag: EventFragment,
   address: string,
-  burrow: Burrow,
+  burrow: Client,
   callback: EventCallback,
   range = latestStreamingBlockRange,
 ): EventStream {
@@ -30,7 +30,7 @@ export function listen(
       });
       return callback(undefined, {
         ...result,
-        args: abiToBurrowResult(result.args, frag.inputs),
+        args: postDecodeResult(result.args, frag.inputs),
       });
     } catch (err) {
       return callback(err);

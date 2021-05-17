@@ -1,11 +1,11 @@
-import solc from 'solc';
+import solc from 'solc_v5';
 import { CompiledContract, Contract } from './contract';
 
 // Compile solidity source code
 export function compile<T = any>(
   source: string,
   name: string,
-  errorSeverity: 'error' | 'warning' = 'error',
+  fatalErrorSeverity: 'error' | 'warning' = 'error',
 ): Contract<T> {
   const desc: solc.InputDescription = { language: 'Solidity', sources: {} };
   if (!desc.sources) {
@@ -16,7 +16,7 @@ export function compile<T = any>(
 
   const json = solc.compile(JSON.stringify(desc));
   const compiled: solc.OutputDescription = JSON.parse(json);
-  const fatalErrors = compiled.errors.filter((err) => err.severity === errorSeverity);
+  const fatalErrors = compiled.errors?.filter((err) => err.severity === fatalErrorSeverity) ?? [];
   if (fatalErrors.length) {
     throw new Error(fatalErrors.map((err) => err.formattedMessage).toString());
   }

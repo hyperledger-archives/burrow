@@ -1,73 +1,62 @@
-import ts, { FunctionDeclaration, VariableStatement } from 'typescript';
-import { Provider } from './provider';
-import { collapseInputs, combineTypes, ContractMethodsList, Signature } from './solidity';
-import { createParameter, declareConstant } from './syntax';
+import ts, { factory, VariableStatement } from 'typescript';
+import { callEncodeFunctionData, Provider } from './provider';
+import { ContractMethodsList, getRealType, Method, Signature } from './solidity';
+import { asConst, createParameter, declareConstant } from './syntax';
 
-export const EncodeName = ts.createIdentifier('Encode');
+export const encodeName = factory.createIdentifier('encode');
+const client = factory.createIdentifier('client');
 
-function output(signatures: Array<Signature>, client: ts.Identifier, provider: Provider): ts.Block {
-  if (signatures.length === 0) {
-    return ts.createBlock([ts.createReturn()]);
-  } else if (signatures.length === 1) {
-    return ts.createBlock([ts.createReturn(encoder(signatures[0], client, provider))]);
-  }
-
-  return ts.createBlock(
-    signatures
-      .filter((sig) => sig.inputs.length > 0)
-      .map((sig) => {
-        return ts.createIf(
-          sig.inputs
-            .map((input) =>
-              ts.createStrictEquality(ts.createTypeOf(ts.createIdentifier(input.name)), ts.createLiteral('string')),
-            )
-            .reduce((all, next) => ts.createLogicalAnd(all, next)),
-          ts.createReturn(encoder(sig, client, provider)),
-        );
-      }),
-    true,
-  );
+export function generateEncodeObject(
+  methods: ContractMethodsList,
+  provider: Provider,
+  abiName: ts.Identifier,
+): VariableStatement {
+  return generateEncoderObject(encodeName, methods, provider, abiName, (method) => {
+    const encodeFunction = (signature: Signature) =>
+      factory.createArrowFunction(
+        undefined,
+        undefined,
+        signature.inputs.map((i) => createParameter(i.name, getRealType(i.type))),
+        undefined,
+        undefined,
+        factory.createBlock([
+          factory.createReturnStatement(
+            callEncodeFunctionData(
+              signature.hash,
+              signature.inputs.map((arg) => factory.createIdentifier(arg.name)),
+            ),
+          ),
+        ]),
+      );
+    if (method.signatures.length === 1) {
+      return encodeFunction(method.signatures[0]);
+    }
+    return asConst(factory.createArrayLiteralExpression(method.signatures.map(encodeFunction)));
+  });
 }
 
-function encoder(sig: Signature, client: ts.Identifier, provider: Provider) {
-  const inputs = ts.createArrayLiteral(sig.inputs.map((arg) => ts.createLiteral(arg.type)));
-  const args = sig.inputs.map((arg) => ts.createIdentifier(arg.name));
-  return provider.methods.encode.call(client, ts.createLiteral(sig.hash), inputs, ...args);
-}
-
-export function generateEncodeObject(methods: ContractMethodsList, provider: Provider): VariableStatement {
-  const client = ts.createIdentifier('client');
-
+function generateEncoderObject(
+  name: ts.Identifier,
+  methods: ContractMethodsList,
+  provider: Provider,
+  abiName: ts.Identifier,
+  functionMaker: (m: Method) => ts.Expression,
+): VariableStatement {
   return declareConstant(
-    EncodeName,
-    ts.createArrowFunction(
-      undefined,
-      [provider.getTypeArgumentDecl()],
-      [createParameter(client, provider.getTypeNode())],
+    name,
+    factory.createArrowFunction(
       undefined,
       undefined,
-      ts.createBlock([
-        ts.createReturn(
-          ts.createObjectLiteral(
+      [createParameter(client, provider.type())],
+      undefined,
+      undefined,
+      factory.createBlock([
+        provider.declareContractCodec(client, abiName),
+        factory.createReturnStatement(
+          factory.createObjectLiteralExpression(
             methods
               .filter((method) => method.type === 'function')
-              .map(
-                (method) =>
-                  ts.createPropertyAssignment(
-                    method.name,
-                    ts.createArrowFunction(
-                      undefined,
-                      undefined,
-                      Array.from(collapseInputs(method.signatures), ([key, value]) =>
-                        createParameter(key, combineTypes(value)),
-                      ),
-                      undefined,
-                      undefined,
-                      output(method.signatures, client, provider),
-                    ),
-                  ),
-                true,
-              ),
+              .map((method) => factory.createPropertyAssignment(method.name, functionMaker(method)), true),
             true,
           ),
         ),
@@ -75,4 +64,4 @@ export function generateEncodeObject(methods: ContractMethodsList, provider: Pro
     ),
     true,
   );
-};
+}

@@ -15,7 +15,8 @@
     "build": "tsc --build",
     "test": "./with-burrow.sh mocha 'src/**/*.test.ts'",
     "lint:fix": "eslint --fix 'src/**/*.ts'",
-    "test:generate": "ts-node src/solts/sol/build.ts"
+    "test:generate": "ts-node src/solts/sol/build.ts",
+    "generate:provider": "ts-node src/solts/provider.gd.ts.gr.ts && eslint --fix --quiet src/solts/provider.gd.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.3.0",

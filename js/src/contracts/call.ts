@@ -6,8 +6,8 @@ import { SolidityFunction } from 'solc';
 import { Result } from '../../proto/exec_pb';
 import { CallTx, ContractMeta, TxInput } from '../../proto/payload_pb';
 import { Envelope } from '../../proto/txs_pb';
-import { Pipe } from '../burrow';
-import { abiToBurrowResult, burrowToAbiResult, toBuffer } from '../convert';
+import { Pipe } from '../client';
+import { postDecodeResult, preEncodeResult, toBuffer } from '../convert';
 import { Address } from './abi';
 import { CallOptions } from './contract';
 
@@ -19,7 +19,7 @@ const WasmMagic = Buffer.from('\0asm');
 
 const coder = new AbiCoder();
 
-export function callTx(
+export function makeCallTx(
   data: Uint8Array,
   inputAddress: Address,
   contractAddress?: Address,
@@ -155,32 +155,9 @@ export async function callFunction(
   callee: Address,
   args: unknown[],
 ): Promise<unknown> {
-  const data = toBuffer(iface.encodeFunctionData(frag, burrowToAbiResult(args, frag.inputs)));
-  const transactionResult = await call(pipe, middleware(callTx(data, input, callee)));
+  const data = toBuffer(iface.encodeFunctionData(frag, preEncodeResult(args, frag.inputs)));
+  const transactionResult = await call(pipe, middleware(makeCallTx(data, input, callee)));
   // Unpack return arguments
-  const result = abiToBurrowResult(iface.decodeFunctionResult(frag, transactionResult.resultBytes), frag.outputs);
+  const result = postDecodeResult(iface.decodeFunctionResult(frag, transactionResult.resultBytes), frag.outputs);
   return handler({ transactionResult, result });
 }
-
-// const decodeF = function (abi: Function, output: Uint8Array): DecodedResult {
-//   if (!output) {
-//     return;
-//   }
-//
-//   const outputs = abi.outputs;
-//   const outputTypes = types(outputs);
-//
-//   Decode raw bytes to arguments
-// const raw = convert.abiToBurrow(outputTypes, coder.rawDecode(outputTypes, Buffer.from(output)));
-// const result: DecodedResult = { raw: raw.slice() };
-//
-// result.values = outputs.reduce(function (acc, current) {
-//   const value = raw.shift();
-//   if (current.name) {
-//     acc[current.name] = value;
-//   }
-//   return acc;
-// }, {});
-//
-// return result;
-// };

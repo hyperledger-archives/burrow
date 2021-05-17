@@ -53,10 +53,10 @@ BurrowDir = ".burrow"
     ListenPort = "26660"
 
 [Logging]
-  Trace = false
+  Trace = true
   NonBlocking = false
   [Logging.RootSink]
-#    [Logging.RootSink.Output]
-#      OutputType = "stderr"
-#      Format = "json"
+    [Logging.RootSink.Output]
+      OutputType = "stderr"
+      Format = "json"
 
