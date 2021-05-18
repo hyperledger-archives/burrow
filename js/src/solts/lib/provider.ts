@@ -1,20 +1,19 @@
 import ts, { factory } from 'typescript';
+import { BoundsType, CallbackReturnType } from './events';
 import {
   AddressType,
   asRefNode,
-  BlockRangeType,
   CallTxType,
   ContractCodecType,
   createCall,
-  createCallbackExpression,
+  createCallbackType,
   createParameter,
   createPromiseOf,
   declareConstant,
-  EndOfStreamType,
   ErrorType,
   EventStream,
+  EventType,
   ExportToken,
-  LogEventType,
   MaybeUint8ArrayType,
   Method,
   StringType,
@@ -23,15 +22,10 @@ import {
 
 export const errName = factory.createIdentifier('err');
 export const contractCodecName = factory.createIdentifier('codec');
-export const logName = factory.createIdentifier('log');
+export const eventName = factory.createIdentifier('event');
 
-export const EventErrParameter = createParameter(
-  errName,
-  factory.createUnionTypeNode([ErrorType, EndOfStreamType]),
-  undefined,
-  true,
-);
-export const LogEventParameter = createParameter(logName, LogEventType, undefined, true);
+export const EventErrParameter = createParameter(errName, ErrorType, undefined, true);
+export const EventParameter = createParameter(eventName, EventType, undefined, true);
 
 class Deploy extends Method {
   params = [createParameter('msg', CallTxType)];
@@ -74,10 +68,11 @@ class CallSim extends Method {
 
 class Listen extends Method {
   params = [
-    createParameter('signature', StringType),
+    createParameter('signatures', factory.createArrayTypeNode(StringType)),
     createParameter('address', StringType),
-    createParameter('callback', createCallbackExpression([EventErrParameter, LogEventParameter])),
-    createParameter('range', BlockRangeType, undefined, true),
+    createParameter('callback', createCallbackType([EventErrParameter, EventParameter], CallbackReturnType)),
+    createParameter('start', BoundsType, undefined, true),
+    createParameter('end', BoundsType, undefined, true),
   ];
   ret = asRefNode(EventStream);
 
@@ -85,8 +80,15 @@ class Listen extends Method {
     super('listen');
   }
 
-  call(exp: ts.Expression, sig: ts.StringLiteral, addr: ts.Expression, callback: ts.Expression, range: ts.Expression) {
-    return createCall(factory.createPropertyAccessExpression(exp, this.id), [sig, addr, callback, range]);
+  call(
+    exp: ts.Expression,
+    sig: ts.Expression,
+    addr: ts.Expression,
+    callback: ts.Expression,
+    start: ts.Expression,
+    end: ts.Expression,
+  ) {
+    return createCall(factory.createPropertyAccessExpression(exp, this.id), [sig, addr, callback, start, end]);
   }
 }
 

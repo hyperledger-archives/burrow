@@ -1,9 +1,8 @@
 import * as grpc from '@grpc/grpc-js';
 import { Interface } from 'ethers/lib/utils';
-import { TxExecution } from '../proto/exec_pb';
+import { Event, TxExecution } from '../proto/exec_pb';
 import { CallTx, ContractMeta } from '../proto/payload_pb';
 import { ExecutionEventsClient, IExecutionEventsClient } from '../proto/rpcevents_grpc_pb';
-import { BlockRange } from '../proto/rpcevents_pb';
 import { IQueryClient, QueryClient } from '../proto/rpcquery_grpc_pb';
 import { GetMetadataParam, StatusParam } from '../proto/rpcquery_pb';
 import { ITransactClient, TransactClient } from '../proto/rpctransact_grpc_pb';
@@ -14,9 +13,9 @@ import { makeCallTx } from './contracts/call';
 import { CallOptions, Contract, ContractInstance } from './contracts/contract';
 import { toBuffer } from './convert';
 import { getException } from './error';
-import { EventCallback, Events, EventStream, latestStreamingBlockRange } from './events';
+import { Bounds, EventCallback, EventStream, getBlockRange, queryFor, stream } from './events';
 import { Namereg } from './namereg';
-import { Provider } from './solts/provider.gd';
+import { Provider } from './solts/interface.gd';
 
 type TxCallback = (error: grpc.ServiceError | null, txe: TxExecution) => void;
 
@@ -26,7 +25,6 @@ export type Interceptor = (result: TxExecution) => Promise<TxExecution>;
 
 export class Client implements Provider {
   interceptor: Interceptor;
-  readonly events: Events;
   readonly namereg: Namereg;
 
   readonly executionEvents: IExecutionEventsClient;
@@ -41,8 +39,6 @@ export class Client implements Provider {
     this.executionEvents = new ExecutionEventsClient(url, credentials);
     this.transact = new TransactClient(url, credentials);
     this.query = new QueryClient(url, credentials);
-    // This is the execution events streaming service running on top of the raw streaming function.
-    this.events = new Events(this.executionEvents);
     // Contracts stuff running on top of grpc
     this.namereg = new Namereg(this.transact, this.query, this.account);
     // NOTE: in general interceptor may be async
@@ -149,12 +145,13 @@ export class Client implements Provider {
   }
 
   listen(
-    signature: string,
+    signatures: string[],
     address: string,
-    callback: EventCallback,
-    range: BlockRange = latestStreamingBlockRange,
+    callback: EventCallback<Event>,
+    start: Bounds = 'latest',
+    end: Bounds = 'stream',
   ): EventStream {
-    return this.events.listen(range, address, signature, callback);
+    return stream(this.executionEvents, getBlockRange(start, end), queryFor({ address, signatures }), callback);
   }
 
   payload(data: string | Uint8Array, address?: string, contractMeta: ContractMeta[] = []): CallTx {

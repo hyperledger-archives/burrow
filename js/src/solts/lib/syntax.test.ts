@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { factory, Node } from 'typescript';
 import { printNodes } from '../api';
-import { createCallbackExpression, createParameter, createPromiseOf, PromiseType, StringType } from './syntax';
+import { createCallbackType, createParameter, createPromiseOf, PromiseType, StringType } from './syntax';
 
 describe('syntax helpers', function () {
   it('should create callback expression', async function () {
@@ -9,7 +9,7 @@ describe('syntax helpers', function () {
       createParameter(factory.createIdentifier('err'), undefined),
       createParameter(factory.createIdentifier('result'), undefined),
     ];
-    assertGenerates(createCallbackExpression(ErrAndResult), '(err, result) => void');
+    assertGenerates(createCallbackType(ErrAndResult), '(err, result) => void');
   });
 
   it('should create promise type', () => {

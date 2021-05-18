@@ -1,10 +1,11 @@
 import ts, { factory } from 'typescript';
 import { ABI } from './lib/abi';
-import { createCallerFunction } from './lib/caller';
-import { generateContractClass } from './lib/contract';
+import { callerTypes, createCallerFunction } from './lib/caller';
+import { declareContractType, generateContractObject } from './lib/contract';
 import { generateDecodeObject } from './lib/decoder';
-import { generateDeployFunction } from './lib/deployer';
+import { generateDeployContractFunction, generateDeployFunction } from './lib/deployer';
 import { generateEncodeObject } from './lib/encoder';
+import { declareEvents, eventTypes } from './lib/events';
 import { createLinkerFunction } from './lib/linker';
 import { Provider } from './lib/provider';
 import { getContractMethods } from './lib/solidity';
@@ -20,6 +21,7 @@ export type Compiled = {
   links: Array<string>;
 };
 
+const contractNameName = factory.createIdentifier('contactName');
 const abiName = factory.createIdentifier('abi');
 const bytecodeName = factory.createIdentifier('bytecode');
 
@@ -36,6 +38,7 @@ export function newFile(contracts: Compiled[], burrowImportPath: string): ts.Nod
     ),
     importBurrow(burrowImportPath),
     provider.createInterface(),
+    ...callerTypes,
     createCallerFunction(provider),
     createLinkerFunction(),
     ...contracts.map((contract) => {
@@ -44,16 +47,25 @@ export function newFile(contracts: Compiled[], burrowImportPath: string): ts.Nod
       const deploy = contract.abi.find((abi): abi is Func => abi.type === 'constructor');
 
       // No deploy function for interfaces
-      const deployFunction = contract.bin
+      const deployMembers = contract.bin
         ? [
             declareConstant(bytecodeName, factory.createStringLiteral(contract.bin, true), true),
             generateDeployFunction(deploy, bytecodeName, contract.links, provider, abiName),
+            generateDeployContractFunction(deploy, bytecodeName, contract.links, provider),
           ]
         : [];
+
+      const events = methods.filter((a) => a.type === 'event');
+
+      const eventMembers = events.length ? [...eventTypes(), declareEvents(events)] : [];
+
       const statements = [
+        declareConstant(contractNameName, factory.createStringLiteral(contract.name), true),
         declareConstant(abiName, factory.createStringLiteral(JSON.stringify(contract.abi), true), true),
-        ...deployFunction,
-        generateContractClass(methods, provider),
+        ...deployMembers,
+        ...eventMembers,
+        declareContractType(),
+        generateContractObject(contractNameName, methods, provider),
         generateEncodeObject(methods, provider, abiName),
         generateDecodeObject(methods, provider, abiName),
       ];

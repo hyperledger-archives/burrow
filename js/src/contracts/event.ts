@@ -2,9 +2,9 @@ import { EventFragment, FormatTypes, Interface, LogDescription } from 'ethers/li
 import { Keccak } from 'sha3';
 import { Client } from '../client';
 import { postDecodeResult, prefixedHexString } from '../convert';
-import { EndOfStream, EventStream, latestStreamingBlockRange } from '../events';
+import { Bounds, EventStream, isEndOfStream } from '../events';
 
-export type EventCallback = (err?: Error | EndOfStream, result?: LogDescription) => void;
+export type EventCallback = (err?: Error, result?: LogDescription) => void;
 
 export function listen(
   iface: Interface,
@@ -12,30 +12,38 @@ export function listen(
   address: string,
   burrow: Client,
   callback: EventCallback,
-  range = latestStreamingBlockRange,
+  start: Bounds = 'latest',
+  end: Bounds = 'stream',
 ): EventStream {
   const signature = sha3(frag.format(FormatTypes.sighash));
 
-  return burrow.events.listen(range, address, signature, (err, log) => {
-    if (err) {
-      return callback(err);
-    }
-    if (!log) {
-      return callback(new Error(`no LogEvent or Error provided`));
-    }
-    try {
-      const result = iface.parseLog({
-        topics: log.getTopicsList_asU8().map((topic) => prefixedHexString(topic)),
-        data: prefixedHexString(log.getData_asU8()),
-      });
-      return callback(undefined, {
-        ...result,
-        args: postDecodeResult(result.args, frag.inputs),
-      });
-    } catch (err) {
-      return callback(err);
-    }
-  });
+  return burrow.listen(
+    [signature],
+    address,
+    (err, event) => {
+      if (err) {
+        return isEndOfStream(err) ? undefined : callback(err);
+      }
+      const log = event?.getLog();
+      if (!log) {
+        return callback(new Error(`no LogEvent or Error provided`));
+      }
+      try {
+        const result = iface.parseLog({
+          topics: log.getTopicsList_asU8().map((topic) => prefixedHexString(topic)),
+          data: prefixedHexString(log.getData_asU8()),
+        });
+        return callback(undefined, {
+          ...result,
+          args: postDecodeResult(result.args, frag.inputs),
+        });
+      } catch (err) {
+        return callback(err);
+      }
+    },
+    start,
+    end,
+  );
 }
 
 function sha3(str: string) {

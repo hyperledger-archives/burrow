@@ -1,4 +1,4 @@
-import ts, { factory, MethodDeclaration } from 'typescript';
+import ts, { ConciseBody, factory, MethodDeclaration, TypeNode } from 'typescript';
 
 export const ErrorType = factory.createTypeReferenceNode('Error');
 export const VoidType = factory.createTypeReferenceNode('void', undefined);
@@ -15,20 +15,22 @@ export const PromiseType = factory.createIdentifier('Promise');
 export const ReadableType = factory.createIdentifier('Readable');
 export const BufferType = factory.createIdentifier('Buffer');
 export const CallTx = factory.createIdentifier('CallTx');
-export const BlockRange = factory.createIdentifier('BlockRange');
 export const Address = factory.createIdentifier('Address');
 export const EventStream = factory.createIdentifier('EventStream');
-export const LogEvent = factory.createIdentifier('LogEvent');
+export const Event = factory.createIdentifier('Event');
 export const ContractCodec = factory.createIdentifier('ContractCodec');
 export const Result = factory.createIdentifier('Result');
-export const EndOfStream = factory.createIdentifier('EndOfStream');
+export const Signal = factory.createIdentifier('Signal');
+export const ReturnType = factory.createIdentifier('ReturnType');
+export const listenerForName = factory.createIdentifier('listenerFor');
 
+export const TType = factory.createTypeReferenceNode('T');
 export const CallTxType = factory.createTypeReferenceNode(CallTx);
-export const BlockRangeType = factory.createTypeReferenceNode(BlockRange);
 export const AddressType = factory.createTypeReferenceNode(Address);
-export const LogEventType = factory.createTypeReferenceNode(LogEvent);
+export const EventType = factory.createTypeReferenceNode(Event);
 export const ContractCodecType = factory.createTypeReferenceNode(ContractCodec);
-export const EndOfStreamType = factory.createTypeReferenceNode(EndOfStream);
+export const EventStreamType = factory.createTypeReferenceNode(EventStream);
+export const SignalType = factory.createTypeReferenceNode(Signal);
 
 export const PrivateToken = factory.createToken(ts.SyntaxKind.PrivateKeyword);
 export const PublicToken = factory.createToken(ts.SyntaxKind.PublicKeyword);
@@ -38,10 +40,12 @@ export const QuestionToken = factory.createToken(ts.SyntaxKind.QuestionToken);
 export const QuestionDotToken = factory.createToken(ts.SyntaxKind.QuestionDotToken);
 export const ColonToken = factory.createToken(ts.SyntaxKind.ColonToken);
 export const AsyncToken = factory.createToken(ts.SyntaxKind.AsyncKeyword);
+export const ReadonlyToken = factory.createToken(ts.SyntaxKind.ReadonlyKeyword);
+export const EqualsGreaterThanToken = factory.createToken(ts.SyntaxKind.EqualsGreaterThanToken);
 export const Undefined = factory.createIdentifier('undefined');
 
-export function createCall(fn: ts.Expression, args?: ts.Expression[]): ts.CallExpression {
-  return factory.createCallExpression(fn, undefined, args);
+export function createCall(fn: ts.Expression | string, args?: ts.Expression[]): ts.CallExpression {
+  return factory.createCallExpression(asExp(fn), undefined, args);
 }
 
 export function accessThis(name: ts.Identifier): ts.PropertyAccessExpression {
@@ -68,12 +72,40 @@ export function asConst(exp: ts.Expression): ts.AsExpression {
   return factory.createAsExpression(exp, factory.createTypeReferenceNode('const'));
 }
 
+export function constObject(elements: ts.ObjectLiteralElementLike[]): ts.AsExpression {
+  return asConst(factory.createObjectLiteralExpression(elements));
+}
+
+export function arrowFunc(params: ts.ParameterDeclaration[], body: ConciseBody): ts.ArrowFunction {
+  return factory.createArrowFunction(undefined, undefined, params, undefined, EqualsGreaterThanToken, body);
+}
+
+export function arrowFuncT(
+  params: ts.ParameterDeclaration[],
+  constraint: TypeNode | undefined,
+  type: TypeNode | undefined,
+  body: ConciseBody,
+): ts.ArrowFunction {
+  return factory.createArrowFunction(
+    undefined,
+    [factory.createTypeParameterDeclaration('T', constraint)],
+    params,
+    type,
+    EqualsGreaterThanToken,
+    body,
+  );
+}
+
 export function prop(
-  obj: ts.Expression,
+  obj: ts.Expression | string,
   name: string | ts.Identifier,
   optionChain?: boolean,
 ): ts.PropertyAccessExpression {
-  return factory.createPropertyAccessChain(obj, optionChain ? QuestionDotToken : undefined, name);
+  return factory.createPropertyAccessChain(asExp(obj), optionChain ? QuestionDotToken : undefined, name);
+}
+
+function asExp(exp: ts.Expression | string): ts.Expression {
+  return typeof exp === 'string' ? factory.createIdentifier(exp) : exp;
 }
 
 export function createParameter(
@@ -165,7 +197,7 @@ export function CreateCallbackDeclaration(
   body: ts.Statement[],
   returnType?: ts.TypeNode,
   multiLine?: boolean,
-) {
+): ts.ArrowFunction {
   return factory.createArrowFunction(
     undefined,
     undefined,
@@ -176,8 +208,11 @@ export function CreateCallbackDeclaration(
   );
 }
 
-export function createCallbackExpression(params: ts.ParameterDeclaration[]): ts.FunctionTypeNode {
-  return factory.createFunctionTypeNode(undefined, params, VoidType);
+export function createCallbackType(
+  params: ts.ParameterDeclaration[],
+  type: ts.TypeNode = VoidType,
+): ts.FunctionTypeNode {
+  return factory.createFunctionTypeNode(undefined, params, type);
 }
 
 function importFrom(pkg: string, ...things: ts.Identifier[]) {
@@ -201,12 +236,12 @@ export function importBurrow(burrowImportPath: string): ts.ImportDeclaration {
   return importFrom(
     burrowImportPath,
     Address,
-    BlockRange,
     CallTx,
     ContractCodec,
-    EndOfStream,
+    Signal,
+    Event,
     EventStream,
-    LogEvent,
+    listenerForName,
     Result,
   );
 }
@@ -226,8 +261,12 @@ export class Method {
     return this;
   }
 
-  parameters(args: ts.ParameterDeclaration[]): Method {
-    this.params.push(...args);
+  parameters(arg: ts.ParameterDeclaration | ts.ParameterDeclaration[]): Method {
+    if (Array.isArray(arg)) {
+      this.params.push(...arg);
+    } else {
+      this.params.push(arg);
+    }
     return this;
   }
 

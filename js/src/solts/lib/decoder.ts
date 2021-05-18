@@ -12,7 +12,7 @@ export function generateDecodeObject(
   methods: ContractMethodsList,
   provider: Provider,
   abiName: ts.Identifier,
-): VariableStatement {
+): ts.VariableStatement {
   return generateDecoderObject(methods, provider, abiName, (method) => {
     const decodeFunction = (signature: Signature) => {
       const isFunction = method.type === 'function';
@@ -43,7 +43,7 @@ function generateDecoderObject(
   provider: Provider,
   abiName: ts.Identifier,
   functionMaker: (m: Method) => ts.Expression,
-): VariableStatement {
+): ts.VariableStatement {
   return declareConstant(
     decodeName,
     factory.createArrowFunction(

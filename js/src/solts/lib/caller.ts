@@ -8,6 +8,7 @@ import {
   createCall,
   createParameter,
   declareConstant,
+  ExportToken,
   MaybeUint8ArrayType,
   PromiseType,
   QuestionToken,
@@ -15,13 +16,14 @@ import {
   Uint8ArrayType,
 } from './syntax';
 
-export const callName = factory.createIdentifier('call');
+export const defaultCallName = factory.createIdentifier('defaultCall');
+export const callerTypeName = factory.createIdentifier('Caller');
 
 export function createCallerFunction(provider: Provider): ts.FunctionDeclaration {
   const output = factory.createIdentifier('Output');
   const client = factory.createIdentifier('client');
   const payload = factory.createIdentifier('payload');
-  const txe = factory.createIdentifier('txe');
+  const returnData = factory.createIdentifier('returnData');
   const data = factory.createIdentifier('data');
   const isSim = factory.createIdentifier('isSim');
   const callback = factory.createIdentifier('callback');
@@ -29,9 +31,9 @@ export function createCallerFunction(provider: Provider): ts.FunctionDeclaration
 
   return factory.createFunctionDeclaration(
     undefined,
-    [AsyncToken],
+    [ExportToken, AsyncToken],
     undefined,
-    callName,
+    defaultCallName,
     [factory.createTypeParameterDeclaration(output)],
     [
       createParameter(client, provider.type()),
@@ -42,7 +44,7 @@ export function createCallerFunction(provider: Provider): ts.FunctionDeclaration
         callback,
         factory.createFunctionTypeNode(
           undefined,
-          [createParameter('exec', MaybeUint8ArrayType)],
+          [createParameter(returnData, MaybeUint8ArrayType)],
           factory.createTypeReferenceNode(output, undefined),
         ),
       ),
@@ -52,7 +54,7 @@ export function createCallerFunction(provider: Provider): ts.FunctionDeclaration
       [
         declareConstant(payload, provider.methods.payload.call(client, data, addr)),
         declareConstant(
-          txe,
+          returnData,
           factory.createAwaitExpression(
             factory.createConditionalExpression(
               isSim,
@@ -63,9 +65,19 @@ export function createCallerFunction(provider: Provider): ts.FunctionDeclaration
             ),
           ),
         ),
-        factory.createReturnStatement(createCall(callback, [txe])),
+        factory.createReturnStatement(createCall(callback, [returnData])),
       ],
       true,
     ),
   );
 }
+
+export const callerTypes: ts.TypeAliasDeclaration[] = [
+  factory.createTypeAliasDeclaration(
+    undefined,
+    [ExportToken],
+    callerTypeName,
+    undefined,
+    factory.createTypeQueryNode(defaultCallName),
+  ),
+];
