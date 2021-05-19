@@ -126,13 +126,14 @@ func encodeUint8(input uint8) ([]byte, error) {
 }
 
 func encodeUint64(i uint64) ([]byte, error) {
-	size := bits.Len64(i)/8 + 1
-	if size == 1 {
+	// Byte-wise ceiling
+	byteCount := (bits.Len64(i) + 7) / 8
+	if byteCount == 1 {
 		return encodeUint8(uint8(i))
 	}
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, uint64(i))
-	return encodeString(b[8-size:])
+	return encodeString(b[8-byteCount:])
 }
 
 func encodeBigInt(b *big.Int) ([]byte, error) {
