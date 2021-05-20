@@ -129,14 +129,14 @@ func TestEncoding(t *testing.T) {
 	t.Run("Integers", func(t *testing.T) {
 		var tests = []testCase{
 			{
-				[]uint64{23, 30400},
-				[]byte{0xc4, 0x17, 0x82, 0x76, 0xc0},
-				[][]byte{{23}, {0x76, 0xc0}},
+				[]uint64{23, 233, 30400},
+				[]byte{0xc6, 0x17, 0x81, 0xe9, 0x82, 0x76, 0xc0},
+				[][]byte{{23}, {233}, {0x76, 0xc0}},
 			},
 			{
-				[]*big.Int{big.NewInt(23), big.NewInt(30400)},
-				[]byte{0xc4, 0x17, 0x82, 0x76, 0xc0},
-				[][]byte{{23}, {0x76, 0xc0}},
+				[]*big.Int{big.NewInt(23), big.NewInt(233), big.NewInt(30400)},
+				[]byte{0xc6, 0x17, 0x81, 0xe9, 0x82, 0x76, 0xc0},
+				[][]byte{{23}, {233}, {0x76, 0xc0}},
 			},
 		}
 
