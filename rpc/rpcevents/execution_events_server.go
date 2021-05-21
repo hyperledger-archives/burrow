@@ -123,15 +123,16 @@ func (ees *executionEventsServer) Events(request *BlocksRequest, stream Executio
 func (ees *executionEventsServer) streamEvents(ctx context.Context, blockRange *BlockRange,
 	consumer func(execution *exec.StreamEvent) error) error {
 
-	start, end, streaming := blockRange.Bounds(ees.tip.LastBlockHeight())
+	lastBlockHeight := ees.tip.LastBlockHeight()
+	start, end, streaming := blockRange.Bounds(lastBlockHeight)
 	ees.logger.TraceMsg("Streaming blocks", "start", start, "end", end, "streaming", streaming)
 
 	// Pull blocks from state and receive the upper bound (exclusive) on the what we were able to send
 	// Set this to start since it will be the start of next streaming batch (if needed)
 	start, err := ees.iterateStreamEvents(start, end, consumer)
 
-	// If we are not streaming and all blocks requested were retrieved from state then we are done
-	if !streaming && start > end {
+	// If we are not streaming and all (non-empty) blocks up to and including end are available from state then we are done
+	if !streaming && end <= lastBlockHeight {
 		return err
 	}
 
