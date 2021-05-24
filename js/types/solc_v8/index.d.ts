@@ -1,4 +1,4 @@
-declare module 'solc' {
+declare module 'solc_v8' {
   export type SolidityFunction = {
     type: 'function' | 'constructor' | 'fallback';
     name: string;

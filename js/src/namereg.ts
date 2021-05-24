@@ -1,15 +1,12 @@
-import {IQueryClient} from '../proto/rpcquery_grpc_pb';
-import {GetNameParam} from '../proto/rpcquery_pb';
-import {Entry} from '../proto/names_pb';
-import {ITransactClient} from '../proto/rpctransact_grpc_pb';
-import {TxInput, NameTx} from '../proto/payload_pb';
-import {TxExecution} from '../proto/exec_pb';
-import * as grpc from '@grpc/grpc-js';
+import { TxExecution } from '../proto/exec_pb';
+import { Entry } from '../proto/names_pb';
+import { NameTx, TxInput } from '../proto/payload_pb';
+import { IQueryClient } from '../proto/rpcquery_grpc_pb';
+import { GetNameParam } from '../proto/rpcquery_pb';
+import { ITransactClient } from '../proto/rpctransact_grpc_pb';
 
 export class Namereg {
-
-  constructor(private transact: ITransactClient, private query: IQueryClient, private account: string) {
-  }
+  constructor(private transact: ITransactClient, private query: IQueryClient, private account: string) {}
 
   set(name: string, data: string, lease = 50000, fee = 5000): Promise<TxExecution> {
     const input = new TxInput();
@@ -25,11 +22,11 @@ export class Namereg {
     return new Promise((resolve, reject) => {
       this.transact.nameTxSync(payload, (err, txe) => {
         if (err) {
-          reject(err)
+          reject(err);
         }
-        resolve(txe)
+        resolve(txe);
       });
-    })
+    });
   }
 
   get(name: string): Promise<Entry> {
@@ -38,10 +35,10 @@ export class Namereg {
     return new Promise((resolve, reject) => {
       this.query.getName(payload, (err, entry) => {
         if (err) {
-          reject(err)
+          reject(err);
         }
-        resolve(entry)
-      })
-    })
+        resolve(entry);
+      });
+    });
   }
 }

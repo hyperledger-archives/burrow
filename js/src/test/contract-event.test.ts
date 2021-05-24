@@ -1,6 +1,5 @@
 import { compile } from '../contracts/compile';
 import { ContractEvent, getAddress } from '../contracts/contract';
-import { Contract } from '../index';
 import { burrow } from './test';
 
 describe('Nested contract event emission', function () {

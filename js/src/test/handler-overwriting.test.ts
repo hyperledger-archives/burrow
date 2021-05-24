@@ -1,9 +1,8 @@
 import * as assert from 'assert';
-import { Result } from 'ethers/lib/utils';
 import { CallResult } from '../contracts/call';
 import { compile } from '../contracts/compile';
 import { getMetadata } from '../contracts/contract';
-import { withoutArrayElements } from "../convert";
+import { withoutArrayElements } from '../convert';
 import { burrow } from './test';
 
 describe('Testing Per-contract handler overwriting', function () {
@@ -54,4 +53,3 @@ describe('Testing Per-contract handler overwriting', function () {
     assert.deepStrictEqual(returnObject, expected);
   });
 });
-

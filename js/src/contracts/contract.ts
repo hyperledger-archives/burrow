@@ -1,11 +1,11 @@
 import { EventFragment, Fragment, FunctionFragment, Interface, LogDescription } from 'ethers/lib/utils';
 import { Keccak } from 'sha3';
 import { CallTx, ContractMeta } from '../../proto/payload_pb';
-import { Burrow } from '../burrow';
-import { burrowToAbiResult, toBuffer } from '../convert';
+import { Client } from '../client';
+import { preEncodeResult, toBuffer } from '../convert';
 import { EventStream } from '../events';
 import { ABI, Address } from './abi';
-import { call, callFunction, CallResult, callTx, DecodeResult } from './call';
+import { call, callFunction, CallResult, DecodeResult, makeCallTx } from './call';
 import { EventCallback, listen } from './event';
 
 export const meta: unique symbol = Symbol('meta');
@@ -54,7 +54,7 @@ export class Contract<T extends ContractInstance | any = any> {
     this.iface = new Interface(this.code.abi);
   }
 
-  at(address: Address, burrow: Burrow, options: CallOptions = defaultCallOptions): T {
+  at(address: Address, burrow: Client, options: CallOptions = defaultCallOptions): T {
     const instance: ContractInstance = {
       [meta]: {
         address,
@@ -77,20 +77,20 @@ export class Contract<T extends ContractInstance | any = any> {
     return [this.code, ...this.childCode].map(contractMeta).filter((m): m is ContractMeta => Boolean(m));
   }
 
-  async deploy(burrow: Burrow, ...args: unknown[]): Promise<T> {
+  async deploy(burrow: Client, ...args: unknown[]): Promise<T> {
     return this.deployWith(burrow, defaultCallOptions, ...args);
   }
 
-  async deployWith(burrow: Burrow, options?: Partial<CallOptions>, ...args: unknown[]): Promise<T> {
+  async deployWith(burrow: Client, options?: Partial<CallOptions>, ...args: unknown[]): Promise<T> {
     const opts = { ...defaultCallOptions, ...options };
     if (!this.code.bytecode) {
       throw new Error(`cannot deploy contract without compiled bytecode`);
     }
     const { middleware } = opts;
     const data = Buffer.concat(
-      [this.code.bytecode, this.iface.encodeDeploy(burrowToAbiResult(args, this.iface.deploy.inputs))].map(toBuffer),
+      [this.code.bytecode, this.iface.encodeDeploy(preEncodeResult(args, this.iface.deploy.inputs))].map(toBuffer),
     );
-    const tx = middleware(callTx(data, burrow.account, undefined, this.meta()));
+    const tx = middleware(makeCallTx(data, burrow.account, undefined, this.meta()));
     const { contractAddress } = await call(burrow.callPipe, tx);
     return this.at(contractAddress, burrow, opts);
   }
@@ -116,7 +116,7 @@ export type ContractEvent = ((cb: EventCallback) => EventStream) & {
 function contractFunction(
   iface: Interface,
   frag: FunctionFragment,
-  burrow: Burrow,
+  burrow: Client,
   options: CallOptions,
   contractAddress: string,
 ): ContractFunction {
@@ -135,7 +135,7 @@ function contractFunction(
   return func;
 }
 
-function contractEvent(iface: Interface, frag: EventFragment, burrow: Burrow, contractAddress: string): ContractEvent {
+function contractEvent(iface: Interface, frag: EventFragment, burrow: Client, contractAddress: string): ContractEvent {
   const func = (cb: EventCallback) => listen(iface, frag, contractAddress, burrow, cb);
   func.at = (address: string, cb: EventCallback) => listen(iface, frag, address, burrow, cb);
   func.once = () =>
