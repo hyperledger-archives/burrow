@@ -41,14 +41,15 @@ describe('Testing Per-contract handler overwriting', function () {
     });
     const address = getMetadata(instance).address;
     const returnObject = await instance.getCombination();
+    const randomBytes = Buffer.from('000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE', 'hex');
     const expected = {
       values: {
         _number: 100,
         _address: address,
         _saying: 'hello moto',
-        _randomBytes: '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE',
+        _randomBytes: randomBytes,
       },
-      raw: [100, address, 'hello moto', '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE'],
+      raw: [100, address, 'hello moto', randomBytes],
     };
     assert.deepStrictEqual(returnObject, expected);
   });

@@ -68,10 +68,6 @@ function postDecode(arg: unknown, type: string): unknown {
   if (/address/.test(type)) {
     return recApply(unprefixedHexString, arg as NestedArray<string>);
   }
-  if (bytesNN.test(type)) {
-    // Handle bytes32 differently - for legacy reasons they are used as identifiers and represented as hex strings
-    return recApply(unprefixedHexString, arg as NestedArray<string>);
-  }
   if (/bytes/.test(type)) {
     return recApply(toBuffer, arg as NestedArray<string>);
   }

@@ -36,19 +36,15 @@ describe('Multiple return types', function () {
         };
       },
     });
+    const randomBytes = Buffer.from('000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE', 'hex');
     const expected = {
       values: {
         _number: 100,
         _address: getAddress(instance),
         _saying: 'hello moto',
-        _randomBytes: '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE',
+        _randomBytes: randomBytes,
       },
-      raw: [
-        100,
-        getAddress(instance),
-        'hello moto',
-        '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE',
-      ],
+      raw: [100, getAddress(instance), 'hello moto', randomBytes],
     };
     const result = await instance.getCombination();
     assert.deepStrictEqual(result, expected);

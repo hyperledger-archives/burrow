@@ -60,7 +60,7 @@ contract GetSet {
 `;
 
   const testUint = 42;
-  const testBytes = 'DEADBEEF00000000000000000000000000000000000000000000000000000000';
+  const testBytes = Buffer.from('DEADBEEF00000000000000000000000000000000000000000000000000000000', 'hex');
   const testString = 'Hello World!';
   const testBool = true;
 
@@ -86,7 +86,7 @@ contract GetSet {
   it('Bytes', async () => {
     await TestContract.setBytes(testBytes);
     const output = await TestContract.getBytes();
-    assert.strictEqual(output[0], testBytes);
+    assert.deepStrictEqual(output[0], testBytes);
   });
 
   it('String', async () => {

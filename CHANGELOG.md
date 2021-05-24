@@ -1,4 +1,12 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.33.1] - 2021-05-24
+### Fixed
+- [JS] Return bytesNN as Buffer to agree with typings
+
+### Added
+- [JS] Inline sources and source maps
+
+
 ## [0.33.0] - 2021-05-24
 ### Changed
 - [JS] Changed Burrow interface and renamed Burrow client object to to Client (merging in features needed for solts support)
@@ -767,6 +775,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.33.1]: https://github.com/hyperledger/burrow/compare/v0.33.0...v0.33.1
 [0.33.0]: https://github.com/hyperledger/burrow/compare/v0.32.1...v0.33.0
 [0.32.1]: https://github.com/hyperledger/burrow/compare/v0.32.0...v0.32.1
 [0.32.0]: https://github.com/hyperledger/burrow/compare/v0.31.3...v0.32.0

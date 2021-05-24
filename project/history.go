@@ -47,7 +47,14 @@ func FullVersion() string {
 // To cut a new release add a release to the front of this slice then run the
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
-	MustDeclareReleases("0.33.0 - 2021-05-24",
+	MustDeclareReleases("0.33.1 - 2021-05-24",
+		`### Fixed
+- [JS] Return bytesNN as Buffer to agree with typings
+
+### Added
+- [JS] Inline sources and source maps
+`,
+		"0.33.0 - 2021-05-24",
 		`### Changed
 - [JS] Changed Burrow interface and renamed Burrow client object to to Client (merging in features needed for solts support)
 

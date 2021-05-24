@@ -34,7 +34,8 @@ describe('solts', () => {
     // Look ma, type narrowing!
     events.map((event) => {
       if (event.name === 'Init') {
-        assert.strictEqual(event.payload.eventId, '6576656E74310000000000000000000000000000000000000000000000000000');
+        const eventId = Buffer.from('6576656E74310000000000000000000000000000000000000000000000000000', 'hex');
+        assert.deepStrictEqual(event.payload.eventId, eventId);
       } else if (event.name === 'MonoRampage') {
         assert.strictEqual(event.payload.timestamp, 123);
       }
