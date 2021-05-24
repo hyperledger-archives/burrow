@@ -46,20 +46,9 @@ describe('Functional Contract Usage', function () {
       instance1.getCombination.at(address2)(),
     ]);
 
-    const expected1 = [
-      100,
-      address1,
-      'hello moto',
-      '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE',
-      '88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F',
-    ];
-    const expected2 = [
-      100,
-      address2,
-      'hello moto',
-      '000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE',
-      'ABCDEFABCDEFABCDEFABCDEFABCDEFABCDEF0123',
-    ];
+    const randomBytes = Buffer.from('000000000000000000000000000000000000000000000000DEADBEEFFEEDFACE', 'hex');
+    const expected1 = [100, address1, 'hello moto', randomBytes, '88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F'];
+    const expected2 = [100, address2, 'hello moto', randomBytes, 'ABCDEFABCDEFABCDEFABCDEFABCDEFABCDEF0123'];
     assert.deepStrictEqual([...ret1], expected1);
     assert.deepStrictEqual([...ret2], expected2);
     // Check we are assigning names to hybrid record/array Result object
