@@ -2,13 +2,14 @@ import * as grpc from '@grpc/grpc-js';
 import { Metadata } from '@grpc/grpc-js';
 import { callErrorFromStatus } from '@grpc/grpc-js/build/src/call';
 import { AbiCoder, FunctionFragment, Interface, Result as DecodedResult } from 'ethers/lib/utils';
+import { Keccak } from 'sha3';
 import { SolidityFunction } from 'solc';
 import { Result } from '../../proto/exec_pb';
 import { CallTx, ContractMeta, TxInput } from '../../proto/payload_pb';
 import { Envelope } from '../../proto/txs_pb';
 import { Pipe } from '../client';
 import { postDecodeResult, preEncodeResult, toBuffer } from '../convert';
-import { Address } from './abi';
+import { ABI, Address } from './abi';
 import { CallOptions } from './contract';
 
 export const DEFAULT_GAS = 1111111111;
@@ -46,6 +47,22 @@ export function makeCallTx(
   payload.setContractmetaList(contractMeta);
 
   return payload;
+}
+
+export function getContractMetaFromBytecode(abi: ABI, deployedBytecode: string): ContractMeta {
+  const hasher = new Keccak(256);
+  const codeHash = hasher.update(deployedBytecode, 'hex').digest();
+  return getContractMeta(abi, codeHash);
+}
+
+export function getContractMeta(abi: ABI | string, codeHash: Uint8Array): ContractMeta {
+  const meta = new ContractMeta();
+  if (typeof abi !== 'string') {
+    abi = JSON.stringify({ Abi: abi });
+  }
+  meta.setMeta(abi);
+  meta.setCodehash(codeHash);
+  return meta;
 }
 
 export type TransactionResult = {

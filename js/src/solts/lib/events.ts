@@ -5,19 +5,18 @@ import { EventErrParameter, eventName } from './provider';
 import { ContractMethodsList, getRealType, InputOutput, sha3 } from './solidity';
 import {
   arrowFuncT,
+  CancelStreamSignalType,
   constObject,
   createCall,
   createParameter,
   declareConstant,
   EqualsGreaterThanToken,
-  EventStreamType,
   EventType,
   ExportToken,
   listenerForName,
   NumberType,
   prop,
   ReturnType,
-  SignalType,
   TType,
   UnknownType,
   VoidType,
@@ -29,13 +28,13 @@ export const BoundsType = factory.createUnionTypeNode([
   ...['first', 'latest', 'stream'].map((s) => factory.createLiteralTypeNode(factory.createStringLiteral(s))),
   NumberType,
 ]);
-export const CallbackReturnType = factory.createUnionTypeNode([SignalType, VoidType]);
+export const CallbackReturnType = factory.createUnionTypeNode([CancelStreamSignalType, VoidType]);
 
 const typedListenerName = factory.createIdentifier('TypedListener');
 
-const getLogName = factory.createIdentifier('getLog');
-const getDataName = factory.createIdentifier('getData_asU8');
-const getTopicsName = factory.createIdentifier('getTopicsList_asU8');
+const logName = factory.createIdentifier('log');
+const dataName = factory.createIdentifier('data');
+const topicsName = factory.createIdentifier('topics');
 const taggedPayloadName = factory.createIdentifier('TaggedPayload');
 const solidityEventName = factory.createIdentifier('SolidityEvent');
 const eventRegistryName = factory.createIdentifier('EventRegistry');
@@ -51,16 +50,12 @@ export function eventSigHash(name: string, inputs: InputOutput[]): string {
   return sha3(eventSignature(name, inputs));
 }
 
-function callGetLogFromEvent(event: ts.Expression): ts.CallExpression {
-  return createCall(prop(event, getLogName, true));
+export function dataFromEvent(event: ts.Expression): ts.Expression {
+  return prop(prop(event, logName, true), dataName);
 }
 
-export function callGetDataFromEvent(event: ts.Expression): ts.CallExpression {
-  return createCall(prop(callGetLogFromEvent(event), getDataName, true));
-}
-
-export function callGetTopicsFromEvent(event: ts.Expression): ts.CallExpression {
-  return createCall(prop(callGetLogFromEvent(event), getTopicsName, true));
+export function topicsFromEvent(event: ts.Expression): ts.Expression {
+  return prop(prop(event, logName, true), topicsName);
 }
 
 export function createListenerForFunction(clientName: ts.Identifier, addressName: ts.Identifier): ts.ArrowFunction {
@@ -215,7 +210,7 @@ export function eventTypes(): ts.TypeAliasDeclaration[] {
           createParameter('start', BoundsType, undefined, true),
           createParameter('end', BoundsType, undefined, true),
         ],
-        EventStreamType,
+        UnknownType,
       ),
     ),
   ];

@@ -5,7 +5,6 @@ export const VoidType = factory.createTypeReferenceNode('void', undefined);
 export const StringType = factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword);
 export const NumberType = factory.createKeywordTypeNode(ts.SyntaxKind.NumberKeyword);
 export const BooleanType = factory.createKeywordTypeNode(ts.SyntaxKind.BooleanKeyword);
-export const AnyType = factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
 export const UnknownType = factory.createKeywordTypeNode(ts.SyntaxKind.UnknownKeyword);
 export const UndefinedType = factory.createKeywordTypeNode(ts.SyntaxKind.UndefinedKeyword);
 export const Uint8ArrayType = factory.createTypeReferenceNode('Uint8Array');
@@ -14,23 +13,20 @@ export const MaybeUint8ArrayType = factory.createUnionTypeNode([Uint8ArrayType, 
 export const PromiseType = factory.createIdentifier('Promise');
 export const ReadableType = factory.createIdentifier('Readable');
 export const BufferType = factory.createIdentifier('Buffer');
-export const CallTx = factory.createIdentifier('CallTx');
 export const Address = factory.createIdentifier('Address');
-export const EventStream = factory.createIdentifier('EventStream');
 export const Event = factory.createIdentifier('Event');
 export const ContractCodec = factory.createIdentifier('ContractCodec');
 export const Result = factory.createIdentifier('Result');
-export const Signal = factory.createIdentifier('Signal');
+export const CancelStreamSignal = factory.createIdentifier('CancelStreamSignal');
 export const ReturnType = factory.createIdentifier('ReturnType');
 export const listenerForName = factory.createIdentifier('listenerFor');
+export const linkerName = factory.createIdentifier('linker');
 
 export const TType = factory.createTypeReferenceNode('T');
-export const CallTxType = factory.createTypeReferenceNode(CallTx);
 export const AddressType = factory.createTypeReferenceNode(Address);
 export const EventType = factory.createTypeReferenceNode(Event);
 export const ContractCodecType = factory.createTypeReferenceNode(ContractCodec);
-export const EventStreamType = factory.createTypeReferenceNode(EventStream);
-export const SignalType = factory.createTypeReferenceNode(Signal);
+export const CancelStreamSignalType = factory.createTypeReferenceNode(CancelStreamSignal);
 
 export const PrivateToken = factory.createToken(ts.SyntaxKind.PrivateKeyword);
 export const PublicToken = factory.createToken(ts.SyntaxKind.PublicKeyword);
@@ -78,6 +74,10 @@ export function constObject(elements: ts.ObjectLiteralElementLike[]): ts.AsExpre
 
 export function arrowFunc(params: ts.ParameterDeclaration[], body: ConciseBody): ts.ArrowFunction {
   return factory.createArrowFunction(undefined, undefined, params, undefined, EqualsGreaterThanToken, body);
+}
+
+export function hexToBuffer(arg: ts.Expression): ts.CallExpression {
+  return createCall(prop(BufferType, 'from'), [arg, factory.createStringLiteral('hex')]);
 }
 
 export function arrowFuncT(
@@ -236,13 +236,12 @@ export function importBurrow(burrowImportPath: string): ts.ImportDeclaration {
   return importFrom(
     burrowImportPath,
     Address,
-    CallTx,
     ContractCodec,
-    Signal,
+    CancelStreamSignal,
     Event,
-    EventStream,
     listenerForName,
     Result,
+    linkerName,
   );
 }
 

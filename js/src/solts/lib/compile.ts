@@ -4,17 +4,18 @@ import { ABI } from './abi';
 import InputDescription = Solidity.InputDescription;
 
 export namespace Solidity {
-  type Bytecode = {
+  export type Bytecode = {
     linkReferences: any;
     object: string;
     opcodes: string;
     sourceMap: string;
   };
 
-  type Contract = {
+  export type Contract = {
     assembly: any;
     evm: {
       bytecode: Bytecode;
+      deployedBytecode: Bytecode;
     };
     functionHashes: any;
     gasEstimates: any;
@@ -25,7 +26,7 @@ export namespace Solidity {
     srcmapRuntime: string;
   };
 
-  type Source = {
+  export type Source = {
     AST: any;
   };
 
@@ -98,4 +99,16 @@ export function tokenizeLinks(links: Record<string, Record<string, unknown>>): s
     }
   }
   return libraries;
+}
+
+export function linker(bytecode: string, links: { name: string; address: string }[]): string {
+  for (const { name, address } of links) {
+    const paddedAddress = address + Array(40 - address.length + 1).join('0');
+    const truncated = name.slice(0, 36);
+    const label = '__' + truncated + Array(37 - truncated.length).join('_') + '__';
+    while (bytecode.indexOf(label) >= 0) {
+      bytecode = bytecode.replace(label, paddedAddress);
+    }
+  }
+  return bytecode;
 }

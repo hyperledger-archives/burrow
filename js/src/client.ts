@@ -1,7 +1,7 @@
 import * as grpc from '@grpc/grpc-js';
 import { Interface } from 'ethers/lib/utils';
-import { Event, TxExecution } from '../proto/exec_pb';
-import { CallTx, ContractMeta } from '../proto/payload_pb';
+import { TxExecution } from '../proto/exec_pb';
+import { CallTx } from '../proto/payload_pb';
 import { ExecutionEventsClient, IExecutionEventsClient } from '../proto/rpcevents_grpc_pb';
 import { IQueryClient, QueryClient } from '../proto/rpcquery_grpc_pb';
 import { GetMetadataParam, StatusParam } from '../proto/rpcquery_pb';
@@ -9,11 +9,11 @@ import { ITransactClient, TransactClient } from '../proto/rpctransact_grpc_pb';
 import { ResultStatus } from '../proto/rpc_pb';
 import { ContractCodec, getContractCodec } from './codec';
 import { Address } from './contracts/abi';
-import { makeCallTx } from './contracts/call';
+import { getContractMeta, makeCallTx } from './contracts/call';
 import { CallOptions, Contract, ContractInstance } from './contracts/contract';
 import { toBuffer } from './convert';
 import { getException } from './error';
-import { Bounds, EventCallback, EventStream, getBlockRange, queryFor, stream } from './events';
+import { Bounds, Event, EventCallback, EventStream, getBlockRange, queryFor, stream } from './events';
 import { Namereg } from './namereg';
 import { Provider } from './solts/interface.gd';
 
@@ -125,8 +125,17 @@ export class Client implements Provider {
   // Methods below implement the generated codegen provider
   // TODO: should probably generate canonical version of Provider interface somewhere outside of files
 
-  async deploy(msg: CallTx): Promise<Address> {
-    const txe = await this.callTxSync(msg);
+  async deploy(
+    data: string | Uint8Array,
+    contractMeta: { abi: string; codeHash: Uint8Array }[] = [],
+  ): Promise<Address> {
+    const tx = makeCallTx(
+      toBuffer(data),
+      this.account,
+      undefined,
+      contractMeta.map(({ abi, codeHash }) => getContractMeta(abi, codeHash)),
+    );
+    const txe = await this.callTxSync(tx);
     const contractAddress = txe.getReceipt()?.getContractaddress_asU8();
     if (!contractAddress) {
       throw new Error(`deploy appears to have succeeded but contract address is missing from result: ${txe}`);
@@ -134,13 +143,15 @@ export class Client implements Provider {
     return Buffer.from(contractAddress).toString('hex').toUpperCase();
   }
 
-  async call(msg: CallTx): Promise<Uint8Array | undefined> {
-    const txe = await this.callTxSync(msg);
+  async call(data: string | Uint8Array, address: string): Promise<Uint8Array | undefined> {
+    const tx = makeCallTx(toBuffer(data), this.account, address);
+    const txe = await this.callTxSync(tx);
     return txe.getResult()?.getReturn_asU8();
   }
 
-  async callSim(msg: CallTx): Promise<Uint8Array | undefined> {
-    const txe = await this.callTxSim(msg);
+  async callSim(data: string | Uint8Array, address: string): Promise<Uint8Array | undefined> {
+    const tx = makeCallTx(toBuffer(data), this.account, address);
+    const txe = await this.callTxSim(tx);
     return txe.getResult()?.getReturn_asU8();
   }
 
@@ -152,10 +163,6 @@ export class Client implements Provider {
     end: Bounds = 'stream',
   ): EventStream {
     return stream(this.executionEvents, getBlockRange(start, end), queryFor({ address, signatures }), callback);
-  }
-
-  payload(data: string | Uint8Array, address?: string, contractMeta: ContractMeta[] = []): CallTx {
-    return makeCallTx(typeof data === 'string' ? toBuffer(data) : data, this.account, address, contractMeta);
   }
 
   contractCodec(contractABI: string): ContractCodec {

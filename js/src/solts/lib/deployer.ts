@@ -1,19 +1,18 @@
 import ts, { factory, FunctionDeclaration, SyntaxKind } from 'typescript';
 import { ABI } from './abi';
 import { contractFunctionName, contractTypeName } from './contract';
-import { linkerName } from './linker';
 import { callEncodeDeploy, Provider } from './provider';
 import { getRealType, sha3, tokenizeString } from './solidity';
 import {
   AsyncToken,
   BufferType,
-  createAssignmentStatement,
   createCall,
   createParameter,
   createPromiseOf,
   declareConstant,
-  declareLet,
   ExportToken,
+  hexToBuffer,
+  linkerName,
   PromiseType,
   prop,
   StringType,
@@ -21,37 +20,50 @@ import {
 
 export const deployName = factory.createIdentifier('deploy');
 export const deployContractName = factory.createIdentifier('deployContract');
+export const bytecodeName = factory.createIdentifier('bytecode');
+export const deployedBytecodeName = factory.createIdentifier('deployedBytecode');
 
 // Variable names
-const payloadName = factory.createIdentifier('payload');
 const linkedBytecodeName = factory.createIdentifier('linkedBytecode');
 const dataName = factory.createIdentifier('data');
 const clientName = factory.createIdentifier('client');
 
 export function generateDeployFunction(
   abi: ABI.Func | undefined,
-  bytecodeName: ts.Identifier,
   links: string[],
   provider: Provider,
   abiName: ts.Identifier,
+  contractNames: ts.Identifier[],
 ): FunctionDeclaration {
   const output = factory.createExpressionWithTypeArguments(PromiseType, [StringType]);
 
   const statements: ts.Statement[] = [];
   statements.push(provider.declareContractCodec(clientName, abiName));
-  statements.push(declareLet(linkedBytecodeName, bytecodeName));
-  statements.push(
-    ...links.map((link) =>
-      createAssignmentStatement(
-        linkedBytecodeName,
-        createCall(linkerName, [
-          linkedBytecodeName,
-          factory.createStringLiteral('$' + sha3(link).toLowerCase().slice(0, 34) + '$'),
-          factory.createIdentifier(tokenizeString(link)),
+
+  let bytecode = bytecodeName;
+  const linksName = factory.createIdentifier('links');
+
+  if (links.length) {
+    const linksArray = factory.createArrayLiteralExpression(
+      links.map((link) =>
+        factory.createObjectLiteralExpression([
+          factory.createPropertyAssignment(
+            'name',
+            factory.createStringLiteral('$' + sha3(link).toLowerCase().slice(0, 34) + '$'),
+          ),
+          factory.createPropertyAssignment(
+            'address',
+
+            factory.createIdentifier(tokenizeString(link)),
+          ),
         ]),
       ),
-    ),
-  );
+    );
+    statements.push(declareConstant(linksName, linksArray));
+    statements.push(declareConstant(linkedBytecodeName, createCall(linkerName, [bytecodeName, linksName])));
+
+    bytecode = linkedBytecodeName;
+  }
 
   const args = abi?.inputs?.map((arg) => factory.createIdentifier(arg.name)) ?? [];
 
@@ -59,16 +71,22 @@ export function generateDeployFunction(
     declareConstant(
       dataName,
       createCall(prop(BufferType, 'concat'), [
-        factory.createArrayLiteralExpression([
-          createCall(prop(BufferType, 'from'), [linkedBytecodeName, factory.createStringLiteral('hex')]),
-          callEncodeDeploy(args),
-        ]),
+        factory.createArrayLiteralExpression([hexToBuffer(bytecode), callEncodeDeploy(args)]),
       ]),
     ),
   );
-  statements.push(declareConstant(payloadName, provider.methods.payload.call(clientName, dataName, undefined)));
 
-  const deployFn = provider.methods.deploy.call(clientName, payloadName);
+  const deployFn = provider.methods.deploy.call(
+    clientName,
+    dataName,
+    contractNames.map((n) => {
+      const deployedBytecode = prop(n, deployedBytecodeName);
+      return {
+        abi: prop(n, abiName),
+        codeHash: hexToBuffer(links.length ? createCall(linkerName, [deployedBytecode, linksName]) : deployedBytecode),
+      };
+    }),
+  );
 
   statements.push(factory.createReturnStatement(deployFn));
 
@@ -78,7 +96,7 @@ export function generateDeployFunction(
     undefined,
     deployName,
     undefined,
-    deployParameters(abi, bytecodeName, links, provider),
+    deployParameters(abi, links, provider),
     output,
     factory.createBlock(statements, true),
   );
@@ -86,11 +104,10 @@ export function generateDeployFunction(
 
 export function generateDeployContractFunction(
   abi: ABI.Func | undefined,
-  bytecodeName: ts.Identifier,
   links: string[],
   provider: Provider,
-) {
-  const parameters = deployParameters(abi, bytecodeName, links, provider);
+): ts.FunctionDeclaration {
+  const parameters = deployParameters(abi, links, provider);
   const addressName = factory.createIdentifier('address');
   const callDeploy = factory.createAwaitExpression(
     createCall(deployName, [
@@ -112,12 +129,7 @@ export function generateDeployContractFunction(
   );
 }
 
-function deployParameters(
-  abi: ABI.Func | undefined,
-  bytecodeName: ts.Identifier,
-  links: string[],
-  provider: Provider,
-): ts.ParameterDeclaration[] {
+function deployParameters(abi: ABI.Func | undefined, links: string[], provider: Provider): ts.ParameterDeclaration[] {
   const parameters = abi ? abi.inputs?.map((input) => createParameter(input.name, getRealType(input.type))) ?? [] : [];
   return [
     createParameter(clientName, provider.type()),

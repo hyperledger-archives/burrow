@@ -1,5 +1,5 @@
 import * as grpc from '@grpc/grpc-js';
-import { Event } from '../proto/exec_pb';
+import { Event as BurrowEvent } from '../proto/exec_pb';
 import { IExecutionEventsClient } from '../proto/rpcevents_grpc_pb';
 import { BlockRange, BlocksRequest, Bound, EventsResponse } from '../proto/rpcevents_pb';
 import { Address } from './contracts/abi';
@@ -8,10 +8,52 @@ import BoundType = Bound.BoundType;
 
 export type EventStream = grpc.ClientReadableStream<EventsResponse>;
 
+export type Event = {
+  header: Header;
+  log: Log;
+};
+
+export type Header = {
+  height: number;
+  index: number;
+  txHash: string;
+  eventId: string;
+};
+
+export type Log = {
+  data: Uint8Array;
+  topics: Uint8Array[];
+};
+
+// We opt for a duck-type brand rather than a unique symbol so that dependencies using different versions of Burrow
+const SignalCodes = {
+  cancelStream: 'cancelStream',
+  endOfStream: 'endOfStream',
+} as const;
+
+type SignalCodes = keyof typeof SignalCodes;
+
+// can be used together when compatible (since Signal is exported by the Provider interface)
+export interface Signal<T extends SignalCodes> {
+  __isBurrowSignal__: '__isBurrowSignal__';
+  signal: T;
+}
+
+export type CancelStreamSignal = Signal<'cancelStream'>;
+
+const cancelStream: CancelStreamSignal = {
+  __isBurrowSignal__: '__isBurrowSignal__',
+  signal: 'cancelStream',
+} as const;
+
+export const Signal = Object.freeze({
+  cancelStream,
+} as const);
+
 // Surprisingly, this seems to be as good as it gets at the time of writing (https://github.com/Microsoft/TypeScript/pull/17819)
 // that is, defining various types of union here does not help on the consumer side to infer exactly one of err or log
 // will be defined
-export type EventCallback<T> = (err?: Error, event?: T) => Signal | void;
+export type EventCallback<T> = (err?: Error, event?: T) => CancelStreamSignal | void;
 
 export type Bounds = number | 'first' | 'latest' | 'stream';
 
@@ -19,16 +61,13 @@ export type FiniteBounds = number | 'first' | 'latest';
 
 type EventRegistry<T extends string> = Record<T, { signature: string }>;
 
-// Emitted for consumers when stream ends
-const endOfStream: unique symbol = Symbol('EndOfStream');
-// Emitted by consumers to signal the stream should end
-export const cancelStream: unique symbol = Symbol('CancelStream');
-
-export type Signal = typeof cancelStream;
-
 // Note: typescript breaks instanceof for Error (https://github.com/microsoft/TypeScript/issues/13965)
-class EndOfStreamError extends Error {
-  public readonly endOfStream = endOfStream;
+const burrowSignalToken = '__isBurrowSignal__' as const;
+
+class EndOfStreamError extends Error implements Signal<'endOfStream'> {
+  __isBurrowSignal__ = burrowSignalToken;
+
+  public readonly signal = 'endOfStream';
 
   constructor() {
     super('End of stream, no more data will be sent - use isEndOfStream(err) to check for this signal');
@@ -37,8 +76,17 @@ class EndOfStreamError extends Error {
 
 const endOfStreamError = Object.freeze(new EndOfStreamError());
 
-export function isEndOfStream(err: Error): boolean {
-  return (err as EndOfStreamError).endOfStream === endOfStream;
+export function isBurrowSignal(value: unknown): value is Signal<SignalCodes> {
+  const v = value as Signal<SignalCodes>;
+  return v && v.__isBurrowSignal__ === burrowSignalToken && (v.signal === 'cancelStream' || v.signal === 'endOfStream');
+}
+
+export function isEndOfStream(value: unknown): value is Signal<'endOfStream'> {
+  return isBurrowSignal(value) && value.signal === 'endOfStream';
+}
+
+export function isCancelStream(value: unknown): value is CancelStreamSignal {
+  return isBurrowSignal(value) && value.signal === 'cancelStream';
 }
 
 export function getBlockRange(start: Bounds = 'latest', end: Bounds = 'stream'): BlockRange {
@@ -62,8 +110,15 @@ export function stream(
   stream.on('data', (data: EventsResponse) => {
     const cancel = data
       .getEventsList()
-      .map((event) => callback(undefined, event))
-      .find((s) => s === cancelStream);
+      .map((event) => {
+        try {
+          return callback(undefined, burrowEventToInterfaceEvent(event));
+        } catch (err) {
+          stream.cancel();
+          throw err;
+        }
+      })
+      .find(isCancelStream);
     if (cancel) {
       stream.cancel();
     }
@@ -128,7 +183,7 @@ function boundsToBound(bounds: Bounds): Bound {
 }
 
 export function readEvents<T>(
-  listener: (callback: EventCallback<T>, start?: Bounds, end?: Bounds) => EventStream,
+  listener: (callback: EventCallback<T>, start?: Bounds, end?: Bounds) => unknown,
   start: FiniteBounds = 'first',
   end: FiniteBounds = 'latest',
   limit?: number,
@@ -137,7 +192,7 @@ export function readEvents<T>(
     listener,
     (events, event) => {
       if (limit && events.length === limit) {
-        return cancelStream;
+        return Signal.cancelStream;
       }
       events.push(event);
       return events;
@@ -149,8 +204,8 @@ export function readEvents<T>(
 }
 
 export function iterateEvents<T>(
-  listener: (callback: EventCallback<T>, start?: Bounds, end?: Bounds) => EventStream,
-  reducer: (event: T) => Signal | void,
+  listener: (callback: EventCallback<T>, start?: Bounds, end?: Bounds) => unknown,
+  reducer: (event: T) => CancelStreamSignal | void,
   start: FiniteBounds = 'first',
   end: FiniteBounds = 'latest',
 ): Promise<void> {
@@ -158,8 +213,8 @@ export function iterateEvents<T>(
 }
 
 export function reduceEvents<T, U>(
-  listener: (callback: EventCallback<T>, start?: Bounds, end?: Bounds) => EventStream,
-  reducer: (accumulator: U, event: T) => U | Signal,
+  listener: (callback: EventCallback<T>, start?: Bounds, end?: Bounds) => unknown,
+  reducer: (accumulator: U, event: T) => U | CancelStreamSignal,
   initialValue: U,
   start: FiniteBounds = 'first',
   end: FiniteBounds = 'latest',
@@ -176,12 +231,12 @@ export function reduceEvents<T, U>(
         }
         if (!event) {
           reject(new Error(`received empty event`));
-          return cancelStream;
+          return Signal.cancelStream;
         }
         const reduced = reducer(accumulator, event);
-        if (reduced === cancelStream) {
+        if (isCancelStream(reduced)) {
           resolve(accumulator);
-          return cancelStream;
+          return Signal.cancelStream;
         }
         accumulator = reduced;
       },
@@ -197,11 +252,7 @@ export const listenerFor = <T extends string>(
   eventRegistry: EventRegistry<T>,
   decode: (client: Provider, data?: Uint8Array, topics?: Uint8Array[]) => Record<T, () => unknown>,
   eventNames: T[],
-) => (
-  callback: EventCallback<{ name: T; payload: unknown; event: Event }>,
-  start?: Bounds,
-  end?: Bounds,
-): EventStream => {
+) => (callback: EventCallback<{ name: T; payload: unknown; event: Event }>, start?: Bounds, end?: Bounds): unknown => {
   const signatureToName = eventNames.reduce((acc, n) => acc.set(eventRegistry[n].signature, n), new Map<string, T>());
 
   return client.listen(
@@ -214,8 +265,7 @@ export const listenerFor = <T extends string>(
       if (!event) {
         return callback(new Error(`Empty event received`));
       }
-      const topics = event?.getLog()?.getTopicsList_asU8();
-      const log0 = topics?.[0];
+      const log0 = event.log.topics[0];
       if (!log0) {
         return callback(new Error(`Event has no Log0: ${event?.toString()}`));
       }
@@ -226,11 +276,28 @@ export const listenerFor = <T extends string>(
           new Error(`Could not find event with signature ${signature} in registry: ${JSON.stringify(eventRegistry)}`),
         );
       }
-      const data = event?.getLog()?.getData_asU8();
-      const payload = decode(client, data, topics)[name]();
+      const payload = decode(client, event.log.data, event.log.topics)[name]();
       return callback(undefined, { name, payload, event });
     },
     start,
     end,
   );
 };
+
+export function burrowEventToInterfaceEvent(event: BurrowEvent): Event {
+  const log = event.getLog();
+  const header = event.getHeader();
+  return {
+    log: {
+      data: log?.getData_asU8() ?? new Uint8Array(),
+      topics: log?.getTopicsList_asU8() || [],
+    },
+    header: {
+      height: header?.getHeight() ?? 0,
+      index: header?.getIndex() ?? 0,
+      eventId: header?.getEventid() ?? '',
+
+      txHash: Buffer.from(header?.getTxhash_asU8() ?? []).toString('hex'),
+    },
+  };
+}

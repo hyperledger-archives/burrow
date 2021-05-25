@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { ABI } from './abi';
-import { getSize, sha3, nameFromABI, tokenizeString } from './solidity';
+import { getSize, nameFromABI, sha3, tokenizeString } from './solidity';
 
 describe('abi helpers', function () {
   it('should compute a valid method id', async function () {

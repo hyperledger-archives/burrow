@@ -5,8 +5,8 @@ import { encodeName } from './encoder';
 import {
   BoundsType,
   CallbackReturnType,
-  callGetDataFromEvent,
-  callGetTopicsFromEvent,
+  dataFromEvent,
+  topicsFromEvent,
   createListener,
   createListenerForFunction,
   eventSigHash,
@@ -15,7 +15,6 @@ import { errName, EventErrParameter, eventName, EventParameter, Provider } from 
 import { ContractMethodsList, getRealType, inputOuputsToType, Signature } from './solidity';
 import {
   asConst,
-  asRefNode,
   constObject,
   createCall,
   createCallbackType,
@@ -23,7 +22,6 @@ import {
   createPromiseOf,
   declareConstant,
   EqualsGreaterThanToken,
-  EventStream,
   ExportToken,
   MaybeUint8ArrayType,
   Method,
@@ -31,6 +29,7 @@ import {
   ReturnType,
   StringType,
   Undefined,
+  UnknownType,
 } from './syntax';
 
 export const contractFunctionName = factory.createIdentifier('contract');
@@ -161,43 +160,46 @@ function solidityEvent(name: string, signature: Signature, provider: Provider): 
   const start = factory.createIdentifier('start');
   const end = factory.createIdentifier('end');
   // Receivers of LogEventParameter
-  const data = callGetDataFromEvent(eventName);
-  const topics = callGetTopicsFromEvent(eventName);
+  const data = dataFromEvent(eventName);
+  const topics = topicsFromEvent(eventName);
   const decoderFunction = prop(createCall(decodeName, [clientName, data, topics]), name);
-  return new Method(name)
-    .parameter(
-      callback,
-      createCallbackType(
-        [EventErrParameter, createParameter(eventName, inputOuputsToType(signature.inputs), undefined, true)],
-        CallbackReturnType,
-      ),
-    )
-    .parameter(start, BoundsType, true)
-    .parameter(end, BoundsType, true)
-    .returns(asRefNode(EventStream))
-    .declaration([
-      factory.createReturnStatement(
-        provider.methods.listen.call(
-          clientName,
-          factory.createArrayLiteralExpression([factory.createStringLiteral(eventSigHash(name, signature.inputs))]),
-          addressName,
-
-          factory.createArrowFunction(
-            undefined,
-            undefined,
-            [EventErrParameter, EventParameter],
-            undefined,
-            undefined,
-            factory.createBlock([
-              factory.createIfStatement(errName, factory.createReturnStatement(createCall(callback, [errName]))),
-              factory.createReturnStatement(createCall(callback, [Undefined, createCall(decoderFunction)])),
-            ]),
-          ),
-          start,
-          end,
+  return (
+    new Method(name)
+      .parameter(
+        callback,
+        createCallbackType(
+          [EventErrParameter, createParameter(eventName, inputOuputsToType(signature.inputs), undefined, true)],
+          CallbackReturnType,
         ),
-      ),
-    ]);
+      )
+      .parameter(start, BoundsType, true)
+      .parameter(end, BoundsType, true)
+      // type may be EventStream, allow type assertion without polluting inteface
+      .returns(UnknownType)
+      .declaration([
+        factory.createReturnStatement(
+          provider.methods.listen.call(
+            clientName,
+            factory.createArrayLiteralExpression([factory.createStringLiteral(eventSigHash(name, signature.inputs))]),
+            addressName,
+
+            factory.createArrowFunction(
+              undefined,
+              undefined,
+              [EventErrParameter, EventParameter],
+              undefined,
+              undefined,
+              factory.createBlock([
+                factory.createIfStatement(errName, factory.createReturnStatement(createCall(callback, [errName]))),
+                factory.createReturnStatement(createCall(callback, [Undefined, createCall(decoderFunction)])),
+              ]),
+            ),
+            start,
+            end,
+          ),
+        ),
+      ])
+  );
 }
 
 function createGroup(name: ts.Identifier, elements: ObjectLiteralElementLike[]): ts.PropertyAssignment {

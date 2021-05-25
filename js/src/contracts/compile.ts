@@ -1,5 +1,14 @@
 import solc from 'solc_v5';
-import { CompiledContract, Contract } from './contract';
+import { ABI } from './abi';
+import { Contract } from './contract';
+
+export type CompiledContract = {
+  abi: ABI;
+  // Required to deploy a contract
+  bytecode?: string;
+  // Required to submit an ABI when deploying a contract
+  deployedBytecode?: string;
+};
 
 // Compile solidity source code
 export function compile<T = any>(
@@ -29,7 +38,7 @@ export function compile<T = any>(
   );
 }
 
-function getCompiledCode(contract: solc.Contract): CompiledContract {
+function getCompiledCode(contract: solc.Contract): Required<CompiledContract> {
   return {
     abi: contract.abi,
     bytecode: contract.evm.bytecode.object,
