@@ -1,4 +1,4 @@
-import { EventFragment, FormatTypes, Interface, LogDescription } from 'ethers/lib/utils';
+import { EventFragment, FormatTypes, Interface, LogDescription } from '@ethersproject/abi';
 import { Keccak } from 'sha3';
 import { Client } from '../client';
 import { postDecodeResult, prefixedHexString } from '../convert';

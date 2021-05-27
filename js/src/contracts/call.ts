@@ -1,7 +1,7 @@
+import { AbiCoder, FunctionFragment, Interface, Result as DecodedResult } from '@ethersproject/abi';
 import * as grpc from '@grpc/grpc-js';
 import { Metadata } from '@grpc/grpc-js';
 import { callErrorFromStatus } from '@grpc/grpc-js/build/src/call';
-import { AbiCoder, FunctionFragment, Interface, Result as DecodedResult } from 'ethers/lib/utils';
 import { Keccak } from 'sha3';
 import { SolidityFunction } from 'solc';
 import { Result } from '../../proto/exec_pb';
@@ -13,8 +13,6 @@ import { ABI, Address } from './abi';
 import { CallOptions } from './contract';
 
 export const DEFAULT_GAS = 1111111111;
-
-export { Result as DecodeResult } from 'ethers/lib/utils';
 
 const WasmMagic = Buffer.from('\0asm');
 

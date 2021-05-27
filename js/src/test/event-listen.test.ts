@@ -1,5 +1,5 @@
+import { LogDescription } from '@ethersproject/abi';
 import * as assert from 'assert';
-import { LogDescription } from 'ethers/lib/utils';
 import { compile } from '../contracts/compile';
 import { ContractEvent } from '../contracts/contract';
 import { burrow } from './test';

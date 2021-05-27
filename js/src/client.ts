@@ -1,5 +1,5 @@
+import { Interface } from '@ethersproject/abi';
 import * as grpc from '@grpc/grpc-js';
-import { Interface } from 'ethers/lib/utils';
 import { TxExecution } from '../proto/exec_pb';
 import { CallTx } from '../proto/payload_pb';
 import { ExecutionEventsClient, IExecutionEventsClient } from '../proto/rpcevents_grpc_pb';

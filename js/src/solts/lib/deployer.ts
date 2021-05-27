@@ -56,7 +56,6 @@ export function generateDeployFunction(
           ),
           factory.createPropertyAssignment(
             'address',
-
             factory.createIdentifier(tokenizeString(link)),
           ),
         ]),

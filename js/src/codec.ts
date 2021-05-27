@@ -1,4 +1,4 @@
-import { EventFragment, Fragment, FunctionFragment, Interface } from 'ethers/lib/utils';
+import { EventFragment, Fragment, FunctionFragment, Interface } from '@ethersproject/abi';
 import { postDecodeResult, preEncodeResult, prefixedHexString, toBuffer } from './convert';
 
 export type ContractCodec = {

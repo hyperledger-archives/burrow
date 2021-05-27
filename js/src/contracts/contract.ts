@@ -1,10 +1,10 @@
-import { EventFragment, Fragment, FunctionFragment, Interface, LogDescription } from 'ethers/lib/utils';
+import { EventFragment, Fragment, FunctionFragment, Interface, LogDescription } from '@ethersproject/abi';
 import { CallTx, ContractMeta } from '../../proto/payload_pb';
 import { Client } from '../client';
-import { preEncodeResult, toBuffer } from '../convert';
-import { EventStream } from "../events";
+import { preEncodeResult, Result, toBuffer } from '../convert';
+import { EventStream } from '../events';
 import { Address } from './abi';
-import { call, callFunction, CallResult, DecodeResult, getContractMetaFromBytecode, makeCallTx } from './call';
+import { call, callFunction, CallResult, getContractMetaFromBytecode, makeCallTx } from './call';
 import { CompiledContract } from './compile';
 import { EventCallback, listen } from './event';
 
@@ -99,7 +99,7 @@ type ContractFunction = GenericFunction & {
   at: (address: string) => GenericFunction;
   atSim: (address: string) => GenericFunction;
   encode: (...args: unknown[]) => string;
-  decode: (output: Uint8Array) => DecodeResult;
+  decode: (output: Uint8Array) => Result;
 };
 
 export type ContractEvent = ((cb: EventCallback) => EventStream) & {
