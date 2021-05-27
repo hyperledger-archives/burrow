@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { ABI } from './abi';
+import { ABI } from '../../contracts/abi';
 import { getSize, nameFromABI, sha3, tokenizeString } from './solidity';
 
 describe('abi helpers', function () {

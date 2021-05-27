@@ -1,5 +1,5 @@
 import ts, { factory } from 'typescript';
-import { ABI } from './lib/abi';
+import { ABI } from "../contracts/abi";
 import { callerTypes, createCallerFunction } from './lib/caller';
 import { declareContractType, generateContractObject } from './lib/contract';
 import { generateDecodeObject } from './lib/decoder';
@@ -16,7 +16,7 @@ import { getContractMethods } from './lib/solidity';
 import { declareConstant, ExportToken, importBurrow, importReadable } from './lib/syntax';
 import Func = ABI.Func;
 
-export { decodeOutput, encodeInput, importLocal, inputDescriptionFromFiles, tokenizeLinks } from './lib/compile';
+export { decodeOutput, encodeInput, importLocal, inputDescriptionFromFiles, tokenizeLinks } from '../contracts/compile';
 
 export type Compiled = {
   name: string;
@@ -54,7 +54,7 @@ export function newFile(contracts: Compiled[], burrowImportPath: string): ts.Nod
       const deployMembers = contract.bytecode
         ? [
             declareConstant(bytecodeName, factory.createStringLiteral(contract.bytecode, true), true),
-            declareConstant(deployedBytecodeName, factory.createStringLiteral(contract.bytecode, true), true),
+            declareConstant(deployedBytecodeName, factory.createStringLiteral(contract.deployedBytecode, true), true),
             generateDeployFunction(deploy, contract.links, provider, abiName, contractNames),
             generateDeployContractFunction(deploy, contract.links, provider),
           ]

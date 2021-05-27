@@ -2,8 +2,8 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as solcv5 from 'solc_v5';
 import * as solcv8 from 'solc_v8';
+import { decodeOutput, encodeInput, importLocal, inputDescriptionFromFiles, Solidity } from '../contracts/compile';
 import { Compiled, newFile, printNodes, tokenizeLinks } from './api';
-import { decodeOutput, encodeInput, importLocal, inputDescriptionFromFiles, Solidity } from './lib/compile';
 
 const solcCompilers = {
   v5: solcv5,
@@ -29,7 +29,10 @@ export type BuildOptions = typeof defaultBuildOptions;
  *  - Outputs the ABI files into bin to be later included in the distribution (for Vent and other ABI-consuming services)
  */
 export async function build(srcPathOrFiles: string | string[], opts?: Partial<BuildOptions>): Promise<void> {
-  const { solcVersion, binPath, basePath, burrowImportPath, abiExt } = { ...defaultBuildOptions, ...opts };
+  const { solcVersion, binPath, basePath, burrowImportPath, abiExt } = {
+    ...defaultBuildOptions,
+    ...opts,
+  };
   const basePathPrefix = new RegExp(
     '^' + path.resolve(basePath ?? (typeof srcPathOrFiles === 'string' ? srcPathOrFiles : process.cwd())),
   );

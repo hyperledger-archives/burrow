@@ -1,5 +1,5 @@
 {
-  "version": "0.33.1-dev.e4b5f85b9",
+  "version": "0.33.1-dev.4b4d42399",
   "name": "@hyperledger/burrow",
   "description": "TypeScript library that calls a Hyperledger Burrow server over GRPC.",
   "main": "./dist/index.js",

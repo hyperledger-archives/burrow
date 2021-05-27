@@ -2,6 +2,7 @@ import ts, { factory } from 'typescript';
 import { BoundsType, CallbackReturnType } from './events';
 import {
   AddressType,
+  ColonToken,
   ContractCodecType,
   createCall,
   createCallbackType,
@@ -13,8 +14,10 @@ import {
   ExportToken,
   MaybeUint8ArrayType,
   Method,
+  QuestionToken,
   StringType,
   Uint8ArrayType,
+  Undefined,
   UnknownType,
 } from './syntax';
 
@@ -52,24 +55,27 @@ class Deploy extends Method {
   call(
     exp: ts.Expression,
     data: ts.Expression,
-    contractMeta?: { abi: ts.Expression; codeHash: ts.Expression }[],
+    withContractMeta: ts.Expression,
+    contractMeta: { abi: ts.Expression; codeHash: ts.Expression }[],
   ): ts.CallExpression {
-    return createCall(
-      factory.createPropertyAccessExpression(exp, this.id),
-      contractMeta
-        ? [
-            data,
-            factory.createArrayLiteralExpression(
-              contractMeta.map(({ abi, codeHash }) =>
-                factory.createObjectLiteralExpression([
-                  factory.createPropertyAssignment(this.abiName, abi),
-                  factory.createPropertyAssignment(this.codeHashName, codeHash),
-                ]),
-              ),
-            ),
-          ]
-        : [data],
+    const contractMetaLiteral = factory.createArrayLiteralExpression(
+      contractMeta.map(({ abi, codeHash }) =>
+        factory.createObjectLiteralExpression([
+          factory.createPropertyAssignment(this.abiName, abi),
+          factory.createPropertyAssignment(this.codeHashName, codeHash),
+        ]),
+      ),
     );
+    return createCall(factory.createPropertyAccessExpression(exp, this.id), [
+      data,
+      // TODO: Contracts that may create contracts need to be deployed with contract meta for all contracts they create
+      //  unfortunately we have no good way to determine from solc output which contracts a contract may create, so
+      //  short of pushing all contract meta to every contract in a family of contracts we cannot safely deploy with meta
+      //  in the general case this Burrow throws on creating a new contract if a) the parent has meta, and b) the child
+      //  meta cannot be found. The solution is to delocalise the contract storage from the parent contract and have
+      //  a global registry of metadata to query against when creating a contract
+      factory.createConditionalExpression(withContractMeta, QuestionToken, contractMetaLiteral, ColonToken, Undefined),
+    ]);
   }
 }
 

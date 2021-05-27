@@ -6,14 +6,13 @@ import { burrow } from './test';
 
 describe('solts', () => {
   it('can deploy and call from codegen', async () => {
-    const address = await Addition.deploy(burrow);
-    const add = Addition.contract(burrow, address);
-    const { sum } = await add.functions.add(2342, 23432);
+    const adder = await Addition.deployContract(burrow, true);
+    const { sum } = await adder.functions.add(2342, 23432);
     assert.strictEqual(sum, 25774);
   });
 
   it('can receive events', async () => {
-    const eventer = Eventer.contract(burrow, await Eventer.deploy(burrow));
+    const eventer = await Eventer.deployContract(burrow, true);
     await eventer.functions.announce();
     await eventer.functions.announce();
     await eventer.functions.announce();
@@ -25,7 +24,7 @@ describe('solts', () => {
   });
 
   it('can listen to multiple events', async () => {
-    const eventer = Eventer.contract(burrow, await Eventer.deploy(burrow));
+    const eventer = await Eventer.deployContract(burrow, true);
     await eventer.functions.announce();
     await eventer.functions.announce();
     const listener = eventer.listenerFor(['MonoRampage', 'Init']);

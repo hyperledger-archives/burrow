@@ -21,6 +21,7 @@ export const CancelStreamSignal = factory.createIdentifier('CancelStreamSignal')
 export const ReturnType = factory.createIdentifier('ReturnType');
 export const listenerForName = factory.createIdentifier('listenerFor');
 export const linkerName = factory.createIdentifier('linker');
+export const keccakName = factory.createIdentifier('Keccak');
 
 export const TType = factory.createTypeReferenceNode('T');
 export const AddressType = factory.createTypeReferenceNode(Address);
@@ -78,6 +79,20 @@ export function arrowFunc(params: ts.ParameterDeclaration[], body: ConciseBody):
 
 export function hexToBuffer(arg: ts.Expression): ts.CallExpression {
   return createCall(prop(BufferType, 'from'), [arg, factory.createStringLiteral('hex')]);
+}
+
+export function hexToKeccak256(str: ts.Expression): ts.CallExpression {
+  // new Keccak(256).update(str).digest('binary');
+  return createCall(
+    prop(
+      createCall(
+        prop(factory.createNewExpression(keccakName, undefined, [factory.createNumericLiteral('256')]), 'update'),
+        [str, factory.createStringLiteral('hex')],
+      ),
+      'digest',
+    ),
+    [factory.createStringLiteral('binary')],
+  );
 }
 
 export function arrowFuncT(
@@ -236,12 +251,13 @@ export function importBurrow(burrowImportPath: string): ts.ImportDeclaration {
   return importFrom(
     burrowImportPath,
     Address,
-    ContractCodec,
     CancelStreamSignal,
+    ContractCodec,
     Event,
+    linkerName,
     listenerForName,
     Result,
-    linkerName,
+    keccakName,
   );
 }
 

@@ -1,6 +1,6 @@
 import { Keccak } from 'sha3';
 import ts, { factory, TypeNode } from 'typescript';
-import { ABI } from './abi';
+import { ABI } from '../../contracts/abi';
 import { asArray, asRefNode, asTuple, BooleanType, BufferType, NumberType, StringType, VoidType } from './syntax';
 
 export function sha3(str: string): string {

@@ -1,10 +1,11 @@
 import ts, { factory, FunctionDeclaration, SyntaxKind } from 'typescript';
-import { ABI } from './abi';
+import { ABI } from '../../contracts/abi';
 import { contractFunctionName, contractTypeName } from './contract';
 import { callEncodeDeploy, Provider } from './provider';
 import { getRealType, sha3, tokenizeString } from './solidity';
 import {
   AsyncToken,
+  BooleanType,
   BufferType,
   createCall,
   createParameter,
@@ -12,6 +13,7 @@ import {
   declareConstant,
   ExportToken,
   hexToBuffer,
+  hexToKeccak256,
   linkerName,
   PromiseType,
   prop,
@@ -22,6 +24,7 @@ export const deployName = factory.createIdentifier('deploy');
 export const deployContractName = factory.createIdentifier('deployContract');
 export const bytecodeName = factory.createIdentifier('bytecode');
 export const deployedBytecodeName = factory.createIdentifier('deployedBytecode');
+export const withContractMetaName = factory.createIdentifier('withContractMeta');
 
 // Variable names
 const linkedBytecodeName = factory.createIdentifier('linkedBytecode');
@@ -76,17 +79,15 @@ export function generateDeployFunction(
     ),
   );
 
-  const deployFn = provider.methods.deploy.call(
-    clientName,
-    dataName,
-    contractNames.map((n) => {
-      const deployedBytecode = prop(n, deployedBytecodeName);
-      return {
-        abi: prop(n, abiName),
-        codeHash: hexToBuffer(links.length ? createCall(linkerName, [deployedBytecode, linksName]) : deployedBytecode),
-      };
-    }),
-  );
+  const contractMeta = contractNames.map((n) => {
+    const deployedBytecode = prop(n, deployedBytecodeName);
+    return {
+      abi: prop(n, abiName),
+      codeHash: hexToKeccak256(links.length ? createCall(linkerName, [deployedBytecode, linksName]) : deployedBytecode),
+    };
+  });
+
+  const deployFn = provider.methods.deploy.call(clientName, dataName, withContractMetaName, contractMeta);
 
   statements.push(factory.createReturnStatement(deployFn));
 
@@ -135,5 +136,6 @@ function deployParameters(abi: ABI.Func | undefined, links: string[], provider: 
     createParameter(clientName, provider.type()),
     ...links.map((link) => createParameter(factory.createIdentifier(tokenizeString(link)), StringType)),
     ...parameters,
+    createParameter(withContractMetaName, BooleanType, factory.createFalse()),
   ];
 }
