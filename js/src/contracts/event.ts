@@ -1,4 +1,4 @@
-import { EventFragment, FormatTypes, Interface, LogDescription } from 'ethers/lib/utils';
+import { EventFragment, FormatTypes, Interface, LogDescription } from '@ethersproject/abi';
 import { Keccak } from 'sha3';
 import { Client } from '../client';
 import { postDecodeResult, prefixedHexString } from '../convert';
@@ -24,14 +24,14 @@ export function listen(
       if (err) {
         return isEndOfStream(err) ? undefined : callback(err);
       }
-      const log = event?.getLog();
+      const log = event?.log;
       if (!log) {
         return callback(new Error(`no LogEvent or Error provided`));
       }
       try {
         const result = iface.parseLog({
-          topics: log.getTopicsList_asU8().map((topic) => prefixedHexString(topic)),
-          data: prefixedHexString(log.getData_asU8()),
+          topics: log.topics.map((topic) => prefixedHexString(topic)),
+          data: prefixedHexString(log.data),
         });
         return callback(undefined, {
           ...result,

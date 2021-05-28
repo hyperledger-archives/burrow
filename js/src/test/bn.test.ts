@@ -1,5 +1,4 @@
 import * as assert from 'assert';
-import { BigNumber } from 'ethers/lib/ethers';
 import { compile } from '../contracts/compile';
 import { burrow } from './test';
 
@@ -21,15 +20,12 @@ describe('BN', function () {
     const instance = await contract.deploy(burrow);
 
     const [number] = await instance.getNumber();
-    const expected = BigNumber.from('10000000000000000000');
-    assert.ok(expected.eq(number));
+    assert.strictEqual(number.toString(), '10000000000000000000');
 
-    await instance.mul(100, -300).then(([number]: any) => {
-      assert.strictEqual(number, -30000);
-    });
+    const [smallNumber] = await instance.mul(100, -300);
+    assert.strictEqual(smallNumber, -30000);
 
-    await instance.mul(BigNumber.from('18446744073709551616'), 102).then(([number]: any) => {
-      assert.ok(BigNumber.from('1881567895518374264832').eq(number));
-    });
+    const [bigNumber] = await instance.mul('18446744073709551616', 102);
+    assert.strictEqual(bigNumber.toString(), '1881567895518374264832');
   });
 });

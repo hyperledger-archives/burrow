@@ -1,11 +1,11 @@
-import { EventFragment, Fragment, FunctionFragment, Interface, LogDescription } from 'ethers/lib/utils';
-import { Keccak } from 'sha3';
+import { EventFragment, Fragment, FunctionFragment, Interface, LogDescription } from '@ethersproject/abi';
 import { CallTx, ContractMeta } from '../../proto/payload_pb';
 import { Client } from '../client';
-import { preEncodeResult, toBuffer } from '../convert';
+import { preEncodeResult, Result, toBuffer } from '../convert';
 import { EventStream } from '../events';
-import { ABI, Address } from './abi';
-import { call, callFunction, CallResult, DecodeResult, makeCallTx } from './call';
+import { Address } from './abi';
+import { call, callFunction, CallResult, getContractMetaFromBytecode, makeCallTx } from './call';
+import { CompiledContract } from './compile';
 import { EventCallback, listen } from './event';
 
 export const meta: unique symbol = Symbol('meta');
@@ -39,14 +39,6 @@ export function getAddress(instance: ContractInstance): Address {
   return instance[meta].address;
 }
 
-export type CompiledContract = {
-  abi: ABI;
-  // Required to deploy a contract
-  bytecode?: string;
-  // Required to submit an ABI when deploying a contract
-  deployedBytecode?: string;
-};
-
 export class Contract<T extends ContractInstance | any = any> {
   private readonly iface: Interface;
 
@@ -74,7 +66,9 @@ export class Contract<T extends ContractInstance | any = any> {
   }
 
   meta(): ContractMeta[] {
-    return [this.code, ...this.childCode].map(contractMeta).filter((m): m is ContractMeta => Boolean(m));
+    return [this.code, ...this.childCode]
+      .map(({ abi, deployedBytecode }) => abi && deployedBytecode && getContractMetaFromBytecode(abi, deployedBytecode))
+      .filter((m): m is ContractMeta => Boolean(m));
   }
 
   async deploy(burrow: Client, ...args: unknown[]): Promise<T> {
@@ -105,7 +99,7 @@ type ContractFunction = GenericFunction & {
   at: (address: string) => GenericFunction;
   atSim: (address: string) => GenericFunction;
   encode: (...args: unknown[]) => string;
-  decode: (output: Uint8Array) => DecodeResult;
+  decode: (output: Uint8Array) => Result;
 };
 
 export type ContractEvent = ((cb: EventCallback) => EventStream) & {
@@ -145,19 +139,6 @@ function contractEvent(iface: Interface, frag: EventFragment, burrow: Client, co
       ),
     );
   return func;
-}
-
-function contractMeta({ abi, deployedBytecode }: CompiledContract): ContractMeta | void {
-  // We can only calculate the codeHash if we have the deployedCode
-  if (abi.length == 0 || !deployedBytecode) {
-    return undefined;
-  }
-  const meta = new ContractMeta();
-  const hasher = new Keccak(256);
-  const codeHash = hasher.update(deployedBytecode, 'hex').digest();
-  meta.setMeta(JSON.stringify({ Abi: abi }));
-  meta.setCodehash(codeHash);
-  return meta;
 }
 
 function attachFunction(

@@ -15,7 +15,7 @@ REPO := $(shell pwd)
 
 # Our own Go files containing the compiled bytecode of solidity files as a constant
 
-export CI_IMAGE=hyperledger/burrow:ci-2
+export CI_IMAGE=hyperledger/burrow:ci-3
 
 VERSION := $(shell scripts/version.sh)
 # Gets implicit default GOPATH if not set

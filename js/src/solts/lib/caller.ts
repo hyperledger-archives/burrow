@@ -52,16 +52,15 @@ export function createCallerFunction(provider: Provider): ts.FunctionDeclaration
     factory.createTypeReferenceNode(PromiseType, [factory.createTypeReferenceNode(output, undefined)]),
     factory.createBlock(
       [
-        declareConstant(payload, provider.methods.payload.call(client, data, addr)),
         declareConstant(
           returnData,
           factory.createAwaitExpression(
             factory.createConditionalExpression(
               isSim,
               QuestionToken,
-              provider.methods.callSim.call(client, payload),
+              provider.methods.callSim.call(client, data, addr),
               ColonToken,
-              provider.methods.call.call(client, payload),
+              provider.methods.call.call(client, data, addr),
             ),
           ),
         ),

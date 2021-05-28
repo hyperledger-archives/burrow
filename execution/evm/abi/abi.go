@@ -30,12 +30,12 @@ func LoadPath(abiFileOrDirs ...string) (*Spec, error) {
 	specs := make([]*Spec, 0)
 
 	for _, dir := range abiFileOrDirs {
-		err := filepath.Walk(dir, func(path string, fi os.FileInfo, err error) error {
+		err := filepath.WalkDir(dir, func(path string, dir os.DirEntry, err error) error {
 			if err != nil {
 				return fmt.Errorf("error returned while walking abiDir '%s': %v", dir, err)
 			}
 			ext := filepath.Ext(path)
-			if fi.IsDir() || !(ext == ".bin" || ext == ".abi" || ext == ".json") {
+			if dir.IsDir() || !(ext == ".bin" || ext == ".abi" || ext == ".json") {
 				return nil
 			}
 			abiSpc, err := ReadSpecFile(path)

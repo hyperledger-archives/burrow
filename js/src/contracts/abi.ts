@@ -6,7 +6,37 @@ export type Address = string;
 
 export type FunctionIO = FunctionInput & FunctionOutput;
 
-// TODO: replace with ethers js
+export namespace ABI {
+  export type Func = {
+    type: 'function' | 'constructor' | 'fallback';
+    name: string;
+    inputs?: Array<FunctionInput>;
+    outputs?: Array<FunctionOutput>;
+    stateMutability: 'pure' | 'view' | 'nonpayable' | 'payable';
+    payable?: boolean;
+    constant?: boolean;
+  };
+
+  export type Event = {
+    type: 'event';
+    name: string;
+    inputs: Array<EventInput>;
+    anonymous: boolean;
+  };
+
+  export type FunctionInput = {
+    name: string;
+    type: string;
+    components?: FunctionInput[];
+    internalType?: string;
+  };
+
+  export type FunctionOutput = FunctionInput;
+  export type EventInput = FunctionInput & { indexed?: boolean };
+
+  export type FunctionIO = FunctionInput & FunctionOutput;
+  export type FunctionOrEvent = Func | Event;
+}
 
 export function transformToFullName(abi: SolidityFunction | Event): string {
   if (abi.name.indexOf('(') !== -1) {
@@ -14,19 +44,4 @@ export function transformToFullName(abi: SolidityFunction | Event): string {
   }
   const typeName = (abi.inputs as Array<EventInput | FunctionIO>).map((i) => i.type).join(',');
   return abi.name + '(' + typeName + ')';
-}
-
-export function extractDisplayName(name: string): string {
-  const length = name.indexOf('(');
-  return length !== -1 ? name.substr(0, length) : name;
-}
-
-export function extractTypeName(name: string): string {
-  /// TODO: make it invulnerable
-  const length = name.indexOf('(');
-  return length !== -1 ? name.substr(length + 1, name.length - 1 - (length + 1)).replace(' ', '') : '';
-}
-
-export function isFunction(abi: SolidityFunction | Event): abi is SolidityFunction {
-  return abi.type === 'function' || abi.type === 'constructor';
 }

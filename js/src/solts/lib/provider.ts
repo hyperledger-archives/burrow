@@ -2,8 +2,7 @@ import ts, { factory } from 'typescript';
 import { BoundsType, CallbackReturnType } from './events';
 import {
   AddressType,
-  asRefNode,
-  CallTxType,
+  ColonToken,
   ContractCodecType,
   createCall,
   createCallbackType,
@@ -11,13 +10,15 @@ import {
   createPromiseOf,
   declareConstant,
   ErrorType,
-  EventStream,
   EventType,
   ExportToken,
   MaybeUint8ArrayType,
   Method,
+  QuestionToken,
   StringType,
   Uint8ArrayType,
+  Undefined,
+  UnknownType,
 } from './syntax';
 
 export const errName = factory.createIdentifier('err');
@@ -28,41 +29,85 @@ export const EventErrParameter = createParameter(errName, ErrorType, undefined, 
 export const EventParameter = createParameter(eventName, EventType, undefined, true);
 
 class Deploy extends Method {
-  params = [createParameter('msg', CallTxType)];
+  private abiName = factory.createIdentifier('abi');
+  private codeHashName = factory.createIdentifier('codeHash');
+
+  params = [
+    createParameter('data', factory.createUnionTypeNode([StringType, Uint8ArrayType])),
+    createParameter(
+      'contractMeta',
+      factory.createArrayTypeNode(
+        factory.createTypeLiteralNode([
+          factory.createPropertySignature(undefined, this.abiName, undefined, StringType),
+          factory.createPropertySignature(undefined, this.codeHashName, undefined, Uint8ArrayType),
+        ]),
+      ),
+      undefined,
+      true,
+    ),
+  ];
   ret = createPromiseOf(AddressType);
 
   constructor() {
     super('deploy');
   }
 
-  call(exp: ts.Expression, tx: ts.Identifier): ts.CallExpression {
-    return createCall(factory.createPropertyAccessExpression(exp, this.id), [tx]);
+  call(
+    exp: ts.Expression,
+    data: ts.Expression,
+    withContractMeta: ts.Expression,
+    contractMeta: { abi: ts.Expression; codeHash: ts.Expression }[],
+  ): ts.CallExpression {
+    const contractMetaLiteral = factory.createArrayLiteralExpression(
+      contractMeta.map(({ abi, codeHash }) =>
+        factory.createObjectLiteralExpression([
+          factory.createPropertyAssignment(this.abiName, abi),
+          factory.createPropertyAssignment(this.codeHashName, codeHash),
+        ]),
+      ),
+    );
+    return createCall(factory.createPropertyAccessExpression(exp, this.id), [
+      data,
+      // TODO: Contracts that may create contracts need to be deployed with contract meta for all contracts they create
+      //  unfortunately we have no good way to determine from solc output which contracts a contract may create, so
+      //  short of pushing all contract meta to every contract in a family of contracts we cannot safely deploy with meta
+      //  in the general case this Burrow throws on creating a new contract if a) the parent has meta, and b) the child
+      //  meta cannot be found. The solution is to delocalise the contract storage from the parent contract and have
+      //  a global registry of metadata to query against when creating a contract
+      factory.createConditionalExpression(withContractMeta, QuestionToken, contractMetaLiteral, ColonToken, Undefined),
+    ]);
   }
 }
 
 class Call extends Method {
-  params = [createParameter('msg', CallTxType)];
+  params = [
+    createParameter('data', factory.createUnionTypeNode([StringType, Uint8ArrayType])),
+    createParameter('address', StringType),
+  ];
   ret = createPromiseOf(MaybeUint8ArrayType);
 
   constructor() {
     super('call');
   }
 
-  call(exp: ts.Expression, tx: ts.Identifier) {
-    return createCall(factory.createPropertyAccessExpression(exp, this.id), [tx]);
+  call(exp: ts.Expression, data: ts.Expression, address: ts.Expression) {
+    return createCall(factory.createPropertyAccessExpression(exp, this.id), [data, address]);
   }
 }
 
 class CallSim extends Method {
-  params = [createParameter('msg', CallTxType)];
+  params = [
+    createParameter('data', factory.createUnionTypeNode([StringType, Uint8ArrayType])),
+    createParameter('address', StringType),
+  ];
   ret = createPromiseOf(MaybeUint8ArrayType);
 
   constructor() {
     super('callSim');
   }
 
-  call(exp: ts.Expression, tx: ts.Identifier) {
-    return createCall(factory.createPropertyAccessExpression(exp, this.id), [tx]);
+  call(exp: ts.Expression, data: ts.Expression, address: ts.Expression) {
+    return createCall(factory.createPropertyAccessExpression(exp, this.id), [data, address]);
   }
 }
 
@@ -74,7 +119,7 @@ class Listen extends Method {
     createParameter('start', BoundsType, undefined, true),
     createParameter('end', BoundsType, undefined, true),
   ];
-  ret = asRefNode(EventStream);
+  ret = UnknownType;
 
   constructor() {
     super('listen');
@@ -89,24 +134,6 @@ class Listen extends Method {
     end: ts.Expression,
   ) {
     return createCall(factory.createPropertyAccessExpression(exp, this.id), [sig, addr, callback, start, end]);
-  }
-}
-
-class Payload extends Method {
-  params = [
-    createParameter('data', factory.createUnionTypeNode([StringType, Uint8ArrayType])),
-    createParameter('address', StringType, undefined, true),
-  ];
-  ret = CallTxType;
-
-  constructor() {
-    super('payload');
-  }
-
-  call(provider: ts.Expression, data: ts.Expression, addr?: ts.Expression) {
-    return addr
-      ? createCall(factory.createPropertyAccessExpression(provider, this.id), [data, addr])
-      : createCall(factory.createPropertyAccessExpression(provider, this.id), [data]);
   }
 }
 
@@ -131,7 +158,6 @@ export class Provider {
     call: new Call(),
     callSim: new CallSim(),
     listen: new Listen(),
-    payload: new Payload(),
     contractCodec: new ContractCodec(),
   };
 
@@ -147,7 +173,6 @@ export class Provider {
         this.methods.call.signature(),
         this.methods.callSim.signature(),
         this.methods.listen.signature(),
-        this.methods.payload.signature(),
         this.methods.contractCodec.signature(),
       ],
     );
