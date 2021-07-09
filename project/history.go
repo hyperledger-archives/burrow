@@ -47,7 +47,11 @@ func FullVersion() string {
 // To cut a new release add a release to the front of this slice then run the
 // release tagging script: ./scripts/tag_release.sh
 var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
-	MustDeclareReleases("0.34.0 - 2021-05-28",
+	MustDeclareReleases("0.34.1 - 2021-07-09",
+		`### Fixed
+- [JS] build function does not swallow errors without a formattedMessage, chdir into basepath before build so solc imports work as expected
+`,
+		"0.34.0 - 2021-05-28",
 		`### Changed
 - [JS] Provider interface no longer depends on GRPC types to improve compatibility between versions of Burrow.js and ease of extension
 - [JS] Use non-unique marker interface to indicate stream cancellation in event reducer (again for compatibility between versions and extensibility)
