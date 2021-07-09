@@ -1,4 +1,9 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.34.1] - 2021-07-09
+### Fixed
+- [JS] build function does not swallow errors without a formattedMessage, chdir into basepath before build so solc imports work as expected
+
+
 ## [0.34.0] - 2021-05-28
 ### Changed
 - [JS] Provider interface no longer depends on GRPC types to improve compatibility between versions of Burrow.js and ease of extension
@@ -789,6 +794,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.34.1]: https://github.com/hyperledger/burrow/compare/v0.34.0...v0.34.1
 [0.34.0]: https://github.com/hyperledger/burrow/compare/v0.33.1...v0.34.0
 [0.33.1]: https://github.com/hyperledger/burrow/compare/v0.33.0...v0.33.1
 [0.33.0]: https://github.com/hyperledger/burrow/compare/v0.32.1...v0.33.0
