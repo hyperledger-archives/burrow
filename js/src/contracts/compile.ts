@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { ResolvedImport } from 'solc';
 import solc from 'solc_v5';
+import { format } from 'util';
 import { ABI } from './abi';
 import { Contract } from './contract';
 
@@ -130,9 +131,15 @@ export function inputDescriptionFromFiles(names: string[]): Solidity.InputDescri
   return desc;
 }
 
-export function importLocal(path: string): ResolvedImport {
-  return {
-    contents: fs.readFileSync(path).toString(),
+export function importLocalResolver(basePath: string): (path: string) => ResolvedImport {
+  return (path) => {
+    try {
+      return {
+        contents: fs.readFileSync(path).toString(),
+      };
+    } catch (err) {
+      throw new Error(`could not import path '${path}': ${format(err)}`);
+    }
   };
 }
 

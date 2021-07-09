@@ -2,7 +2,13 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as solcv5 from 'solc_v5';
 import * as solcv8 from 'solc_v8';
-import { decodeOutput, encodeInput, importLocal, inputDescriptionFromFiles, Solidity } from '../contracts/compile';
+import {
+  decodeOutput,
+  encodeInput,
+  importLocalResolver,
+  inputDescriptionFromFiles,
+  Solidity,
+} from '../contracts/compile';
 import { Compiled, newFile, printNodes, tokenizeLinks } from './api';
 
 const solcCompilers = {
@@ -33,18 +39,24 @@ export async function build(srcPathOrFiles: string | string[], opts?: Partial<Bu
     ...defaultBuildOptions,
     ...opts,
   };
-  const basePathPrefix = new RegExp(
-    '^' + path.resolve(basePath ?? (typeof srcPathOrFiles === 'string' ? srcPathOrFiles : process.cwd())),
-  );
+  const resolvedBasePath = basePath ?? (typeof srcPathOrFiles === 'string' ? srcPathOrFiles : process.cwd());
+  process.chdir(resolvedBasePath);
+  const basePathPrefix = new RegExp('^' + path.resolve(resolvedBasePath));
   await fs.mkdir(binPath, { recursive: true });
   const solidityFiles = await getSourceFilesList(srcPathOrFiles);
-  const inputDescription = inputDescriptionFromFiles(solidityFiles);
+  const inputDescription = inputDescriptionFromFiles(
+    // solidityFiles.map((f) => path.resolve(resolvedBasePath, f.replace(basePathPrefix, ''))),
+    solidityFiles,
+  );
   const input = encodeInput(inputDescription);
   const solc = solcCompilers[solcVersion];
-  const solcOutput = solc.compile(input, { import: importLocal });
+
+  const solcOutput = solc.compile(input, { import: importLocalResolver(resolvedBasePath) });
   const output = decodeOutput(solcOutput);
   if (output.errors && output.errors.length > 0) {
-    throw new Error(output.errors.map((err) => err.formattedMessage).join('\n'));
+    throw new Error(
+      'Solidity compiler errors: ' + output.errors.map((err) => err.formattedMessage || err.message).join(', '),
+    );
   }
 
   const plan = Object.keys(output.contracts).map((filename) => ({
