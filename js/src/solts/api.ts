@@ -16,7 +16,7 @@ import { getContractMethods } from './lib/solidity';
 import { declareConstant, ExportToken, importBurrow, importReadable } from './lib/syntax';
 import Func = ABI.Func;
 
-export { decodeOutput, encodeInput, importLocal, inputDescriptionFromFiles, tokenizeLinks } from '../contracts/compile';
+export { decodeOutput, encodeInput, importLocalResolver, inputDescriptionFromFiles, tokenizeLinks } from '../contracts/compile';
 
 export type Compiled = {
   name: string;
