@@ -31,7 +31,7 @@ export async function defaultCall<Output>(
   return callback(returnData);
 }
 export namespace Storage {
-  export const contactName = 'Storage';
+  export const contractName = 'Storage';
   export const abi =
     '[{"inputs":[{"internalType":"int256","name":"x","type":"int256"}],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"constant":true,"inputs":[],"name":"get","outputs":[{"internalType":"int256","name":"ret","type":"int256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"int256","name":"x","type":"int256"}],"name":"set","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]';
   export const bytecode =
@@ -55,6 +55,7 @@ export namespace Storage {
   export type Contract = ReturnType<typeof contract>;
   export const contract = (client: Provider, address: string) =>
     ({
+      name: 'Storage',
       address,
       functions: {
         get(

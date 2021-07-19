@@ -38,25 +38,31 @@ func FullVersion() string {
 ### Removed
 
 ### Deprecated
-*/
+*/var (
+	// The releases described by version string and changes, newest release first.
+	// The current release is taken to be the first release in the slice, and its
+	// version determines the single authoritative version for the next release.
+	//
+	// To cut a new release add a release to the front of this slice then run the
+	// release tagging script: ./scripts/tag_release.sh
+	History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
+		MustDeclareReleases("0.34.3 - 2021-07-19",
+			`### Fixed
+- [JS] Fix spelling of 'contractName' in solts, add contract name to contract object.
 
-// The releases described by version string and changes, newest release first.
-// The current release is taken to be the first release in the slice, and its
-// version determines the single authoritative version for the next release.
-//
-// To cut a new release add a release to the front of this slice then run the
-// release tagging script: ./scripts/tag_release.sh
-var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
-	MustDeclareReleases("0.34.2 - 2021-07-09",
-		`### Fixed
+### Added
+- [JS] Added option to build.ts code generation to not fail on Solidity compiler warnings, which is now the default. Warnings are still logged to stderr
+`,
+			"0.34.2 - 2021-07-09",
+			`### Fixed
 - [Build] Add 0.34.1 changes!
 `,
-		"0.34.1 - 2021-07-09",
-		`### Fixed
+			"0.34.1 - 2021-07-09",
+			`### Fixed
 - [JS] build function does not swallow errors without a formattedMessage, chdir into basepath before build so solc imports work as expected
 `,
-		"0.34.0 - 2021-05-28",
-		`### Changed
+			"0.34.0 - 2021-05-28",
+			`### Changed
 - [JS] Provider interface no longer depends on GRPC types to improve compatibility between versions of Burrow.js and ease of extension
 - [JS] Use non-unique marker interface to indicate stream cancellation in event reducer (again for compatibility between versions and extensibility)
 - [Go] Upgrade to Go 1.16
@@ -68,15 +74,15 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 ### Added
 - [JS] Include deployedBycode and optionally submit ABI's to Burrow's contract metadata store on deploy
 `,
-		"0.33.1 - 2021-05-24",
-		`### Fixed
+			"0.33.1 - 2021-05-24",
+			`### Fixed
 - [JS] Return bytesNN as Buffer to agree with typings
 
 ### Added
 - [JS] Inline sources and source maps
 `,
-		"0.33.0 - 2021-05-24",
-		`### Changed
+			"0.33.0 - 2021-05-24",
+			`### Changed
 - [JS] Changed Burrow interface and renamed Burrow client object to to Client (merging in features needed for solts support)
 
 ### Fixed
@@ -88,13 +94,13 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [JS] Added Solidity-to-Typescript code generation support (merging in solts) - this provides helpers (build.ts, api.ts) to compile Solidity files into corresponding .abi.ts files that include types for functions, events, the ABI, and EVM bytecode, and includes bindings into Burrow JS to deploy and interact with contracts via Typescript/Javascript with strong static types
 - [JS] Improved interactions with events which can now be queried over any range and with strong types, see the listenerFor, reduceEvents, readEvents, and iterateEvents functions.
 `,
-		"0.32.1 - 2021-05-15",
-		`### Changed
+			"0.32.1 - 2021-05-15",
+			`### Changed
 - [Execution] CallErrors no longer emit very long rather pointless (since there is no tooling to help interpret them currently) EVM call traces
 - [JS] Return byte arrays as Buffers from decode (only return fixed-width byteNN types as hex strings)
 `,
-		"0.32.0 - 2021-05-14",
-		`### Changed
+			"0.32.0 - 2021-05-14",
+			`### Changed
 - [JS] Significant refactor/rewrite of Burrow.js into idiomatic Typescript including some breaking changes to API
 - [JS] Change to use ethers.js for ABI encoding
 
@@ -107,13 +113,13 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [JS] Historic events can now be requested via API
 - [JS] Contract deployments will now include ABIs via contract metadata so Burrow's ABI registry can be used
 `,
-		"0.31.3 - 2020-03-25",
-		`### Fixed
+			"0.31.3 - 2020-03-25",
+			`### Fixed
 - [Dump] Make load from dump set tx index so BlockAccumulator continuity conditions are met
 - [Dump] Improve error messages
 `,
-		"0.31.2 - 2020-03-24",
-		`### Fixed
+			"0.31.2 - 2020-03-24",
+			`### Fixed
 - [Dump] Stop TxStack EventStream consumer from rejecting events from dump/restored chain because they lack tx Envelopes (as they are intended to to keep dump format minimal)
 - [Genesis] Fix hash instability introduced by accidentally removing omitempty from AppHash in genesis
 
@@ -121,8 +127,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [Vent] Implement throttling on Ethereum Vent consumer via --max-request-rate=<requests / time base> flag to 'vent start'
 `,
 
-		"0.31.1 - 2020-03-19",
-		`### Changed
+			"0.31.1 - 2020-03-19",
+			`### Changed
 - [Repo] main branch replaces master as per Hyperledger TSC guidelines
 
 ### Fixed
@@ -136,8 +142,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [Vent] Expose BlockConsumerConfig to adjust backoff and read characteristics
 - [Vent] Add vent-side continuity test over blocks (to double-check exactly once delivery of events)
 `,
-		"0.31.0 - 2020-03-10",
-		`### Changed
+			"0.31.0 - 2020-03-10",
+			`### Changed
 - [Tendermint] Upgraded to Tendermint 0.34.3
 - [Docker] Image will now start testnet by default
 
@@ -170,56 +176,56 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - Updated elliptic JS dep to 6.5.3
 - Updated lodash to 4.17.19
 `,
-		"0.30.5 - 2020-07-09",
-		`### Added
+			"0.30.5 - 2020-07-09",
+			`### Added
 - [Vent] Add BytesToHex flag on projection field mappings that causes bytes fields (e.g. bytes32) solidity fields to be hex-encoded and mapped to varchar(64) rather than bytea/blob columns in postgres/sqlite
 `,
-		"0.30.4 - 2020-04-05",
-		`### Added
+			"0.30.4 - 2020-04-05",
+			`### Added
 - [Build] Added Helm chart
 - [State] Account now has EVMOpcodeBitset field to support upcoming EVM fixes
 
 ### Fixed
 - [JS] Github actions release of JS lib
 `,
-		"0.30.3 - 2020-04-05",
-		`### Added
+			"0.30.3 - 2020-04-05",
+			`### Added
 - [CLI] Made previously internal Solidity Go fixtures compilation available through 'burrow compile'
 - [TS] Default ts client interface implementation
 `,
-		"0.30.2 - 2020-03-13",
-		`### Fixed
+			"0.30.2 - 2020-03-13",
+			`### Fixed
 - [RPC] add mutex to callSim and callCode
 `,
-		"0.30.1 - 2020-03-06",
-		`### Fixed
+			"0.30.1 - 2020-03-06",
+			`### Fixed
 - [CLI/Tx] Unbond formulation now specifies amount
 `,
 
-		"0.30.0 - 2020-03-05",
-		`### Changed
+			"0.30.0 - 2020-03-05",
+			`### Changed
 - [JS] Partial rewrite of client API in typescript
 
 ### Fixed
 - [State] Blockchain now commits initial AppHash to avoid IAVL panic
 `,
-		"0.29.8 - 2020-02-11",
-		`### Fixed
+			"0.29.8 - 2020-02-11",
+			`### Fixed
 - [ABI] Fix failure to convert crypto.Address to EVMAddress (https://github.com/hyperledger/burrow/issues/1326)
 `,
-		"0.29.7 - 2020-01-27",
-		`### Fixed
+			"0.29.7 - 2020-01-27",
+			`### Fixed
 - [Build] Updates to CI build process
 `,
-		"0.29.6 - 2020-01-22",
-		`### Changed
+			"0.29.6 - 2020-01-22",
+			`### Changed
 - [CLI] Burrow dump can now stream to STDOUT
 
 ### Fixed
 - [NPM] Burrow-js is now published via an auth token
 `,
-		"0.29.5 - 2019-12-09",
-		`### Security
+			"0.29.5 - 2019-12-09",
+			`### Security
 - [Tendermint] Upgraded to v0.32.8, checkTxAsync now includes node ID
 
 ### Changed
@@ -229,26 +235,26 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 ### Fixed
 - [Execution] Simulated calls (e.g. query contracts) now returns the height of the state on which the query was run. Useful for downstream sync.
 `,
-		"0.29.4 - 2019-11-22",
-		`### Changed
+			"0.29.4 - 2019-11-22",
+			`### Changed
 - [Build] Move to solidity 0.5.12
 `,
 
-		"0.29.3 - 2019-10-16",
-		`### Changed
+			"0.29.3 - 2019-10-16",
+			`### Changed
 - [NPM] Point package.json to index.js
 `,
 
-		"0.29.2 - 2019-10-15",
-		`### Changed
+			"0.29.2 - 2019-10-15",
+			`### Changed
 - [NPM] Publish with index.js in TLD
 `,
-		"0.29.1 - 2019-10-10",
-		`### Changed
+			"0.29.1 - 2019-10-10",
+			`### Changed
 - [State] Split metadata and account state to be kinder to downstream EVM integrators
 `,
-		"0.29.0 - 2019-10-08",
-		`### Changed
+			"0.29.0 - 2019-10-08",
+			`### Changed
 - [Config] Reverted rename of ValidatorAddress to Address in config (each Burrow node has a specific validator key it uses for signing whether or not it is running as a validator right now)
 
 ### Fixed
@@ -272,20 +278,20 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [Natives] Implement Ethereum precompile number 5 - modular exponentiation
 
 `,
-		"0.28.2 - 2019-08-21",
-		`### Fixed
+			"0.28.2 - 2019-08-21",
+			`### Fixed
 - [Vent] The new decode event ABI _before_ filter provides more keys but means vent must have access to all possible LogEvent ABIs when it is started. This is not practical in general so we now will will only err if an event matches but we have no ABI. This means we might not notice we have forgot to include an ABI since an event that _would_ have matched on an ABI spec field (prefixed 'Event') will not just not match, and so fail silently.
 `,
-		"0.28.1 - 2019-08-21",
-		`### Fixed
+			"0.28.1 - 2019-08-21",
+			`### Fixed
 - [Vent] Log for _vent_log insert now faithfully captures what is being inserted
 - [Vent] Remove arbitrary 100 character limits on system table text fields
 
 ### Added
 - [JS] Burrow.js now included in Burrow repo and tested with Burrow CI! Future burrow.js releases will now match version of Burrow.
 `,
-		"0.28.0 - 2019-08-14",
-		`### Changed
+			"0.28.0 - 2019-08-14",
+			`### Changed
 - [State] IterateStreamEvents now takes inclusive start and end points (end used to be exclusive) avoid bug-prone conversion
 - [Dump] Improved structure and API
 - [Dump] Default to JSON output and use protobuf for binary output
@@ -306,8 +312,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [CLI/RPC] Contracts now hold metadata, including contract name, source file, and function names
 
 `,
-		"0.27.0 - 2019-06-23",
-		`### Added
+			"0.27.0 - 2019-06-23",
+			`### Added
 - [WASM] Support for WASM contracts written in Solidity compiled using solang
 
 ### Fixed
@@ -316,12 +322,12 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 ### Changed
 - [State] TxExecution's Envelope now stored in state so will be reproduced in Vent Tx tables and over RPC, and so matches TxExecutions served from *Sync rpctransact methods
 `,
-		"0.26.2 - 2019-06-19",
-		`### Fixed
+			"0.26.2 - 2019-06-19",
+			`### Fixed
 - [Blockchain] Persist LastBlockTime in Blockchain - before this patch LastBlockTime would only be set correctly after the first block had been received after a node is restarted - this can lead to non-determinism in the EVM via the TIMESTAMP opcode that use the LastBlockTime which is itself sourced from Tendermint's block header (from their implementation of BFT time). Implementing no empty blocks made observing this bug more likely by increasing the amount of time spent in a bad state (LastBlockTime is initially set to GenesisTime).
 `,
-		"0.26.1 - 2019-06-16",
-		`### Changed
+			"0.26.1 - 2019-06-16",
+			`### Changed
 - [CLI] 'burrow dump' renamed 'burrow dump remote'
 - [Consensus] By default Burrow no longer creates empty blocks at the end of a round - though does make on every 5 minutes by default. Set CreateEmptyBlocks to "never" or omit to create no blocks unless there are transactions, or "always" to generate blocks even when there are no transactions.
 - [State] Burrow state does not store empty blocks in the execution event store even when Tendermint creates them.
@@ -336,8 +342,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 ### Added
 - [Dump] burrow dump now has local variant that produces a dump directly from a compatible burrow directory rather than over GRPC. If dumping/restoring between state-incompatible versions use burrow dump remote.
 `,
-		"0.26.0 - 2019-06-14",
-		`### Changed
+			"0.26.0 - 2019-06-14",
+			`### Changed
 - [Vent] The chain id is stored in the SQL Tables
 - [CLI] Command line arguments have changed
 
@@ -350,8 +356,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 ### Add
 - [Vent] vent can restore tables from vent log using new vent restore command
 `,
-		"0.25.1 - 2019-05-03",
-		`### Changed
+			"0.25.1 - 2019-05-03",
+			`### Changed
 - [Config] Split ListenAddress into ListenHost and ListenPort to ease parsing in the Helm charts
 - [CLI] Burrow restore now always fails if state is detected but can be made --silent
 - [CLI] No dump client timeout by default
@@ -362,8 +368,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [Keys] Resolved an issue where the keyStore wasn't built when using the remote keys client.
 - [Deploy] Fix nil dereference in query error path, check constructor args in BuildJob
 `,
-		"0.25.0 - 2019-04-05",
-		`### Changed
+			"0.25.0 - 2019-04-05",
+			`### Changed
 - [Tendermint] Upgraded to 0.31.2
 - [IAVL] upgraded to 0.12.2
 - [Config] Tendermint.TimeoutFactor moved to Execution.TimeoutFactor (and reused for NoConsensus mode)
@@ -379,8 +385,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [Tests] Various concurrency issues fixed in tests and execution tests parallelised
 
 `,
-		"0.24.6 - 2019-03-19",
-		`### Changed
+			"0.24.6 - 2019-03-19",
+			`### Changed
 - [RPC] 'blocks' on info RPC now lists blocks in ascending rather than descending height order
 
 ### Added
@@ -389,8 +395,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 ### Fixed
 - [Metrics] Fix histogram statistics by making counts cumulative
 `,
-		"0.24.5 - 2019-03-14",
-		`### Changed
+			"0.24.5 - 2019-03-14",
+			`### Changed
 - [Consensus] Tendermint timeouts configurable by a float factor from defaults and default change to 0.33 of Tendermint's default for smaller networks'
 - [Transactor] Hard-coded timeout removed from transactor and added to TxEnvelopeParam for client specified server-side timeout (in case of longer confirmation times such as when some validators are unavailable
 - [Logging] ExcludeTrace config inverted to Trace and now defaults to false (i.e. no trace/debug logging). Default log output now excludes Tendermint logging (and is therefore much less talkative)
@@ -402,13 +408,13 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 ### Fixed
 - [Metrics] Replace use of Summary metrics when Histogram was intended
 `,
-		"0.24.4 - 2019-03-08",
-		`### Changed
+			"0.24.4 - 2019-03-08",
+			`### Changed
 - [EVM] Accept []byte nonce rather than enforcing the use of txs.Tx.TxHash()
 - [Crypto] Expose SequenceNonce helper to allow library users to use sequence-number based addresses for newly created contracts
 `,
-		"0.24.3 - 2019-03-06",
-		`### Fixed
+			"0.24.3 - 2019-03-06",
+			`### Fixed
 - [State] Avoid stack traces which may be code-path-dependent or non-deterministic from being pushed to TxExecutions and so to merkle state where they can lead to breaking consensus
 - [State] KVCache iterator fixed to use low, high interface as per DB, fixing CacheDB for use in Replay
 
@@ -416,8 +422,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [Logging] Included height in various execution log messages
 - [Transactor] Now provides SyncInfo in error message when there is a BroadcastTxSync timeout
 `,
-		"0.24.2 - 2019-02-28",
-		`### Changed
+			"0.24.2 - 2019-02-28",
+			`### Changed
 - [Genesis] Use HexBytes for Genesis AppHash
 
 ### Fixed
@@ -431,8 +437,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [EVM] Attempt to provide REVERT reason where possible
 - [Vent] --abi and --spec can be provided multiple times to provide multiple paths to search
 `,
-		"0.24.1 - 2019-02-28",
-		`### Changed
+			"0.24.1 - 2019-02-28",
+			`### Changed
 - [ABI] abi.EncodeFunctionCall and AbiSpec.Pack now take a variadic ...interface{} type for function arguments rather than []string
 
 ### Fixed
@@ -442,8 +448,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [ABI] DecodeFunctionReturn re-exposed (formerly Packer then packer in 0.24.0) to make deploy API symmetrical
 `,
 
-		"0.24.0 - 2019-02-26",
-		`### Changed
+			"0.24.0 - 2019-02-26",
+			`### Changed
 - [EVM] Use TxHash to allow predictable sequence numbers for account creation (allows proposal mechanism to aggregate transactions and execute in a BatchTx) - [pull request](https://github.com/hyperledger/burrow/pull/969)
 - [State] Introduced MutableForest and change state layout to a streaming model that amongst other things should not blow the GRPC message size for large transactions
 - [Consensus] Upgraded Tendermint to v0.30.1
@@ -476,18 +482,18 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [State] Implemented dump/restore to port state between different version of Burrow or to compress the execution of a chain (with a proof) onto a fresh chain
 
 `,
-		"0.23.3 - 2018-12-19",
-		`### Fixed
+			"0.23.3 - 2018-12-19",
+			`### Fixed
 - [State] Since State hash is not unique (i.e if we make no writes) by storing the CommitID by AppHash we can overwrite an older CommitID with a newer one leading us to load the wrong tree version to overwrite in case of loading from a checkpoint.
 `,
-		"0.23.2 - 2018-12-18",
-		`Hotfix release for 0.23.1
+			"0.23.2 - 2018-12-18",
+			`Hotfix release for 0.23.1
 ### Fixed
 - [State] Fixed issue with checkpointing whereby RWTree would load its readTree from one version lower than it should.
 
 `,
-		"0.23.1 - 2018-11-14",
-		`### Fixed
+			"0.23.1 - 2018-11-14",
+			`### Fixed
 - [EVM] state/Cache no longer allows SetStorage on accounts that do not exist
 - [GRPC] GetAccount on unknown account no longer causes a panic
 
@@ -495,8 +501,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - [Docker] Added solc 0.4.25 binary to docker container so that burrow deploy has what it needs to function
 - [Execution] panics from executors are captured and pushed to error sink of TxExecution
 `,
-		"0.23.0 - 2018-11-09",
-		`### Changed
+			"0.23.0 - 2018-11-09",
+			`### Changed
 - [ABI] provides fast event lookup of EventID
 - [Events] BlockExecution now included full Tendermint block header as protobuf object rather than JSON string
 - [EVM] Nested call errors are now transmitted to EventSink (e.g. TxExecution) as events for better tracing and tests
@@ -526,8 +532,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 ### Removed
 - MutableAccount and ConcreteAccount
 `,
-		"0.22.0 - 2018-09-21",
-		`### Changed
+			"0.22.0 - 2018-09-21",
+			`### Changed
 - Upgraded to Tendermint 0.24.0
 - Upgraded to IAVL 0.11.0
 
@@ -538,8 +544,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 ### Added
 - burrow deploy displays revert reason when available
 - burrow deploy compiles contracts concurrently`,
-		"0.21.0 - 2018-08-21",
-		`### Changed
+			"0.21.0 - 2018-08-21",
+			`### Changed
 - Upgraded to Tendermint 0.23.0
 - Validator Set Power now takes Address
 - RPC/TM config renamed to RPC/Info
@@ -552,8 +558,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - Upgrade to IAVL 0.10.0 and load previous versions immutably on boot - for chains with a long history > 20 minute load times could be observed because every previous root was being loaded from DB rather than lightweight version references as was intended
 - Metrics server does not panic on empty block metas and recovers from other panics
 `,
-		"0.20.1 - 2018-08-17",
-		`### Changed
+			"0.20.1 - 2018-08-17",
+			`### Changed
 - The snatives functions have new signatures; string arguments are now string, not byte32.
 - The Solidity interface contracts can be generated using the "burrow snatives" command, and the make snatives target is gone.
 
@@ -571,8 +577,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - Ability to set various command line options on burrow configure and burrow start and by BURROW_ prefixed environment variables
 - Exposed Tendermint SeedMode option
 `,
-		"0.20.0 - 2018-07-24",
-		`This is a major (pre-1.0.0) release that introduces the ability to change the validator set through GovTx, transaction execution history, and fuller GRPC endpoint.
+			"0.20.0 - 2018-07-24",
+			`This is a major (pre-1.0.0) release that introduces the ability to change the validator set through GovTx, transaction execution history, and fuller GRPC endpoint.
 
 #### Breaking changes
 - Address format has been changed (by Tendermint and we have followed suite) - conversion is possible but simpler to regenerated keys
@@ -594,8 +600,8 @@ var History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "htt
 - Fixed panic on nil bounds for blocks service
 
 `,
-		"0.19.0 - 2018-06-26",
-		`This is a major (pre-1.0.0) release that brings upgrades, safety improvements, cloud configuration, and GRPC endpoints to Burrow.
+			"0.19.0 - 2018-06-26",
+			`This is a major (pre-1.0.0) release that brings upgrades, safety improvements, cloud configuration, and GRPC endpoints to Burrow.
 
 #### Breaking changes
 In addition to breaking changes associated with Tendermint (see their changelog):
@@ -634,12 +640,12 @@ In addition to breaking changes associated with Tendermint (see their changelog)
 - Fix address generation from bytes mismatch
 
 `,
-		"0.18.1",
-		`This is a minor release including:
+			"0.18.1",
+			`This is a minor release including:
 - Introduce InputAccount param for RPC/v0 for integration in JS libs
 - Resolve some issues with RPC/tm tests swallowing timeouts and not dealing with reordered events`,
-		"0.18.0 - 2018-05-09",
-		`This is an extremely large release in terms of lines of code changed addressing several years of technical debt. Despite this efforts were made to maintain external interfaces as much as possible and an extended period of stabilisation has taken place on develop.
+			"0.18.0 - 2018-05-09",
+			`This is an extremely large release in terms of lines of code changed addressing several years of technical debt. Despite this efforts were made to maintain external interfaces as much as possible and an extended period of stabilisation has taken place on develop.
 
 A major strand of work has been in condensing previous Monax tooling spread across multiple repos into just two. The Hyperledger Burrow repo and [Bosmarmot](http://github.com/monax/bosmarmot). Burrow is now able to generate chains (replacing 'monax chains make') with 'burrow spec' and 'burrow configure'. Our 'EPM' contract deployment and testing tool, our javascript libraries, compilers, and monax-keys are avaiable in Bosmarmot (the former in the 'bos' tool). Work is underway to pull monax-keys into the Burrow project, and we will continue to make Burrow as self-contained as possible.
 
@@ -687,11 +693,11 @@ A major strand of work has been in condensing previous Monax tooling spread acro
 - Missing support for: REVERT https://github.com/hyperledger/burrow/issues/600 (coming very soon)
 `,
 
-		"0.17.1",
-		`Minor tweaks to docker build file`,
+			"0.17.1",
+			`Minor tweaks to docker build file`,
 
-		"0.17.0 - 2017-09-04",
-		`This is a service release with some significant ethereum/solidity compatibility improvements and new logging features. It includes:
+			"0.17.0 - 2017-09-04",
+			`This is a service release with some significant ethereum/solidity compatibility improvements and new logging features. It includes:
 
 - [Upgrade to use Tendermint v0.9.2](https://github.com/hyperledger/burrow/pull/595)
 - [Implemented dynamic memory](https://github.com/hyperledger/burrow/pull/607) assumed by the EVM bytecode produce by solidity, fixing various issues.
@@ -705,8 +711,8 @@ Known issues:
 
 - SELFDESTRUCT opcode causes a panic when an account is removed. A [fix](https://github.com/hyperledger/burrow/pull/605) was produced but was [reverted](https://github.com/hyperledger/burrow/pull/636) pending investigation of a possible regression.`,
 
-		"0.16.3 - 2017-04-25",
-		`This release adds an stop-gap fix to the Transact method so that it never
+			"0.16.3 - 2017-04-25",
+			`This release adds an stop-gap fix to the Transact method so that it never
 transfers value with the CallTx is generates.
 
 We hard-code amount = fee so that no value is transferred
@@ -715,16 +721,16 @@ from transferring value to non-payable functions with newer versions of solidity
 By doing this we can resolve some issues with users of the v0 RPC without making
 a breaking API change.`,
 
-		"0.16.2 - 2017-04-20",
-		`This release finalises our accession to the Hyperledger project and updates our root package namespace to github.com/hyperledger/burrow.
+			"0.16.2 - 2017-04-20",
+			`This release finalises our accession to the Hyperledger project and updates our root package namespace to github.com/hyperledger/burrow.
 
 It also includes a bug fix for rpc/V0 so that BroadcastTx can accept any transaction type and various pieces of internal clean-up.`,
 
-		"0.16.1 - 2017-04-04",
-		`This release was an internal rename to 'Burrow' with some minor other attendant clean up.`,
+			"0.16.1 - 2017-04-04",
+			`This release was an internal rename to 'Burrow' with some minor other attendant clean up.`,
 
-		"0.16.0 - 2017-03-01",
-		`This is a consolidation release that fixes various bugs and improves elements
+			"0.16.0 - 2017-03-01",
+			`This is a consolidation release that fixes various bugs and improves elements
 of the architecture across the Monax Platform to support a quicker release
 cadence.
 
@@ -753,17 +759,17 @@ cadence.
 - [pull-379](https://github.com/hyperledger/burrow/pull/379) more descriptive error message for eris-client
 `,
 
-		"0.15.0",
-		"This release was elided to synchronise release versions with tooling",
+			"0.15.0",
+			"This release was elided to synchronise release versions with tooling",
 
-		"0.14.0",
-		"This release was elided to synchronise release versions with tooling",
+			"0.14.0",
+			"This release was elided to synchronise release versions with tooling",
 
-		"0.13.0",
-		"This release was elided to synchronise release versions with tooling",
+			"0.13.0",
+			"This release was elided to synchronise release versions with tooling",
 
-		"0.12.0",
-		`This release marks the start of Eris-DB as the full permissioned blockchain node
+			"0.12.0",
+			`This release marks the start of Eris-DB as the full permissioned blockchain node
  of the Eris platform with the Tendermint permissioned consensus engine.
  This involved significant refactoring of almost all parts of the code,
  but provides a solid foundation to build the next generation of advanced
@@ -799,4 +805,5 @@ cadence.
   - [RPC/v0] Fix blocking event subscription in transactAndHold (preventing return in Javascript libraries)
   - [Blockchain] Fix getBlocks to respect block height cap.
 `,
-	)
+		)
+)

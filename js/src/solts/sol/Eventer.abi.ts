@@ -31,7 +31,7 @@ export async function defaultCall<Output>(
   return callback(returnData);
 }
 export namespace Eventer {
-  export const contactName = 'Eventer';
+  export const contractName = 'Eventer';
   export const abi =
     '[{"anonymous":false,"inputs":[{"indexed":true,"internalType":"bytes32","name":"eventId","type":"bytes32"},{"indexed":true,"internalType":"bytes32","name":"intervalId","type":"bytes32"},{"indexed":false,"internalType":"address","name":"eventAddress","type":"address"},{"indexed":false,"internalType":"string","name":"namespace","type":"string"},{"indexed":false,"internalType":"string","name":"name","type":"string"},{"indexed":false,"internalType":"address","name":"controller","type":"address"},{"indexed":false,"internalType":"uint256","name":"threshold","type":"uint256"},{"indexed":false,"internalType":"string","name":"metadata","type":"string"}],"name":"Init","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"int256","name":"timestamp","type":"int256"},{"indexed":false,"internalType":"string","name":"place","type":"string"},{"indexed":false,"internalType":"string","name":"postalAddress","type":"string"}],"name":"MonoRampage","type":"event"},{"constant":false,"inputs":[],"name":"announce","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]';
   export const bytecode =
@@ -102,6 +102,7 @@ export namespace Eventer {
   export type Contract = ReturnType<typeof contract>;
   export const contract = (client: Provider, address: string) =>
     ({
+      name: 'Eventer',
       address,
       functions: {
         announce(call = defaultCall): Promise<void> {

@@ -31,7 +31,7 @@ export async function defaultCall<Output>(
   return callback(returnData);
 }
 export namespace Multiple {
-  export const contactName = 'Multiple';
+  export const contractName = 'Multiple';
   export const abi =
     '[{"constant":true,"inputs":[],"name":"get","outputs":[{"internalType":"int256","name":"","type":"int256"},{"internalType":"int256","name":"","type":"int256"},{"internalType":"int256","name":"","type":"int256"}],"payable":false,"stateMutability":"pure","type":"function"}]';
   export const bytecode =
@@ -55,6 +55,7 @@ export namespace Multiple {
   export type Contract = ReturnType<typeof contract>;
   export const contract = (client: Provider, address: string) =>
     ({
+      name: 'Multiple',
       address,
       functions: {
         get(call = defaultCall): Promise<[number, number, number]> {

@@ -31,7 +31,7 @@ export async function defaultCall<Output>(
   return callback(returnData);
 }
 export namespace Creator {
-  export const contactName = 'Creator';
+  export const contractName = 'Creator';
   export const abi =
     '[{"constant":false,"inputs":[{"internalType":"string","name":"_name","type":"string"}],"name":"create","outputs":[{"internalType":"address","name":"proxy","type":"address"}],"payable":false,"stateMutability":"nonpayable","type":"function"}]';
   export const bytecode =
@@ -58,6 +58,7 @@ export namespace Creator {
   export type Contract = ReturnType<typeof contract>;
   export const contract = (client: Provider, address: string) =>
     ({
+      name: 'Creator',
       address,
       functions: {
         create(
@@ -96,7 +97,7 @@ export namespace Creator {
   };
 }
 export namespace Proxy {
-  export const contactName = 'Proxy';
+  export const contractName = 'Proxy';
   export const abi =
     '[{"inputs":[{"internalType":"string","name":"_name","type":"string"}],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"constant":true,"inputs":[],"name":"get","outputs":[{"internalType":"string","name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"}]';
   export const bytecode =
@@ -123,6 +124,7 @@ export namespace Proxy {
   export type Contract = ReturnType<typeof contract>;
   export const contract = (client: Provider, address: string) =>
     ({
+      name: 'Proxy',
       address,
       functions: {
         get(call = defaultCall): Promise<[string]> {

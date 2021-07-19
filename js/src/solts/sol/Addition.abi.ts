@@ -31,7 +31,7 @@ export async function defaultCall<Output>(
   return callback(returnData);
 }
 export namespace Addition {
-  export const contactName = 'Addition';
+  export const contractName = 'Addition';
   export const abi =
     '[{"constant":true,"inputs":[{"internalType":"int256","name":"a","type":"int256"},{"internalType":"int256","name":"b","type":"int256"}],"name":"add","outputs":[{"internalType":"int256","name":"sum","type":"int256"}],"payable":false,"stateMutability":"pure","type":"function"}]';
   export const bytecode =
@@ -55,6 +55,7 @@ export namespace Addition {
   export type Contract = ReturnType<typeof contract>;
   export const contract = (client: Provider, address: string) =>
     ({
+      name: 'Addition',
       address,
       functions: {
         add(

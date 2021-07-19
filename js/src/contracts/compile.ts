@@ -48,7 +48,7 @@ export namespace Solidity {
     };
   };
 
-  type Error = {
+  export type Error = {
     sourceLocation?: {
       file: string;
       start: number;
@@ -63,7 +63,7 @@ export namespace Solidity {
 
   export type OutputDescription = {
     contracts: Record<string, Record<string, Contract>>;
-    errors: Array<Error>;
+    errors?: Array<Error>;
     sourceList: Array<string>;
     sources: Record<string, Source>;
   };
