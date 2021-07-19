@@ -5,11 +5,11 @@ import { encodeName } from './encoder';
 import {
   BoundsType,
   CallbackReturnType,
-  dataFromEvent,
-  topicsFromEvent,
   createListener,
   createListenerForFunction,
+  dataFromEvent,
   eventSigHash,
+  topicsFromEvent,
 } from './events';
 import { errName, EventErrParameter, eventName, EventParameter, Provider } from './provider';
 import { ContractMethodsList, getRealType, inputOuputsToType, Signature } from './solidity';
@@ -53,7 +53,7 @@ export function declareContractType(): ts.TypeAliasDeclaration {
 }
 
 export function generateContractObject(
-  contractNameName: ts.Identifier,
+  contractName: string,
   abi: ContractMethodsList,
   provider: Provider,
 ): ts.VariableStatement {
@@ -92,6 +92,7 @@ export function generateContractObject(
       EqualsGreaterThanToken,
       asConst(
         factory.createObjectLiteralExpression([
+          factory.createPropertyAssignment('name', factory.createStringLiteral(contractName)),
           factory.createShorthandPropertyAssignment(addressName),
           ...functionObjectProperties,
           ...eventObjectProperties,

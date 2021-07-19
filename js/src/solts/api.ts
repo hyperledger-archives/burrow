@@ -26,7 +26,7 @@ export type Compiled = {
   links: Array<string>;
 };
 
-const contractNameName = factory.createIdentifier('contactName');
+const contractNameName = factory.createIdentifier('contractName');
 const abiName = factory.createIdentifier('abi');
 
 // Note: this is a very useful tool for discovering the correct Typescript factory API calls to produce a particular
@@ -70,7 +70,7 @@ export function newFile(contracts: Compiled[], burrowImportPath: string): ts.Nod
         ...deployMembers,
         ...eventMembers,
         declareContractType(),
-        generateContractObject(contractNameName, methods, provider),
+        generateContractObject(contract.name, methods, provider),
         generateEncodeObject(methods, provider, abiName),
         generateDecodeObject(methods, provider, abiName),
       ];

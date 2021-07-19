@@ -1,4 +1,12 @@
 # [Hyperledger Burrow](https://github.com/hyperledger/burrow) Changelog
+## [0.34.3] - 2021-07-19
+### Fixed
+- [JS] Fix spelling of 'contractName' in solts, add contract name to contract object.
+
+### Added
+- [JS] Added option to build.ts code generation to not fail on Solidity compiler warnings, which is now the default. Warnings are still logged to stderr
+
+
 ## [0.34.2] - 2021-07-09
 ### Fixed
 - [Build] Add 0.34.1 changes!
@@ -799,6 +807,7 @@ This release marks the start of Eris-DB as the full permissioned blockchain node
   - [Blockchain] Fix getBlocks to respect block height cap.
 
 
+[0.34.3]: https://github.com/hyperledger/burrow/compare/v0.34.2...v0.34.3
 [0.34.2]: https://github.com/hyperledger/burrow/compare/v0.34.1...v0.34.2
 [0.34.1]: https://github.com/hyperledger/burrow/compare/v0.34.0...v0.34.1
 [0.34.0]: https://github.com/hyperledger/burrow/compare/v0.33.1...v0.34.0

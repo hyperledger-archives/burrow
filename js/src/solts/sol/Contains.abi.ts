@@ -31,7 +31,7 @@ export async function defaultCall<Output>(
   return callback(returnData);
 }
 export namespace Contains {
-  export const contactName = 'Contains';
+  export const contractName = 'Contains';
   export const abi =
     '[{"constant":true,"inputs":[{"internalType":"address[]","name":"_list","type":"address[]"},{"internalType":"address","name":"_value","type":"address"}],"name":"contains","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"pure","type":"function"},{"constant":true,"inputs":[{"internalType":"uint256[]","name":"_list","type":"uint256[]"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"contains","outputs":[{"internalType":"bool","name":"","type":"bool"}],"payable":false,"stateMutability":"pure","type":"function"}]';
   export const bytecode =
@@ -55,6 +55,7 @@ export namespace Contains {
   export type Contract = ReturnType<typeof contract>;
   export const contract = (client: Provider, address: string) =>
     ({
+      name: 'Contains',
       address,
       functions: {
         contains(_list: string[], _value: string, call = defaultCall): Promise<[boolean]> {
