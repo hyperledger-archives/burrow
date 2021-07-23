@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { compile } from '../contracts/compile';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('BN', function () {
   it('BN', async () => {
@@ -17,7 +17,7 @@ describe('BN', function () {
       }
     `;
     const contract = compile(source, 'Test');
-    const instance = await contract.deploy(burrow);
+    const instance = await contract.deploy(client);
 
     const [number] = await instance.getNumber();
     assert.strictEqual(number.toString(), '10000000000000000000');

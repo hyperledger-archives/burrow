@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { compile } from '../contracts/compile';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('Really Long Loop', function () {
   let instance: any;
@@ -28,7 +28,7 @@ describe('Really Long Loop', function () {
     `;
 
     const contract = compile(source, 'main');
-    instance = await contract.deployWith(burrow, {
+    instance = await contract.deployWith(client, {
       middleware: (callTx) => {
         // Normal gas for deploy (when address === '')
         if (callTx.getAddress()) {

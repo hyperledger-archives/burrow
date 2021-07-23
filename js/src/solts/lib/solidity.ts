@@ -1,3 +1,4 @@
+import { camelCase } from 'camel-case';
 import { Keccak } from 'sha3';
 import ts, { factory, TypeNode } from 'typescript';
 import { ABI } from '../../contracts/abi';
@@ -113,8 +114,8 @@ export function getContractMethods(abi: ABI.FunctionOrEvent[]): Method[] {
   });
 }
 
-export function tokenizeString(input: string): string {
-  return input.replace(/\W+/g, '_');
+export function libraryName(link: string): string {
+  return link.split(':').slice(-1)[0];
 }
 
 function getFunctionSelector(abi: ABI.Func): string {

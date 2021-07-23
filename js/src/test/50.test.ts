@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { compile } from '../contracts/compile';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('#50', function () {
   it('#50', async () => {
@@ -19,7 +19,7 @@ describe('#50', function () {
       }
     `;
     const contract = compile(source, 'SimpleStorage');
-    const instance = await contract.deploy(burrow);
+    const instance = await contract.deploy(client);
     await instance.set(42);
     const value = await instance.get.call();
     assert.deepStrictEqual([...value], [42]);

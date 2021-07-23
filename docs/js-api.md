@@ -102,19 +102,19 @@ var addressToCreate = "6075EADD0C7A33EE6153F3FA1B21E4D80045FCE2"
 // The amount we send is arbitrary
 var amount = 20
 
-burrow.transact.SendTxSync(
-    {
-        Inputs: [{
-            Address: Buffer.from(account, 'hex'),
-            Amount: amount
-        }],
-        Outputs: [{
-            Address: Buffer.from(addressToCreate, 'hex'),
-            Amount: amount
-        }]
-    })
-    .then(txe => console.log(txe))
-    .catch(err => console.error(err))
+client.transact.SendTxSync(
+  {
+    Inputs: [{
+      Address: Buffer.from(account, 'hex'),
+      Amount: amount
+    }],
+    Outputs: [{
+      Address: Buffer.from(addressToCreate, 'hex'),
+      Amount: amount
+    }]
+  })
+  .then(txe => console.log(txe))
+  .catch(err => console.error(err))
 ```
 
 The return `txe` (short for `TxExecution`) logged to the console in the `then` block  contains the history and fingerprint of the `SendTx` execution. You can see an example of this in [basic app](example/basic-app/app.js). 
@@ -125,26 +125,30 @@ Here is an example of usage in setting and getting a name:
 
 ```javascript
 var setPayload = {
-	Input: {
-		Address: Buffer.from(account,'hex'),
-		Amount: 50000
- 	 },
-	Name: "DOUG",
-	Data: "Marmot",
-	Fee: 5000
+  Input: {
+    Address: Buffer.from(account, 'hex'),
+    Amount: 50000
+  },
+  Name: "DOUG",
+  Data: "Marmot",
+  Fee: 5000
 }
 
 var getPayload = {Name: "DOUG"}
 
 // Using a callback
-burrow.transact.NameTxSync(setPayload, function(error, data){
-	if (error) throw error; // or something more sensible
-	// data object contains detailed information of the transaction execution.
+client.transact.NameTxSync(setPayload, function (error, data) {
+  if (error) throw error; // or something more sensible
+  // data object contains detailed information of the transaction execution.
 
-	// Get a name this time using a promise
-	burrow.query.GetName(getPayload)
-		.then((data) => {console.log(data);}) // should print "Marmot"
-		.catch((error)=> {throw error;})
+  // Get a name this time using a promise
+  client.query.GetName(getPayload)
+    .then((data) => {
+      console.log(data);
+    }) // should print "Marmot"
+    .catch((error) => {
+      throw error;
+    })
 })
 
 ```
@@ -239,14 +243,18 @@ Sets an entry in the namereg. It returns a promise if callback not provided.
 
 ```javascript
 // Using a callback
-burrow.namereg.set("DOUG", "Marmot", 5000, function(error, data){
-	if (error) throw error; // or something more sensible
-	// data object contains detailed information of the transaction execution.
+client.namereg.set("DOUG", "Marmot", 5000, function (error, data) {
+  if (error) throw error; // or something more sensible
+  // data object contains detailed information of the transaction execution.
 
-	// Get a name this time using a promise
-	burrow.namereg.get("DOUG")
-		.then((data) => {console.log(data);}) // Should print "Marmot"
-		.catch((error)=> {throw error;})
+  // Get a name this time using a promise
+  client.namereg.get("DOUG")
+    .then((data) => {
+      console.log(data);
+    }) // Should print "Marmot"
+    .catch((error) => {
+      throw error;
+    })
 })
 ```
 

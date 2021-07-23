@@ -2,17 +2,19 @@ import * as assert from 'assert';
 import { readEvents } from '../events';
 import { Addition } from '../solts/sol/Addition.abi';
 import { Eventer } from '../solts/sol/Eventer.abi';
-import { burrow } from './test';
+import { NegationLib } from '../solts/sol/NegationLib.abi';
+import { client } from './test';
 
 describe('solts', () => {
   it('can deploy and call from codegen', async () => {
-    const adder = await Addition.deployContract(burrow, true);
+    const libraries = { NegationLib: await NegationLib.deploy({ client }) };
+    const adder = await Addition.deployContract({ client, libraries: libraries, withContractMeta: true });
     const { sum } = await adder.functions.add(2342, 23432);
     assert.strictEqual(sum, 25774);
   });
 
   it('can receive events', async () => {
-    const eventer = await Eventer.deployContract(burrow, true);
+    const eventer = await Eventer.deployContract({ client, withContractMeta: true });
     await eventer.functions.announce();
     await eventer.functions.announce();
     await eventer.functions.announce();
@@ -24,7 +26,7 @@ describe('solts', () => {
   });
 
   it('can listen to multiple events', async () => {
-    const eventer = await Eventer.deployContract(burrow, true);
+    const eventer = await Eventer.deployContract({ client, withContractMeta: true });
     await eventer.functions.announce();
     await eventer.functions.announce();
     const listener = eventer.listenerFor(['MonoRampage', 'Init']);

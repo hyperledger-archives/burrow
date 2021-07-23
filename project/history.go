@@ -46,7 +46,11 @@ func FullVersion() string {
 	// To cut a new release add a release to the front of this slice then run the
 	// release tagging script: ./scripts/tag_release.sh
 	History relic.ImmutableHistory = relic.NewHistory("Hyperledger Burrow", "https://github.com/hyperledger/burrow").
-		MustDeclareReleases("0.34.3 - 2021-07-19",
+		MustDeclareReleases("0.34.4 - 2021-07-23",
+			`### Changed
+- [JS] Make deploy and deployContract take deps argument consisting of deployment options and library object. The library object makes it easier to pass an identical object with the addresses of commonly used libraries under their canonical names.
+`,
+			"0.34.3 - 2021-07-19",
 			`### Fixed
 - [JS] Fix spelling of 'contractName' in solts, add contract name to contract object.
 

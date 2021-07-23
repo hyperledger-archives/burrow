@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { compile } from '../contracts/compile';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('#48', function () {
   it('#48', async () => {
@@ -25,7 +25,7 @@ describe('#48', function () {
     `;
     const contract = compile(source, 'Test');
     return contract
-      .deploy(burrow)
+      .deploy(client)
       .then((instance: any) => instance.getCombination())
       .then(([number, address]) => {
         assert.strictEqual(number, 100);

@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { compile } from '../contracts/compile';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('memory bytes', function () {
   let instance: any;
@@ -28,7 +28,7 @@ describe('memory bytes', function () {
     `;
 
     const contract = compile(source, 'c');
-    instance = await contract.deploy(burrow);
+    instance = await contract.deploy(client);
   });
 
   it('gets the static byte array decoded properly', async () => {

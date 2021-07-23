@@ -2,7 +2,7 @@ import { LogDescription } from '@ethersproject/abi';
 import * as assert from 'assert';
 import { compile } from '../contracts/compile';
 import { ContractEvent } from '../contracts/contract';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('Event listening', function () {
   it('listens to an event from a contract', async () => {
@@ -34,7 +34,7 @@ describe('Event listening', function () {
     `;
 
     const contract = compile(source, 'Contract');
-    const instance = await contract.deploy(burrow);
+    const instance = await contract.deploy(client);
     const promise = new Promise<LogDescription>((resolve, reject) => {
       const pay = instance.Pay as ContractEvent;
       const stream = pay((error, result) => {

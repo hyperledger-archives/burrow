@@ -38,7 +38,16 @@ export namespace Storage {
     '608060405234801561001057600080fd5b506040516101203803806101208339818101604052602081101561003357600080fd5b8101908080519060200190929190505050806000819055505060c68061005a6000396000f3fe6080604052348015600f57600080fd5b506004361060325760003560e01c80636d4ce63c146037578063e5c19b2d146053575b600080fd5b603d607e565b6040518082815260200191505060405180910390f35b607c60048036036020811015606757600080fd5b81019080803590602001909291905050506087565b005b60008054905090565b806000819055505056fea265627a7a72315820df6fea8cbd336a45734df49c645eb1a45497cd5babf1e4c20c340998d6d9cb6264736f6c63430005110032';
   export const deployedBytecode =
     '6080604052348015600f57600080fd5b506004361060325760003560e01c80636d4ce63c146037578063e5c19b2d146053575b600080fd5b603d607e565b6040518082815260200191505060405180910390f35b607c60048036036020811015606757600080fd5b81019080803590602001909291905050506087565b005b60008054905090565b806000819055505056fea265627a7a72315820df6fea8cbd336a45734df49c645eb1a45497cd5babf1e4c20c340998d6d9cb6264736f6c63430005110032';
-  export function deploy(client: Provider, x: number, withContractMeta = false): Promise<string> {
+  export function deploy(
+    {
+      client,
+      withContractMeta,
+    }: {
+      client: Provider;
+      withContractMeta?: boolean;
+    },
+    x: number,
+  ): Promise<string> {
     const codec = client.contractCodec(abi);
     const data = Buffer.concat([Buffer.from(bytecode, 'hex'), codec.encodeDeploy(x)]);
     return client.deploy(
@@ -48,9 +57,15 @@ export namespace Storage {
         : undefined,
     );
   }
-  export async function deployContract(client: Provider, x: number, withContractMeta = false): Promise<Contract> {
-    const address = await deploy(client, x, withContractMeta);
-    return contract(client, address);
+  export async function deployContract(
+    deps: {
+      client: Provider;
+      withContractMeta?: boolean;
+    },
+    x: number,
+  ): Promise<Contract> {
+    const address = await deploy(deps, x);
+    return contract(deps.client, address);
   }
   export type Contract = ReturnType<typeof contract>;
   export const contract = (client: Provider, address: string) =>

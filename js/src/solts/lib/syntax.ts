@@ -124,7 +124,7 @@ function asExp(exp: ts.Expression | string): ts.Expression {
 }
 
 export function createParameter(
-  name: string | ts.Identifier,
+  name: string | ts.BindingName,
   typeNode?: ts.TypeNode,
   initializer?: ts.Expression,
   isOptional?: boolean,
@@ -134,7 +134,7 @@ export function createParameter(
     undefined,
     undefined,
     isVariadic ? EllipsisToken : undefined,
-    typeof name === 'string' ? factory.createIdentifier(name) : name,
+    name,
     isOptional ? QuestionToken : undefined,
     typeNode,
     initializer,

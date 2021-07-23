@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { compile } from '../contracts/compile';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('#46', function () {
   it('#46', async () => {
@@ -26,7 +26,7 @@ describe('#46', function () {
 
     const contract = compile(source, 'Test');
     return contract
-      .deploy(burrow)
+      .deploy(client)
       .then((instance: any) =>
         instance.setName('Batman').then(() => Promise.all([instance.getNameConstant(), instance.getName()])),
       )
