@@ -30,14 +30,14 @@ export async function defaultCall<Output>(
   const returnData = await (isSim ? client.callSim(data, addr) : client.call(data, addr));
   return callback(returnData);
 }
-export namespace Unnamed {
-  export const contractName = 'Unnamed';
+export namespace NegationLib {
+  export const contractName = 'NegationLib';
   export const abi =
-    '[{"constant":true,"inputs":[{"internalType":"int256","name":"a","type":"int256"},{"internalType":"int256","name":"","type":"int256"}],"name":"set","outputs":[{"internalType":"int256","name":"sum","type":"int256"}],"payable":false,"stateMutability":"pure","type":"function"}]';
+    '[{"constant":true,"inputs":[{"internalType":"int256","name":"a","type":"int256"}],"name":"negate","outputs":[{"internalType":"int256","name":"inverse","type":"int256"}],"payable":false,"stateMutability":"pure","type":"function"}]';
   export const bytecode =
-    '608060405234801561001057600080fd5b5060b88061001f6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c806304c402f414602d575b600080fd5b606060048036036040811015604157600080fd5b8101908080359060200190929190803590602001909291905050506076565b6040518082815260200191505060405180910390f35b600082830190509291505056fea265627a7a72315820c692aa5593a39c498f58c4a0221aa0b6ca567436b02c62f90b9214af7b7c390064736f6c63430005110032';
+    '60b9610025600b82828239805160001a60731461001857fe5b30600052607381538281f3fe730000000000000000000000000000000000000000301460806040526004361060335760003560e01c806325b832d9146038575b600080fd5b606160048036036020811015604c57600080fd5b81019080803590602001909291905050506077565b6040518082815260200191505060405180910390f35b600081600003905091905056fea265627a7a7231582025f0a2f322c335616644c87b35a42bad6fad892fda8312ab90121566f216478c64736f6c63430005110032';
   export const deployedBytecode =
-    '6080604052348015600f57600080fd5b506004361060285760003560e01c806304c402f414602d575b600080fd5b606060048036036040811015604157600080fd5b8101908080359060200190929190803590602001909291905050506076565b6040518082815260200191505060405180910390f35b600082830190509291505056fea265627a7a72315820c692aa5593a39c498f58c4a0221aa0b6ca567436b02c62f90b9214af7b7c390064736f6c63430005110032';
+    '730000000000000000000000000000000000000000301460806040526004361060335760003560e01c806325b832d9146038575b600080fd5b606160048036036020811015604c57600080fd5b81019080803590602001909291905050506077565b6040518082815260200191505060405180910390f35b600081600003905091905056fea265627a7a7231582025f0a2f322c335616644c87b35a42bad6fad892fda8312ab90121566f216478c64736f6c63430005110032';
   export function deploy({
     client,
     withContractMeta,
@@ -50,7 +50,12 @@ export namespace Unnamed {
     return client.deploy(
       data,
       withContractMeta
-        ? [{ abi: Unnamed.abi, codeHash: new Keccak(256).update(Unnamed.deployedBytecode, 'hex').digest('binary') }]
+        ? [
+            {
+              abi: NegationLib.abi,
+              codeHash: new Keccak(256).update(NegationLib.deployedBytecode, 'hex').digest('binary'),
+            },
+          ]
         : undefined,
     );
   }
@@ -61,20 +66,20 @@ export namespace Unnamed {
   export type Contract = ReturnType<typeof contract>;
   export const contract = (client: Provider, address: string) =>
     ({
-      name: 'Unnamed',
+      name: 'NegationLib',
       address,
       functions: {
-        set(
+        negate(
           a: number,
           call = defaultCall,
         ): Promise<{
-          sum: number;
+          inverse: number;
         }> {
-          const data = encode(client).set(a);
+          const data = encode(client).negate(a);
           return call<{
-            sum: number;
+            inverse: number;
           }>(client, address, data, true, (data: Uint8Array | undefined) => {
-            return decode(client, data).set();
+            return decode(client, data).negate();
           });
         },
       } as const,
@@ -82,19 +87,19 @@ export namespace Unnamed {
   export const encode = (client: Provider) => {
     const codec = client.contractCodec(abi);
     return {
-      set: (a: number) => {
-        return codec.encodeFunctionData('04C402F4', a);
+      negate: (a: number) => {
+        return codec.encodeFunctionData('25B832D9', a);
       },
     };
   };
   export const decode = (client: Provider, data: Uint8Array | undefined, topics: Uint8Array[] = []) => {
     const codec = client.contractCodec(abi);
     return {
-      set: (): {
-        sum: number;
+      negate: (): {
+        inverse: number;
       } => {
-        const [sum] = codec.decodeFunctionResult('04C402F4', data);
-        return { sum: sum };
+        const [inverse] = codec.decodeFunctionResult('25B832D9', data);
+        return { inverse: inverse };
       },
     };
   };

@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { compile } from '../contracts/compile';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('#61', function () {
   it('#61', async () => {
@@ -19,7 +19,7 @@ describe('#61', function () {
       }
     `;
     const contract = compile(source, 'SimpleStorage');
-    const instance = await contract.deploy(burrow, '88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F');
+    const instance = await contract.deploy(client, '88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F');
     const value = await instance.get();
     assert.deepStrictEqual([...value], ['88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F']);
   });

@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { compile } from '../contracts/compile';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('#45', function () {
   it('Set/get memory string', async () => {
@@ -24,7 +24,7 @@ describe('#45', function () {
     `;
     const contract = compile(source, 'Test');
     return contract
-      .deploy(burrow)
+      .deploy(client)
       .then((instance: any) => instance.setName('Batman').then(() => instance.getName()))
       .then((value) => {
         assert.deepStrictEqual(value, ['Batman']);
@@ -48,7 +48,7 @@ describe('#45', function () {
     `;
 
     const contract = compile(source, 'Test');
-    return contract.deploy(burrow).then((instance: any) =>
+    return contract.deploy(client).then((instance: any) =>
       Promise.all([instance.getAddress(), instance.getNumber()]).then(([address, number]) => {
         assert.strictEqual(address[0].length, 40);
         assert.strictEqual(number[0], 100);

@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { compile } from '../contracts/compile';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('Setting and Getting Values:', function () {
   const source = `
@@ -68,7 +68,7 @@ contract GetSet {
 
   before(async () => {
     const contract = compile(source, 'GetSet');
-    TestContract = await contract.deploy(burrow);
+    TestContract = await contract.deploy(client);
   });
 
   it('Uint', async () => {

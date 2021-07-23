@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import fs from 'fs';
 import { Contract } from '../contracts/contract';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('Wasm flipper:', function () {
   let TestContract: any;
@@ -9,7 +9,7 @@ describe('Wasm flipper:', function () {
   before(async () => {
     const abi: any[] = JSON.parse(fs.readFileSync('src/test/flipper.abi', 'utf-8'));
     const wasm: string = fs.readFileSync('src/test/flipper.wasm').toString('hex');
-    TestContract = await new Contract({ abi, bytecode: wasm }).deploy(burrow, true);
+    TestContract = await new Contract({ abi, bytecode: wasm }).deploy(client, true);
   });
 
   it('Flip', async () => {

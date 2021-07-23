@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { ABI } from '../../contracts/abi';
-import { getSize, nameFromABI, sha3, tokenizeString } from './solidity';
+import { getSize, libraryName, nameFromABI, sha3 } from './solidity';
 
 describe('abi helpers', function () {
   it('should compute a valid method id', async function () {
@@ -30,7 +30,7 @@ describe('abi helpers', function () {
     assert.equal(getSize('uint[3]'), 3);
   });
 
-  it('should tokenize string', () => {
-    assert.equal(tokenizeString('sol/Storage.sol:Storage'), 'sol_Storage_sol_Storage');
+  it('should extract library name', () => {
+    assert.equal(libraryName('sol/Storage.sol:Storage'), 'Storage');
   });
 });

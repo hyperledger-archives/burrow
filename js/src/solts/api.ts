@@ -1,5 +1,5 @@
 import ts, { factory } from 'typescript';
-import { ABI } from "../contracts/abi";
+import { ABI } from '../contracts/abi';
 import { callerTypes, createCallerFunction } from './lib/caller';
 import { declareContractType, generateContractObject } from './lib/contract';
 import { generateDecodeObject } from './lib/decoder';
@@ -16,7 +16,13 @@ import { getContractMethods } from './lib/solidity';
 import { declareConstant, ExportToken, importBurrow, importReadable } from './lib/syntax';
 import Func = ABI.Func;
 
-export { decodeOutput, encodeInput, importLocalResolver, inputDescriptionFromFiles, tokenizeLinks } from '../contracts/compile';
+export {
+  decodeOutput,
+  encodeInput,
+  importLocalResolver,
+  inputDescriptionFromFiles,
+  tokenizeLinks,
+} from '../contracts/compile';
 
 export type Compiled = {
   name: string;
@@ -34,7 +40,6 @@ const abiName = factory.createIdentifier('abi');
 export function newFile(contracts: Compiled[], burrowImportPath: string): ts.Node[] {
   const provider = new Provider();
 
-  const contractNames = contracts.map((c) => factory.createIdentifier(c.name));
   return [
     ts.addSyntheticLeadingComment(
       importReadable(),
@@ -55,7 +60,14 @@ export function newFile(contracts: Compiled[], burrowImportPath: string): ts.Nod
         ? [
             declareConstant(bytecodeName, factory.createStringLiteral(contract.bytecode, true), true),
             declareConstant(deployedBytecodeName, factory.createStringLiteral(contract.deployedBytecode, true), true),
-            generateDeployFunction(deploy, contract.links, provider, abiName, contractNames),
+            generateDeployFunction(
+              deploy,
+              contract.links,
+              provider,
+              abiName,
+              // Exclude names of interface contracts since they have no deployed code
+              contracts.filter((c) => c.bytecode).map((c) => factory.createIdentifier(c.name)),
+            ),
             generateDeployContractFunction(deploy, contract.links, provider),
           ]
         : [];

@@ -1,29 +1,29 @@
-import { promises as fs } from "fs";
-import * as path from "path";
-import * as solcv5 from "solc_v5";
-import * as solcv8 from "solc_v8";
+import { promises as fs } from 'fs';
+import * as path from 'path';
+import * as solcv5 from 'solc_v5';
+import * as solcv8 from 'solc_v8';
 import {
   decodeOutput,
   encodeInput,
   importLocalResolver,
   inputDescriptionFromFiles,
-  Solidity
-} from "../contracts/compile";
-import { Compiled, newFile, printNodes, tokenizeLinks } from "./api";
+  Solidity,
+} from '../contracts/compile';
+import { Compiled, newFile, printNodes, tokenizeLinks } from './api';
 
 const solcCompilers = {
   v5: solcv5,
-  v8: solcv8
+  v8: solcv8,
 } as const;
 
 export const defaultBuildOptions = {
-  solcVersion: "v5" as keyof typeof solcCompilers,
-  burrowImportPath: (sourceFile: string) => "@hyperledger/burrow" as string,
-  binPath: "bin" as string,
-  abiExt: ".abi" as string,
+  solcVersion: 'v5' as keyof typeof solcCompilers,
+  burrowImportPath: (sourceFile: string) => '@hyperledger/burrow' as string,
+  binPath: 'bin' as string | false,
+  abiExt: '.abi' as string,
   // Used to resolve layout in bin folder - defaults to srcPath if is passed or process.cwd() otherwise
   basePath: undefined as undefined | string,
-  failOnWarnings: false as boolean
+  failOnWarnings: false as boolean,
 } as const;
 
 export type BuildOptions = typeof defaultBuildOptions;
@@ -38,60 +38,62 @@ export type BuildOptions = typeof defaultBuildOptions;
 export async function build(srcPathOrFiles: string | string[], opts?: Partial<BuildOptions>): Promise<void> {
   const { failOnWarnings, solcVersion, binPath, basePath, burrowImportPath, abiExt } = {
     ...defaultBuildOptions,
-    ...opts
+    ...opts,
   };
-  const resolvedBasePath = basePath ?? (typeof srcPathOrFiles === "string" ? srcPathOrFiles : process.cwd());
+  const resolvedBasePath = basePath ?? (typeof srcPathOrFiles === 'string' ? srcPathOrFiles : process.cwd());
   process.chdir(resolvedBasePath);
-  const basePathPrefix = new RegExp("^" + path.resolve(resolvedBasePath));
-  await fs.mkdir(binPath, { recursive: true });
+  const basePathPrefix = new RegExp('^' + path.resolve(resolvedBasePath));
   const solidityFiles = await getSourceFilesList(srcPathOrFiles);
   const inputDescription = inputDescriptionFromFiles(
     // solidityFiles.map((f) => path.resolve(resolvedBasePath, f.replace(basePathPrefix, ''))),
-    solidityFiles
+    solidityFiles,
   );
   const input = encodeInput(inputDescription);
   const solc = solcCompilers[solcVersion];
 
   const solcOutput = solc.compile(input, { import: importLocalResolver(resolvedBasePath) });
   const output = decodeOutput(solcOutput);
-  const errors = output.errors?.filter((e) => failOnWarnings || (e.severity === "error")) || [];
+  const errors = output.errors?.filter((e) => failOnWarnings || e.severity === 'error') || [];
   if (errors.length > 0) {
-    throw new Error(
-      "Solidity compiler errors:\n" + formatErrors(errors)
-    );
+    throw new Error('Solidity compiler errors:\n' + formatErrors(errors));
   }
-  const warnings = output.errors?.filter((e) => e.severity === "warning") || [];
+  const warnings = output.errors?.filter((e) => e.severity === 'warning') || [];
 
   if (warnings.length) {
-    console.error("Solidity compiler warnings (not treated as fatal):\n" + formatErrors(warnings))
+    console.error('Solidity compiler warnings (not treated as fatal):\n' + formatErrors(warnings));
   }
 
   const plan = Object.keys(output.contracts).map((filename) => ({
     source: filename,
-    target: filename.replace(/\.[^/.]+$/, ".abi.ts"),
+    target: filename.replace(/\.[^/.]+$/, '.abi.ts'),
     contracts: Object.entries(output.contracts[filename]).map(([name, contract]) => ({
       name,
-      contract
-    }))
+      contract,
+    })),
   }));
 
-  const binPlan = plan.flatMap((f) => {
-    return f.contracts.map(({ name, contract }) => ({
-      source: f.source,
-      name,
-      filename: path.join(binPath, path.dirname(path.resolve(f.source)).replace(basePathPrefix, ""), name + abiExt),
-      abi: JSON.stringify(contract)
-    }));
-  });
+  let binPlan: { source: string; filename: string; abi: string }[] = [];
 
-  const dupes = findDupes(binPlan, (b) => b.filename);
+  if (binPath !== false) {
+    await fs.mkdir(binPath, { recursive: true });
+    binPlan = plan.flatMap((f) => {
+      return f.contracts.map(({ name, contract }) => ({
+        source: f.source,
+        name,
+        filename: path.join(binPath, path.dirname(path.resolve(f.source)).replace(basePathPrefix, ''), name + abiExt),
+        abi: JSON.stringify(contract),
+      }));
+    });
 
-  if (dupes.length) {
-    const dupeDescs = dupes.map(({ key, dupes }) => ({ duplicate: key, sources: dupes.map((d) => d.source) }));
-    throw Error(
-      `Duplicate contract names found (these contracts will result ABI filenames that will collide since ABIs ` +
-      `are flattened in '${binPath}'):\n${dupeDescs.map((d) => JSON.stringify(d)).join("\n")}`
-    );
+    const dupes = findDupes(binPlan, (b) => b.filename);
+
+    if (dupes.length) {
+      const dupeDescs = dupes.map(({ key, dupes }) => ({ duplicate: key, sources: dupes.map((d) => d.source) }));
+      throw Error(
+        `Duplicate contract names found (these contracts will result ABI filenames that will collide since ABIs ` +
+          `are flattened in '${binPath}'):\n${dupeDescs.map((d) => JSON.stringify(d)).join('\n')}`,
+      );
+    }
   }
 
   // Write the ABIs emitted for each file to the name of that file without extension. We flatten into a single
@@ -107,11 +109,11 @@ export async function build(srcPathOrFiles: string | string[], opts?: Partial<Bu
         printNodes(
           ...newFile(
             contracts.map(({ name, contract }) => getCompiled(name, contract)),
-            burrowImportPath(source)
-          )
-        )
-      )
-    )
+            burrowImportPath(source),
+          ),
+        ),
+      ),
+    ),
   ]);
 }
 
@@ -121,7 +123,7 @@ function getCompiled(name: string, contract: Solidity.Contract): Compiled {
     abi: contract.abi,
     bytecode: contract.evm.bytecode.object,
     deployedBytecode: contract.evm.deployedBytecode.object,
-    links: tokenizeLinks(contract.evm.bytecode.linkReferences)
+    links: tokenizeLinks(contract.evm.bytecode.linkReferences),
   };
 }
 
@@ -138,15 +140,15 @@ function findDupes<T>(list: T[], by: (t: T) => string): { key: string; dupes: T[
     .filter(([_, group]) => group.length > 1)
     .map(([key, dupes]) => ({
       key,
-      dupes
+      dupes,
     }));
 }
 
 async function getSourceFilesList(srcPathOrFiles: string | string[]): Promise<string[]> {
-  if (typeof srcPathOrFiles === "string") {
+  if (typeof srcPathOrFiles === 'string') {
     const files: string[] = [];
     for await (const f of walkDir(srcPathOrFiles)) {
-      if (path.extname(f) === ".sol") {
+      if (path.extname(f) === '.sol') {
         files.push(f);
       }
     }
@@ -167,5 +169,5 @@ async function* walkDir(dir: string): AsyncGenerator<string, void, void> {
 }
 
 function formatErrors(errors: Solidity.Error[]): string {
-  return errors.map((err) => err.formattedMessage || err.message).join("")
+  return errors.map((err) => err.formattedMessage || err.message).join('');
 }

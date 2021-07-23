@@ -3,7 +3,7 @@ import { CallResult } from '../contracts/call';
 import { compile } from '../contracts/compile';
 import { getMetadata } from '../contracts/contract';
 import { withoutArrayElements } from '../convert';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('Testing Per-contract handler overwriting', function () {
   // {handlers: {call: function (result) { return {super: result.values, man: result.raw} }}})
@@ -31,7 +31,7 @@ describe('Testing Per-contract handler overwriting', function () {
       }
     `;
 
-    const instance: any = await compile(source, 'Test').deployWith(burrow, {
+    const instance: any = await compile(source, 'Test').deployWith(client, {
       handler: function ({ result }: CallResult) {
         return {
           values: withoutArrayElements(result),

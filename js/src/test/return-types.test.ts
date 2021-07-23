@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import { compile } from '../contracts/compile';
 import { getAddress } from '../contracts/contract';
 import { withoutArrayElements } from '../convert';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('Multiple return types', function () {
   it('can decode multiple returns', async () => {
@@ -28,7 +28,7 @@ describe('Multiple return types', function () {
       }
     `;
     const contract = compile(source, 'Test');
-    const instance: any = await contract.deployWith(burrow, {
+    const instance: any = await contract.deployWith(client, {
       handler: function ({ result }) {
         return {
           values: withoutArrayElements(result),

@@ -38,7 +38,13 @@ export namespace Multiple {
     '6080604052348015600f57600080fd5b5060ab8061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c80636d4ce63c14602d575b600080fd5b60336057565b60405180848152602001838152602001828152602001935050505060405180910390f35b600080600060016002600382925081915080905092509250925090919256fea265627a7a72315820db13aa50f1e1ad94cdc8fb2b158b105d0d0812d53d9851ed8a9bfa5447e3c17864736f6c63430005110032';
   export const deployedBytecode =
     '6080604052348015600f57600080fd5b506004361060285760003560e01c80636d4ce63c14602d575b600080fd5b60336057565b60405180848152602001838152602001828152602001935050505060405180910390f35b600080600060016002600382925081915080905092509250925090919256fea265627a7a72315820db13aa50f1e1ad94cdc8fb2b158b105d0d0812d53d9851ed8a9bfa5447e3c17864736f6c63430005110032';
-  export function deploy(client: Provider, withContractMeta = false): Promise<string> {
+  export function deploy({
+    client,
+    withContractMeta,
+  }: {
+    client: Provider;
+    withContractMeta?: boolean;
+  }): Promise<string> {
     const codec = client.contractCodec(abi);
     const data = Buffer.concat([Buffer.from(bytecode, 'hex'), codec.encodeDeploy()]);
     return client.deploy(
@@ -48,9 +54,9 @@ export namespace Multiple {
         : undefined,
     );
   }
-  export async function deployContract(client: Provider, withContractMeta = false): Promise<Contract> {
-    const address = await deploy(client, withContractMeta);
-    return contract(client, address);
+  export async function deployContract(deps: { client: Provider; withContractMeta?: boolean }): Promise<Contract> {
+    const address = await deploy(deps);
+    return contract(deps.client, address);
   }
   export type Contract = ReturnType<typeof contract>;
   export const contract = (client: Provider, address: string) =>

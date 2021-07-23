@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import { compile } from '../contracts/compile';
 import { ContractEvent } from '../contracts/contract';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('event', function () {
   it('listens to an event from a contract', async () => {
@@ -18,7 +18,7 @@ describe('event', function () {
       }
     `;
     const contract = compile(source, 'Contract');
-    const instance: any = await contract.deploy(burrow);
+    const instance: any = await contract.deploy(client);
     let count = 0;
 
     const event = instance.Event as ContractEvent;

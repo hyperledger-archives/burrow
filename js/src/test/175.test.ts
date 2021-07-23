@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import { compile } from '../contracts/compile';
 import { ContractInstance, getMetadata } from '../contracts/contract';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('#175', function () {
   it('#175', async () => {
@@ -20,8 +20,8 @@ describe('#175', function () {
 
     const contract = compile<ContractInstance>(source, 'Contract');
 
-    const instance1 = (await contract.deploy(burrow, 'contract1')) as any;
-    const instance2 = await contract.deploy(burrow, 'contract2');
+    const instance1 = (await contract.deploy(client, 'contract1')) as any;
+    const instance2 = await contract.deploy(client, 'contract2');
 
     const address = getMetadata(instance2).address;
     const ps = await Promise.all([

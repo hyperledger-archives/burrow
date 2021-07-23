@@ -1,7 +1,7 @@
 import * as grpc from '@grpc/grpc-js';
 import * as assert from 'assert';
 import { compile } from '../contracts/compile';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('REVERT constant', function () {
   let instance: any;
@@ -21,7 +21,7 @@ describe('REVERT constant', function () {
       }
     `;
 
-    instance = await compile(source, 'c').deploy(burrow);
+    instance = await compile(source, 'c').deploy(client);
   });
 
   it('gets the string when revert not called', async () => {

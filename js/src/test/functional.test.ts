@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import { compile } from '../contracts/compile';
 import { getMetadata } from '../contracts/contract';
-import { burrow } from './test';
+import { client } from './test';
 
 describe('Functional Contract Usage', function () {
   it('#Constructor usage', async () => {
@@ -34,8 +34,8 @@ describe('Functional Contract Usage', function () {
     const contract = compile(source, 'Test');
 
     const [instance1, instance2] = await Promise.all([
-      contract.deploy(burrow, '88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F'),
-      contract.deploy(burrow, 'ABCDEFABCDEFABCDEFABCDEFABCDEFABCDEF0123'),
+      contract.deploy(client, '88977A37D05A4FE86D09E88C88A49C2FCF7D6D8F'),
+      contract.deploy(client, 'ABCDEFABCDEFABCDEFABCDEFABCDEFABCDEF0123'),
     ]);
 
     const address1 = getMetadata(instance1).address;
