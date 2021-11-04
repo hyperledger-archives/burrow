@@ -38,7 +38,7 @@ func (ec *EventClass) Validate() error {
 	)
 }
 
-// Get a (memoised) Query from the EventClass Filter string
+// Query gets a (memorised) Query from the EventClass Filter string
 func (ec *EventClass) Query() (query.Query, error) {
 	if ec.query == nil {
 		var err error

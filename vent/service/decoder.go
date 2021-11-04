@@ -30,7 +30,8 @@ func decodeEvent(log chain.Event, txOrigin *chain.Origin, evAbi *abi.EventSpec) 
 	unpackedData := abi.GetPackingTypes(evAbi.Inputs)
 
 	// unpack event data (topics & data part)
-	if err := abi.UnpackEvent(evAbi, log.GetTopics(), log.GetData(), unpackedData...); err != nil {
+	topics := log.GetTopics()
+	if err := abi.UnpackEvent(evAbi, topics, log.GetData(), unpackedData...); err != nil {
 		return nil, errors.Wrap(err, "Could not unpack event data")
 	}
 

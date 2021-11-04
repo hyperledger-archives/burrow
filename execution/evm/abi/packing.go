@@ -137,6 +137,9 @@ func unpackTopics(eventSpec *EventSpec, topics []binary.Word256, getArg func(int
 
 	for i, a := range eventSpec.Inputs {
 		if a.Indexed {
+			if topicIndex >= len(topics) {
+				return fmt.Errorf("ABI defines more topics than the event")
+			}
 			_, err := a.EVM.unpack(topics[topicIndex][:], 0, getArg(i))
 			if err != nil {
 				return err
