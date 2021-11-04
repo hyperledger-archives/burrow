@@ -10,7 +10,7 @@ import (
 	"github.com/hyperledger/burrow/vent/chain"
 )
 
-type EventSpecGetter func(abi.EventID, crypto.Address) (*abi.EventSpec, error)
+type EventABIGetter func(abi.EventID, crypto.Address) (*abi.EventSpec, error)
 
 // AbiProvider provides a method for loading ABIs from disk, and retrieving them from burrow on-demand
 type AbiProvider struct {
@@ -38,9 +38,9 @@ func NewAbiProvider(paths []string, chain chain.Chain, logger *logging.Logger) (
 	return
 }
 
-// GetEventAbi get the ABI for a particular eventID. If it is not known, it is retrieved from the burrow node via
+// GetEventABI get the ABI for a particular eventID. If it is not known, it is retrieved from the burrow node via
 // the address for the contract
-func (p *AbiProvider) GetEventAbi(eventID abi.EventID, address crypto.Address) (*abi.EventSpec, error) {
+func (p *AbiProvider) GetEventABI(eventID abi.EventID, address crypto.Address) (*abi.EventSpec, error) {
 	evAbi, ok := p.abiSpec.EventsByID[eventID]
 	if !ok {
 		metadata, err := p.chain.GetABI(context.Background(), address)

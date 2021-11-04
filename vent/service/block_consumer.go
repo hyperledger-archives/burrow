@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewBlockConsumer(chainID string, projection *sqlsol.Projection, opt sqlsol.SpecOpt, getEventSpec EventSpecGetter,
+func NewBlockConsumer(chainID string, projection *sqlsol.Projection, opt sqlsol.SpecOpt, getEventABI EventABIGetter,
 	eventCh chan<- types.EventData, doneCh chan struct{}, logger *logging.Logger) func(block chain.Block) error {
 
 	logger = logger.WithScope("makeBlockConsumer")
@@ -71,48 +71,50 @@ func NewBlockConsumer(chainID string, projection *sqlsol.Projection, opt sqlsol.
 					}
 				}
 
-				for _, event := range events {
-					var tagged query.Tagged = event
-					eventID := exec.SolidityEventID(event.GetTopics())
-					eventSpec, eventSpecErr := getEventSpec(eventID, event.GetAddress())
-					if eventSpecErr != nil {
-						logger.InfoMsg("could not get ABI for solidity event",
-							structure.ErrorKey, eventSpecErr,
-							"event_id", eventID,
-							"address", event.GetAddress())
-					} else {
-						// Since we have the event ABI we will allow matching on ABI fields
-						tagged = query.TagsFor(event, query.TaggedPrefix("Event", eventSpec))
+				// see which spec filter matches with the one in event data
+				for _, eventClass := range projection.Spec {
+					qry, err := eventClass.Query()
+					if err != nil {
+						return errors.Wrapf(err, "Error parsing query from filter string")
 					}
 
-					// see which spec filter matches with the one in event data
-					for _, eventClass := range projection.Spec {
-						qry, err := eventClass.Query()
-
-						if err != nil {
-							return errors.Wrapf(err, "Error parsing query from filter string")
-						}
-
+					for _, event := range events {
+						var tagged query.Tagged = event
 						// there's a matching filter, add data to the rows
-						if qry.Matches(tagged) {
-							if eventSpecErr != nil {
-								return errors.Wrapf(eventSpecErr, "could not get ABI for solidity event matching "+
-									"projection filter \"%s\" with id %v at address %v",
-									eventClass.Filter, eventID, event.GetAddress())
-							}
-
-							logger.InfoMsg("Matched event", "event_id", eventID, "filter", eventClass.Filter)
-
-							// unpack, decode & build event data
-							eventData, err := buildEventData(projection, eventClass, event, txOrigin, eventSpec, logger)
-							if err != nil {
-								return errors.Wrapf(err, "Error building event data")
-							}
-
-							// set row in structure
-							blockData.AddRow(eventClass.TableName, eventData)
+						if !qry.Matches(tagged) {
+							continue
 						}
+						eventID := exec.SolidityEventID(event.GetTopics())
+						eventSpec, eventSpecErr := getEventABI(eventID, event.GetAddress())
+
+						if eventSpecErr != nil {
+							logger.InfoMsg("could not get ABI for solidity event",
+								structure.ErrorKey, eventSpecErr,
+								"event_id", eventID,
+								"address", event.GetAddress())
+						} else {
+							// Since we have the event ABI we will allow matching on ABI fields
+							tagged = query.TagsFor(event, query.TaggedPrefix("Event", eventSpec))
+						}
+
+						if eventSpecErr != nil {
+							return errors.Wrapf(eventSpecErr, "could not get ABI for solidity event matching "+
+								"projection filter \"%s\" with id %v at address %v",
+								eventClass.Filter, eventID, event.GetAddress())
+						}
+
+						logger.InfoMsg("Matched event", "event_id", eventID, "filter", eventClass.Filter)
+
+						// unpack, decode & build event data
+						eventData, err := buildEventData(projection, eventClass, event, txOrigin, eventSpec, logger)
+						if err != nil {
+							return errors.Wrapf(err, "Error building event data")
+						}
+
+						// set row in structure
+						blockData.AddRow(eventClass.TableName, eventData)
 					}
+
 				}
 			}
 		}

@@ -148,7 +148,7 @@ func (c *Consumer) Run(projection *sqlsol.Projection, stream bool) error {
 		c.Logger.TraceMsg("Waiting for blocks...")
 
 		// gets blocks in given range based on last processed block taken from database
-		consumer := NewBlockConsumer(c.Chain.GetChainID(), projection, c.Config.SpecOpt, abiProvider.GetEventAbi,
+		consumer := NewBlockConsumer(c.Chain.GetChainID(), projection, c.Config.SpecOpt, abiProvider.GetEventABI,
 			eventCh, c.Done, c.Logger)
 
 		err = c.Chain.ConsumeBlocks(context.Background(), request.BlockRange, consumer)

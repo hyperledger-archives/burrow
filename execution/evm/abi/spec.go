@@ -18,8 +18,8 @@ type Spec struct {
 	Constructor  *FunctionSpec
 	Fallback     *FunctionSpec
 	Functions    map[string]*FunctionSpec
-	EventsByName map[string]*EventSpec
-	EventsByID   map[EventID]*EventSpec
+	EventsByName map[string][]*EventSpec
+	EventsByID   map[EventID][]*EventSpec
 }
 
 type specJSON struct {
@@ -36,8 +36,8 @@ func NewSpec() *Spec {
 		// Zero value for constructor and fallback function is assumed when those functions are not present
 		Constructor:  &FunctionSpec{},
 		Fallback:     &FunctionSpec{},
-		EventsByName: make(map[string]*EventSpec),
-		EventsByID:   make(map[EventID]*EventSpec),
+		EventsByName: make(map[string][]*EventSpec),
+		EventsByID:   make(map[EventID][]*EventSpec),
 		Functions:    make(map[string]*FunctionSpec),
 	}
 }
@@ -78,8 +78,8 @@ func ReadSpec(specBytes []byte) (*Spec, error) {
 			if err != nil {
 				return nil, err
 			}
-			abiSpec.EventsByName[ev.Name] = ev
-			abiSpec.EventsByID[ev.ID] = ev
+			abiSpec.EventsByName[ev.Name] = append(abiSpec.EventsByName[ev.Name], ev)
+			abiSpec.EventsByID[ev.ID] = append(abiSpec.EventsByID[ev.ID], ev)
 		case "function":
 			inputs, err := readArgSpec(s.Inputs)
 			if err != nil {
@@ -109,9 +109,9 @@ func MergeSpec(abiSpec []*Spec) *Spec {
 
 		// Different Abis can have the Event name, but with a different signature
 		// Loop over the signatures, as these are less likely to have collisions
-		for _, e := range s.EventsByID {
-			newSpec.EventsByName[e.Name] = e
-			newSpec.EventsByID[e.ID] = e
+		for id, eventSpecs := range s.EventsByID {
+			newSpec.EventsByName[eventSpecs.Name] = eventSpecs
+			newSpec.EventsByID[id] = append(newSpec.EventsByID[id], eventSpecs...)
 		}
 	}
 
