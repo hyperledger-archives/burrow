@@ -233,6 +233,7 @@ func pack(argSpec []Argument, getArg func(int) interface{}) ([]byte, error) {
 					if err != nil {
 						return nil, err
 					}
+					fixedSize += len(d)
 					packedDynamic = append(packedDynamic, d...)
 				}
 			}
