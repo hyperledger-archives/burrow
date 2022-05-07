@@ -17,3 +17,8 @@ services:
     volumes:
     - .:/go/src/github.com/hyperledger/burrow
     working_dir: /go/src/github.com/hyperledger/burrow
+language: go
+fuzz_engines: 
+- libfuzzer
+santinizers: 
+- address  

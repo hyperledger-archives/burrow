@@ -2,6 +2,10 @@
 FROM ethereum/solc:0.5.15 as solc-builder
 # We use a multistage build to avoid bloating our deployment image with build dependencies
 FROM golang:1.16-alpine3.13 as builder
+# We use gofuzz
+FROM gcr.io/oss-fuzz-base/base-builder-go
+
+RUN git clone --depth 1 https://github.com/ianlancetaylor/demangle
 
 RUN apk add --no-cache --update git bash make musl-dev gcc libc6-compat
 
