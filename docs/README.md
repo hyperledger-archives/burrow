@@ -1,11 +1,20 @@
 # [Hyperledger Burrow](https://hyperledger.github.io/burrow)
 
-[![CI](https://github.com/hyperledger/burrow/workflows/main/badge.svg)](https://launch-editor.github.com/actions?workflowID=main&event=push&nwo=hyperledger%2Fburrow)
+ <!-- (SPDX-License-Identifier: CC-BY-4.0) -->  <!-- Ensure there is a newline before, and after, this line -->
+ 
+# Hyperledger Burrow
+
+:warning: :warning: :warning:
+
+**Hyperledger Burrow has been moved to End of Life status by the original project maintainers.  Although Hyperledger Burrow is not currently being developed or maintained, the code is still available under an open source license so you would be welcome to reactivate this project. If you are interested in continuing development of this code, please consider submitting a PR at https://github.com/hyperledger/hyperledger-hip and sending and email to tsc@lists.hyperledger.org. See more details about project proposals at: https://hyperledger.github.io/hyperledger-hip/**
+
+**If you wish to contribute, please reach out to the [TSC mailing list](https://lists.hyperledger.org/g/tsc/messages)**
+
+:warning: :warning: :warning:
+ 
 [![version](https://img.shields.io/github/tag/hyperledger/burrow.svg)](https://github.com/hyperledger/burrow/releases/latest)
 [![GoDoc](https://godoc.org/github.com/burrow?status.png)](https://godoc.org/github.com/hyperledger/burrow)
 [![license](https://img.shields.io/github/license/hyperledger/burrow.svg)](../LICENSE.md)
-[![LoC](https://tokei.rs/b1/github/hyperledger/burrow?category=lines)](https://github.com/hyperledger/burrow)
-[![codecov](https://codecov.io/gh/hyperledger/burrow/branch/main/graph/badge.svg)](https://codecov.io/gh/hyperledger/burrow)
 
 Hyperledger Burrow is a permissioned Ethereum smart-contract blockchain node. It executes Ethereum EVM and WASM smart contract code (usually written in [Solidity](https://solidity.readthedocs.io)) on a permissioned virtual machine. Burrow provides transaction finality and high transaction throughput on a proof-of-stake [Tendermint](https://tendermint.com) consensus engine.
 
@@ -13,7 +22,7 @@ Hyperledger Burrow is a permissioned Ethereum smart-contract blockchain node. It
 
 ## What is Burrow
 
-Burrow is a fully fledged blockchain node and smart contract execution engine -- a distributed database that executes code. Burrow runs Ethereum Virtual Machine (EVM) and Web Assembly (WASM) smart contracts. Burrow networks are synchronised using the [Tendermint](https://github.com/tendermint/tendermint) consensus algorithm.
+Burrow was a fully fledged blockchain node and smart contract execution engine -- a distributed database that executes code. Burrow runs Ethereum Virtual Machine (EVM) and Web Assembly (WASM) smart contracts. Burrow networks are synchronised using the [Tendermint](https://github.com/tendermint/tendermint) consensus algorithm.
 
 Highlights include:
 
