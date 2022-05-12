@@ -1,0 +1,16 @@
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+repository:
+  name: burrow
+  default_branch: main
+  has_downloads: true
+  has_issues: true
+  has_projects: true
+  has_wiki: false
+  archived: true
+  private: false
+  allow_squash_merge: true
+  allow_merge_commit: false
+  allow_rebase_merge: true
